@@ -1,0 +1,3 @@
+-- Dev seed is intentionally empty of tenant data.
+-- Catalog (roles, permissions, plans) is in migrations so production is complete without this file.
+-- After you have Auth users, create a workspace via RPC create_workspace — never silently.

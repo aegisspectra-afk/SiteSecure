@@ -1,0 +1,37 @@
+# Local / VPS staging preview. Does not create a public SITE SECURE website.
+# From repo root:
+#   docker compose --env-file .env -f deploy/compose.staging.yml up --build
+#
+# Browser: http://localhost:8080
+# API:     http://localhost:8000/health
+#
+# Requires a root .env with the names in .env.example (never commit values).
+
+name: site-secure-staging
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    env_file:
+      - ../.env
+    environment:
+      APP_ENV: staging
+      WEB_PUBLIC_URL: http://localhost:8080
+      API_PUBLIC_URL: http://localhost:8000
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - api

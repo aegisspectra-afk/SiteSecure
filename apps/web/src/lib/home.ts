@@ -1,0 +1,51 @@
+import { can } from "./can";
+
+export type HomeVariant = "ops" | "sales" | "today" | "observe";
+
+export function homeVariant(roleKey: string | undefined): HomeVariant {
+  switch (roleKey) {
+    case "sales":
+      return "sales";
+    case "technician":
+    case "founding_technician":
+      return "today";
+    case "viewer":
+      return "observe";
+    default:
+      return "ops";
+  }
+}
+
+/** Product screens that exist as click-through. Empty until those phases ship. */
+export function moduleHref(
+  _kind: "customer.create" | "quote.create" | "job.create" | "quote" | "job" | "service",
+  _id?: string,
+): string | null {
+  return null;
+}
+
+export function quickActions(
+  roleKey: string | undefined,
+  features: string[] = [],
+): { permission: string; label: string; href: string }[] {
+  const candidates: { permission: string; feature?: string; kind: "customer.create" | "quote.create" | "job.create"; label: string }[] =
+    [
+      { permission: "crm.create", feature: "crm", kind: "customer.create", label: "לקוח חדש" },
+      { permission: "quotes.create", feature: "quotes", kind: "quote.create", label: "הצעת מחיר" },
+      { permission: "jobs.create", kind: "job.create", label: "עבודה חדשה" },
+    ];
+  const out: { permission: string; label: string; href: string }[] = [];
+  for (const item of candidates) {
+    const href = moduleHref(item.kind);
+    if (!href) continue;
+    if (!can(roleKey, item.permission, features)) continue;
+    out.push({ permission: item.permission, label: item.label, href });
+  }
+  return out;
+}
+
+export function itemHref(entityType: string, entityId: string): string | null {
+  if (entityType === "quote") return moduleHref("quote", entityId);
+  if (entityType === "job") return moduleHref("job", entityId);
+  return null;
+}

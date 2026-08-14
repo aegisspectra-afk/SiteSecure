@@ -1,0 +1,21 @@
+-- RLS isolation cases (run against a migrated database with two test users).
+-- These are the stop-the-line checks from docs/security/V2-RLS.md.
+--
+-- Setup (API or SQL as service role):
+--   User A owner of Workspace A
+--   User B owner of Workspace B
+--   FT in Workspace A assigned only to Site A1
+--
+-- Then SET request.jwt.claim.sub / use authenticated role as each user:
+--
+-- 1. A cannot SELECT customers of B
+-- 2. B cannot SELECT sites of A
+-- 3. FT cannot SELECT Site A2
+-- 4. FT cannot SELECT quotes without site assignment
+-- 5. viewer cannot INSERT customers
+-- 6. technician cannot UPDATE workspace_memberships
+-- 7. anon cannot SELECT customers
+-- 8. storage object under B's workspace_id denied to A
+--
+-- Implementation of executable pgTAP comes in Phase 2 once a live V2 project exists.
+SELECT 1;

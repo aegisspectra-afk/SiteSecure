@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@site-secure/design-system/tokens.css";
+
+@source "../../packages/ui/src";
+@source "./src";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-0);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-brand-grid {
+  background-color: var(--color-auth-panel);
+  background-image:
+    linear-gradient(to left, rgb(248 250 252 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(248 250 252 / 6%) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

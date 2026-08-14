@@ -1,0 +1,9 @@
+{
+  "name": "@site-secure/authz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./catalog.json": "./catalog.json"
+  }
+}

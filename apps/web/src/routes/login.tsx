@@ -18,17 +18,18 @@ function LoginPage() {
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const shell = { title: he.loginTitle, kicker: he.authWelcomeBack, heading: he.loginLead };
 
   if (loading) {
     return (
-      <AuthLayout title={he.loginTitle} welcome={he.authWelcome} description={he.loginLead}>
+      <AuthLayout {...shell}>
         <LoadingBlock label={he.loading} />
       </AuthLayout>
     );
   }
   if (error && user) {
     return (
-      <AuthLayout title={he.loginTitle} welcome={he.authWelcome} description={he.loginLead}>
+      <AuthLayout {...shell}>
         <ErrorState
           className="px-0 py-4"
           title={he.sessionError}
@@ -45,9 +46,7 @@ function LoginPage() {
 
   return (
     <AuthLayout
-      title={he.loginTitle}
-      welcome={he.authWelcome}
-      description={he.loginLead}
+      {...shell}
       footer={
         <AuthFooter
           prompt={he.noAccount}

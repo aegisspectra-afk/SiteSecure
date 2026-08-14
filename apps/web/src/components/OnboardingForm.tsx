@@ -1,20 +1,22 @@
-import { Button, Input, ProgressList, type ProgressStep } from "@site-secure/ui";
+import { Button, ProgressList, type ProgressStep } from "@site-secure/ui";
 import { useMemo, useState, type FormEvent } from "react";
 import { he } from "../i18n/he";
+import { AuthAlert, AuthField, AuthForm } from "./auth";
 
 export function OnboardingForm({
   profileDone,
-  onSubmit,
+  created = false,
+  onSaveProfile,
+  onCreateWorkspace,
+  onEnter,
   error,
   loading,
 }: {
   profileDone: boolean;
-  onSubmit: (input: {
-    name: string;
-    timezone: string;
-    vatPercent: number;
-    fullName?: string;
-  }) => Promise<void>;
+  created?: boolean;
+  onSaveProfile: (fullName: string) => Promise<void>;
+  onCreateWorkspace: (input: { name: string; timezone: string; vatPercent: number }) => Promise<void>;
+  onEnter: () => void;
   error?: string | null;
   loading?: boolean;
 }) {
@@ -22,7 +24,6 @@ export function OnboardingForm({
   const [fullName, setFullName] = useState("");
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
   const [vat, setVat] = useState("18");
-  const [advanced, setAdvanced] = useState(false);
   const [nameError, setNameError] = useState<string>();
   const [fullNameError, setFullNameError] = useState<string>();
 
@@ -33,46 +34,80 @@ export function OnboardingForm({
       {
         id: "workspace",
         label: he.stepWorkspace,
-        state: "current",
+        state: !profileDone ? "upcoming" : created ? "done" : "current",
       },
-      { id: "customer", label: `${he.stepCustomer} — ${he.laterStep}`, state: "upcoming" },
-      { id: "site", label: `${he.stepSite} — ${he.laterStep}`, state: "upcoming" },
-      { id: "quote", label: `${he.stepQuote} — ${he.laterStep}`, state: "upcoming" },
+      { id: "ready", label: he.stepReady, state: created ? "current" : "upcoming" },
     ],
-    [profileDone],
+    [created, profileDone],
   );
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleProfile(e: FormEvent) {
     e.preventDefault();
-    let blocked = false;
-    if (!profileDone && fullName.trim().length < 2) {
+    if (fullName.trim().length < 2) {
       setFullNameError(he.nameMin);
-      blocked = true;
-    } else {
-      setFullNameError(undefined);
+      return;
     }
+    setFullNameError(undefined);
+    await onSaveProfile(fullName.trim());
+  }
+
+  async function handleWorkspace(e: FormEvent) {
+    e.preventDefault();
     if (name.trim().length < 2) {
       setNameError(he.nameMin);
-      blocked = true;
-    } else {
-      setNameError(undefined);
+      return;
     }
-    if (blocked) return;
+    setNameError(undefined);
     const vatPercent = Number(vat);
-    await onSubmit({
+    await onCreateWorkspace({
       name: name.trim(),
       timezone,
       vatPercent: Number.isFinite(vatPercent) ? vatPercent : 18,
-      fullName: profileDone ? undefined : fullName.trim(),
     });
   }
 
   return (
     <div className="flex flex-col gap-8">
       <ProgressList steps={steps} />
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
-        {profileDone ? null : (
-          <Input
+      {created ? (
+        <Button type="button" variant="primary" className="h-12 w-full" onClick={onEnter}>
+          {he.enterWorkspace}
+        </Button>
+      ) : profileDone ? (
+        <AuthForm onSubmit={handleWorkspace}>
+          <AuthField
+            id="workspaceName"
+            label={he.workspaceName}
+            value={name}
+            onChange={(ev) => setName(ev.target.value)}
+            error={nameError}
+          />
+          <AuthField
+            id="timezone"
+            label={he.timezone}
+            ltr
+            value={timezone}
+            onChange={(ev) => setTimezone(ev.target.value)}
+          />
+          <AuthField
+            id="vat"
+            label={he.vat}
+            type="number"
+            value={vat}
+            onChange={(ev) => setVat(ev.target.value)}
+          />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-fg">{he.currencyLabel}</span>
+            <p className="public-mono text-sm text-fg-muted">{he.currencyValue}</p>
+          </div>
+          {error ? <AuthAlert>{error}</AuthAlert> : null}
+          <Button type="submit" variant="primary" loading={loading} className="h-12 w-full">
+            {he.onboardingPrimary}
+          </Button>
+        </AuthForm>
+      ) : (
+        <AuthForm onSubmit={handleProfile}>
+          <AuthField
             id="fullName"
             label={he.fullName}
             autoComplete="name"
@@ -80,49 +115,12 @@ export function OnboardingForm({
             onChange={(ev) => setFullName(ev.target.value)}
             error={fullNameError}
           />
-        )}
-        <Input
-          id="workspaceName"
-          label={he.workspaceName}
-          value={name}
-          onChange={(ev) => setName(ev.target.value)}
-          error={nameError}
-        />
-        <button
-          type="button"
-          className="self-start text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-focus"
-          aria-expanded={advanced}
-          onClick={() => setAdvanced((v) => !v)}
-        >
-          {he.advanced}
-        </button>
-        {advanced ? (
-          <div className="flex flex-col gap-4">
-            <Input
-              id="timezone"
-              label={he.timezone}
-              value={timezone}
-              onChange={(ev) => setTimezone(ev.target.value)}
-              className="ltr-meta"
-            />
-            <Input
-              id="vat"
-              label={he.vat}
-              type="number"
-              value={vat}
-              onChange={(ev) => setVat(ev.target.value)}
-            />
-          </div>
-        ) : null}
-        {error ? (
-          <p className="text-sm text-danger" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <Button type="submit" variant="primary" loading={loading} className="w-full">
-          {he.onboardingPrimary}
-        </Button>
-      </form>
+          {error ? <AuthAlert>{error}</AuthAlert> : null}
+          <Button type="submit" variant="primary" loading={loading} className="h-12 w-full">
+            {he.profileContinue}
+          </Button>
+        </AuthForm>
+      )}
     </div>
   );
 }

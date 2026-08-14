@@ -27,7 +27,7 @@ Public Website is **not** “another `/app` screen” and is **not** deferred ma
 
 Authenticated app modules (CRM, Quotes, Jobs, …) still ship only when their spec is approved. Hidden nav ≠ fake modules.
 
-**Current stop:** Auth UX on localhost, then **Vercel Web** (not FastAPI). Do **not** start Phase 7B or Public Website UI. Web host: [VERCEL.md](../operations/VERCEL.md). API stays local until a public FastAPI origin exists. Not Production.
+**Current stop:** Public Website at `/`, Auth, Vercel Web. Do **not** start Phase 7B, Site File application, or Mobile. Web host: [VERCEL.md](../operations/VERCEL.md). API stays local until a public FastAPI origin exists.
 
 ---
 
@@ -100,7 +100,7 @@ Authenticated app modules (CRM, Quotes, Jobs, …) still ship only when their sp
 - Doors: `/login`, `/register` (trial / pilot intent)
 - Public inquiry ≠ tenant CRM `leads` / `customers`
 - Depends on: Auth pages already exist (Phase 5). Does **not** depend on CRM, Quotes, or Jobs UI
-- **Schedule:** the human chooses before, parallel to, or after 7B. Must not be treated as “later.” Must not start until explicitly requested
+- **Schedule:** started when the human requested the public origin. Must not be treated as “later.”
 - Claim gate: no 99.9%, partnership logos, customer counts, guaranteed savings, or unverified encryption/hosting claims
 
 ---

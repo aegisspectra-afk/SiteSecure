@@ -1,10 +1,11 @@
-import { Button, ErrorState, LoadingBlock, SuccessState } from "@site-secure/ui";
+import { Button, ErrorState, LoadingBlock } from "@site-secure/ui";
 import { Link, Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthFooter, AuthLayout } from "../components/auth";
 import { RegisterForm } from "../components/RegisterForm";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
+import { signupVerifyRedirectUrl } from "../lib/auth-redirect";
 import { afterAuthPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
@@ -13,23 +14,29 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+const registerShell = {
+  title: he.registerTitle,
+  kicker: he.authCreateAccount,
+  heading: he.registerTitle,
+  description: he.registerLead,
+} as const;
+
 function RegisterPage() {
   const { loading, user, session, api, error, refresh } = useSession();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [checkEmail, setCheckEmail] = useState(false);
 
   if (loading) {
     return (
-      <AuthLayout title={he.registerTitle} welcome={he.authWelcome} description={he.registerLead}>
+      <AuthLayout {...registerShell}>
         <LoadingBlock label={he.loading} />
       </AuthLayout>
     );
   }
-  if (error && user && !checkEmail) {
+  if (error && user) {
     return (
-      <AuthLayout title={he.registerTitle} welcome={he.authWelcome} description={he.registerLead}>
+      <AuthLayout {...registerShell}>
         <ErrorState
           className="px-0 py-4"
           title={he.sessionError}
@@ -42,35 +49,17 @@ function RegisterPage() {
       </AuthLayout>
     );
   }
-  if (user && session && !checkEmail) return <Navigate to={afterAuthPath(session.has_workspace)} />;
-
-  if (checkEmail) {
-    return (
-      <AuthLayout title={he.registerTitle} welcome={he.authWelcome} description={he.registerLead}>
-        <SuccessState
-          className="px-0 py-4"
-          title={he.checkEmail}
-          description={he.checkEmailBody}
-          action={
-            <Button variant="primary" className="h-12" onClick={() => void navigate({ to: "/login" })}>
-              {he.continueToLogin}
-            </Button>
-          }
-        />
-      </AuthLayout>
-    );
-  }
+  if (user && session) return <Navigate to={afterAuthPath(session.has_workspace)} />;
 
   return (
     <AuthLayout
-      title={he.registerTitle}
-      welcome={he.authWelcome}
-      description={he.registerLead}
+      {...registerShell}
       footer={
         <AuthFooter
+          prompt={he.registerHasAccount}
           action={
             <Link to="/login" className="font-medium text-action hover:underline">
-              {he.registerHasAccount}
+              {he.loginTitle}
             </Link>
           }
         />
@@ -87,7 +76,7 @@ function RegisterPage() {
             password,
             options: {
               data: { full_name: fullName },
-              emailRedirectTo: `${window.location.origin}/login`,
+              emailRedirectTo: signupVerifyRedirectUrl(),
             },
           });
           if (authError) {
@@ -97,11 +86,15 @@ function RegisterPage() {
           }
           if (!data.session) {
             setSubmitting(false);
-            setCheckEmail(true);
+            await navigate({ to: "/verify-email", search: { email } });
             return;
           }
           try {
             await api.patchMe({ full_name: fullName, locale: "he" });
+          } catch {
+            // Profile is completed on /onboarding. Never create a workspace here.
+          }
+          try {
             const hydrated = await refresh();
             await navigate({ to: afterAuthPath(Boolean(hydrated?.has_workspace)) });
           } catch (err) {

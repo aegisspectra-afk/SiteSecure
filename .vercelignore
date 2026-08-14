@@ -1,0 +1,18 @@
+# Never upload secrets or local env files to Vercel.
+.env
+**/.env
+**/.env.*
+!.env.example
+**/.env.example
+.cursor/
+.vercel/
+*.pem
+node_modules/
+**/node_modules/
+.venv/
+venv/
+__pycache__/
+dist/
+coverage/
+.vite/
+**/.vite/

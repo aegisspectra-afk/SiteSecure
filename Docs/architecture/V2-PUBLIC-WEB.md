@@ -1,7 +1,7 @@
 # V2 Public Web — Marketing origin
 
 **Status:** Binding. Public Web is a **first-class SITE SECURE V2 surface**, not a deferred landing and not a screen inside `/app`.  
-**Do not implement this document until the human starts a Public Website phase.**  
+**Implementation:** started — marketing origin is `/` in `apps/web`. Auth remains `/login` `/register`; product remains `/app/*`.  
 **Companion:** [V2-WEB.md](./V2-WEB.md) (authenticated app), [V2-MOBILE.md](./V2-MOBILE.md), [V2-ARCHITECTURE.md](./V2-ARCHITECTURE.md)
 
 SITE SECURE is one product with three clients of the same backend:

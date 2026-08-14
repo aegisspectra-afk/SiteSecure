@@ -27,12 +27,26 @@
   --color-primary-800: #073f73;
   --color-primary-900: #062f56;
 
-  --color-auth-panel: #062f56;
-  --color-auth-panel-fg: #f8fafc;
-  --color-auth-panel-muted: #94a3b8;
+  --color-auth-panel: #0d131d;
+  --color-auth-panel-fg: #e8eef6;
+  --color-auth-panel-muted: #8b9bb0;
+  --color-auth-bg: #070b12;
+  --color-auth-surface: #0d131d;
+  --color-auth-elevated: #121a26;
+  --color-auth-border: #243044;
+  --color-auth-fg: #e8eef6;
+  --color-auth-muted: #8b9bb0;
+  --color-auth-accent: #0b6bcb;
+  --color-auth-accent-soft: #4d9adc;
+  --color-auth-glow: rgb(11 107 203 / 22%);
+  --color-public-bg: #05080d;
+  --color-public-surface: #0a1018;
+  --color-public-elevated: #0f1722;
+  --color-public-border: #1b2533;
 
   --font-sans: "Heebo", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-latin: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --radius-control: 6px;
   --radius-panel: 8px;
@@ -73,11 +87,57 @@
   --color-warning: #f79009;
   --color-success: #32d583;
   --color-focus: #4d9adc;
-  --color-auth-panel: #062f56;
-  --color-auth-panel-fg: #f8fafc;
-  --color-auth-panel-muted: #94a3b8;
+  --color-auth-panel: #0d131d;
+  --color-auth-panel-fg: #e8eef6;
+  --color-auth-panel-muted: #8b9bb0;
   --shadow-card: none;
   --shadow-popover: none;
+}
+
+/* Auth-only dark console. Does not convert the rest of the product to dark mode. */
+.auth-root {
+  color-scheme: dark;
+  --color-action: #0b6bcb;
+  --color-action-hover: #1c7dd9;
+  --color-action-active: #095aa9;
+  --color-action-fg: #ffffff;
+  --color-fg: var(--color-auth-fg);
+  --color-fg-muted: var(--color-auth-muted);
+  --color-border: var(--color-auth-border);
+  --color-bg: var(--color-auth-surface);
+  --color-bg-subtle: var(--color-auth-elevated);
+  --color-bg-0: var(--color-auth-bg);
+  --color-bg-1: var(--color-auth-surface);
+  --color-bg-2: var(--color-auth-elevated);
+  --color-focus: var(--color-auth-accent-soft);
+  --color-danger: #f97066;
+  --color-danger-fg: #070b12;
+  --color-success: #3dbe8c;
+  --shadow-card: none;
+  --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
+}
+
+/* Public marketing origin. Darker, more neutral than the auth console. */
+.public-root {
+  color-scheme: dark;
+  --color-action: #0b6bcb;
+  --color-action-hover: #1c7dd9;
+  --color-action-active: #095aa9;
+  --color-action-fg: #ffffff;
+  --color-fg: #e8eef6;
+  --color-fg-muted: #8b9bb0;
+  --color-border: var(--color-public-border);
+  --color-bg: var(--color-public-surface);
+  --color-bg-subtle: var(--color-public-elevated);
+  --color-bg-0: var(--color-public-bg);
+  --color-bg-1: var(--color-public-surface);
+  --color-bg-2: var(--color-public-elevated);
+  --color-focus: #4d9adc;
+  --color-danger: #f97066;
+  --color-success: #3dbe8c;
+  --color-warning: #d69a2d;
+  --shadow-card: none;
+  --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
 }
 
 .ltr-meta {

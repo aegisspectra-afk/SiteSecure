@@ -46,6 +46,8 @@ Dark mode (architected from day one, light is default):
 
 If we ship light-only in an early phase, **tokens still exist** so we do not invert later.
 
+**Auth exception:** `/login`, `/register`, `/forgot-password`, `/reset-password`, and onboarding use `.auth-root` — a dark enterprise console (`auth-bg` `#070b12`, `auth-surface` `#0d131d`, primary still `#0b6bcb`). This does **not** flip Dashboard/CRM to dark. Product UI stays light until a dedicated dark-mode pass.
+
 ---
 
 ## 3. Typography

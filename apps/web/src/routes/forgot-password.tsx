@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AuthAlert, AuthField, AuthFooter, AuthForm, AuthLayout } from "../components/auth";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
+import { resetPasswordRedirectUrl } from "../lib/auth-redirect";
 import { supabase } from "../lib/supabase";
 
 export const Route = createFileRoute("/forgot-password")({
@@ -30,7 +31,7 @@ function ForgotPage() {
     setLoading(true);
     setError(null);
     const { error: authError } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: resetPasswordRedirectUrl(),
     });
     setLoading(false);
     if (authError) {

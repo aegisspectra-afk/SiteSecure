@@ -1,4 +1,4 @@
-/** Guest entry is Login. Register is opt-in. `/` is not the public website yet. */
+/** Unauthenticated /app and onboarding send guests to Login. `/` is the public website. */
 
 export function guestEntryPath(): "/login" {
   return "/login";

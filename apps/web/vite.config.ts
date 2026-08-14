@@ -11,14 +11,22 @@ export default defineConfig(({ mode }) => {
   const rootEnv = loadEnv(mode, rootDir, "");
   const localEnv = loadEnv(mode, __dirname, "");
   const env = { ...localEnv, ...rootEnv, ...process.env };
+  const hosted = process.env.VERCEL === "1";
+  if (hosted && /localhost|127\.0\.0\.1/i.test(env.VITE_API_URL ?? "")) {
+    env.VITE_API_URL = "";
+    process.env.VITE_API_URL = "";
+  }
   if (mode === "production") {
-    requireProductionApiUrl(env.VITE_API_URL, process.env.VERCEL === "1");
+    requireProductionApiUrl(env.VITE_API_URL, hosted);
     if (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_ANON_KEY) {
       throw new Error("VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are required for production web builds");
     }
   }
   return {
-    envDir: rootEnv.VITE_SUPABASE_URL || rootEnv.VITE_API_URL ? rootDir : __dirname,
+    envDir: hosted ? path.resolve(__dirname, "vercel-env") : rootEnv.VITE_SUPABASE_URL || rootEnv.VITE_API_URL ? rootDir : __dirname,
+    define: hosted
+      ? { "import.meta.env.VITE_API_URL": JSON.stringify(env.VITE_API_URL || "") }
+      : undefined,
     plugins: [tanstackRouter({ quoteStyle: "double" }), react(), tailwindcss()],
     resolve: {
       alias: {

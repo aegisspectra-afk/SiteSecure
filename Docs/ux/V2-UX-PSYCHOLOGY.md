@@ -243,7 +243,7 @@ Group related. Separate unrelated. Whitespace is hierarchy.
 
 Do not force a 12-column grid on every page. Allowed layouts:
 
-- Auth: product-entry split — identity panel + form column (form max ~400px). The panel names the product and shows one illustrative Site File preview; it does not sell with bullets or claims. On small screens the panel collapses to a compact header, the form is the work, and the preview sits below.
+- Auth: dark enterprise console (auth-only; product UI stays light until a later dark pass). Desktop is LTR chrome — identity ~62% + access console ~38% (form max ~400px). The identity side shows an illustrative Site File surface, not marketing claims. Mobile: identity strip, then form, then a compact preview.
 - List + detail
 - Table page
 - Dossier (stacked sections)

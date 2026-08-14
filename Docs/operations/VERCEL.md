@@ -68,32 +68,47 @@ Until FastAPI has a public URL, Login/Signup can still talk to **Supabase Auth**
 
 ---
 
-## 3. Supabase Auth (add, do not replace localhost yet)
+## 3. Supabase Auth URL Configuration (required for Vercel email)
 
-**Site URL** stays an origin, never `/login`.
+**Site URL is the default fallback origin.** If a requested `emailRedirectTo` is not in Redirect URLs, Auth silently uses Site URL. That is why production confirmation emails went to `http://localhost:5173`.
 
-While dogfooding both local and Vercel:
+Code always sends the **current browser origin** (`window.location.origin`), never a baked Vercel alias:
 
-| Field | Keep localhost | Add Vercel |
-|-------|----------------|------------|
-| Site URL | `http://localhost:5173` until you switch daily use | then `https://<project>.vercel.app` |
-| Redirect URLs | existing localhost paths | same paths on the Vercel origin |
+| Flow | Value sent |
+|------|------------|
+| Signup / resend | `{origin}/login` |
+| Forgot password | `{origin}/reset-password` |
 
-Required Vercel redirects (code today):
+### Cloud project (Authentication → URL Configuration)
+
+| Field | Value |
+|-------|--------|
+| **Site URL** | `https://site-secure-umber.vercel.app` (origin only, no `/login`) |
+| **Redirect URLs** | exact paths below, plus localhost so local email still works |
+
+Required Redirect URLs:
 
 ```
-https://<project>.vercel.app/login
-https://<project>.vercel.app/reset-password
+https://site-secure-umber.vercel.app/login
+https://site-secure-umber.vercel.app/reset-password
+https://site-secure-umber.vercel.app/**
+http://localhost:5173/login
+http://localhost:5173/reset-password
+http://localhost:5173/**
 ```
 
-Also allow:
+Also allow if you still land on these paths from older links:
 
 ```
-https://<project>.vercel.app/**
-https://<project>.vercel.app/register
-https://<project>.vercel.app/onboarding
-https://<project>.vercel.app/app
+https://site-secure-umber.vercel.app/onboarding
+https://site-secure-umber.vercel.app/app
+http://localhost:5173/onboarding
+http://localhost:5173/app
 ```
+
+Preview deployments: add `https://*-site-secure-*.vercel.app/**` only if you send auth emails from those hosts.
+
+Do **not** leave Site URL on `http://localhost:5173` once real users register on Vercel.
 
 ---
 

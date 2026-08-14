@@ -3,6 +3,7 @@ import { Menu } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { he } from "../i18n/he";
+import { useDocumentMeta } from "../lib/document-meta";
 import { homeVariant } from "../lib/home";
 import { useSession } from "../lib/session";
 
@@ -11,6 +12,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const membership = session?.memberships[0];
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  useDocumentMeta({
+    title: `${he.brand} — ${he.homeTitle}`,
+    robots: "noindex, nofollow",
+  });
   const variant = homeVariant(membership?.role_key);
   const nav =
     variant === "today"
@@ -43,10 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh bg-bg-0">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-[var(--radius-control)] focus:bg-bg-1 focus:px-3 focus:py-2 focus:text-sm focus:text-fg"
-      >
+      <a href="#main" className="skip-link">
         דלגו לתוכן
       </a>
       <aside className="hidden w-60 shrink-0 border-e border-border bg-bg-1 lg:flex lg:flex-col">

@@ -4,7 +4,7 @@
 
 **Right now:** keep running on **localhost**. Web public host is **Vercel** — [VERCEL.md](./VERCEL.md). FastAPI stays separate (Render later). Not Production.
 
-**Do not start:** Public Website UI, CRM 7B, Customers/Sites/Quotes/Jobs UI, Site File, Mobile.
+**Do not start:** CRM 7B, Customers/Sites/Quotes/Jobs UI, Site File application, Mobile.
 
 ```
 localhost (now)                    public Web (Vercel)              FastAPI (later)
@@ -22,15 +22,15 @@ http://localhost:8000      →                                        https://ap
 
 | Surface | Status |
 |---------|--------|
+| `/` | Public website (marketing) |
 | `/login` `/register` `/forgot-password` `/reset-password` | Built |
 | `/onboarding` | Built |
 | `/app/dashboard` `/app/today` | Built |
 | FastAPI, Auth, RBAC, RLS, Storage | Built |
-| Public marketing | Not built — do not wait |
 | CRM / Customers / Sites / Quotes / Jobs UI | Not built — do not start |
 | Site File / Mobile | Not built |
 
-`/` still redirects to `/login`. Correct until Public Website ships. Staging sends `noindex`.
+`/` is the public SITE SECURE website. `/login` is authentication. Staging still sends `noindex` on auth and `/app`.
 
 ---
 
@@ -38,38 +38,36 @@ http://localhost:8000      →                                        https://ap
 
 **Site URL is the web origin only.** It is **not** `/login`.
 
-Supabase uses Site URL as the default after-auth landing when a redirect is missing. Putting `/login` there is a misconfiguration.
+Supabase uses Site URL as the default after-auth landing when a redirect is missing **or not allow-listed**. Putting `/login` there is a misconfiguration. Leaving Site URL on localhost after Vercel exists sends production confirmation emails to `http://localhost:5173`.
 
-### While you stay on localhost
+### Cloud project used by Vercel
 
 | Field | Value |
 |-------|--------|
-| **Site URL** | `http://localhost:5173` |
-| **Redirect URLs** | exact paths the **code** uses (below) |
+| **Site URL** | `https://site-secure-umber.vercel.app` |
+| **Redirect URLs** | production paths **and** localhost paths (below) |
 
-Code today:
+Code today (always `window.location.origin`, never a hardcoded host):
 
-| Flow | Code | Redirect URL to allow |
-|------|------|------------------------|
-| Signup email confirm | `emailRedirectTo: origin + '/login'` | `http://localhost:5173/login` |
-| Forgot password | `redirectTo: origin + '/reset-password'` | `http://localhost:5173/reset-password` |
+| Flow | Code | Production | Local |
+|------|------|------------|-------|
+| Signup / resend | `emailRedirectTo: origin + '/login'` | `https://site-secure-umber.vercel.app/login` | `http://localhost:5173/login` |
+| Forgot password | `redirectTo: origin + '/reset-password'` | `https://site-secure-umber.vercel.app/reset-password` | `http://localhost:5173/reset-password` |
 
-Also allow (safe extras, same origin):
+Allow both origins:
 
 ```
+https://site-secure-umber.vercel.app/login
+https://site-secure-umber.vercel.app/reset-password
+https://site-secure-umber.vercel.app/**
+http://localhost:5173/login
+http://localhost:5173/reset-password
 http://localhost:5173/**
-http://localhost:5173/register
-http://localhost:5173/onboarding
-http://localhost:5173/app
-http://localhost:5173/app/dashboard
-http://localhost:5173/app/today
 ```
 
-### When Vercel Web exists
+### Local-only Supabase (`supabase/config.toml`)
 
-Follow [VERCEL.md](./VERCEL.md). Site URL is the Vercel origin (`https://<project>.vercel.app`), never `/login` and never the API host.
-
-Keep localhost Redirect URLs until you drop local email tests.
+Local CLI Auth still uses Site URL `http://localhost:5173`. That file does **not** control the hosted project `rhxqqudlngimhplvndmz`.
 
 ---
 

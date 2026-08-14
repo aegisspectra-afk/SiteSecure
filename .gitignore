@@ -44,3 +44,7 @@ pnpm-lock.yaml
 
 # Generated types (committed once the pipeline exists; ignore local dumps)
 *.pem
+
+.env*
+!.env.example
+

@@ -5,8 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthLayout } from "../src/components/AuthLayout";
 import { LoginForm } from "../src/components/LoginForm";
 import { RegisterForm } from "../src/components/RegisterForm";
+import { VerifyEmailPanel } from "../src/components/VerifyEmailPanel";
 import { he } from "../src/i18n/he";
 import { authErrorMessage } from "../src/lib/auth-errors";
+import { resetPasswordRedirectUrl, signupVerifyRedirectUrl } from "../src/lib/auth-redirect";
 import { afterAuthPath, guestEntryPath } from "../src/lib/auth-routes";
 import { requireProductionApiUrl } from "../src/lib/public-api-url";
 
@@ -38,9 +40,25 @@ describe("auth routing", () => {
   });
 });
 
+describe("auth email redirects", () => {
+  it("follows the current origin and never hardcodes localhost or a Vercel alias", () => {
+    const production = "https://site-secure-umber.vercel.app";
+    const local = "http://localhost:5173";
+    expect(signupVerifyRedirectUrl(production)).toBe(`${production}/login`);
+    expect(resetPasswordRedirectUrl(production)).toBe(`${production}/reset-password`);
+    expect(signupVerifyRedirectUrl(local)).toBe(`${local}/login`);
+    expect(resetPasswordRedirectUrl(local)).toBe(`${local}/reset-password`);
+    expect(signupVerifyRedirectUrl(production)).not.toContain("localhost");
+    expect(resetPasswordRedirectUrl(production)).not.toContain("localhost");
+    expect(signupVerifyRedirectUrl()).toBe(`${window.location.origin}/login`);
+    expect(resetPasswordRedirectUrl()).toBe(`${window.location.origin}/reset-password`);
+  });
+});
+
 describe("production API URL", () => {
   it("rejects localhost so Vercel never bakes in :8000", () => {
     expect(() => requireProductionApiUrl(undefined)).toThrow(/VITE_API_URL/);
+    expect(requireProductionApiUrl(undefined, true)).toBe("");
     expect(() => requireProductionApiUrl("http://localhost:8000", true)).toThrow(/localhost/);
     expect(() => requireProductionApiUrl("http://127.0.0.1:8000", true)).toThrow(/localhost/);
     expect(requireProductionApiUrl("http://localhost:8000", false)).toBe("http://localhost:8000");
@@ -111,29 +129,63 @@ describe("RegisterForm", () => {
   });
 });
 
-describe("AuthLayout", () => {
-  it("is a product entry screen with a Site File preview, not marketing bullets", () => {
+describe("register identity copy", () => {
+  it("creates an account, not a workspace", () => {
     render(
-      <AuthLayout title={he.loginTitle} welcome={he.authWelcome} description={he.loginLead}>
+      <AuthLayout
+        kicker={he.authCreateAccount}
+        title={he.registerTitle}
+        heading={he.registerTitle}
+        description={he.registerLead}
+      >
+        <p>form</p>
+      </AuthLayout>,
+    );
+    expect(screen.getByRole("heading", { name: he.registerTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.registerLead)).toBeInTheDocument();
+    expect(screen.queryByText(he.stepAccount)).not.toBeInTheDocument();
+    expect(screen.queryByText(he.stepWorkspace)).not.toBeInTheDocument();
+  });
+});
+
+describe("VerifyEmailPanel", () => {
+  it("names the inbox and offers a real resend, not a fake open-mail button", () => {
+    const onResend = vi.fn();
+    render(<VerifyEmailPanel email="ilya@example.com" onResend={onResend} />);
+    expect(screen.getByText("ilya@example.com")).toBeInTheDocument();
+    expect(screen.getByText(he.verifyNext)).toBeInTheDocument();
+    expect(screen.getByText(he.openEmail)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.verifyResend })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: he.openEmail })).not.toBeInTheDocument();
+  });
+});
+
+describe("AuthLayout", () => {
+  it("is a dark operations console that belongs to the same product as the public site", () => {
+    render(
+      <AuthLayout kicker={he.authWelcomeBack} title={he.loginTitle} heading={he.loginLead}>
         <p>form</p>
       </AuthLayout>,
     );
     expect(screen.getByRole("complementary", { name: he.brand })).toBeInTheDocument();
     expect(screen.getAllByText(he.brand).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.productLineRole).length).toBeGreaterThan(0);
-    expect(screen.getByText(he.authTagline)).toBeInTheDocument();
-    expect(screen.getByText(he.authWelcome)).toBeInTheDocument();
-    expect(screen.getAllByLabelText(he.authPreviewAria).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.authPreviewProduct).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.authPreviewSiteName).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.authPreviewCameras).length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: he.loginTitle })).toBeInTheDocument();
+    expect(screen.getAllByText(he.authPlatformLabel).length).toBeGreaterThan(0);
+    expect(screen.getByText(he.authHeadlineLine1)).toBeInTheDocument();
+    expect(screen.getByText(he.authHeadlineLine2)).toBeInTheDocument();
+    expect(screen.getByText(he.authHebrewSupport)).toBeInTheDocument();
+    expect(screen.getByText(he.authWelcomeBack)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.authOpsAria)).toBeInTheDocument();
+    expect(screen.getByText(he.authOpsStatusLabel)).toBeInTheDocument();
+    expect(screen.getByText(he.authOpsStatusValue)).toBeInTheDocument();
+    expect(screen.getByText(he.authOpsWorkspaceName)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.loginLead })).toBeInTheDocument();
     const skip = screen.getByRole("link", { name: he.skipToForm });
     expect(skip).toHaveAttribute("href", "#auth-form");
-    expect(skip.className).toContain("sr-only");
-    expect(screen.queryByText("סביבת עבודה אחת לצוות")).not.toBeInTheDocument();
+    expect(skip).toHaveClass("skip-link");
+    expect(screen.getAllByRole("link", { name: he.brand }).every((el) => el.getAttribute("href") === "/")).toBe(true);
     expect(screen.queryByText(/99\.9/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ROI/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ENCRYPTED/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/פיילוט/)).not.toBeInTheDocument();
   });
 });

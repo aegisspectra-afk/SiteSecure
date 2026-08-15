@@ -34,16 +34,18 @@ export function OpsDashboard({
   workspaceStatus?: string;
 }) {
   const setup = workspaceSetup({ roleKey, features, memberCount });
+  const summary = data.summary;
+  const recentQuotes = data.recent_quotes ?? [];
   const quoteActions = quickActions(roleKey, features);
   const quoteCta = quoteActions[0];
   const invite = liveAdminActions(roleKey, features).find((action) => action.href === "/app/settings/users");
-  const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
+  const showQuotes = Boolean(summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const showJobs = data.home_variant === "ops" && can(roleKey, "jobs.view", features);
   const empty =
     data.attention.length === 0 &&
     data.today.items.length === 0 &&
     data.activity.length === 0 &&
-    data.recent_quotes.length === 0;
+    recentQuotes.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,7 +76,7 @@ export function OpsDashboard({
         security={security}
       />
       {!setup.complete ? <WorkspaceSetup steps={setup.steps} /> : null}
-      {data.summary ? <OpsMetrics summary={data.summary} showJobs={showJobs} showQuotes={showQuotes} /> : null}
+      {summary ? <OpsMetrics summary={summary} showJobs={showJobs} showQuotes={showQuotes} /> : null}
       {empty ? (
         <div className="ops-card">
           <EmptyState
@@ -111,9 +113,9 @@ export function OpsDashboard({
             <p className="mt-4 text-sm text-fg-muted">{he.activeWorkEmpty}</p>
           )}
         </section>
-        {showQuotes ? <QuotePipeline summary={data.summary} /> : null}
+        {showQuotes && summary ? <QuotePipeline summary={summary} /> : null}
       </div>
-      {showQuotes ? <RecentQuotes quotes={data.recent_quotes} canCreate={Boolean(quoteCta)} /> : null}
+      {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} /> : null}
       {usage ? <UsageSnapshot usage={usage} /> : null}
       {security ? <SecuritySnapshot data={security} /> : null}
       <ActivityList items={data.activity} />
@@ -134,7 +136,7 @@ export function ObserveDashboard({
   roleKey?: string;
   features?: string[];
 }) {
-  const showQuotes = can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
+  const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const empty =
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
   return (
@@ -151,7 +153,7 @@ export function ObserveDashboard({
       ) : (
         <AttentionList groups={data.attention} />
       )}
-      {showQuotes ? <RecentQuotes quotes={data.recent_quotes} canCreate={false} /> : null}
+      {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
       {security ? <SecuritySnapshot data={security} /> : null}
       <ActivityList items={data.activity} />
     </div>

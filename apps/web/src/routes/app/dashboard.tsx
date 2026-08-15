@@ -4,7 +4,7 @@ import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { ObserveDashboard, OpsDashboard } from "../../components/dashboard/OpsDashboard";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { he } from "../../i18n/he";
-import { can } from "../../lib/can";
+import { can, canAny } from "../../lib/can";
 import { homeVariant } from "../../lib/home";
 import { useSession } from "../../lib/session";
 
@@ -17,13 +17,23 @@ function DashboardPage() {
   const membership = session?.memberships[0];
   const variant = homeVariant(membership?.role_key);
   const workspaceId = membership?.workspace_id;
+  const features = membership?.features ?? [];
+  const roleKey = membership?.role_key;
 
   if (variant === "today") return <Navigate to="/app/today" />;
-  if (!can(membership?.role_key, "dashboard.view", membership?.features ?? [])) {
+  if (!can(roleKey, "dashboard.view", features)) {
     return <ErrorState title={he.noDashboardPermission} />;
   }
 
-  return <DashboardBody workspaceId={workspaceId} roleKey={membership?.role_key} features={membership?.features ?? []} variant={variant} api={api} />;
+  return (
+    <DashboardBody
+      workspaceId={workspaceId}
+      roleKey={roleKey}
+      features={features}
+      variant={variant}
+      api={api}
+    />
+  );
 }
 
 function DashboardBody({
@@ -39,10 +49,23 @@ function DashboardBody({
   variant: "ops" | "sales" | "observe" | "today";
   api: ReturnType<typeof useSession>["api"];
 }) {
+  const canTeam = can(roleKey, "users.view", features);
+  const canSecurity = canAny(roleKey, ["settings.general", "workspace.edit"], features);
+
   const query = useQuery({
     queryKey: ["dashboard", workspaceId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.getDashboard(workspaceId!),
+  });
+  const members = useQuery({
+    queryKey: ["members", workspaceId],
+    enabled: Boolean(workspaceId) && canTeam,
+    queryFn: () => api.listMembers(workspaceId!),
+  });
+  const security = useQuery({
+    queryKey: ["security", workspaceId],
+    enabled: Boolean(workspaceId) && canSecurity,
+    queryFn: () => api.getSecurityCenter(workspaceId!),
   });
 
   if (!workspaceId) return <ErrorState title={he.dashboardError} />;
@@ -60,6 +83,19 @@ function DashboardBody({
     );
   }
 
-  if (variant === "observe") return <ObserveDashboard data={query.data} />;
-  return <OpsDashboard data={query.data} roleKey={roleKey} features={features} />;
+  const memberCount = canTeam ? (members.data?.length ?? null) : null;
+  const securityData = canSecurity ? (security.data ?? null) : null;
+
+  if (variant === "observe") {
+    return <ObserveDashboard data={query.data} security={securityData} />;
+  }
+  return (
+    <OpsDashboard
+      data={query.data}
+      roleKey={roleKey}
+      features={features}
+      memberCount={memberCount}
+      security={securityData}
+    />
+  );
 }

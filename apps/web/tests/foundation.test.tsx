@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { OnboardingForm } from "../src/components/OnboardingForm";
 import { he } from "../src/i18n/he";
-import { can } from "../src/lib/can";
+import { can, canAny, canAll } from "../src/lib/can";
 import { appNav } from "../src/lib/app-nav";
 import { roleGranted } from "../src/lib/role-catalog";
 
@@ -91,6 +91,8 @@ describe("can()", () => {
     expect(can("viewer", "quotes.send", ["quotes"])).toBe(false);
     expect(can("owner", "quotes.send", ["quotes"])).toBe(true);
     expect(can("technician", "users.invite", ["core"])).toBe(false);
+    expect(canAny("manager", ["users.view", "audit.view"], ["audit"])).toBe(true);
+    expect(canAll("manager", ["users.view", "audit.view"], ["audit"])).toBe(false);
   });
 });
 

@@ -15,17 +15,21 @@ export function TodayHome({
   busyId: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeader title={he.todayTitle} />
+    <div className="flex flex-col gap-6">
+      <PageHeader title={he.todayTitle} description={he.opsPlatform} />
       {data.today.items.length === 0 ? (
-        <EmptyState title={he.todayEmptyTitle} description={he.todayEmptyBody} />
+        <div className="ops-card">
+          <EmptyState title={he.todayEmptyTitle} description={he.todayEmptyBody} />
+        </div>
       ) : (
-        <TodayList
-          items={data.today.items}
-          onStart={onStart}
-          onComplete={onComplete}
-          busyId={busyId}
-        />
+        <div className="ops-card p-5">
+          <TodayList
+            items={data.today.items}
+            onStart={onStart}
+            onComplete={onComplete}
+            busyId={busyId}
+          />
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { DashboardResponse } from "@site-secure/api-client";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ObserveDashboard, OpsDashboard } from "../src/components/dashboard/OpsDashboard";
 import { TodayHome } from "../src/components/dashboard/TodayHome";
@@ -7,7 +8,26 @@ import { AttentionList } from "../src/components/dashboard/AttentionList";
 import { DashboardSkeleton } from "../src/components/dashboard/DashboardSkeleton";
 import { ErrorState } from "@site-secure/ui";
 import { he } from "../src/i18n/he";
+import { can, canAny, canAll } from "../src/lib/can";
+import { dayGreeting } from "../src/lib/greeting";
 import { homeVariant, moduleHref, quickActions } from "../src/lib/home";
+import { liveAdminActions, workspaceSetup } from "../src/lib/workspace-setup";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    children,
+    className,
+  }: {
+    to: string;
+    children: ReactNode;
+    className?: string;
+  }) => (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 const emptyDash: DashboardResponse = {
   home_variant: "ops",
@@ -73,6 +93,27 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("button", { name: "הצעת מחיר" })).not.toBeInTheDocument();
     expect(screen.queryByText(/KPI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("142")).not.toBeInTheDocument();
+  });
+
+  it("owner empty state offers live admin destinations only", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="owner"
+        features={["crm", "quotes", "settings"]}
+        memberCount={1}
+      />,
+    );
+    expect(screen.getAllByRole("link", { name: he.inviteUser }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: he.navSettings })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+  });
+
+  it("sales empty state has no team administration", () => {
+    render(<OpsDashboard data={emptyDash} roleKey="sales" features={["crm"]} />);
+    expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
+    expect(screen.queryByText(he.setupTitle)).not.toBeInTheDocument();
   });
 
   it("attention rows are not links while destination modules are absent", () => {
@@ -151,5 +192,51 @@ describe("dashboard states", () => {
     );
     expect(screen.getByText(he.dashboardError)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.retry })).toBeInTheDocument();
+  });
+});
+
+describe("permission helpers", () => {
+  it("evaluates any/all without role-name branching", () => {
+    expect(can("technician", "users.invite", ["core"])).toBe(false);
+    expect(canAny("owner", ["users.invite", "crm.create"], ["crm"])).toBe(true);
+    expect(canAny("viewer", ["users.invite", "users.manage"], ["team"])).toBe(false);
+    expect(canAll("administrator", ["users.view", "jobs.view"], [])).toBe(true);
+    expect(canAll("sales", ["users.view", "crm.view"], ["crm"])).toBe(false);
+  });
+});
+
+describe("workspaceSetup", () => {
+  it("computes percent from real member count and hides CRM steps", () => {
+    const solo = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
+    expect(solo.complete).toBe(false);
+    expect(solo.percent).toBe(50);
+    expect(solo.steps.map((step) => step.id)).toEqual(["workspace", "invite"]);
+
+    const staffed = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 2 });
+    expect(staffed.complete).toBe(true);
+    expect(staffed.percent).toBe(100);
+
+    const sales = workspaceSetup({ roleKey: "sales", features: ["crm"], memberCount: 1 });
+    expect(sales.complete).toBe(true);
+    expect(sales.steps.map((step) => step.id)).toEqual(["workspace"]);
+  });
+
+  it("admin actions stay on live settings routes", () => {
+    const owner = liveAdminActions("owner", ["settings"]);
+    expect(owner.map((item) => item.href)).toEqual([
+      "/app/settings/users",
+      "/app/settings",
+      "/app/settings/roles",
+      "/app/settings/security",
+    ]);
+    expect(liveAdminActions("technician", ["core"])).toEqual([]);
+  });
+});
+
+describe("dayGreeting", () => {
+  it("uses Jerusalem hours", () => {
+    expect(dayGreeting(new Date("2026-08-15T06:00:00+03:00"))).toBe(he.greetingMorning);
+    expect(dayGreeting(new Date("2026-08-15T14:00:00+03:00"))).toBe(he.greetingAfternoon);
+    expect(dayGreeting(new Date("2026-08-15T19:00:00+03:00"))).toBe(he.greetingEvening);
   });
 });

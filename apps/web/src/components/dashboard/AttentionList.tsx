@@ -1,5 +1,6 @@
 import { Status, cn } from "@site-secure/ui";
 import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
+import { he } from "../../i18n/he";
 import { itemHref } from "../../lib/home";
 
 const tone = (severity: DashboardItem["severity"]) =>
@@ -8,12 +9,13 @@ const tone = (severity: DashboardItem["severity"]) =>
 export function AttentionList({ groups }: { groups: AttentionGroup[] }) {
   if (!groups.length) return null;
   return (
-    <section className="flex flex-col gap-6" aria-labelledby="attention-heading">
+    <section className="ops-card p-5" aria-labelledby="attention-heading">
+      <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">ATTENTION</p>
       <h2 id="attention-heading" className="text-lg font-semibold text-fg">
-        דורש תשומת לב
+        {he.attentionTitle}
       </h2>
       {groups.map((group) => (
-        <div key={group.kind} className="flex flex-col gap-2">
+        <div key={group.kind} className="mt-4 flex flex-col gap-2">
           <p className="text-sm font-medium text-fg">
             {group.count} {group.label_he}
           </p>

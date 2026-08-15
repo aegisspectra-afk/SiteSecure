@@ -16,3 +16,11 @@ export function can(roleKey: string | undefined, permission: string, features: s
   if (feature && !features.includes(feature)) return false;
   return true;
 }
+
+export function canAny(roleKey: string | undefined, permissions: string[], features: string[] = []) {
+  return permissions.some((permission) => can(roleKey, permission, features));
+}
+
+export function canAll(roleKey: string | undefined, permissions: string[], features: string[] = []) {
+  return permissions.length > 0 && permissions.every((permission) => can(roleKey, permission, features));
+}

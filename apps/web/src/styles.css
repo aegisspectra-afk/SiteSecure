@@ -265,12 +265,67 @@ body {
   text-shadow: 0 0 18px rgb(11 107 203 / 35%);
 }
 
+.ops-shell {
+  background: var(--color-bg-0);
+}
+
+.ops-sidebar {
+  background: var(--color-auth-bg);
+  color: var(--color-auth-fg);
+  border-inline-end: 1px solid var(--color-auth-border);
+}
+
+.ops-sidebar-link {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.ops-status-pulse {
+  animation: auth-pulse 2.4s ease-in-out infinite;
+}
+
+.ops-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-1);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-card);
+}
+
+.ops-card-interactive {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.ops-card-interactive:hover {
+  border-color: rgb(11 107 203 / 35%);
+}
+
+.ops-setup-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-bg-subtle);
+}
+
+.ops-setup-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-action);
+  transition: width 200ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-status-pulse,
   .auth-node-pulse,
   .auth-float,
   .auth-flow,
-  .public-flow {
+  .public-flow,
+  .ops-status-pulse,
+  .ops-card-interactive {
     animation: none;
+    transition: none;
   }
 }

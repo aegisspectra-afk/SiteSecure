@@ -1,8 +1,42 @@
 import type { ReactNode } from "react";
 import { pub } from "../../i18n/public-he";
 import { useDocumentMeta } from "../../lib/document-meta";
+import { afterAuthPath } from "../../lib/auth-routes";
+import { useSession } from "../../lib/session";
 import { CtaLink, PublicFooter, PublicHeader } from "./PublicChrome";
 import { ChaosChain, FieldPhone, HeroConsole, OpsChain, SecurityArch, SiteFileStage, TwinExplorer } from "./PublicSurfaces";
+
+function HeroEntry() {
+  const { user, session, error } = useSession();
+  const email = user?.email ?? session?.email ?? null;
+  if (!user) return <CtaLink to="/register">{pub.joinPilot}</CtaLink>;
+  if (error && !session) {
+    return (
+      <div className="flex flex-col gap-2">
+        {email ? (
+          <p className="ltr-meta text-sm text-fg-muted">
+            {pub.signedInAs}
+            {email}
+          </p>
+        ) : null}
+        <CtaLink to="/login">{pub.sessionUnavailable}</CtaLink>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {email ? (
+        <p className="ltr-meta text-sm text-fg-muted">
+          {pub.signedInAs}
+          {email}
+        </p>
+      ) : null}
+      <CtaLink to={afterAuthPath(Boolean(session?.has_workspace))}>
+        {session?.has_workspace ? pub.enterWorkspace : pub.continueOnboarding}
+      </CtaLink>
+    </div>
+  );
+}
 
 function Manifest({ lines, mutedFrom = 1 }: { lines: string[]; mutedFrom?: number }) {
   return (
@@ -67,7 +101,7 @@ export function PublicHome() {
                 <p className="text-base text-fg-muted">{pub.heroLead}</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row" dir="rtl">
-                <CtaLink to="/register">{pub.joinPilot}</CtaLink>
+                <HeroEntry />
                 <a
                   href="#site-file"
                   className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] border border-border px-5 text-sm font-medium text-fg hover:bg-public-elevated"
@@ -128,7 +162,7 @@ export function PublicHome() {
             {pub.pilotBody}
           </p>
           <div className="mt-8">
-            <CtaLink to="/register">{pub.joinPilot}</CtaLink>
+            <HeroEntry />
           </div>
         </Scene>
       </main>

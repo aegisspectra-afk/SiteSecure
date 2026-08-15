@@ -4,6 +4,7 @@ import { he } from "../i18n/he";
 import { AuthAlert, AuthField, AuthForm } from "./auth";
 
 export function OnboardingForm({
+  email,
   profileDone,
   created = false,
   onSaveProfile,
@@ -12,6 +13,7 @@ export function OnboardingForm({
   error,
   loading,
 }: {
+  email?: string | null;
   profileDone: boolean;
   created?: boolean;
   onSaveProfile: (fullName: string) => Promise<void>;
@@ -68,6 +70,12 @@ export function OnboardingForm({
 
   return (
     <div className="flex flex-col gap-8">
+      {email ? (
+        <p className="text-sm text-fg-muted">
+          {he.onboardingAccount}{" "}
+          <span className="ltr-meta font-medium text-fg">{email}</span>
+        </p>
+      ) : null}
       <ProgressList steps={steps} />
       {created ? (
         <Button type="button" variant="primary" className="h-12 w-full" onClick={onEnter}>

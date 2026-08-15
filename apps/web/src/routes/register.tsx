@@ -1,7 +1,7 @@
-import { Button, ErrorState, LoadingBlock } from "@site-secure/ui";
+import { LoadingBlock } from "@site-secure/ui";
 import { Link, Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { AuthFooter, AuthLayout } from "../components/auth";
+import { AuthFooter, AuthHydrateError, AuthLayout } from "../components/auth";
 import { RegisterForm } from "../components/RegisterForm";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
@@ -22,7 +22,7 @@ const registerShell = {
 } as const;
 
 function RegisterPage() {
-  const { loading, user, session, api, error, refresh } = useSession();
+  const { loading, user, session, api, error, refresh, signOut } = useSession();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,14 +37,10 @@ function RegisterPage() {
   if (error && user) {
     return (
       <AuthLayout {...registerShell}>
-        <ErrorState
-          className="px-0 py-4"
-          title={he.sessionError}
-          action={
-            <Button variant="secondary" onClick={() => void refresh()}>
-              {he.retry}
-            </Button>
-          }
+        <AuthHydrateError
+          error={error}
+          onRetry={() => void refresh()}
+          onSignOut={() => void signOut()}
         />
       </AuthLayout>
     );

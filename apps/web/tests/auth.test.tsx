@@ -8,9 +8,10 @@ import { RegisterForm } from "../src/components/RegisterForm";
 import { VerifyEmailPanel } from "../src/components/VerifyEmailPanel";
 import { he } from "../src/i18n/he";
 import { authErrorMessage } from "../src/lib/auth-errors";
-import { resetPasswordRedirectUrl, signupVerifyRedirectUrl } from "../src/lib/auth-redirect";
+import { resetPasswordRedirectUrl, signupVerifyRedirectUrl, hasAuthCallback } from "../src/lib/auth-redirect";
 import { afterAuthPath, guestEntryPath } from "../src/lib/auth-routes";
-import { requireProductionApiUrl } from "../src/lib/public-api-url";
+import { isSpaApiUrl, requireProductionApiUrl } from "../src/lib/public-api-url";
+import { API_UNAVAILABLE_HE, createApiClient, parseApiResponse } from "@site-secure/api-client";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -53,6 +54,13 @@ describe("auth email redirects", () => {
     expect(signupVerifyRedirectUrl()).toBe(`${window.location.origin}/login`);
     expect(resetPasswordRedirectUrl()).toBe(`${window.location.origin}/reset-password`);
   });
+
+  it("detects the email confirmation callback so Site URL / does not stay on the marketing page", () => {
+    expect(hasAuthCallback("?code=abc", "")).toBe(true);
+    expect(hasAuthCallback("", "#access_token=tok&type=signup")).toBe(true);
+    expect(hasAuthCallback("", "")).toBe(false);
+    expect(hasAuthCallback("?utm=1", "#hero")).toBe(false);
+  });
 });
 
 describe("production API URL", () => {
@@ -63,6 +71,47 @@ describe("production API URL", () => {
     expect(() => requireProductionApiUrl("http://127.0.0.1:8000", true)).toThrow(/localhost/);
     expect(requireProductionApiUrl("http://localhost:8000", false)).toBe("http://localhost:8000");
     expect(requireProductionApiUrl("https://api.example.com/")).toBe("https://api.example.com");
+    expect(isSpaApiUrl("http://localhost:5173")).toBe(true);
+    expect(isSpaApiUrl("http://localhost:8000")).toBe(false);
+    expect(isSpaApiUrl("https://site-secure-umber.vercel.app", "https://site-secure-umber.vercel.app")).toBe(true);
+  });
+});
+
+describe("parseApiResponse", () => {
+  it("does not crash on empty 405 from a static host", async () => {
+    const res = new Response("", { status: 405, statusText: "Method Not Allowed" });
+    await expect(parseApiResponse(res)).rejects.toMatchObject({
+      status: 405,
+      code: "API_UNAVAILABLE",
+      message: API_UNAVAILABLE_HE,
+    });
+  });
+
+  it("does not call a relative /api URL when the API origin is missing", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const client = createApiClient({ baseUrl: "", getAccessToken: async () => "token" });
+    await expect(client.patchMe({ full_name: "Ilya Kerner" })).rejects.toMatchObject({
+      status: 503,
+      code: "API_UNAVAILABLE",
+      message: API_UNAVAILABLE_HE,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("uses a same-origin /api path only when the Vite proxy is enabled", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const client = createApiClient({
+      baseUrl: "",
+      sameOriginProxy: true,
+      getAccessToken: async () => "token",
+    });
+    await client.patchMe({ full_name: "Ilya Kerner" });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/v1/me",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+    fetchSpy.mockRestore();
   });
 });
 

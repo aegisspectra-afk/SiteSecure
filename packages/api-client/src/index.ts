@@ -15,6 +15,36 @@ export class ApiClientError extends Error {
   }
 }
 
+export const API_UNAVAILABLE_HE = "לא ניתן להתחבר לשרת. Onboarding דורש FastAPI זמין.";
+
+export async function parseApiResponse<T>(res: Response): Promise<T> {
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) {
+    throw new ApiClientError(
+      res.status,
+      res.status === 405 || res.status === 404 ? "API_UNAVAILABLE" : "BUSINESS_RULE",
+      API_UNAVAILABLE_HE,
+    );
+  }
+  let json: T | ApiErrorBody;
+  try {
+    json = JSON.parse(text) as T | ApiErrorBody;
+  } catch {
+    throw new ApiClientError(res.status, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+  }
+  if (!res.ok) {
+    const err = json as ApiErrorBody;
+    throw new ApiClientError(
+      res.status,
+      err.error?.code ?? "BUSINESS_RULE",
+      err.error?.message ?? API_UNAVAILABLE_HE,
+      err.error?.details ?? {},
+    );
+  }
+  return json as T;
+}
+
 export type SessionMembership = {
   workspace_id: string;
   workspace_name: string;
@@ -75,6 +105,55 @@ export type DashboardResponse = {
   activity: { entity_type: string; entity_id: string; title_he: string; occurred_at: string }[];
 };
 
+export type MemberOut = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string | null;
+  role_key: string;
+  status: string;
+  created_at: string | null;
+};
+
+export type InviteOut = {
+  id: string;
+  email: string;
+  role_key: string;
+  expires_at: string;
+  token: string | null;
+};
+
+export type AuditItem = {
+  id: string;
+  actor_user_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type SecuritySignal = {
+  key: string;
+  label_he: string;
+  status: "healthy" | "not_in_plan" | "not_built";
+  detail_he: string;
+};
+
+export type SecurityCenter = {
+  workspace_id: string;
+  role_key: string;
+  plan_key: string;
+  signals: SecuritySignal[];
+};
+
+export type AuthzCatalog = {
+  roles: { key: string; label_he: string; label_en: string; default_scope: string }[];
+  permissions: { key: string; group: string }[];
+  grants: Record<string, string[]>;
+  plans: { key: string; label_he: string; features: string[] }[];
+};
+
 export type JobOut = {
   id: string;
   workspace_id: string;
@@ -86,25 +165,28 @@ export type JobOut = {
 export function createApiClient(opts: {
   baseUrl: string;
   getAccessToken: () => Promise<string | null>;
+  /** Local Vite only: fetch `/api/...` so the dev proxy can reach FastAPI. Never on Vercel. */
+  sameOriginProxy?: boolean;
 }) {
+  const baseUrl = opts.baseUrl.replace(/\/$/, "");
+  const sameOriginProxy = Boolean(opts.sameOriginProxy);
+
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    if (!baseUrl && !sameOriginProxy) {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+    }
     const token = await opts.getAccessToken();
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
     if (token) headers.set("Authorization", `Bearer ${token}`);
-    const res = await fetch(`${opts.baseUrl}${path}`, { ...init, headers });
-    if (res.status === 204) return undefined as T;
-    const json = (await res.json()) as T | ApiErrorBody;
-    if (!res.ok) {
-      const err = json as ApiErrorBody;
-      throw new ApiClientError(
-        res.status,
-        err.error?.code ?? "BUSINESS_RULE",
-        err.error?.message ?? "שגיאה",
-        err.error?.details ?? {},
-      );
+    const url = sameOriginProxy ? path : `${baseUrl}${path}`;
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, headers });
+    } catch {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
     }
-    return json as T;
+    return parseApiResponse<T>(res);
   }
 
   return {
@@ -124,8 +206,30 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
     getDashboard: (workspaceId: string) =>
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
+    listMembers: (workspaceId: string) =>
+      request<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`),
+    patchMember: (
+      workspaceId: string,
+      memberId: string,
+      body: { role_key?: string; status?: "active" | "disabled" },
+    ) =>
+      request<MemberOut>(`/api/v1/workspaces/${workspaceId}/members/${memberId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    createInvitation: (workspaceId: string, body: { email: string; role_key?: string }) =>
+      request<InviteOut>(`/api/v1/workspaces/${workspaceId}/invitations`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listAudit: (workspaceId: string) =>
+      request<AuditItem[]>(`/api/v1/workspaces/${workspaceId}/audit`),
+    getSecurityCenter: (workspaceId: string) =>
+      request<SecurityCenter>(`/api/v1/workspaces/${workspaceId}/security`),
+    getAuthzCatalog: () => request<AuthzCatalog>("/api/v1/authz/catalog"),
     startJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
     completeJob: (workspaceId: string, jobId: string) =>

@@ -20,3 +20,14 @@ export function signupVerifyRedirectUrl(origin?: string): string {
 export function resetPasswordRedirectUrl(origin?: string): string {
   return authRedirectUrl("/reset-password", origin);
 }
+
+export function hasAuthCallback(search: string, hash: string): boolean {
+  const query = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  const fragment = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  return Boolean(
+    query.get("code") ||
+      fragment.get("access_token") ||
+      fragment.get("refresh_token") ||
+      fragment.get("type"),
+  );
+}

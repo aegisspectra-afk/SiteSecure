@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicHome } from "../src/components/public/PublicHome";
 import { pub } from "../src/i18n/public-he";
 import { guestEntryPath } from "../src/lib/auth-routes";
@@ -22,14 +22,30 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("../src/lib/session", () => ({
-  useSession: () => ({
-    loading: false,
-    user: null,
-    session: null,
-  }),
+  useSession: () => sessionStub,
 }));
 
+const sessionStub: {
+  loading: boolean;
+  user: { email: string } | null;
+  session: { has_workspace: boolean; email?: string } | null;
+  error: string | null;
+  signOut: () => Promise<void>;
+} = {
+  loading: false,
+  user: null,
+  session: null,
+  error: null,
+  signOut: async () => undefined,
+};
+
 describe("public website", () => {
+  beforeEach(() => {
+    sessionStub.user = null;
+    sessionStub.session = null;
+    sessionStub.error = null;
+  });
+
   it("renders a product experience at home, not a login redirect", () => {
     render(<PublicHome />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pub.heroLine1);
@@ -51,5 +67,16 @@ describe("public website", () => {
 
   it("keeps product entry at login when the app is unauthenticated", () => {
     expect(guestEntryPath()).toBe("/login");
+  });
+
+  it("names the signed-in account instead of an anonymous continue CTA", () => {
+    sessionStub.user = { email: "ilya@example.com" };
+    sessionStub.session = { has_workspace: false, email: "ilya@example.com" };
+    sessionStub.error = null;
+    render(<PublicHome />);
+    expect(screen.getAllByText("ilya@example.com").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: pub.continueOnboarding }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: pub.signOut }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: pub.login })).not.toBeInTheDocument();
   });
 });

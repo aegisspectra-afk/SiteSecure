@@ -14,13 +14,16 @@ const nav = [
 ] as const;
 
 export function PublicHeader() {
-  const { user, session } = useSession();
+  const { user, session, error, signOut } = useSession();
   const [open, setOpen] = useState(false);
+  const email = user?.email ?? session?.email ?? null;
   const workspaceCta = user
-    ? {
-        to: afterAuthPath(Boolean(session?.has_workspace)),
-        label: session?.has_workspace ? pub.enterWorkspace : pub.continueOnboarding,
-      }
+    ? error && !session
+      ? { to: "/login" as const, label: pub.sessionUnavailable }
+      : {
+          to: afterAuthPath(Boolean(session?.has_workspace)),
+          label: session?.has_workspace ? pub.enterWorkspace : pub.continueOnboarding,
+        }
     : null;
 
   const links = (
@@ -39,15 +42,31 @@ export function PublicHeader() {
   );
 
   const actions = (
-    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-2">
+    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
       {workspaceCta ? (
-        <Link
-          to={workspaceCta.to}
-          className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg hover:bg-action-hover"
-          onClick={() => setOpen(false)}
-        >
-          {workspaceCta.label}
-        </Link>
+        <>
+          <p className="ltr-meta max-w-56 truncate text-xs tracking-[0.04em] text-fg-muted" title={email ?? undefined}>
+            <span className="sr-only">{pub.signedInAs}</span>
+            {email ?? pub.signedInUnknown}
+          </p>
+          <Link
+            to={workspaceCta.to}
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg hover:bg-action-hover"
+            onClick={() => setOpen(false)}
+          >
+            {workspaceCta.label}
+          </Link>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-fg-muted hover:text-fg"
+            onClick={() => {
+              setOpen(false);
+              void signOut();
+            }}
+          >
+            {pub.signOut}
+          </button>
+        </>
       ) : (
         <>
           <Link

@@ -7,20 +7,27 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { isHostedBrowser, requireProductionApiUrl } from "./public-api-url";
+import { isHostedBrowser, isSpaApiUrl, requireProductionApiUrl } from "./public-api-url";
 import { supabase } from "./supabase";
 
-function apiBaseUrl(): string {
-  const fromEnv = import.meta.env.VITE_API_URL as string | undefined;
-  if (import.meta.env.PROD) return requireProductionApiUrl(fromEnv, isHostedBrowser());
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-  return "http://localhost:8000";
+function apiClientConfig(): { baseUrl: string; sameOriginProxy: boolean } {
+  const fromEnv = ((import.meta.env.VITE_API_URL as string | undefined) ?? "").trim().replace(/\/$/, "");
+  if (import.meta.env.DEV) {
+    return { baseUrl: "", sameOriginProxy: true };
+  }
+  const hosted = isHostedBrowser();
+  const url = requireProductionApiUrl(fromEnv, hosted);
+  if (!url || isSpaApiUrl(url)) {
+    return { baseUrl: "", sameOriginProxy: false };
+  }
+  return { baseUrl: url, sameOriginProxy: false };
 }
 
-const apiBase = apiBaseUrl();
+const apiConfig = apiClientConfig();
 
 type SessionState = {
   loading: boolean;
@@ -39,12 +46,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
   const api = useMemo(
     () =>
       createApiClient({
-        baseUrl: apiBase.replace(/\/$/, ""),
+        baseUrl: apiConfig.baseUrl,
+        sameOriginProxy: apiConfig.sameOriginProxy,
         getAccessToken: async () => {
+          if (tokenRef.current) return tokenRef.current;
           const { data } = await supabase.auth.getSession();
           return data.session?.access_token ?? null;
         },
@@ -52,38 +62,47 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const hydrate = useCallback(
+    async (nextUser: User | null): Promise<SessionResponse | null> => {
+      setUser(nextUser);
+      if (!nextUser) {
+        tokenRef.current = null;
+        setSession(null);
+        setError(null);
+        setLoading(false);
+        return null;
+      }
+      try {
+        const hydrated = await api.getSession();
+        setSession(hydrated);
+        setError(null);
+        return hydrated;
+      } catch (err) {
+        setSession(null);
+        setError(err instanceof Error ? err.message : "שגיאה");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api],
+  );
+
   const refresh = useCallback(async (): Promise<SessionResponse | null> => {
     const { data } = await supabase.auth.getSession();
-    const nextUser = data.session?.user ?? null;
-    setUser(nextUser);
-    if (!nextUser) {
-      setSession(null);
-      setError(null);
-      setLoading(false);
-      return null;
-    }
-    try {
-      const hydrated = await api.getSession();
-      setSession(hydrated);
-      setError(null);
-      return hydrated;
-    } catch (err) {
-      setSession(null);
-      setError(err instanceof Error ? err.message : "שגיאה");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [api]);
+    tokenRef.current = data.session?.access_token ?? null;
+    return hydrate(data.session?.user ?? null);
+  }, [hydrate]);
 
   useEffect(() => {
-    void refresh();
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "INITIAL_SESSION") return;
-      void refresh();
+    const { data: sub } = supabase.auth.onAuthStateChange((event, authSession) => {
+      tokenRef.current = authSession?.access_token ?? null;
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") {
+        void hydrate(authSession?.user ?? null);
+      }
     });
     return () => sub.subscription.unsubscribe();
-  }, [refresh]);
+  }, [hydrate]);
 
   const value: SessionState = {
     loading,
@@ -93,9 +112,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     api,
     refresh,
     signOut: async () => {
+      tokenRef.current = null;
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+      setError(null);
     },
   };
 

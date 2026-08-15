@@ -47,7 +47,6 @@ export function PublicHeader() {
       {workspaceCta ? (
         <>
           <p className="ltr-meta max-w-56 truncate text-xs tracking-[0.04em] text-fg-muted" title={email ?? undefined}>
-            <span className="sr-only">{pub.signedInAs}</span>
             {email ?? pub.signedInUnknown}
           </p>
           <Link

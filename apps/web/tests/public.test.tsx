@@ -96,6 +96,7 @@ describe("public website", () => {
     sessionStub.error = null;
     render(<PublicHome />);
     expect(screen.getAllByText("ilya@example.com").length).toBeGreaterThan(0);
+    expect(screen.queryByText(new RegExp(pub.signedInAs))).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: pub.continueOnboarding }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: pub.signOut }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: pub.login })).not.toBeInTheDocument();

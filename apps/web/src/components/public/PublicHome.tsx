@@ -8,33 +8,12 @@ import { ChaosChain, FieldPhone, HeroConsole, OpsChain, SecurityArch, SiteFileSt
 
 function HeroEntry() {
   const { user, session, error } = useSession();
-  const email = user?.email ?? session?.email ?? null;
   if (!user) return <CtaLink to="/register">{pub.joinPilot}</CtaLink>;
-  if (error && !session) {
-    return (
-      <div className="flex flex-col gap-2">
-        {email ? (
-          <p className="ltr-meta text-sm text-fg-muted">
-            {pub.signedInAs}
-            {email}
-          </p>
-        ) : null}
-        <CtaLink to="/login">{pub.sessionUnavailable}</CtaLink>
-      </div>
-    );
-  }
+  if (error && !session) return <CtaLink to="/login">{pub.sessionUnavailable}</CtaLink>;
   return (
-    <div className="flex flex-col gap-2">
-      {email ? (
-        <p className="ltr-meta text-sm text-fg-muted">
-          {pub.signedInAs}
-          {email}
-        </p>
-      ) : null}
-      <CtaLink to={afterAuthPath(Boolean(session?.has_workspace))}>
-        {session?.has_workspace ? pub.enterWorkspace : pub.continueOnboarding}
-      </CtaLink>
-    </div>
+    <CtaLink to={afterAuthPath(Boolean(session?.has_workspace))}>
+      {session?.has_workspace ? pub.enterWorkspace : pub.continueOnboarding}
+    </CtaLink>
   );
 }
 

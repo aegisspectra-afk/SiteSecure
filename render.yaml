@@ -4,9 +4,7 @@
 #
 # Dashboard → New → Blueprint → this repo (main).
 # Paste only the sync:false secrets in the Render UI. Never commit values.
-
-previews:
-  generation: manual
+# No `previews:` — Hobby workspaces cannot enable Preview Environments.
 
 services:
   - type: web

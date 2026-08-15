@@ -100,4 +100,19 @@ describe("public website", () => {
     expect(screen.getAllByRole("button", { name: pub.signOut }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: pub.login })).not.toBeInTheDocument();
   });
+
+  it("returns to guest login after sign-out instead of enter-workspace", () => {
+    sessionStub.user = { email: "ilya@example.com" };
+    sessionStub.session = { has_workspace: true, email: "ilya@example.com" };
+    const { rerender } = render(<PublicHome />);
+    expect(screen.getAllByRole("link", { name: pub.enterWorkspace }).length).toBeGreaterThan(0);
+
+    sessionStub.user = null;
+    sessionStub.session = null;
+    rerender(<PublicHome />);
+    expect(screen.queryByRole("link", { name: pub.enterWorkspace })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: pub.signOut })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: pub.login }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: pub.joinPilot }).length).toBeGreaterThan(0);
+  });
 });

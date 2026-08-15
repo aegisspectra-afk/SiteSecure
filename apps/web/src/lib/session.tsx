@@ -47,6 +47,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const tokenRef = useRef<string | null>(null);
+  const hydrateGen = useRef(0);
+  const signingOut = useRef(false);
 
   const api = useMemo(
     () =>
@@ -64,6 +66,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const hydrate = useCallback(
     async (nextUser: User | null): Promise<SessionResponse | null> => {
+      if (signingOut.current && nextUser) return null;
+      const gen = ++hydrateGen.current;
       setUser(nextUser);
       if (!nextUser) {
         tokenRef.current = null;
@@ -74,21 +78,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       try {
         const hydrated = await api.getSession();
+        if (gen !== hydrateGen.current) return null;
         setSession(hydrated);
         setError(null);
         return hydrated;
       } catch (err) {
+        if (gen !== hydrateGen.current) return null;
         setSession(null);
         setError(err instanceof Error ? err.message : "שגיאה");
         return null;
       } finally {
-        setLoading(false);
+        if (gen === hydrateGen.current) setLoading(false);
       }
     },
     [api],
   );
 
   const refresh = useCallback(async (): Promise<SessionResponse | null> => {
+    if (signingOut.current) return null;
     const { data } = await supabase.auth.getSession();
     tokenRef.current = data.session?.access_token ?? null;
     return hydrate(data.session?.user ?? null);
@@ -96,6 +103,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, authSession) => {
+      if (signingOut.current && event !== "SIGNED_OUT") return;
       tokenRef.current = authSession?.access_token ?? null;
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") {
         void hydrate(authSession?.user ?? null);
@@ -112,11 +120,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     api,
     refresh,
     signOut: async () => {
+      signingOut.current = true;
+      hydrateGen.current += 1;
       tokenRef.current = null;
-      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setError(null);
+      setLoading(false);
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+        await supabase.auth.signOut({ scope: "global" });
+      } finally {
+        signingOut.current = false;
+      }
     },
   };
 

@@ -57,6 +57,22 @@ def test_role_matrix_server_not_ui():
     assert authorize(ctx=_ctx("owner"), action="workspace.delete").allowed
 
 
+def test_solo_owner_cannot_view_audit_without_feature():
+    catalog = load_catalog()
+    ctx = AuthzContext(
+        user_id="u1",
+        workspace_id="w1",
+        role_key="owner",
+        workspace_status="active",
+        subscription_status="active",
+        plan_key="solo",
+        features=catalog["_plan_features"]["solo"],
+    )
+    denied = authorize(ctx=ctx, action="audit.view")
+    assert not denied.allowed
+    assert denied.code == "FEATURE_NOT_INCLUDED"
+
+
 def test_cors_staging_excludes_localhost():
     origins = parse_cors_origins("https://staging.example.com", extra="", app_env="staging")
     assert origins == ["https://staging.example.com"]
@@ -85,3 +101,18 @@ def test_cors_preflight_allows_web_origin():
     )
     assert res.status_code in {200, 204}
     assert res.headers.get("access-control-allow-origin") == origin
+
+
+def test_foundation_routes_require_bearer():
+    client = TestClient(app)
+    ws = "00000000-0000-0000-0000-000000000001"
+    for path in (
+        f"/api/v1/workspaces/{ws}/members",
+        f"/api/v1/workspaces/{ws}/audit",
+        f"/api/v1/workspaces/{ws}/security",
+        "/api/v1/authz/catalog",
+        "/api/v1/me",
+    ):
+        res = client.get(path) if path != "/api/v1/me" else client.patch(path, json={"full_name": "x"})
+        assert res.status_code == 401, path
+        assert res.json()["error"]["code"] == "UNAUTHENTICATED"

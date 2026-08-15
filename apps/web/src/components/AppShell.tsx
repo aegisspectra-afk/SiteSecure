@@ -1,13 +1,14 @@
 import { cn, Drawer, Dropdown, DropdownItem, Status } from "@site-secure/ui";
-import { Menu } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { he } from "../i18n/he";
-import { appNav, roleLabel } from "../lib/app-nav";
+import { appNav, bottomNav, isNavSelected, planLabel, roleLabel } from "../lib/app-nav";
 import { can, canAny } from "../lib/can";
 import { useDocumentMeta } from "../lib/document-meta";
 import { dayGreeting } from "../lib/greeting";
 import { useSession } from "../lib/session";
+import { AppBottomNav } from "./AppBottomNav";
+import { NavIcon } from "./NavIcon";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { session, signOut } = useSession();
@@ -18,6 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const features = membership?.features ?? [];
   const roleKey = membership?.role_key;
   const groups = appNav(roleKey, features);
+  const tabs = bottomNav(roleKey, features);
   const displayName = session?.profile?.full_name?.trim() || session?.email || he.brand;
   useDocumentMeta({
     title: `${membership?.workspace_name ?? he.brand} — ${he.homeTitle}`,
@@ -37,16 +39,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             {group.label}
           </p>
           {group.items.map((item) => {
-            const selected =
-              item.to === "/app/settings"
-                ? pathname === "/app/settings" || pathname === "/app/settings/"
-                : pathname === item.to || pathname.startsWith(`${item.to}/`);
+            const selected = isNavSelected(item.to, pathname);
             return (
               <Link
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "ops-sidebar-link rounded-[var(--radius-control)] px-3 py-2 text-sm",
+                  "ops-sidebar-link flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-sm",
                   "focus-visible:outline-2 focus-visible:outline-offset-2",
                   tone === "dark"
                     ? "focus-visible:outline-[var(--color-auth-accent)]"
@@ -59,8 +58,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                       ? "border-s-2 border-transparent text-[var(--color-auth-muted)] hover:bg-[var(--color-auth-elevated)] hover:text-[var(--color-auth-fg)]"
                       : "border-s-2 border-transparent text-fg-muted hover:bg-bg-subtle hover:text-fg",
                 )}
+                aria-current={selected ? "page" : undefined}
                 onClick={() => setOpen(false)}
               >
+                <NavIcon
+                  name={item.icon}
+                  active={selected}
+                  className="size-4 shrink-0"
+                />
                 {item.label}
               </Link>
             );
@@ -84,32 +89,25 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-4 truncate text-sm font-medium text-[var(--color-auth-fg)]">
             {membership?.workspace_name}
           </p>
-          <p className="text-xs text-[var(--color-auth-muted)]">{roleLabel(roleKey)}</p>
+          <p className="text-xs text-[var(--color-auth-muted)]">
+            {roleLabel(roleKey)}
+            {membership?.plan_key ? ` · ${planLabel(membership.plan_key)}` : ""}
+          </p>
         </div>
         <div className="flex-1 overflow-y-auto">{navList("dark")}</div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-bg-1 px-4 py-2 lg:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              className="rounded-[var(--radius-control)] p-2 hover:bg-bg-subtle lg:hidden"
-              aria-label={he.menu}
-              onClick={() => setOpen(true)}
-            >
-              <Menu className="size-5" />
-            </button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-fg lg:text-base">
-                {dayGreeting()}
-                {session?.profile?.full_name ? ` · ${session.profile.full_name}` : ""}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-fg lg:text-base">
+              {dayGreeting()}
+              {session?.profile?.full_name ? ` · ${session.profile.full_name}` : ""}
+            </p>
+            <div className="mt-0.5 hidden items-center gap-3 sm:flex">
+              <p className="truncate text-xs text-fg-muted">
+                {membership?.workspace_name} · {he.overviewKicker}
               </p>
-              <div className="mt-0.5 hidden items-center gap-3 sm:flex">
-                <p className="truncate text-xs text-fg-muted">
-                  {membership?.workspace_name} · {he.overviewKicker}
-                </p>
-                <Status label={he.statusOperational} tone="success" />
-              </div>
+              <Status label={he.statusOperational} tone="success" />
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -127,7 +125,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="border-b border-border px-3 py-2">
                 <p className="truncate text-sm font-medium text-fg">{displayName}</p>
                 <p className="ltr-meta truncate text-xs text-fg-muted">{session?.email}</p>
-                <p className="mt-1 text-xs text-fg-muted">{roleLabel(roleKey)}</p>
+                <p className="mt-1 text-xs text-fg-muted">
+                  {roleLabel(roleKey)}
+                  {membership?.plan_key ? ` · ${planLabel(membership.plan_key)}` : ""}
+                </p>
               </div>
               {can(roleKey, "workspace.edit", features) ? (
                 <DropdownItem onClick={() => void navigate({ to: "/app/settings" })}>{he.navSettings}</DropdownItem>
@@ -144,11 +145,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Dropdown>
           </div>
         </header>
-        <main id="main" className="flex-1 p-4 lg:p-6">
+        <main id="main" className="ops-main flex-1 p-4 lg:p-6">
           {children}
         </main>
       </div>
-      <Drawer open={open} onClose={() => setOpen(false)} title={he.brand}>
+      <AppBottomNav items={tabs} pathname={pathname} moreOpen={open} onMore={() => setOpen(true)} />
+      <Drawer open={open} onClose={() => setOpen(false)} title={he.navMore}>
         {navList("light")}
       </Drawer>
     </div>

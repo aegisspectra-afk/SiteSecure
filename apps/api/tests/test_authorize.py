@@ -111,6 +111,11 @@ def test_solo_can_invite_ft():
     assert d.allowed is True
 
 
+def test_business_can_invite_admin():
+    d = authorize(ctx=_ctx("owner", plan="business"), action="users.invite", invite_role="administrator")
+    assert d.allowed is True
+
+
 def test_inventory_feature_gated_on_solo():
     d = authorize(ctx=_ctx("owner", plan="solo"), action="inventory.view")
     assert d.allowed is False
@@ -125,3 +130,108 @@ def test_quote_locked_state():
     )
     assert d.allowed is False
     assert d.code == "RESOURCE_STATE"
+
+
+FOUNDATION_ACTIONS = (
+    "dashboard.view",
+    "settings.view",
+    "settings.general",
+    "workspace.edit",
+    "workspace.billing",
+    "workspace.delete",
+    "users.view",
+    "users.invite",
+    "users.manage",
+    "roles.manage",
+    "audit.view",
+)
+
+FOUNDATION_MATRIX = {
+    "owner": {action: True for action in FOUNDATION_ACTIONS},
+    "administrator": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": True,
+        "workspace.edit": True,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": True,
+        "users.invite": True,
+        "users.manage": True,
+        "roles.manage": True,
+        "audit.view": True,
+    },
+    "manager": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": True,
+        "workspace.edit": False,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": True,
+        "users.invite": False,
+        "users.manage": False,
+        "roles.manage": False,
+        "audit.view": False,
+    },
+    "sales": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": False,
+        "workspace.edit": False,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": False,
+        "users.invite": False,
+        "users.manage": False,
+        "roles.manage": False,
+        "audit.view": False,
+    },
+    "technician": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": False,
+        "workspace.edit": False,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": False,
+        "users.invite": False,
+        "users.manage": False,
+        "roles.manage": False,
+        "audit.view": False,
+    },
+    "founding_technician": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": True,
+        "workspace.edit": False,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": False,
+        "users.invite": False,
+        "users.manage": False,
+        "roles.manage": False,
+        "audit.view": False,
+    },
+    "viewer": {
+        "dashboard.view": True,
+        "settings.view": True,
+        "settings.general": False,
+        "workspace.edit": False,
+        "workspace.billing": False,
+        "workspace.delete": False,
+        "users.view": False,
+        "users.invite": False,
+        "users.manage": False,
+        "roles.manage": False,
+        "audit.view": False,
+    },
+}
+
+
+def test_foundation_role_matrix():
+    for role, expected in FOUNDATION_MATRIX.items():
+        for action, allowed in expected.items():
+            decision = authorize(ctx=_ctx(role), action=action)
+            assert decision.allowed is allowed, f"{role} {action} expected {allowed} got {decision.code}"
+

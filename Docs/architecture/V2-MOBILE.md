@@ -34,17 +34,26 @@ Managers may log in to assign/check, but IA is optimized for field completion.
 
 ## 3. Navigation (priority)
 
-Tab bar (RTL-aware). Items appear only when the module exists **and** `can(permission)`:
+Tab bar / bottom navigation is first-class IA, not a decorative footer.
 
-1. **היום (Today)** — default. Next job, start/navigate.  
-2. **עבודות (Jobs)** — assigned list, filters: today / week / open  
-3. **אתרים (Sites)** — assigned site files  
-4. **לקוחות (Customers)** — assigned customers (field list/peek, not the desktop 360 clone)  
-5. **שירות (Service)** — when service-call API/UI exists  
-6. **התראות**  
-7. **פרופיל**
+**Binding visual and IA rules:** [V2-APP-SHELL.md](../ux/V2-APP-SHELL.md) §4.
 
-If the tab bar cannot hold all items honestly, **התראות** and **שירות** may sit behind עוד — Today, Jobs, Sites, Customers stay first. Do not add a marketing/landing tab.
+One centralized nav config shared with web. Items appear only when the module exists **and** `can(permission)` **and** the plan includes the feature.
+
+Field-first default when those modules exist:
+
+1. **היום (Today)** — default. Next job, start/navigate.
+2. **עבודות (Jobs)** — assigned list, filters: today / week / open
+3. **אתרים (Sites)** — assigned site files
+4. **לקוחות (Customers)** — assigned customers (field list/peek, not the desktop 360 clone)
+5. **שירות (Service)** — when service-call API/UI exists
+6. Overflow **עוד** — notifications, profile-adjacent tools, never logout/billing/legal in the bar
+
+Preferred maximum: 3–5 primary destinations. Absolute maximum: 6.
+
+Until Jobs / Sites / Customers / Service UI exist, native and web must **not** invent those tabs. Home + עוד (if overflow exists) is the honest bar.
+
+Do not add a marketing/landing tab. Do not copy the full desktop sidebar.
 
 Customer **360, leads, quotes** remain authenticated **web** CRM ([V2-CRM-SPEC.md](../ux/V2-CRM-SPEC.md)). Mobile Customers is assigned field access to the same `customers` rows.
 

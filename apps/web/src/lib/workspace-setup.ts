@@ -5,6 +5,7 @@ export type SetupStep = {
   id: string;
   label: string;
   done: boolean;
+  current: boolean;
   href?: "/app/settings/users";
 };
 
@@ -12,19 +13,27 @@ export function workspaceSetup(opts: {
   roleKey: string | undefined;
   features: string[];
   memberCount: number | null;
-}): { steps: SetupStep[]; percent: number; complete: boolean } {
-  const steps: SetupStep[] = [{ id: "workspace", label: he.setupWorkspace, done: true }];
+}): { steps: SetupStep[]; complete: boolean } {
+  const steps: SetupStep[] = [{ id: "workspace", label: he.setupWorkspace, done: true, current: false }];
   if (can(opts.roleKey, "users.invite", opts.features) || can(opts.roleKey, "users.view", opts.features)) {
+    const invited = (opts.memberCount ?? 1) > 1;
     steps.push({
       id: "invite",
       label: he.setupInvite,
-      done: (opts.memberCount ?? 1) > 1,
+      done: invited,
+      current: !invited,
       href: "/app/settings/users",
     });
   }
-  const doneCount = steps.filter((step) => step.done).length;
-  const percent = Math.round((doneCount / steps.length) * 100);
-  return { steps, percent, complete: doneCount === steps.length };
+  const complete = steps.every((step) => step.done);
+  if (complete) {
+    return { steps: steps.map((step) => ({ ...step, current: false })), complete };
+  }
+  const currentIndex = steps.findIndex((step) => !step.done);
+  return {
+    steps: steps.map((step, index) => ({ ...step, current: index === currentIndex })),
+    complete,
+  };
 }
 
 export function liveAdminActions(

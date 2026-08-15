@@ -46,8 +46,10 @@ The AppShell (sidebar, workspace, user) exists **only** under `/app`. Marketing 
 
 **Tablet / small web**
 
-- Collapse sidebar to rail or sheet
-- Do not pretend this is the technician product
+- Phone: bottom navigation from the same `appNav` / `bottomNav` config ([V2-APP-SHELL.md](../ux/V2-APP-SHELL.md))
+- Tablet: collapsible sidebar / sheet
+- Do not pretend the web SPA is the native technician product
+- Do not copy every sidebar item into the bottom bar
 
 RTL: `dir="rtl"` on `<html>`. Numbers, SKUs, IPs, MACs use `dir="ltr"` spans.
 

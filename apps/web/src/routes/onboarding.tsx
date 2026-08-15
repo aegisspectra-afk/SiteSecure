@@ -103,7 +103,7 @@ function OnboardingPage() {
           setSubmitting(true);
           setError(null);
           try {
-            const ws = await api.createWorkspace({ name, plan_key: "solo" });
+            const ws = await api.createWorkspace({ name });
             setCreated(true);
             try {
               await api.patchWorkspace(ws.id, { timezone, vat_percent: vatPercent });

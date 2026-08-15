@@ -49,7 +49,7 @@ function DashboardBody({
   variant: "ops" | "sales" | "observe" | "today";
   api: ReturnType<typeof useSession>["api"];
 }) {
-  const canTeam = can(roleKey, "users.view", features);
+  const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
   const canSecurity = canAny(roleKey, ["settings.general", "workspace.edit"], features);
 
   const query = useQuery({
@@ -57,10 +57,10 @@ function DashboardBody({
     enabled: Boolean(workspaceId),
     queryFn: () => api.getDashboard(workspaceId!),
   });
-  const members = useQuery({
-    queryKey: ["members", workspaceId],
+  const usage = useQuery({
+    queryKey: ["usage", workspaceId],
     enabled: Boolean(workspaceId) && canTeam,
-    queryFn: () => api.listMembers(workspaceId!),
+    queryFn: () => api.getUsage(workspaceId!),
   });
   const security = useQuery({
     queryKey: ["security", workspaceId],
@@ -83,7 +83,7 @@ function DashboardBody({
     );
   }
 
-  const memberCount = canTeam ? (members.data?.length ?? null) : null;
+  const memberCount = canTeam ? (usage.data?.active_members ?? null) : null;
   const securityData = canSecurity ? (security.data ?? null) : null;
 
   if (variant === "observe") {

@@ -7,7 +7,9 @@ Read, in order:
 1. `Docs/SITE-SECURE-CONTEXT.md` (V1 facts)
 2. `docs/architecture/V1-TO-V2.md`
 3. `docs/architecture/V2-ARCHITECTURE.md`
-4. The domain doc for your change (database, RBAC, RLS, API, web, mobile, UX)
+4. `docs/architecture/V2-SAAS-EXPERIENCE.md` (SaaS / RBAC / billing / product UX)
+5. `docs/ux/V2-APP-SHELL.md` (shell, primitives, mobile bottom nav)
+6. The domain doc for your change (database, RBAC, RLS, API, web, mobile, UX)
 
 If a change fights those documents, update the document in the same PR and explain why.
 

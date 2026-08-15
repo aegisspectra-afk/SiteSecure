@@ -12,7 +12,18 @@ from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .errors import ApiError, error_response
-from .routers import auth, customers, dashboard, documents, health, jobs, quotes, sites, workspaces
+from .routers import (
+    auth,
+    customers,
+    dashboard,
+    documents,
+    health,
+    jobs,
+    quotes,
+    sites,
+    team,
+    workspaces,
+)
 
 logger = logging.getLogger("site-secure")
 
@@ -90,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(workspaces.router)
+    app.include_router(team.router)
     app.include_router(customers.router)
     app.include_router(sites.router)
     app.include_router(jobs.router)

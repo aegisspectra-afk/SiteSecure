@@ -39,6 +39,7 @@ MESSAGES = {
     "TENANT_INACTIVE": "הסביבה אינה פעילה",
     "SUBSCRIPTION_INVALID": "המנוי אינו תקין",
     "FEATURE_NOT_INCLUDED": "היכולת אינה כלולה בתוכנית",
+    "PLAN_LIMIT_REACHED": "הגעתם למגבלת התוכנית הנוכחית",
     "PERMISSION_DENIED": "אין הרשאה לפעולה זו",
     "SCOPE_DENIED": "אין גישה למשאב זה",
     "RESOURCE_STATE": "לא ניתן לבצע את הפעולה במצב הנוכחי",

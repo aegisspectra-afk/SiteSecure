@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from ..authz.catalog import load_catalog
+from ..authz.catalog import default_plan_key, load_catalog
 from ..deps import UserClient, current_user, user_client
 from ..errors import ApiError
 
@@ -74,11 +74,11 @@ def get_session(
                 continue
             ws = ws_res.json()[0]
             ent_res = client.rpc("my_workspace_entitlements", {"p_workspace_id": ws_id})
-            plan_key = "solo"
+            plan_key = default_plan_key()
             features: list[str] = []
             if ent_res.status_code == 200 and ent_res.json():
                 payload = ent_res.json()
-                plan_key = payload.get("plan_key", "solo")
+                plan_key = payload.get("plan_key") or default_plan_key()
                 features = list(payload.get("features") or [])
             memberships.append(
                 MembershipOut(

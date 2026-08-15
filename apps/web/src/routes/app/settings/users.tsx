@@ -5,7 +5,8 @@ import { useState, type FormEvent } from "react";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
-import { roleLabel } from "../../../lib/app-nav";
+import { assignableInviteRoles, seatBucket } from "@site-secure/authz";
+import { planLabel, roleLabel } from "../../../lib/app-nav";
 import { can } from "../../../lib/can";
 import { useSession } from "../../../lib/session";
 
@@ -37,6 +38,15 @@ function UsersBody() {
     enabled: Boolean(workspaceId),
     queryFn: () => api.listMembers(workspaceId!),
   });
+  const usageQuery = useQuery({
+    queryKey: ["usage", workspaceId],
+    enabled: Boolean(workspaceId),
+    queryFn: () => api.getUsage(workspaceId!),
+  });
+
+  const meters = usageQuery.data?.meters ?? [];
+  const seatMeter = meters.find((row) => row.key === seatBucket(roleKey));
+  const atSeatLimit = Boolean(seatMeter?.at_limit);
 
   const invite = useMutation({
     mutationFn: () => api.createInvitation(workspaceId!, { email: email.trim(), role_key: roleKey }),
@@ -45,8 +55,13 @@ function UsersBody() {
       setRoleKey("technician");
       setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
     },
     onError: (err) => {
+      if (err instanceof ApiClientError && err.code === "PLAN_LIMIT_REACHED") {
+        setFormError(`${he.planLimitReached} ${he.planLimitHint}`);
+        return;
+      }
       setFormError(err instanceof ApiClientError ? err.message : he.sessionError);
     },
   });
@@ -54,12 +69,15 @@ function UsersBody() {
   const patch = useMutation({
     mutationFn: (input: { id: string; role_key: string }) =>
       api.patchMember(workspaceId!, input.id, { role_key: input.role_key }),
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
+    },
   });
 
   function onInvite(e: FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || atSeatLimit) return;
     invite.mutate();
   }
 
@@ -78,29 +96,32 @@ function UsersBody() {
     );
   }
 
-  const inviteRoles =
-    membership?.plan_key === "solo"
-      ? [
-          { value: "technician", label: roleLabel("technician") },
-          { value: "founding_technician", label: roleLabel("founding_technician") },
-          { value: "viewer", label: roleLabel("viewer") },
-        ]
-      : [
-          { value: "technician", label: roleLabel("technician") },
-          { value: "founding_technician", label: roleLabel("founding_technician") },
-          { value: "viewer", label: roleLabel("viewer") },
-          { value: "sales", label: roleLabel("sales") },
-          { value: "manager", label: roleLabel("manager") },
-          { value: "administrator", label: roleLabel("administrator") },
-        ];
-  const manageRoles =
-    membership?.role_key === "owner"
-      ? [...inviteRoles, { value: "owner", label: roleLabel("owner") }]
-      : inviteRoles;
+  const canAssignOwner = can(membership?.role_key, "workspace.delete", membership?.features ?? []);
+  const inviteRoles = assignableInviteRoles(membership?.plan_key).map((value) => ({
+    value,
+    label: roleLabel(value),
+  }));
+  const manageRoles = canAssignOwner
+    ? [...inviteRoles, { value: "owner", label: roleLabel("owner") }]
+    : inviteRoles;
+  const usage = usageQuery.data?.meters ?? [];
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title={he.usersTitle} description={he.usersLead} />
+      <PageHeader
+        title={he.usersTitle}
+        description={`${planLabel(membership?.plan_key)} · ${he.usersLead}`}
+      />
+      <dl className="grid gap-3 sm:grid-cols-2">
+        {usage.map((row) => (
+          <div key={row.key} className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
+            <dt className="text-xs font-medium text-fg-muted">{row.label_he}</dt>
+            <dd className="mt-1 text-sm font-semibold text-fg">
+              {row.unlimited ? he.usersUsageUnlimited : `${row.current} / ${row.limit}`}
+            </dd>
+          </div>
+        ))}
+      </dl>
       {canInvite ? (
         <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={onInvite}>
           <Input
@@ -123,10 +144,22 @@ function UsersBody() {
               </option>
             ))}
           </Select>
-          <Button type="submit" variant="primary" loading={invite.isPending} className="h-11">
+          <Button
+            type="submit"
+            variant="primary"
+            loading={invite.isPending}
+            disabled={atSeatLimit}
+            className="h-11"
+            aria-describedby={atSeatLimit ? "seat-limit-hint" : undefined}
+          >
             {he.inviteUser}
           </Button>
         </form>
+      ) : null}
+      {canInvite && atSeatLimit ? (
+        <p id="seat-limit-hint" className="text-sm text-fg-muted" role="status">
+          {he.planLimitReached} {he.planLimitHint}
+        </p>
       ) : null}
       {formError ? (
         <p className="text-sm text-danger" role="alert">

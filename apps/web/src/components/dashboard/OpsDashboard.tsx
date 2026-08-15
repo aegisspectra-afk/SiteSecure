@@ -30,7 +30,7 @@ export function OpsDashboard({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={he.overviewTitle} description={he.overviewKicker} />
-      {!setup.complete ? <WorkspaceSetup steps={setup.steps} percent={setup.percent} /> : null}
+      {!setup.complete ? <WorkspaceSetup steps={setup.steps} /> : null}
       {empty ? (
         <div className="ops-card">
           <EmptyState

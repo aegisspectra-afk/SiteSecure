@@ -37,7 +37,9 @@ Authenticated
   → ALLOW | DENY
 ```
 
-Every DENY has a machine code (`UNAUTHENTICATED`, `TENANT_INACTIVE`, `SUBSCRIPTION_INVALID`, `FEATURE_NOT_INCLUDED`, `PERMISSION_DENIED`, `SCOPE_DENIED`, `RESOURCE_STATE`, `BUSINESS_RULE`) plus a Hebrew user message.
+Every DENY has a machine code (`UNAUTHENTICATED`, `TENANT_INACTIVE`, `SUBSCRIPTION_INVALID`, `FEATURE_NOT_INCLUDED`, `PLAN_LIMIT_REACHED`, `PERMISSION_DENIED`, `SCOPE_DENIED`, `RESOURCE_STATE`, `BUSINESS_RULE`) plus a Hebrew user message.
+
+Plan limits are catalog-driven (`packages/authz/catalog.json`). Do not hardcode seat caps in routers or React. Product OS: [V2-SAAS-EXPERIENCE.md](../architecture/V2-SAAS-EXPERIENCE.md).
 
 ---
 

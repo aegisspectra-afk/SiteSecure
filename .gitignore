@@ -38,6 +38,9 @@ Thumbs.db
 # Vercel
 .vercel/
 
+# Router / test caches
+apps/web/.tanstack/
+
 # Leftover package-manager files (this repo uses npm workspaces)
 pnpm-workspace.yaml
 pnpm-lock.yaml

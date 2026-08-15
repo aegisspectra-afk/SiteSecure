@@ -5,6 +5,8 @@
 
 **Inherits (do not contradict):**
 
+- SaaS OS: [V2-SAAS-EXPERIENCE.md](../architecture/V2-SAAS-EXPERIENCE.md)
+- Application shell: [V2-APP-SHELL.md](./V2-APP-SHELL.md)
 - UX OS: [V2-UX-PSYCHOLOGY.md](./V2-UX-PSYCHOLOGY.md)
 - Visual: [V2-DESIGN-SYSTEM.md](./V2-DESIGN-SYSTEM.md)
 - Web IA: [V2-WEB.md](../architecture/V2-WEB.md)

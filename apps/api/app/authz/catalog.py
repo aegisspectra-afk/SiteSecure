@@ -40,4 +40,19 @@ def load_catalog(path: str | None = None) -> dict[str, Any]:
     data["_role_scope"] = {r["key"]: r["default_scope"] for r in data["roles"]}
     data["_plan_features"] = {p["key"]: frozenset(p["features"]) for p in data["plans"]}
     data["_plan_limits"] = {p["key"]: p.get("limits", {}) for p in data["plans"]}
+    data["_plan_assignable"] = {
+        p["key"]: frozenset(p.get("assignable_roles") or ()) for p in data["plans"]
+    }
+    data.setdefault("default_plan_key", "solo")
+    data.setdefault(
+        "seat_buckets",
+        {
+            "seats_operator": ["owner", "administrator", "manager", "sales"],
+            "seats_field": ["technician", "founding_technician", "viewer"],
+        },
+    )
     return data
+
+
+def default_plan_key() -> str:
+    return str(load_catalog().get("default_plan_key") or "solo")

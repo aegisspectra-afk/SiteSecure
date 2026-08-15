@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { OnboardingForm } from "../src/components/OnboardingForm";
 import { he } from "../src/i18n/he";
 import { can, canAny, canAll } from "../src/lib/can";
-import { appNav } from "../src/lib/app-nav";
+import { appNav, bottomNav } from "../src/lib/app-nav";
 import { roleGranted } from "../src/lib/role-catalog";
 
 describe("OnboardingForm", () => {
@@ -144,6 +144,28 @@ describe("appNav", () => {
 
     const ft = paths("founding_technician", solo);
     expect(ft).toEqual(["/app/today", "/app/settings/security"]);
+  });
+
+  it("bottom nav is a short live spine, not a copied sidebar", () => {
+    const kinds = (role: string, features: string[]) =>
+      bottomNav(role, features).map((item) => (item.kind === "more" ? "more" : item.to));
+
+    expect(kinds("technician", solo)).toEqual(["/app/today"]);
+    expect(kinds("technician", solo).some((to) => String(to).includes("job") || String(to).includes("customer"))).toBe(
+      false,
+    );
+
+    expect(kinds("sales", solo)).toEqual(["/app/dashboard"]);
+    expect(kinds("owner", solo)).toEqual(["/app/dashboard", "more"]);
+    expect(kinds("owner", solo)).not.toContain("/app/settings");
+    expect(kinds("owner", solo)).not.toContain("/app/settings/security");
+
+    const ownerMore = bottomNav("owner", solo).find((item) => item.kind === "more");
+    expect(ownerMore?.label).toBe(he.navMore);
+
+    expect(kinds("founding_technician", solo)).toEqual(["/app/today", "more"]);
+    expect(kinds("manager", solo)).toEqual(["/app/dashboard", "more"]);
+    expect(bottomNav("owner", solo).length).toBeLessThanOrEqual(5);
   });
 });
 

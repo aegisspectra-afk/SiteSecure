@@ -2,6 +2,8 @@
 
 **Status:** Source of truth for V2 engineering  
 **Companion:** [V1 → V2 decisions](./V1-TO-V2.md)  
+**SaaS / RBAC / billing UX:** [V2-SAAS-EXPERIENCE.md](./V2-SAAS-EXPERIENCE.md)  
+**Authenticated shell / mobile bottom nav:** [V2-APP-SHELL.md](../ux/V2-APP-SHELL.md)  
 **Rule:** One platform, three clients. Public Web, authenticated Web, and mobile are not three products.
 
 ```
@@ -379,7 +381,7 @@ subscriptions (workspace-level)
 workspace_features (effective set, derived from plan + overrides)
 ```
 
-Tiers to seed: `solo`, `business`, `enterprise`. Prices are **not** hardcoded in UI components; they come from `plans` (or a config package that mirrors the table).
+Tiers to seed: `solo`, `business`, `enterprise`. Prices are **not** hardcoded in UI components; they come from `plans` (or a config package that mirrors the table). Narrative Free/Pro examples in [V2-SAAS-EXPERIENCE.md](./V2-SAAS-EXPERIENCE.md) are psychology only.
 
 Stripe (or equivalent) is integrated in Phase 14. Until then, a workspace can be seeded with a plan for development. No fake checkout in production.
 

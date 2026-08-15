@@ -1,21 +1,22 @@
--- RLS isolation cases (run against a migrated database with two test users).
--- These are the stop-the-line checks from docs/security/V2-RLS.md.
---
--- Setup (API or SQL as service role):
---   User A owner of Workspace A
---   User B owner of Workspace B
---   FT in Workspace A assigned only to Site A1
---
--- Then SET request.jwt.claim.sub / use authenticated role as each user:
---
--- 1. A cannot SELECT customers of B
--- 2. B cannot SELECT sites of A
--- 3. FT cannot SELECT Site A2
--- 4. FT cannot SELECT quotes without site assignment
--- 5. viewer cannot INSERT customers
--- 6. technician cannot UPDATE workspace_memberships
--- 7. anon cannot SELECT customers
--- 8. storage object under B's workspace_id denied to A
---
--- Implementation of executable pgTAP comes in Phase 2 once a live V2 project exists.
-SELECT 1;
+-- RLS isolation cases for SITE SECURE V2.
+-- Behavioral JWT cases live in apps/api/tests/test_tenant_isolation.py (pytest -m live).
+-- This file asserts the policies that make those cases possible.
+
+SELECT pol.polname
+FROM pg_policy pol
+JOIN pg_class rel ON rel.oid = pol.polrelid
+JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+WHERE nsp.nspname = 'public'
+  AND pol.polname IN (
+    'memberships_select_member',
+    'memberships_insert_privileged',
+    'memberships_update_privileged',
+    'memberships_delete_privileged',
+    'invitations_all_privileged',
+    'profiles_select_self',
+    'profiles_select_coworkers',
+    'workspaces_select_member',
+    'workspaces_update_privileged',
+    'audit_logs_select'
+  )
+ORDER BY pol.polname;

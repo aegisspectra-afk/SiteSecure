@@ -147,6 +147,24 @@ export type SecurityCenter = {
   signals: SecuritySignal[];
 };
 
+export type WorkspaceUsageMeter = {
+  key: string;
+  label_he: string;
+  current: number;
+  limit: number;
+  unlimited: boolean;
+  unit: string;
+  at_limit: boolean;
+};
+
+export type WorkspaceUsage = {
+  workspace_id: string;
+  plan_key: string;
+  active_members: number;
+  pending_invites: number;
+  meters: WorkspaceUsageMeter[];
+};
+
 export type AuthzCatalog = {
   roles: { key: string; label_he: string; label_en: string; default_scope: string }[];
   permissions: { key: string; group: string }[];
@@ -211,6 +229,8 @@ export function createApiClient(opts: {
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
     listMembers: (workspaceId: string) =>
       request<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`),
+    getUsage: (workspaceId: string) =>
+      request<WorkspaceUsage>(`/api/v1/workspaces/${workspaceId}/usage`),
     patchMember: (
       workspaceId: string,
       memberId: string,

@@ -4,8 +4,6 @@ from ..errors import MESSAGES
 from .catalog import load_catalog
 from .types import AuthzContext, Decision, ResourceRef
 
-SOLO_INVITE_BLOCKED_ROLES = frozenset({"administrator", "manager", "sales", "owner"})
-FIELD_ROLES = frozenset({"technician", "founding_technician", "viewer"})
 QUOTE_LOCKED = frozenset({"approved", "cancelled"})
 
 
@@ -99,9 +97,9 @@ def _resource_state(action: str, resource: ResourceRef | None) -> Decision | Non
 def _business_rules(
     ctx: AuthzContext, action: str, *, invite_role: str | None
 ) -> Decision | None:
-    if action == "users.invite" and ctx.plan_key == "solo" and invite_role:
-        if invite_role in SOLO_INVITE_BLOCKED_ROLES:
-            return _deny("BUSINESS_RULE", reason="solo_role_restricted", invite_role=invite_role)
-        if invite_role not in FIELD_ROLES:
-            return _deny("BUSINESS_RULE", reason="solo_role_restricted", invite_role=invite_role)
+    if action == "users.invite" and invite_role:
+        catalog = load_catalog()
+        assignable = catalog.get("_plan_assignable", {}).get(ctx.plan_key, frozenset())
+        if invite_role not in assignable:
+            return _deny("BUSINESS_RULE", reason="role_not_assignable", invite_role=invite_role)
     return None

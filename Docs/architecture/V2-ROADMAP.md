@@ -5,6 +5,8 @@
 
 Architecture documents in this folder are **Phase 0–1**. Database migrations in `/supabase` begin **Phase 2**.
 
+Product / SaaS / RBAC / billing UX operating system: [V2-SAAS-EXPERIENCE.md](./V2-SAAS-EXPERIENCE.md). That spec does **not** unlock CRM, Site File, Mobile, or fake billing. Catalog plans remain `solo` / `business` / `enterprise`.
+
 SITE SECURE is **one product, three clients** of the same FastAPI + Supabase stack:
 
 ```
@@ -27,7 +29,7 @@ Public Website is **not** “another `/app` screen” and is **not** deferred ma
 
 Authenticated app modules (CRM, Quotes, Jobs, …) still ship only when their spec is approved. Hidden nav ≠ fake modules.
 
-**Current stop:** Public Website at `/`, Auth, Vercel Web. Do **not** start Phase 7B, Site File application, or Mobile. Web host: [VERCEL.md](../operations/VERCEL.md). API stays local until a public FastAPI origin exists.
+**Current stop:** Foundation SaaS (workspace, catalog plans, `authorize()` + RLS, seat limits). Next: **server usage meters on Render**. Do **not** start CRM / Phase 7B, Site File, Mobile Expo, billing, or fake dashboard widgets. Web: [VERCEL.md](../operations/VERCEL.md). API: Render `site-secure-api-staging`.
 
 ---
 

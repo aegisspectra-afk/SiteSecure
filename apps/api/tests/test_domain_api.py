@@ -29,6 +29,12 @@ def test_openapi_and_health():
         "/api/v1/workspaces/{workspace_id}/documents/uploads",
         "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/start",
         "/api/v1/workspaces/{workspace_id}/dashboard",
+        "/api/v1/workspaces/{workspace_id}/members",
+        "/api/v1/workspaces/{workspace_id}/usage",
+        "/api/v1/workspaces/{workspace_id}/audit",
+        "/api/v1/workspaces/{workspace_id}/security",
+        "/api/v1/me",
+        "/api/v1/authz/catalog",
     ):
         assert path in paths
 

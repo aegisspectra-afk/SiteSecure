@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, Header, Request
 
-from .authz.catalog import load_catalog
+from .authz.catalog import default_plan_key, load_catalog
 from .authz.types import AuthzContext
 from .config import Settings, get_settings
 from .errors import ApiError
@@ -65,12 +65,12 @@ def load_authz_context(
     ws = workspace.json()[0]
 
     ent = client.rpc("my_workspace_entitlements", {"p_workspace_id": workspace_id})
-    plan_key = "solo"
+    plan_key = default_plan_key()
     sub_status = "active"
     features: frozenset[str] = frozenset()
     if ent.status_code == 200 and ent.json():
         payload = ent.json()
-        plan_key = payload.get("plan_key") or "solo"
+        plan_key = payload.get("plan_key") or default_plan_key()
         sub_status = payload.get("status") or "active"
         features = frozenset(payload.get("features") or [])
     else:

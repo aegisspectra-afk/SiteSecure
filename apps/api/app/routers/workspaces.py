@@ -8,18 +8,20 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from ..audit import write_audit
+from ..authz.catalog import default_plan_key
 from ..authz.engine import authorize
+from ..authz.limits import evaluate_seat_limit
+from ..authz.usage import fetch_occupied_roles
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import MESSAGES, ApiError
 
 router = APIRouter(prefix="/api/v1", tags=["workspaces"])
 
-SOLO_ALLOWED_INVITE_ROLES = frozenset({"founding_technician", "technician", "viewer"})
-
 
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
-    plan_key: str = "solo"
+    plan_key: str | None = None
 
 
 class WorkspaceOut(BaseModel):
@@ -38,7 +40,7 @@ class WorkspacePatch(BaseModel):
 
 class InviteCreate(BaseModel):
     email: str = Field(min_length=3, max_length=320)
-    role_key: str
+    role_key: str | None = None
 
 
 class InviteOut(BaseModel):
@@ -65,9 +67,10 @@ def create_workspace(
     client: Annotated[UserClient, Depends(user_client)],
     _: Annotated[dict, Depends(current_user)],
 ) -> WorkspaceOut:
+    plan_key = default_plan_key()
     res = client.rpc(
         "create_workspace",
-        {"p_name": body.name.strip(), "p_plan_key": body.plan_key},
+        {"p_name": body.name.strip(), "p_plan_key": plan_key},
     )
     if res.status_code != 200:
         detail = res.text
@@ -79,6 +82,14 @@ def create_workspace(
     if ws.status_code != 200 or not ws.json():
         raise ApiError(500, "BUSINESS_RULE", "הסביבה נוצרה אך לא ניתן לטעון אותה")
     row = ws.json()[0]
+    write_audit(
+        client,
+        str(workspace_id),
+        "workspace.create",
+        entity_type="workspace",
+        entity_id=str(workspace_id),
+        metadata={"result": "success", "name": row["name"], "role_key": "owner"},
+    )
     return WorkspaceOut(
         id=row["id"],
         name=row["name"],
@@ -122,6 +133,14 @@ def patch_workspace(
     if res.status_code not in {200, 204} or not res.json():
         raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
     row = res.json()[0]
+    write_audit(
+        client,
+        str(workspace_id),
+        "workspace.edit",
+        entity_type="workspace",
+        entity_id=str(workspace_id),
+        metadata={"result": "success", "fields": sorted(patch.keys())},
+    )
     return WorkspaceOut(
         id=row["id"],
         name=row["name"],
@@ -129,26 +148,6 @@ def patch_workspace(
         timezone=row.get("timezone"),
         vat_percent=float(row["vat_percent"]) if row.get("vat_percent") is not None else None,
     )
-
-
-@router.get("/workspaces/{workspace_id}/members")
-def list_members(
-    workspace_id: UUID,
-    client: Annotated[UserClient, Depends(user_client)],
-    user: Annotated[dict, Depends(current_user)],
-) -> list[dict]:
-    ctx = load_authz_context(client, user["id"], str(workspace_id))
-    _raise_decision(authorize(ctx=ctx, action="users.view"))
-    res = client.get(
-        "workspace_memberships",
-        params={
-            "workspace_id": f"eq.{workspace_id}",
-            "select": "id,user_id,role_key,status,technician_code,program_type,created_at",
-        },
-    )
-    if res.status_code != 200:
-        raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
-    return res.json()
 
 
 @router.post("/workspaces/{workspace_id}/invitations", response_model=InviteOut)
@@ -159,7 +158,38 @@ def create_invitation(
     user: Annotated[dict, Depends(current_user)],
 ) -> InviteOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
-    _raise_decision(authorize(ctx=ctx, action="users.invite", invite_role=body.role_key))
+    role_key = (body.role_key or "technician").strip() or "technician"
+    if role_key == "owner":
+        write_audit(
+            client,
+            str(workspace_id),
+            "users.invite",
+            metadata={"result": "denied", "code": "OWNER_INVITE_RESTRICTED", "role_key": role_key},
+        )
+        raise ApiError(403, "BUSINESS_RULE", "לא ניתן להזמין בעלים. מינוי בעלים נעשה מחברי הסביבה.")
+    decision = authorize(ctx=ctx, action="users.invite", invite_role=role_key)
+    if not decision.allowed:
+        write_audit(
+            client,
+            str(workspace_id),
+            "users.invite",
+            metadata={"result": "denied", "code": decision.code, "role_key": role_key},
+        )
+        _raise_decision(decision)
+    occupied, _, _ = fetch_occupied_roles(client, str(workspace_id))
+    limit = evaluate_seat_limit(
+        plan_key=ctx.plan_key,
+        invite_role=role_key,
+        occupied_roles=occupied,
+    )
+    if not limit.allowed:
+        write_audit(
+            client,
+            str(workspace_id),
+            "users.invite",
+            metadata={"result": "denied", "code": limit.code, "role_key": role_key},
+        )
+        _raise_decision(limit)
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     res = client.post(
@@ -167,7 +197,7 @@ def create_invitation(
         {
             "workspace_id": str(workspace_id),
             "email": str(body.email).lower(),
-            "role_key": body.role_key,
+            "role_key": role_key,
             "token_hash": token_hash,
             "invited_by": user["id"],
         },
@@ -175,6 +205,14 @@ def create_invitation(
     if res.status_code not in {200, 201} or not res.json():
         raise ApiError(403, "PERMISSION_DENIED", "לא ניתן ליצור הזמנה")
     row = res.json()[0]
+    write_audit(
+        client,
+        str(workspace_id),
+        "users.invite",
+        entity_type="invitation",
+        entity_id=row["id"],
+        metadata={"result": "success", "email": row["email"], "role_key": row["role_key"]},
+    )
     return InviteOut(
         id=row["id"],
         email=row["email"],

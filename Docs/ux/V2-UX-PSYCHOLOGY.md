@@ -1,6 +1,8 @@
 # SITE SECURE UX Operating System
 
 **Status:** Binding UX doctrine for V2. Not a moodboard.  
+**SaaS / RBAC / billing product OS:** [V2-SAAS-EXPERIENCE.md](../architecture/V2-SAAS-EXPERIENCE.md)  
+**Application shell / primitives / mobile bottom nav:** [V2-APP-SHELL.md](./V2-APP-SHELL.md)  
 **Visual tokens:** [V2-DESIGN-SYSTEM.md](./V2-DESIGN-SYSTEM.md)  
 **Web IA (authenticated `/app`):** [V2-WEB.md](../architecture/V2-WEB.md)  
 **Public Web (visitor origin):** [V2-PUBLIC-WEB.md](../architecture/V2-PUBLIC-WEB.md)  
@@ -44,6 +46,28 @@ Phase 5 builds the **Design System + Login + Signup + Onboarding + Web Shell** f
 It does **not** design Dashboard, CRM, Quotes, or Jobs as one-off screens. Those inherit the same OS later.
 
 If a future screen needs a new pattern, add it here first. Do not invent a one-screen exception.
+
+---
+
+## Capability-bound UI (hard rule)
+
+Dashboard IA, Bottom Navigation, SaaS psychology, and similar references are **UX constraints**. They are not permission to invent routes, modules, or data.
+
+Before adding a destination, inspect in this order:
+
+1. Current routes  
+2. Roles  
+3. Permissions (`can()` is UX only)  
+4. Plan entitlements in `catalog.json`  
+5. Real workflows the backend already supports  
+
+Then choose at most 3–5 **live** bottom-nav items. Do not copy `סקירה / עבודות / לקוחות / שירות / עוד` if Jobs, Customers, or Service are not shipped products.
+
+```
+Architecture → real capabilities → navigation → UI polish
+```
+
+Owner home shows what exists today (team, settings, security, honest empty). It does not preview CRM.
 
 ---
 

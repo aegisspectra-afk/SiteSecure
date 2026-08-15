@@ -206,15 +206,14 @@ describe("permission helpers", () => {
 });
 
 describe("workspaceSetup", () => {
-  it("computes percent from real member count and hides CRM steps", () => {
+  it("computes real setup steps without decorative percent", () => {
     const solo = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
     expect(solo.complete).toBe(false);
-    expect(solo.percent).toBe(50);
     expect(solo.steps.map((step) => step.id)).toEqual(["workspace", "invite"]);
+    expect(solo.steps.find((step) => step.id === "invite")?.current).toBe(true);
 
     const staffed = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 2 });
     expect(staffed.complete).toBe(true);
-    expect(staffed.percent).toBe(100);
 
     const sales = workspaceSetup({ roleKey: "sales", features: ["crm"], memberCount: 1 });
     expect(sales.complete).toBe(true);

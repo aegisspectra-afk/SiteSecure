@@ -128,11 +128,15 @@ describe("appNav", () => {
 
     const soloOwner = paths("owner", solo);
     expect(soloOwner).toContain("/app/dashboard");
+    expect(appNav("owner", solo)[0]?.items[0]?.label).toBe(he.navDashboard);
     expect(soloOwner).toContain("/app/settings/users");
     expect(soloOwner).toContain("/app/settings/roles");
     expect(soloOwner).toContain("/app/settings/security");
     expect(soloOwner).toContain("/app/settings");
     expect(soloOwner).not.toContain("/app/settings/audit");
+    expect(appNav("owner", solo).some((group) => group.items.some((item) => /לקוח|הצעת|פרויקט|אתר/.test(item.label)))).toBe(
+      false,
+    );
 
     const businessOwner = paths("owner", business);
     expect(businessOwner).toContain("/app/settings/audit");
@@ -166,6 +170,11 @@ describe("appNav", () => {
     expect(kinds("founding_technician", solo)).toEqual(["/app/today", "more"]);
     expect(kinds("manager", solo)).toEqual(["/app/dashboard", "more"]);
     expect(bottomNav("owner", solo).length).toBeLessThanOrEqual(5);
+
+    const owned = new Set(appNav("owner", solo).flatMap((group) => group.items.map((item) => item.to)));
+    for (const item of bottomNav("owner", solo)) {
+      if (item.kind === "route") expect(owned.has(item.to)).toBe(true);
+    }
   });
 });
 

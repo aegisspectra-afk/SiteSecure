@@ -31,6 +31,7 @@ function DashboardPage() {
       roleKey={roleKey}
       features={features}
       variant={variant}
+      workspaceStatus={membership?.workspace_status}
       api={api}
     />
   );
@@ -41,12 +42,14 @@ function DashboardBody({
   roleKey,
   features,
   variant,
+  workspaceStatus,
   api,
 }: {
   workspaceId: string | undefined;
   roleKey: string | undefined;
   features: string[];
   variant: "ops" | "sales" | "observe" | "today";
+  workspaceStatus?: string;
   api: ReturnType<typeof useSession>["api"];
 }) {
   const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
@@ -85,9 +88,12 @@ function DashboardBody({
 
   const memberCount = canTeam ? (usage.data?.active_members ?? null) : null;
   const securityData = canSecurity ? (security.data ?? null) : null;
+  const usageData = canTeam ? (usage.data ?? null) : null;
 
   if (variant === "observe") {
-    return <ObserveDashboard data={query.data} security={securityData} />;
+    return (
+      <ObserveDashboard data={query.data} security={securityData} workspaceStatus={workspaceStatus} />
+    );
   }
   return (
     <OpsDashboard
@@ -95,7 +101,9 @@ function DashboardBody({
       roleKey={roleKey}
       features={features}
       memberCount={memberCount}
+      usage={usageData}
       security={securityData}
+      workspaceStatus={workspaceStatus}
     />
   );
 }

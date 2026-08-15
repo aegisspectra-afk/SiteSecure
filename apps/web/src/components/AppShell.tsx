@@ -21,6 +21,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const groups = appNav(roleKey, features);
   const tabs = bottomNav(roleKey, features);
   const displayName = session?.profile?.full_name?.trim() || session?.email || he.brand;
+  const workspaceActive = membership?.workspace_status === "active";
+  const statusLabel = workspaceActive ? he.statusOperational : he.workspaceInactive;
+  const statusTone = workspaceActive ? "success" : "warning";
   useDocumentMeta({
     title: `${membership?.workspace_name ?? he.brand} — ${he.homeTitle}`,
     robots: "noindex, nofollow",
@@ -80,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="skip-link">
         דלגו לתוכן
       </a>
-      <aside className="ops-sidebar hidden w-60 shrink-0 lg:flex lg:flex-col">
+      <aside className="ops-sidebar" aria-label={he.navDesktop}>
         <div className="border-b border-[var(--color-auth-border)] px-4 py-4">
           <p className="text-sm font-semibold tracking-[-0.02em] text-[var(--color-auth-fg)]">{he.brand}</p>
           <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-[var(--color-auth-muted)]">
@@ -89,10 +92,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-4 truncate text-sm font-medium text-[var(--color-auth-fg)]">
             {membership?.workspace_name}
           </p>
-          <p className="text-xs text-[var(--color-auth-muted)]">
-            {roleLabel(roleKey)}
-            {membership?.plan_key ? ` · ${planLabel(membership.plan_key)}` : ""}
+          <p className="mt-2 text-xs text-[var(--color-auth-muted)]">
+            {he.roleCaption}
+            <span className="ms-1 text-[var(--color-auth-fg)]">{roleLabel(roleKey)}</span>
           </p>
+          {membership?.plan_key ? (
+            <p className="text-xs text-[var(--color-auth-muted)]">
+              {he.planCaption}
+              <span className="ms-1 text-[var(--color-auth-fg)]">{planLabel(membership.plan_key)}</span>
+            </p>
+          ) : null}
         </div>
         <div className="flex-1 overflow-y-auto">{navList("dark")}</div>
       </aside>
@@ -107,12 +116,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="truncate text-xs text-fg-muted">
                 {membership?.workspace_name} · {he.overviewKicker}
               </p>
-              <Status label={he.statusOperational} tone="success" />
+              <Status label={statusLabel} tone={statusTone} />
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="sm:hidden">
-              <Status label={he.statusOperational} tone="success" />
+              <Status label={statusLabel} tone={statusTone} />
             </span>
             <Dropdown
               label={
@@ -126,9 +135,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <p className="truncate text-sm font-medium text-fg">{displayName}</p>
                 <p className="ltr-meta truncate text-xs text-fg-muted">{session?.email}</p>
                 <p className="mt-1 text-xs text-fg-muted">
-                  {roleLabel(roleKey)}
-                  {membership?.plan_key ? ` · ${planLabel(membership.plan_key)}` : ""}
+                  {he.roleCaption}: {roleLabel(roleKey)}
                 </p>
+                {membership?.plan_key ? (
+                  <p className="text-xs text-fg-muted">
+                    {he.planCaption}: {planLabel(membership.plan_key)}
+                  </p>
+                ) : null}
               </div>
               {can(roleKey, "workspace.edit", features) ? (
                 <DropdownItem onClick={() => void navigate({ to: "/app/settings" })}>{he.navSettings}</DropdownItem>

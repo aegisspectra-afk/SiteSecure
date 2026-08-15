@@ -18,7 +18,7 @@ export function AppBottomNav({
   if (items.length === 0) return null;
 
   return (
-    <nav className="ops-bottom-nav lg:hidden" aria-label={he.navMobile}>
+    <nav className="ops-bottom-nav" aria-label={he.navMobile}>
       {items.map((item) => {
         if (item.kind === "more") {
           return (

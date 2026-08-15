@@ -87,13 +87,14 @@ describe("module destinations", () => {
 describe("OpsDashboard", () => {
   it("empty state has no fake create CTAs or KPI copy", () => {
     render(<OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} />);
-    expect(screen.getByRole("heading", { name: he.overviewTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.dashboardTitle })).toBeInTheDocument();
     expect(screen.getByText(he.dashboardEmptyTitle)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הצעת מחיר" })).not.toBeInTheDocument();
     expect(screen.queryByText(/KPI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
     expect(screen.queryByText("142")).not.toBeInTheDocument();
+    expect(screen.queryByText("Storage")).not.toBeInTheDocument();
   });
 
   it("owner empty state offers live admin destinations only", () => {
@@ -103,17 +104,61 @@ describe("OpsDashboard", () => {
         roleKey="owner"
         features={["crm", "quotes", "settings"]}
         memberCount={1}
+        workspaceStatus="active"
       />,
     );
     expect(screen.getAllByRole("link", { name: he.inviteUser }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: he.navSettings })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+    expect(screen.queryByText("הצעות מחיר")).not.toBeInTheDocument();
   });
 
   it("sales empty state has no team administration", () => {
     render(<OpsDashboard data={emptyDash} roleKey="sales" features={["crm"]} />);
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
-    expect(screen.queryByText(he.setupTitle)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
+  });
+
+  it("renders catalog usage meters from the server and not fake KPIs", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="owner"
+        features={["settings"]}
+        memberCount={1}
+        workspaceStatus="active"
+        usage={{
+          workspace_id: "w1",
+          plan_key: "solo",
+          active_members: 1,
+          pending_invites: 0,
+          meters: [
+            {
+              key: "seats_operator",
+              label_he: "משתמשים במשרד",
+              current: 1,
+              limit: 1,
+              unlimited: false,
+              unit: "seats",
+              at_limit: true,
+            },
+            {
+              key: "seats_field",
+              label_he: "משתמשים בשטח",
+              current: 0,
+              limit: 3,
+              unlimited: false,
+              unit: "seats",
+              at_limit: false,
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.usageTitle })).toBeInTheDocument();
+    expect(screen.getByText("1 / 1")).toBeInTheDocument();
+    expect(screen.getByText("0 / 3")).toBeInTheDocument();
+    expect(screen.queryByText(/Storage/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("לקוחות")).not.toBeInTheDocument();
   });
 
   it("attention rows are not links while destination modules are absent", () => {

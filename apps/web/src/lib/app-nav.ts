@@ -68,7 +68,7 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
   const fieldHome = homeVariant(roleKey) === "today";
   const home: AppNavItem = {
     to: fieldHome ? "/app/today" : "/app/dashboard",
-    label: fieldHome ? he.navToday : he.navOverview,
+    label: fieldHome ? he.navToday : he.navDashboard,
     icon: fieldHome ? "today" : "overview",
     visible: allow("dashboard.view"),
   };

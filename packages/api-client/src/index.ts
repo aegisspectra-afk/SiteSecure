@@ -97,12 +97,73 @@ export type AttentionGroup = {
   items: DashboardItem[];
 };
 
+export type DashboardSummary = {
+  quotes_draft: number;
+  quotes_sent: number;
+  quotes_viewed: number;
+  quotes_approved: number;
+  quotes_rejected: number;
+  quotes_open: number;
+  quotes_approved_value: number;
+  jobs_open: number;
+  jobs_overdue: number;
+  jobs_unassigned: number;
+};
+
+export type RecentQuote = {
+  id: string;
+  number: string;
+  status: string;
+  customer_name: string | null;
+  total_gross: number | null;
+  updated_at: string;
+};
+
 export type DashboardResponse = {
   home_variant: "ops" | "sales" | "today" | "observe";
   generated_at: string;
   attention: AttentionGroup[];
   today: { label_he: string; items: DashboardItem[] };
   activity: { entity_type: string; entity_id: string; title_he: string; occurred_at: string }[];
+  summary: DashboardSummary;
+  recent_quotes: RecentQuote[];
+};
+
+export type QuoteOut = {
+  id: string;
+  workspace_id: string;
+  number: string;
+  status: string;
+  customer_id: string | null;
+  site_id: string | null;
+  owner_user_id: string | null;
+  currency?: string;
+  vat_percent?: number | null;
+  total_gross?: number | null;
+  subtotal_net?: number | null;
+  vat_amount?: number | null;
+  valid_until?: string | null;
+  customer_notes?: string | null;
+  internal_notes?: string | null;
+  updated_at?: string;
+  created_at?: string;
+  items?: QuoteItemOut[];
+};
+
+export type QuoteItemOut = {
+  id: string;
+  quote_id: string;
+  description: string;
+  qty: number;
+  unit_price: number;
+  discount?: number;
+  line_net?: number;
+  item_type?: string;
+};
+
+export type QuotePage = {
+  items: QuoteOut[];
+  next_cursor: string | null;
 };
 
 export type MemberOut = {
@@ -227,6 +288,24 @@ export function createApiClient(opts: {
     getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
     getDashboard: (workspaceId: string) =>
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
+    listQuotes: (workspaceId: string) =>
+      request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?limit=50`),
+    createQuote: (workspaceId: string, body: { customer_notes?: string; valid_until?: string } = {}) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getQuote: (workspaceId: string, quoteId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`),
+    addQuoteItem: (
+      workspaceId: string,
+      quoteId: string,
+      body: { description: string; qty: number; unit_price: number; item_type?: string },
+    ) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/items`, {
+        method: "POST",
+        body: JSON.stringify({ item_type: "custom", ...body }),
+      }),
     listMembers: (workspaceId: string) =>
       request<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`),
     getUsage: (workspaceId: string) =>

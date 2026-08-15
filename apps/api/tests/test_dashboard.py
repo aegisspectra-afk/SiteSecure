@@ -140,6 +140,8 @@ def test_owner_attention_is_objects_not_kpis():
     assert payload["home_variant"] == "ops"
     assert "kpis" not in payload
     assert "revenue" not in payload
+    assert payload["summary"]["quotes_open"] >= 1
+    assert payload["recent_quotes"]
     kinds = [g["kind"] for g in payload["attention"]]
     assert "quote_awaiting_customer" in kinds
     assert "job_unassigned" in kinds
@@ -166,6 +168,7 @@ def test_sales_sees_only_owned_quotes_and_no_unassigned_jobs():
 def test_technician_today_hides_ops_quotes_and_start_is_real_action():
     payload = _build("technician")
     assert payload["home_variant"] == "today"
+    assert payload["recent_quotes"] == []
     assert payload["attention"] == [] or all(g["kind"] != "quote_awaiting_customer" for g in payload["attention"])
     today_ids = {item["entity_id"] for item in payload["today"]["items"]}
     assert "job-assigned" in today_ids

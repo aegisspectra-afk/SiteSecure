@@ -106,20 +106,19 @@ describe("appNav", () => {
 
   it("is RBAC-aware and does not invent CRM routes", () => {
     const technician = paths("technician", solo);
-    expect(technician).toEqual(["/app/today"]);
-    expect(technician.some((to) => to.includes("customer") || to.includes("quote") || to.includes("site"))).toBe(
-      false,
-    );
+    expect(technician).toEqual(["/app/today", "/app/quotes"]);
+    expect(technician.some((to) => to.includes("customer") || to.includes("site"))).toBe(false);
 
     const sales = paths("sales", solo);
-    expect(sales).toEqual(["/app/dashboard"]);
+    expect(sales).toEqual(["/app/dashboard", "/app/quotes"]);
     expect(sales).not.toContain("/app/settings/users");
 
     const viewer = paths("viewer", solo);
-    expect(viewer).toEqual(["/app/dashboard"]);
+    expect(viewer).toEqual(["/app/dashboard", "/app/quotes"]);
 
     const manager = paths("manager", solo);
     expect(manager).toContain("/app/dashboard");
+    expect(manager).toContain("/app/quotes");
     expect(manager).toContain("/app/settings/users");
     expect(manager).toContain("/app/settings/roles");
     expect(manager).toContain("/app/settings/security");
@@ -128,13 +127,14 @@ describe("appNav", () => {
 
     const soloOwner = paths("owner", solo);
     expect(soloOwner).toContain("/app/dashboard");
+    expect(soloOwner).toContain("/app/quotes");
     expect(appNav("owner", solo)[0]?.items[0]?.label).toBe(he.navDashboard);
     expect(soloOwner).toContain("/app/settings/users");
     expect(soloOwner).toContain("/app/settings/roles");
     expect(soloOwner).toContain("/app/settings/security");
     expect(soloOwner).toContain("/app/settings");
     expect(soloOwner).not.toContain("/app/settings/audit");
-    expect(appNav("owner", solo).some((group) => group.items.some((item) => /לקוח|הצעת|פרויקט|אתר/.test(item.label)))).toBe(
+    expect(appNav("owner", solo).some((group) => group.items.some((item) => item.label === "לקוחות" || item.label === "פרויקטים"))).toBe(
       false,
     );
 
@@ -147,20 +147,20 @@ describe("appNav", () => {
     expect(admin).toContain("/app/settings");
 
     const ft = paths("founding_technician", solo);
-    expect(ft).toEqual(["/app/today", "/app/settings/security"]);
+    expect(ft).toEqual(["/app/today", "/app/quotes", "/app/settings/security"]);
   });
 
   it("bottom nav is a short live spine, not a copied sidebar", () => {
     const kinds = (role: string, features: string[]) =>
       bottomNav(role, features).map((item) => (item.kind === "more" ? "more" : item.to));
 
-    expect(kinds("technician", solo)).toEqual(["/app/today"]);
+    expect(kinds("technician", solo)).toEqual(["/app/today", "more"]);
     expect(kinds("technician", solo).some((to) => String(to).includes("job") || String(to).includes("customer"))).toBe(
       false,
     );
 
-    expect(kinds("sales", solo)).toEqual(["/app/dashboard"]);
-    expect(kinds("owner", solo)).toEqual(["/app/dashboard", "more"]);
+    expect(kinds("sales", solo)).toEqual(["/app/dashboard", "/app/quotes"]);
+    expect(kinds("owner", solo)).toEqual(["/app/dashboard", "/app/quotes", "more"]);
     expect(kinds("owner", solo)).not.toContain("/app/settings");
     expect(kinds("owner", solo)).not.toContain("/app/settings/security");
 
@@ -168,7 +168,7 @@ describe("appNav", () => {
     expect(ownerMore?.label).toBe(he.navMore);
 
     expect(kinds("founding_technician", solo)).toEqual(["/app/today", "more"]);
-    expect(kinds("manager", solo)).toEqual(["/app/dashboard", "more"]);
+    expect(kinds("manager", solo)).toEqual(["/app/dashboard", "/app/quotes", "more"]);
     expect(bottomNav("owner", solo).length).toBeLessThanOrEqual(5);
 
     const owned = new Set(appNav("owner", solo).flatMap((group) => group.items.map((item) => item.to)));

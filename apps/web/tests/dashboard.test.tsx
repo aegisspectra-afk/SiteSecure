@@ -29,12 +29,27 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+const emptySummary = {
+  quotes_draft: 0,
+  quotes_sent: 0,
+  quotes_viewed: 0,
+  quotes_approved: 0,
+  quotes_rejected: 0,
+  quotes_open: 0,
+  quotes_approved_value: 0,
+  jobs_open: 0,
+  jobs_overdue: 0,
+  jobs_unassigned: 0,
+};
+
 const emptyDash: DashboardResponse = {
   home_variant: "ops",
   generated_at: "2026-08-14T12:00:00Z",
   attention: [],
   today: { label_he: "היום", items: [] },
   activity: [],
+  summary: emptySummary,
+  recent_quotes: [],
 };
 
 const attentionDash: DashboardResponse = {
@@ -74,13 +89,16 @@ describe("homeVariant", () => {
 });
 
 describe("module destinations", () => {
-  it("does not expose CRM/Quotes/Jobs hrefs before those phases", () => {
+  it("exposes live quote routes and not CRM/Jobs", () => {
     expect(moduleHref("customer.create")).toBeNull();
-    expect(moduleHref("quote.create")).toBeNull();
+    expect(moduleHref("quote.create")).toBe("/app/quotes/new");
     expect(moduleHref("job.create")).toBeNull();
-    expect(moduleHref("quote", "q1")).toBeNull();
-    expect(quickActions("owner", ["crm", "quotes"])).toEqual([]);
-    expect(quickActions("viewer", ["crm"])).toEqual([]);
+    expect(moduleHref("quote", "q1")).toBe("/app/quotes/q1");
+    expect(quickActions("owner", ["crm", "quotes"])).toEqual([
+      { permission: "quotes.create", label: he.newQuote, href: "/app/quotes/new" },
+    ]);
+    expect(quickActions("viewer", ["crm", "quotes"])).toEqual([]);
+    expect(quickActions("technician", ["quotes"])).toEqual([]);
   });
 });
 
@@ -89,15 +107,16 @@ describe("OpsDashboard", () => {
     render(<OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} />);
     expect(screen.getByRole("heading", { name: he.dashboardTitle })).toBeInTheDocument();
     expect(screen.getByText(he.dashboardEmptyTitle)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "הצעת מחיר" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/KPI/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
     expect(screen.queryByText("142")).not.toBeInTheDocument();
     expect(screen.queryByText("Storage")).not.toBeInTheDocument();
+    expect(screen.queryByText("NPS")).not.toBeInTheDocument();
   });
 
-  it("owner empty state offers live admin destinations only", () => {
+  it("owner empty state offers live quote creation first", () => {
     render(
       <OpsDashboard
         data={emptyDash}
@@ -107,15 +126,15 @@ describe("OpsDashboard", () => {
         workspaceStatus="active"
       />,
     );
-    expect(screen.getAllByRole("link", { name: he.inviteUser }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
-    expect(screen.queryByText("הצעות מחיר")).not.toBeInTheDocument();
   });
 
   it("sales empty state has no team administration", () => {
-    render(<OpsDashboard data={emptyDash} roleKey="sales" features={["crm"]} />);
+    render(<OpsDashboard data={{ ...emptyDash, home_variant: "sales" }} roleKey="sales" features={["crm", "quotes"]} />);
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
   });
 
   it("renders catalog usage meters from the server and not fake KPIs", () => {
@@ -161,10 +180,10 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText("לקוחות")).not.toBeInTheDocument();
   });
 
-  it("attention rows are not links while destination modules are absent", () => {
+  it("attention rows link to the live quote route", () => {
     render(<AttentionList groups={attentionDash.attention} />);
     expect(screen.getByText(/ממתינות לאישור הלקוח/)).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/app/quotes/$quoteId");
   });
 });
 

@@ -170,12 +170,23 @@ def build_dashboard(
         can_jobs_complete=can_jobs_complete and variant == "today",
     )
 
+    summary, recent_quotes = _ops_summary(
+        visible_quotes,
+        visible_jobs,
+        job_assignees,
+        names,
+        now,
+        variant=variant,
+        assignments_reliable=assignments_reliable,
+    )
     payload = {
         "home_variant": variant,
         "generated_at": now.isoformat(),
         "attention": attention,
         "today": {"label_he": "היום", "items": today_items[:TODAY_CAP]},
         "activity": _activity(events, visible_jobs, names, variant)[:ACTIVITY_CAP],
+        "summary": summary,
+        "recent_quotes": recent_quotes,
     }
     _assert_no_vanity(payload)
     return payload
@@ -365,6 +376,66 @@ def _activity(
             )
     rows.sort(key=lambda row: row.get("occurred_at") or "", reverse=True)
     return rows
+
+
+def _ops_summary(
+    quotes: list[dict[str, Any]],
+    jobs: list[dict[str, Any]],
+    job_assignees: dict[str, set[str]],
+    names: dict[str, str],
+    now: datetime,
+    *,
+    variant: HomeVariant,
+    assignments_reliable: bool,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    statuses = ("draft", "sent", "viewed", "approved", "rejected", "expired", "cancelled")
+    counts = {key: 0 for key in statuses}
+    approved_value = 0.0
+    for quote in quotes:
+        status = str(quote.get("status") or "")
+        if status in counts:
+            counts[status] += 1
+        if status == "approved":
+            approved_value += float(quote.get("total_gross") or 0)
+
+    open_jobs = [job for job in jobs if job.get("status") in OPEN_JOB]
+    overdue = 0
+    unassigned = 0
+    if variant != "sales":
+        for job in open_jobs:
+            when = _parse_dt(job.get("scheduled_for") if isinstance(job.get("scheduled_for"), str) else None)
+            if when and when < now:
+                overdue += 1
+            if assignments_reliable and not job_assignees.get(str(job["id"])):
+                unassigned += 1
+
+    summary = {
+        "quotes_draft": counts["draft"],
+        "quotes_sent": counts["sent"],
+        "quotes_viewed": counts["viewed"],
+        "quotes_approved": counts["approved"],
+        "quotes_rejected": counts["rejected"],
+        "quotes_open": counts["sent"] + counts["viewed"],
+        "quotes_approved_value": round(approved_value, 2),
+        "jobs_open": 0 if variant == "sales" else len(open_jobs),
+        "jobs_overdue": 0 if variant == "sales" else overdue,
+        "jobs_unassigned": 0 if variant in {"sales", "today"} or not assignments_reliable else unassigned,
+    }
+
+    recent: list[dict[str, Any]] = []
+    if variant != "today":
+        for quote in quotes[:5]:
+            recent.append(
+                {
+                    "id": str(quote["id"]),
+                    "number": str(quote.get("number") or ""),
+                    "status": str(quote.get("status") or ""),
+                    "customer_name": names.get(str(quote["customer_id"])) if quote.get("customer_id") else None,
+                    "total_gross": float(quote["total_gross"]) if quote.get("total_gross") is not None else None,
+                    "updated_at": str(quote.get("updated_at") or ""),
+                }
+            )
+    return summary, recent
 
 
 def _assert_no_vanity(payload: dict[str, Any]) -> None:

@@ -1,4 +1,5 @@
 import {
+  FileText,
   LayoutDashboard,
   ListChecks,
   Lock,
@@ -14,6 +15,7 @@ import type { NavIconKey } from "../lib/app-nav";
 const icons: Record<NavIconKey, LucideIcon> = {
   overview: LayoutDashboard,
   today: ListChecks,
+  quotes: FileText,
   team: Users,
   roles: Shield,
   security: Lock,

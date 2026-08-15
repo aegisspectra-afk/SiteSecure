@@ -92,7 +92,13 @@ function DashboardBody({
 
   if (variant === "observe") {
     return (
-      <ObserveDashboard data={query.data} security={securityData} workspaceStatus={workspaceStatus} />
+      <ObserveDashboard
+        data={query.data}
+        security={securityData}
+        workspaceStatus={workspaceStatus}
+        roleKey={roleKey}
+        features={features}
+      />
     );
   }
   return (

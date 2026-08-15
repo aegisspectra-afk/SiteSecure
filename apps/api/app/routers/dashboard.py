@@ -16,11 +16,11 @@ from ..rest import as_list
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"])
 
-QUOTE_SELECT = "id,number,status,customer_id,site_id,owner_user_id,valid_until,updated_at"
+QUOTE_SELECT = "id,number,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross"
 JOB_SELECT = (
     "id,number,title,status,customer_id,site_id,scheduled_for,started_at,completed_at,updated_at"
 )
-COST_SELECT_FORBIDDEN = ("cost_total", "margin_amount", "margin_percent", "total_gross")
+COST_SELECT_FORBIDDEN = ("cost_total", "margin_amount", "margin_percent")
 
 
 class DashboardItemOut(BaseModel):
@@ -58,6 +58,30 @@ class ActivityItemOut(BaseModel):
     occurred_at: str
 
 
+class DashboardSummaryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quotes_draft: int
+    quotes_sent: int
+    quotes_viewed: int
+    quotes_approved: int
+    quotes_rejected: int
+    quotes_open: int
+    quotes_approved_value: float
+    jobs_open: int
+    jobs_overdue: int
+    jobs_unassigned: int
+
+
+class RecentQuoteOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    number: str
+    status: str
+    customer_name: str | None = None
+    total_gross: float | None = None
+    updated_at: str
+
+
 class DashboardOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
     home_variant: Literal["ops", "sales", "today", "observe"]
@@ -65,6 +89,8 @@ class DashboardOut(BaseModel):
     attention: list[AttentionGroupOut]
     today: TodayBlockOut
     activity: list[ActivityItemOut]
+    summary: DashboardSummaryOut
+    recent_quotes: list[RecentQuoteOut]
 
 
 def _optional_list(res) -> list[dict[str, Any]]:

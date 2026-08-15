@@ -1,5 +1,6 @@
 import { Status, cn } from "@site-secure/ui";
 import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
+import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { itemHref } from "../../lib/home";
 
@@ -52,6 +53,15 @@ function AttentionRow({ item }: { item: DashboardItem }) {
       "rounded-[var(--radius-control)] hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
   );
   if (href) {
+    if (item.entity_type === "quote") {
+      return (
+        <li>
+          <Link to="/app/quotes/$quoteId" params={{ quoteId: item.entity_id }} className={className}>
+            {body}
+          </Link>
+        </li>
+      );
+    }
     return (
       <li>
         <a href={href} className={className}>

@@ -75,6 +75,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       ))}
+      <Link
+        to="/"
+        className={cn(
+          "ops-sidebar-link mt-2 flex items-center rounded-[var(--radius-control)] px-3 py-2 text-sm",
+          tone === "dark"
+            ? "text-[var(--color-auth-muted)] hover:text-[var(--color-auth-fg)]"
+            : "text-fg-muted hover:text-fg",
+        )}
+        onClick={() => setOpen(false)}
+      >
+        {he.navAegis}
+      </Link>
     </nav>
   );
 

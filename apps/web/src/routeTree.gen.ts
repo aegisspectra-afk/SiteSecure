@@ -23,6 +23,9 @@ import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as AppQuotesIndexRouteImport } from "./routes/app/quotes/index"
+import { Route as AppQuotesQuoteIdRouteImport } from "./routes/app/quotes/$quoteId"
+import { Route as AppQuotesNewRouteImport } from "./routes/app/quotes/new"
 import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
@@ -99,6 +102,21 @@ const LegalSlugRoute = LegalSlugRouteImport.update({
   path: "/legal/$slug",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
+  id: "/quotes/",
+  path: "/quotes/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppQuotesQuoteIdRoute = AppQuotesQuoteIdRouteImport.update({
+  id: "/quotes/$quoteId",
+  path: "/quotes/$quoteId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppQuotesNewRoute = AppQuotesNewRouteImport.update({
+  id: "/quotes/new",
+  path: "/quotes/new",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: "/settings/",
   path: "/settings/",
@@ -140,10 +158,13 @@ export interface FileRoutesByFullPath {
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -160,10 +181,13 @@ export interface FileRoutesByTo {
   "/legal/$slug": typeof LegalSlugRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/quotes": typeof AppQuotesIndexRoute
   "/app/settings": typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -182,10 +206,13 @@ export interface FileRoutesById {
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -205,10 +232,13 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app/"
     | "/legal/"
+    | "/app/quotes/$quoteId"
+    | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/quotes/"
     | "/app/settings/"
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -225,10 +255,13 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app"
     | "/legal"
+    | "/app/quotes/$quoteId"
+    | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/quotes"
     | "/app/settings"
   id:
     | "__root__"
@@ -246,10 +279,13 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app/"
     | "/legal/"
+    | "/app/quotes/$quoteId"
+    | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/quotes/"
     | "/app/settings/"
   fileRoutesById: FileRoutesById
 }
@@ -367,6 +403,27 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LegalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/app/quotes/": {
+      id: "/app/quotes/"
+      path: "/quotes"
+      fullPath: "/app/quotes/"
+      preLoaderRoute: typeof AppQuotesIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/quotes/$quoteId": {
+      id: "/app/quotes/$quoteId"
+      path: "/quotes/$quoteId"
+      fullPath: "/app/quotes/$quoteId"
+      preLoaderRoute: typeof AppQuotesQuoteIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/quotes/new": {
+      id: "/app/quotes/new"
+      path: "/quotes/new"
+      fullPath: "/app/quotes/new"
+      preLoaderRoute: typeof AppQuotesNewRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/app/settings/": {
       id: "/app/settings/"
       path: "/settings"
@@ -409,10 +466,13 @@ interface AppRouteRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRoute
+  AppQuotesNewRoute: typeof AppQuotesNewRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+  AppQuotesIndexRoute: typeof AppQuotesIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -420,10 +480,13 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
+  AppQuotesQuoteIdRoute: AppQuotesQuoteIdRoute,
+  AppQuotesNewRoute: AppQuotesNewRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsUsersRoute: AppSettingsUsersRoute,
+  AppQuotesIndexRoute: AppQuotesIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 

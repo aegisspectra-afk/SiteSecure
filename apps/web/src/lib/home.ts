@@ -16,11 +16,17 @@ export function homeVariant(roleKey: string | undefined): HomeVariant {
   }
 }
 
-/** Product screens that exist as click-through. Empty until those phases ship. */
+export function hasFeature(features: string[], feature: string): boolean {
+  return features.includes(feature);
+}
+
+/** Product screens that exist as click-through. */
 export function moduleHref(
-  _kind: "customer.create" | "quote.create" | "job.create" | "quote" | "job" | "service",
-  _id?: string,
+  kind: "customer.create" | "quote.create" | "job.create" | "quote" | "job" | "service",
+  id?: string,
 ): string | null {
+  if (kind === "quote.create") return "/app/quotes/new";
+  if (kind === "quote" && id) return `/app/quotes/${id}`;
   return null;
 }
 
@@ -28,16 +34,17 @@ export function quickActions(
   roleKey: string | undefined,
   features: string[] = [],
 ): { permission: string; label: string; href: string }[] {
-  const candidates: { permission: string; feature?: string; kind: "customer.create" | "quote.create" | "job.create"; label: string }[] =
-    [
-      { permission: "crm.create", feature: "crm", kind: "customer.create", label: "לקוח חדש" },
-      { permission: "quotes.create", feature: "quotes", kind: "quote.create", label: "הצעת מחיר" },
-      { permission: "jobs.create", kind: "job.create", label: "עבודה חדשה" },
-    ];
+  const candidates: {
+    permission: string;
+    feature?: string;
+    kind: "customer.create" | "quote.create" | "job.create";
+    label: string;
+  }[] = [{ permission: "quotes.create", feature: "quotes", kind: "quote.create", label: "הצעת מחיר חדשה" }];
   const out: { permission: string; label: string; href: string }[] = [];
   for (const item of candidates) {
     const href = moduleHref(item.kind);
     if (!href) continue;
+    if (item.feature && !hasFeature(features, item.feature)) continue;
     if (!can(roleKey, item.permission, features)) continue;
     out.push({ permission: item.permission, label: item.label, href });
   }

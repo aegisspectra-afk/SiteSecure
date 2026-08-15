@@ -1,10 +1,9 @@
-# SITE SECURE V2 — Render Blueprint (FastAPI only, later)
+# SITE SECURE V2 — Render Blueprint (FastAPI only)
 # Web is on Vercel — docs/operations/VERCEL.md
 # Do not host the Vite app here. Do not put SUPABASE_SERVICE_ROLE_KEY on Vercel.
 #
-# Apply this Blueprint only when FastAPI needs a public URL.
-# Dashboard → New → Blueprint → this repo.
-# Then paste secrets in the Render UI (sync: false keys). Never commit values.
+# Dashboard → New → Blueprint → this repo (main).
+# Paste only the sync:false secrets in the Render UI. Never commit values.
 
 previews:
   generation: manual
@@ -12,25 +11,24 @@ previews:
 services:
   - type: web
     name: site-secure-api-staging
-    runtime: python
+    runtime: docker
     plan: free
-    buildCommand: pip install -e ./apps/api
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    region: frankfurt
+    dockerfilePath: ./deploy/Dockerfile.api
+    dockerContext: .
     healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.8"
       - key: APP_ENV
         value: staging
+      - key: WEB_PUBLIC_URL
+        value: https://site-secure-umber.vercel.app
+      - key: CORS_EXTRA_ORIGINS
+        value: ""
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: WEB_PUBLIC_URL
-        sync: false
       - key: API_PUBLIC_URL
         sync: false
-      - key: CORS_EXTRA_ORIGINS
-        value: ""

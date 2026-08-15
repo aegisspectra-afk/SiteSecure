@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicHome } from "../src/components/public/PublicHome";
 import { pub } from "../src/i18n/public-he";
+import { legal } from "../src/i18n/legal-he";
 import { guestEntryPath } from "../src/lib/auth-routes";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -10,15 +11,26 @@ vi.mock("@tanstack/react-router", () => ({
     to,
     children,
     className,
+    params,
+    hash,
   }: {
     to: string;
     children: ReactNode;
     className?: string;
-  }) => (
-    <a href={to} className={className}>
-      {children}
-    </a>
-  ),
+    params?: Record<string, string>;
+    hash?: string;
+  }) => {
+    let href = to;
+    if (params) {
+      for (const [key, value] of Object.entries(params)) href = href.replace(`$${key}`, value);
+    }
+    if (hash) href = `${href}#${hash}`;
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  },
 }));
 
 vi.mock("../src/lib/session", () => ({
@@ -62,6 +74,15 @@ describe("public website", () => {
     expect(screen.getAllByText(pub.previewBadge).length).toBeGreaterThan(0);
     expect(screen.getByText(pub.siteFileIntent)).toBeInTheDocument();
     expect(screen.getByText(pub.securityTitle)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: legal.pages.privacy.title })).toHaveAttribute(
+      "href",
+      "/legal/privacy",
+    );
+    expect(screen.getByRole("link", { name: legal.pages.terms.title })).toHaveAttribute("href", "/legal/terms");
+    expect(screen.getByRole("link", { name: legal.pages.security.title })).toHaveAttribute(
+      "href",
+      "/legal/security",
+    );
     expect(screen.queryByText("COMING SOON")).not.toBeInTheDocument();
   });
 

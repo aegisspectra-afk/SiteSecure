@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { useDocumentMeta } from "../../lib/document-meta";
 import { AuthBrandPanel } from "./AuthBrandPanel";
 import { AuthHeader } from "./AuthHeader";
+import { AuthStatusStrip } from "./AuthStatusStrip";
+import { AuthTrust } from "./AuthTrust";
+import { LegalNav } from "../public/LegalNav";
 
 export function AuthLayout({
   title,
@@ -27,33 +29,39 @@ export function AuthLayout({
     robots: "noindex, nofollow",
   });
   return (
-    <div className="public-root public-shell flex min-h-dvh flex-col lg:flex-row" dir="ltr">
+    <div className="auth-root auth-shell flex min-h-dvh flex-col lg:flex-row" dir="ltr">
       <a href="#auth-form" className="skip-link">
         {he.skipToForm}
       </a>
       <AuthBrandPanel />
-      <main className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-8 lg:w-[42%] lg:shrink-0 lg:border-s lg:border-border lg:px-12 lg:py-16">
-        <Link
-          to="/"
-          className="ltr-meta mb-10 w-fit text-sm font-semibold tracking-[0.22em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:hidden"
-        >
-          {he.brand}
-        </Link>
-        <div className="mx-auto flex w-full max-w-[400px] flex-col gap-8" dir="rtl">
-          <AuthHeader kicker={kicker} title={heading ?? title} description={description} />
-          {steps ? (
-            <ol className="flex flex-wrap gap-x-6 gap-y-2" dir="ltr">
-              {steps.map((step) => (
-                <li key={step.n} className="public-mono text-[11px] tracking-[0.12em] text-fg-muted">
-                  <span className="text-fg">{step.n}</span> {step.label}
-                </li>
-              ))}
-            </ol>
-          ) : null}
-          <div id="auth-form" tabIndex={-1} className="outline-none">
-            {children}
+      <main className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-8 lg:w-[45%] lg:shrink-0 lg:border-s lg:border-border lg:px-12 lg:py-16">
+        <div className="mx-auto flex w-full max-w-[440px] flex-col gap-5">
+          <AuthStatusStrip />
+          <div className="auth-panel px-5 py-7 sm:px-8 sm:py-8" dir="rtl">
+            <div className="flex flex-col gap-8">
+              <AuthHeader kicker={kicker} title={heading ?? title} description={description} />
+              {steps ? (
+                <ol className="flex flex-wrap gap-x-6 gap-y-2" dir="ltr">
+                  {steps.map((step) => (
+                    <li key={step.n} className="public-mono text-[11px] tracking-[0.12em] text-fg-muted">
+                      <span className="text-fg">{step.n}</span> {step.label}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+              <div id="auth-form" tabIndex={-1} className="outline-none">
+                {children}
+              </div>
+              {footer ? <div className="border-t border-border pt-6">{footer}</div> : null}
+              <AuthTrust />
+            </div>
           </div>
-          {footer ? <div className="border-t border-border pt-6">{footer}</div> : null}
+          <div className="flex flex-col items-center gap-3">
+            <LegalNav compact className="justify-center text-[11px] tracking-[0.08em]" />
+            <p className="public-mono text-center text-[10px] tracking-[0.12em] text-fg-muted">
+              {he.authFooterLegal}
+            </p>
+          </div>
         </div>
       </main>
     </div>

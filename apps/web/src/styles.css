@@ -20,21 +20,88 @@ body {
 }
 
 .auth-shell {
+  position: relative;
+  isolation: isolate;
   background-color: var(--color-auth-bg);
   background-image:
-    radial-gradient(ellipse 70% 45% at 18% 8%, rgb(11 107 203 / 16%), transparent 58%),
-    radial-gradient(ellipse 40% 30% at 88% 92%, rgb(11 107 203 / 8%), transparent 60%),
-    linear-gradient(to right, rgb(232 238 246 / 4%) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(232 238 246 / 4%) 1px, transparent 1px);
-  background-size: auto, auto, 48px 48px, 48px 48px;
+    radial-gradient(ellipse 58% 42% at 16% 6%, rgb(11 107 203 / 18%), transparent 58%),
+    radial-gradient(ellipse 36% 28% at 88% 94%, rgb(11 107 203 / 9%), transparent 62%),
+    radial-gradient(ellipse 24% 18% at 62% 42%, rgb(11 107 203 / 6%), transparent 70%),
+    linear-gradient(to right, rgb(232 238 246 / 3.5%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(232 238 246 / 3.5%) 1px, transparent 1px);
+  background-size: auto, auto, auto, 56px 56px, 56px 56px;
+}
+
+.auth-shell::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+.auth-shell > *:not(.skip-link) {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-console {
-  background: var(--color-auth-surface);
+  background: rgb(13 19 29 / 78%);
+  border: 1px solid var(--color-auth-border);
+  box-shadow:
+    0 0 0 1px rgb(11 107 203 / 10%),
+    0 28px 80px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(14px);
+}
+
+.auth-panel {
+  background: rgb(13 19 29 / 72%);
+  border: 1px solid var(--color-auth-border);
+  box-shadow:
+    0 0 0 1px rgb(11 107 203 / 8%),
+    0 22px 60px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(16px);
 }
 
 .auth-status-pulse {
   animation: auth-pulse 2.4s ease-in-out infinite;
+}
+
+.auth-node-pulse {
+  animation: auth-node 2.8s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.auth-float {
+  animation: auth-float 9s ease-in-out infinite;
+}
+
+.auth-flow {
+  stroke-dasharray: 4 8;
+  animation: auth-flow 3.2s linear infinite;
+}
+
+.auth-cta {
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.auth-cta:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 0 22px var(--color-auth-glow);
+}
+
+.auth-activity-row {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.auth-activity-row:hover {
+  background: rgb(11 107 203 / 7%);
 }
 
 @keyframes auth-pulse {
@@ -45,6 +112,36 @@ body {
   50% {
     opacity: 0.35;
   }
+}
+
+@keyframes auth-node {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes auth-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes auth-flow {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+.auth-field-focus:hover:not(:disabled):not(:focus-visible) {
+  border-color: #334155;
 }
 
 .auth-field-focus:focus-visible {
@@ -170,6 +267,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .auth-status-pulse,
+  .auth-node-pulse,
+  .auth-float,
+  .auth-flow,
   .public-flow {
     animation: none;
   }

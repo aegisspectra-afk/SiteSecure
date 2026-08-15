@@ -18,6 +18,17 @@ describe("Button", () => {
     expect(btn.className).toContain("bg-action");
   });
 
+  it("exposes a loading label to assistive tech when provided", () => {
+    render(
+      <Button loading loadingLabel="AUTHENTICATING..." variant="primary">
+        התחבר
+      </Button>,
+    );
+    const btn = screen.getByRole("button", { name: "AUTHENTICATING..." });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute("aria-busy", "true");
+  });
+
   it("disabled does not look like a primary action", () => {
     const { rerender } = render(<Button variant="primary">שלח הצעת מחיר</Button>);
     const enabled = screen.getByRole("button");

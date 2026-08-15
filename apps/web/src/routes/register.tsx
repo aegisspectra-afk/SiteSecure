@@ -26,6 +26,7 @@ function RegisterPage() {
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState(false);
 
   if (loading) {
     return (
@@ -63,6 +64,7 @@ function RegisterPage() {
     >
       <RegisterForm
         loading={submitting}
+        created={created}
         error={formError}
         onSubmit={async ({ fullName, email, password }) => {
           setSubmitting(true);
@@ -80,8 +82,8 @@ function RegisterPage() {
             setFormError(authErrorMessage(authError.message));
             return;
           }
+          setCreated(true);
           if (!data.session) {
-            setSubmitting(false);
             await navigate({ to: "/verify-email", search: { email } });
             return;
           }
@@ -94,6 +96,7 @@ function RegisterPage() {
             const hydrated = await refresh();
             await navigate({ to: afterAuthPath(Boolean(hydrated?.has_workspace)) });
           } catch (err) {
+            setCreated(false);
             setFormError(err instanceof Error ? authErrorMessage(err.message) : he.sessionError);
           } finally {
             setSubmitting(false);

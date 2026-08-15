@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { OnboardingForm } from "../src/components/OnboardingForm";
 import { he } from "../src/i18n/he";
 import { can } from "../src/lib/can";
+import { appNav } from "../src/lib/app-nav";
+import { roleGranted } from "../src/lib/role-catalog";
 
 describe("OnboardingForm", () => {
   it("profile step only completes the account identity", () => {
@@ -28,6 +30,20 @@ describe("OnboardingForm", () => {
     expect(screen.queryByLabelText(he.workspaceName)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.profileContinue })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.onboardingPrimary })).not.toBeInTheDocument();
+  });
+
+  it("names the signed-in email so workspace creation is not anonymous", () => {
+    render(
+      <OnboardingForm
+        email="ilya@example.com"
+        profileDone={false}
+        onSaveProfile={vi.fn()}
+        onCreateWorkspace={vi.fn()}
+        onEnter={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(he.onboardingAccount, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("ilya@example.com")).toBeInTheDocument();
   });
 
   it("workspace step requires an explicit create action", () => {
@@ -75,5 +91,79 @@ describe("can()", () => {
     expect(can("viewer", "quotes.send", ["quotes"])).toBe(false);
     expect(can("owner", "quotes.send", ["quotes"])).toBe(true);
     expect(can("technician", "users.invite", ["core"])).toBe(false);
+  });
+});
+
+describe("appNav", () => {
+  const solo = ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings"];
+  const business = [...solo, "inventory", "finance", "reports", "automation", "team", "audit", "api"];
+
+  function paths(role: string, features: string[]) {
+    return appNav(role, features).flatMap((g) => g.items.map((item) => item.to));
+  }
+
+  it("is RBAC-aware and does not invent CRM routes", () => {
+    const technician = paths("technician", solo);
+    expect(technician).toEqual(["/app/today"]);
+    expect(technician.some((to) => to.includes("customer") || to.includes("quote") || to.includes("site"))).toBe(
+      false,
+    );
+
+    const sales = paths("sales", solo);
+    expect(sales).toEqual(["/app/dashboard"]);
+    expect(sales).not.toContain("/app/settings/users");
+
+    const viewer = paths("viewer", solo);
+    expect(viewer).toEqual(["/app/dashboard"]);
+
+    const manager = paths("manager", solo);
+    expect(manager).toContain("/app/dashboard");
+    expect(manager).toContain("/app/settings/users");
+    expect(manager).toContain("/app/settings/roles");
+    expect(manager).toContain("/app/settings/security");
+    expect(manager).not.toContain("/app/settings");
+    expect(manager).not.toContain("/app/settings/audit");
+
+    const soloOwner = paths("owner", solo);
+    expect(soloOwner).toContain("/app/dashboard");
+    expect(soloOwner).toContain("/app/settings/users");
+    expect(soloOwner).toContain("/app/settings/roles");
+    expect(soloOwner).toContain("/app/settings/security");
+    expect(soloOwner).toContain("/app/settings");
+    expect(soloOwner).not.toContain("/app/settings/audit");
+
+    const businessOwner = paths("owner", business);
+    expect(businessOwner).toContain("/app/settings/audit");
+
+    const admin = paths("administrator", business);
+    expect(admin).toContain("/app/settings/users");
+    expect(admin).toContain("/app/settings/audit");
+    expect(admin).toContain("/app/settings");
+
+    const ft = paths("founding_technician", solo);
+    expect(ft).toEqual(["/app/today", "/app/settings/security"]);
+  });
+});
+
+describe("role catalog display", () => {
+  it("shows technician CRM read without create, and never grants user admin", () => {
+    expect(roleGranted("technician", "crm.view")).toBe(true);
+    expect(roleGranted("technician", "crm.create")).toBe(false);
+    expect(roleGranted("technician", "sites.view")).toBe(true);
+    expect(roleGranted("technician", "sites.create")).toBe(true);
+    expect(roleGranted("technician", "jobs.view")).toBe(true);
+    expect(roleGranted("technician", "jobs.assign")).toBe(false);
+    expect(roleGranted("technician", "users.view")).toBe(false);
+    expect(roleGranted("owner", "workspace.delete")).toBe(true);
+    expect(roleGranted("administrator", "workspace.delete")).toBe(false);
+  });
+});
+
+describe("direct URL hiding is not the boundary", () => {
+  it("denies technician Users and Audit even if the URL is known", () => {
+    expect(can("technician", "users.view", ["settings", "team"])).toBe(false);
+    expect(can("technician", "audit.view", ["audit"])).toBe(false);
+    expect(can("viewer", "users.manage", ["team"])).toBe(false);
+    expect(can("sales", "users.invite", ["core"])).toBe(false);
   });
 });

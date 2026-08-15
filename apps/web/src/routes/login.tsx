@@ -16,9 +16,15 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { loading, user, session, error, refresh, signOut } = useSession();
   const navigate = useNavigate();
+  const shell = {
+    title: he.loginTitle,
+    kicker: he.authWelcomeBack,
+    heading: he.loginLead,
+    description: he.loginDescription,
+  };
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const shell = { title: he.loginTitle, kicker: he.authWelcomeBack, heading: he.loginLead };
+  const [granted, setGranted] = useState(false);
 
   if (loading) {
     return (
@@ -56,6 +62,7 @@ function LoginPage() {
     >
       <LoginForm
         loading={submitting}
+        granted={granted}
         error={formError}
         onSubmit={async (email, password) => {
           setSubmitting(true);
@@ -66,8 +73,8 @@ function LoginPage() {
             setFormError(authErrorMessage(authError.message));
             return;
           }
+          setGranted(true);
           const hydrated = await refresh();
-          setSubmitting(false);
           await navigate({ to: afterAuthPath(Boolean(hydrated?.has_workspace)) });
         }}
       />

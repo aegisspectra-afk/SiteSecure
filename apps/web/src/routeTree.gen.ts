@@ -21,6 +21,13 @@ import { Route as AppIndexRouteImport } from "./routes/app/index"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
 import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
+import { Route as LegalIndexRouteImport } from "./routes/legal/index"
+import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
+import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
+import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
+import { Route as AppSettingsSecurityRouteImport } from "./routes/app/settings/security"
+import { Route as AppSettingsUsersRouteImport } from "./routes/app/settings/users"
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -82,6 +89,41 @@ const DevUiRoute = DevUiRouteImport.update({
   path: "/dev/ui",
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: "/legal/",
+  path: "/legal/",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalSlugRoute = LegalSlugRouteImport.update({
+  id: "/legal/$slug",
+  path: "/legal/$slug",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: "/settings/",
+  path: "/settings/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
+  id: "/settings/audit",
+  path: "/settings/audit",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsRolesRoute = AppSettingsRolesRouteImport.update({
+  id: "/settings/roles",
+  path: "/settings/roles",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
+  id: "/settings/security",
+  path: "/settings/security",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
+  id: "/settings/users",
+  path: "/settings/users",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
@@ -95,7 +137,14 @@ export interface FileRoutesByFullPath {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
+  "/legal/": typeof LegalIndexRoute
+  "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/roles": typeof AppSettingsRolesRoute
+  "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/settings/": typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
@@ -108,7 +157,14 @@ export interface FileRoutesByTo {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/legal/$slug": typeof LegalSlugRoute
   "/app": typeof AppIndexRoute
+  "/legal": typeof LegalIndexRoute
+  "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/roles": typeof AppSettingsRolesRoute
+  "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/settings": typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,7 +179,14 @@ export interface FileRoutesById {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
+  "/legal/": typeof LegalIndexRoute
+  "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/roles": typeof AppSettingsRolesRoute
+  "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/settings/": typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,7 +202,14 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/legal/$slug"
     | "/app/"
+    | "/legal/"
+    | "/app/settings/audit"
+    | "/app/settings/roles"
+    | "/app/settings/security"
+    | "/app/settings/users"
+    | "/app/settings/"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
@@ -152,7 +222,14 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/legal/$slug"
     | "/app"
+    | "/legal"
+    | "/app/settings/audit"
+    | "/app/settings/roles"
+    | "/app/settings/security"
+    | "/app/settings/users"
+    | "/app/settings"
   id:
     | "__root__"
     | "/"
@@ -166,7 +243,14 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/legal/$slug"
     | "/app/"
+    | "/legal/"
+    | "/app/settings/audit"
+    | "/app/settings/roles"
+    | "/app/settings/security"
+    | "/app/settings/users"
+    | "/app/settings/"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,6 +263,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   DevUiRoute: typeof DevUiRoute
+  LegalSlugRoute: typeof LegalSlugRoute
+  LegalIndexRoute: typeof LegalIndexRoute
 }
 
 declare module "@tanstack/react-router" {
@@ -267,6 +353,55 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DevUiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/legal/": {
+      id: "/legal/"
+      path: "/legal"
+      fullPath: "/legal/"
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/legal/$slug": {
+      id: "/legal/$slug"
+      path: "/legal/$slug"
+      fullPath: "/legal/$slug"
+      preLoaderRoute: typeof LegalSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/app/settings/": {
+      id: "/app/settings/"
+      path: "/settings"
+      fullPath: "/app/settings/"
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/settings/audit": {
+      id: "/app/settings/audit"
+      path: "/settings/audit"
+      fullPath: "/app/settings/audit"
+      preLoaderRoute: typeof AppSettingsAuditRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/settings/roles": {
+      id: "/app/settings/roles"
+      path: "/settings/roles"
+      fullPath: "/app/settings/roles"
+      preLoaderRoute: typeof AppSettingsRolesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/settings/security": {
+      id: "/app/settings/security"
+      path: "/settings/security"
+      fullPath: "/app/settings/security"
+      preLoaderRoute: typeof AppSettingsSecurityRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/settings/users": {
+      id: "/app/settings/users"
+      path: "/settings/users"
+      fullPath: "/app/settings/users"
+      preLoaderRoute: typeof AppSettingsUsersRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
@@ -274,12 +409,22 @@ interface AppRouteRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppSettingsAuditRoute: typeof AppSettingsAuditRoute
+  AppSettingsRolesRoute: typeof AppSettingsRolesRoute
+  AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
+  AppSettingsAuditRoute: AppSettingsAuditRoute,
+  AppSettingsRolesRoute: AppSettingsRolesRoute,
+  AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsUsersRoute: AppSettingsUsersRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
@@ -296,6 +441,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   DevUiRoute: DevUiRoute,
+  LegalSlugRoute: LegalSlugRoute,
+  LegalIndexRoute: LegalIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

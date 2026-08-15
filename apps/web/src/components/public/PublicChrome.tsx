@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { pub } from "../../i18n/public-he";
 import { afterAuthPath } from "../../lib/auth-routes";
 import { useSession } from "../../lib/session";
+import { LegalNav } from "./LegalNav";
 
 const nav = [
   { href: "#operations", label: pub.navPlatform },
@@ -31,7 +32,7 @@ export function PublicHeader() {
       {nav.map((item) => (
         <a
           key={item.href}
-          href={item.href}
+          href={`/${item.href}`}
           className="ltr-meta rounded-[var(--radius-control)] px-2 py-2 text-[13px] tracking-[0.08em] text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={() => setOpen(false)}
         >
@@ -91,7 +92,12 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-public-bg/90 backdrop-blur-sm" dir="ltr">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <p className="ltr-meta text-sm font-semibold tracking-[0.2em] text-fg">{pub.brand}</p>
+        <Link
+          to="/"
+          className="ltr-meta text-sm font-semibold tracking-[0.2em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          {pub.brand}
+        </Link>
         <nav className="hidden lg:flex" aria-label="שיווק">
           {links}
         </nav>
@@ -115,24 +121,32 @@ export function PublicFooter() {
     <footer className="border-t border-border px-4 py-12" dir="ltr">
       <div className="mx-auto flex max-w-6xl flex-col gap-10">
         <div>
-          <p className="ltr-meta text-sm font-semibold tracking-[0.2em] text-fg">{pub.brand}</p>
+          <Link
+            to="/"
+            className="ltr-meta text-sm font-semibold tracking-[0.2em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            {pub.brand}
+          </Link>
           <p className="ltr-meta mt-4 max-w-sm text-sm leading-6 tracking-[0.08em] text-fg-muted">{pub.footerTag}</p>
           <p className="ltr-meta mt-6 text-[11px] tracking-[0.16em] text-fg-muted">{pub.operator}</p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm" aria-label="כותרת תחתונה">
-          <a href="#operations" className="ltr-meta text-fg-muted hover:text-fg">
+          <a href="/#operations" className="ltr-meta text-fg-muted hover:text-fg">
             {pub.navPlatform}
           </a>
-          <a href="#security" className="ltr-meta text-fg-muted hover:text-fg">
+          <a href="/#security" className="ltr-meta text-fg-muted hover:text-fg">
             {pub.navSecurity}
           </a>
-          <a href="#site-file" className="ltr-meta text-fg-muted hover:text-fg">
+          <a href="/#site-file" className="ltr-meta text-fg-muted hover:text-fg">
             {pub.navSiteFile}
           </a>
-          <a href="#pilot" className="ltr-meta text-fg-muted hover:text-fg">
+          <a href="/#pilot" className="ltr-meta text-fg-muted hover:text-fg">
             {pub.pilotTitle}
           </a>
         </nav>
+        <div dir="rtl">
+          <LegalNav className="text-fg-muted" />
+        </div>
         <p className="ltr-meta text-xs text-fg-muted">{pub.footerLegal}</p>
       </div>
     </footer>

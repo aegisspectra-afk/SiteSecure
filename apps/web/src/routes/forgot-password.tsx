@@ -82,7 +82,7 @@ function ForgotPage() {
             error={fieldError}
           />
           {error ? <AuthAlert>{error}</AuthAlert> : null}
-          <Button type="submit" variant="primary" loading={loading} className="h-12 w-full">
+          <Button type="submit" variant="primary" loading={loading} loadingLabel={he.sendingReset} className="auth-cta h-12 w-full">
             {he.forgotPrimary}
           </Button>
         </AuthForm>

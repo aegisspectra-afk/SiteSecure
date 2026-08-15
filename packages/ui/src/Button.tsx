@@ -7,6 +7,7 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   loading?: boolean;
+  loadingLabel?: string;
 };
 
 const variants: Record<ButtonVariant, string> = {
@@ -26,6 +27,7 @@ const disabledVisual: Record<ButtonVariant, string> = {
 export function Button({
   variant = "primary",
   loading = false,
+  loadingLabel,
   className,
   disabled,
   children,
@@ -34,6 +36,7 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = Boolean(disabled) || loading;
   const showDisabledLook = Boolean(disabled) && !loading;
+  const showLoadingLabel = loading && Boolean(loadingLabel);
   return (
     <button
       type={type}
@@ -47,12 +50,20 @@ export function Button({
       disabled={isDisabled}
       aria-busy={loading || undefined}
       aria-disabled={isDisabled || undefined}
+      aria-label={showLoadingLabel ? loadingLabel : undefined}
       {...props}
     >
-      {loading ? (
-        <LoaderCircle className="absolute size-4 animate-spin" aria-hidden />
-      ) : null}
-      <span className={loading ? "invisible" : undefined}>{children}</span>
+      {showLoadingLabel ? (
+        <>
+          <LoaderCircle className="size-4 animate-spin" aria-hidden />
+          <span>{loadingLabel}</span>
+        </>
+      ) : (
+        <>
+          {loading ? <LoaderCircle className="absolute size-4 animate-spin" aria-hidden /> : null}
+          <span className={loading ? "invisible" : undefined}>{children}</span>
+        </>
+      )}
     </button>
   );
 }

@@ -1,7 +1,7 @@
 import { Button, ErrorState, LoadingBlock } from "@site-secure/ui";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { AuthAlert, AuthFooter, AuthForm, AuthLayout, PasswordField } from "../components/auth";
+import { AuthAlert, AuthFooter, AuthForm, AuthLayout, PasswordField, PasswordStrength } from "../components/auth";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
 import { useSession } from "../lib/session";
@@ -89,11 +89,11 @@ function ResetPage() {
           name="password"
           label={he.password}
           autoComplete="new-password"
-          hint={he.passwordMin}
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
           error={fieldError}
         />
+        <PasswordStrength password={password} />
         <PasswordField
           id="confirm"
           name="confirm"

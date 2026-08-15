@@ -10,7 +10,9 @@ import { he } from "../src/i18n/he";
 import { authErrorMessage } from "../src/lib/auth-errors";
 import { resetPasswordRedirectUrl, signupVerifyRedirectUrl, hasAuthCallback } from "../src/lib/auth-redirect";
 import { afterAuthPath, guestEntryPath } from "../src/lib/auth-routes";
+import { scorePassword } from "../src/lib/password-strength";
 import { isSpaApiUrl, requireProductionApiUrl } from "../src/lib/public-api-url";
+import { authTokenStorage, getRememberDevice, setRememberDevice } from "../src/lib/remember-device";
 import { API_UNAVAILABLE_HE, createApiClient, parseApiResponse } from "@site-secure/api-client";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -18,15 +20,33 @@ vi.mock("@tanstack/react-router", () => ({
     to,
     children,
     className,
+    params,
+    hash,
   }: {
     to: string;
     children: ReactNode;
     className?: string;
-  }) => (
-    <a href={to} className={className}>
-      {children}
-    </a>
-  ),
+    params?: Record<string, string>;
+    hash?: string;
+  }) => {
+    let href = to;
+    if (params) {
+      for (const [key, value] of Object.entries(params)) href = href.replace(`$${key}`, value);
+    }
+    if (hash) href = `${href}#${hash}`;
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  },
+  Navigate: ({ to, params }: { to: string; params?: Record<string, string> }) => {
+    let href = to;
+    if (params) {
+      for (const [key, value] of Object.entries(params)) href = href.replace(`$${key}`, value);
+    }
+    return <span data-testid="navigate">{href}</span>;
+  },
 }));
 
 describe("auth routing", () => {
@@ -129,12 +149,20 @@ describe("LoginForm", () => {
   it("keeps one Hebrew primary and a quieter forgot-password link", () => {
     render(<LoginForm onSubmit={vi.fn()} />);
     expect(screen.getByRole("button", { name: he.loginPrimary })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: he.rememberMe })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.loginSecondaryForgot })).toHaveAttribute(
       "href",
       "/forgot-password",
     );
     expect(screen.getByRole("button", { name: he.showPassword })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.loginSecondaryRegister })).not.toBeInTheDocument();
+  });
+
+  it("shows authenticating and granted labels without a second primary", () => {
+    const { rerender } = render(<LoginForm loading onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: he.authenticating })).toBeDisabled();
+    rerender(<LoginForm granted onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: he.accessGranted })).toBeDisabled();
   });
 
   it("blocks submit with invalid email", async () => {
@@ -153,7 +181,8 @@ describe("RegisterForm", () => {
   it("primary action is the Hebrew verb צור חשבון", () => {
     render(<RegisterForm onSubmit={vi.fn()} />);
     expect(screen.getByRole("button", { name: he.registerPrimary })).toBeInTheDocument();
-    expect(screen.getByText(he.passwordMin)).toBeInTheDocument();
+    expect(screen.getByText(he.passwordStrength)).toBeInTheDocument();
+    expect(screen.getByText(he.passwordRuleLength)).toBeInTheDocument();
   });
 
   it("blocks short password and mismatched confirmation", async () => {
@@ -224,9 +253,17 @@ describe("AuthLayout", () => {
     expect(screen.getByText(he.authHebrewSupport)).toBeInTheDocument();
     expect(screen.getByText(he.authWelcomeBack)).toBeInTheDocument();
     expect(screen.getByLabelText(he.authOpsAria)).toBeInTheDocument();
-    expect(screen.getByText(he.authOpsStatusLabel)).toBeInTheDocument();
-    expect(screen.getByText(he.authOpsStatusValue)).toBeInTheDocument();
+    expect(screen.getByText(he.authOpsPreviewLabel)).toBeInTheDocument();
+    expect(screen.getAllByText(he.authOpsStatusLabel).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(he.authOpsStatusValue).length).toBeGreaterThan(0);
     expect(screen.getByText(he.authOpsWorkspaceName)).toBeInTheDocument();
+    expect(screen.getAllByText(he.authOpsNetworkLabel).length).toBeGreaterThan(0);
+    expect(screen.getByText(he.authOpsSystemsLabel)).toBeInTheDocument();
+    expect(screen.getByText(he.authTrustAuth)).toBeInTheDocument();
+    expect(screen.getByText(he.authFooterLegal)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/legal/privacy");
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/legal/terms");
+    expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute("href", "/legal/security");
     expect(screen.getByRole("heading", { name: he.loginLead })).toBeInTheDocument();
     const skip = screen.getByRole("link", { name: he.skipToForm });
     expect(skip).toHaveAttribute("href", "#auth-form");
@@ -236,5 +273,38 @@ describe("AuthLayout", () => {
     expect(screen.queryByText(/ROI/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/ENCRYPTED/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/פיילוט/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /google/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /microsoft/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("password strength", () => {
+  it("only treats length as the blocking bar, and scores complexity above that", () => {
+    expect(scorePassword("")).toBe(0);
+    expect(scorePassword("short")).toBe(0);
+    expect(scorePassword("longenough")).toBe(1);
+    expect(scorePassword("LongEnough1")).toBe(3);
+    expect(scorePassword("LongEnoughPass1")).toBe(4);
+  });
+});
+
+describe("remember device storage", () => {
+  it("keeps existing local sessions readable and writes to session storage when opted out", () => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    expect(getRememberDevice()).toBe(true);
+    window.localStorage.setItem("sb-token", "existing");
+    expect(authTokenStorage.getItem("sb-token")).toBe("existing");
+
+    setRememberDevice(false);
+    expect(getRememberDevice()).toBe(false);
+    authTokenStorage.setItem("sb-token", "fresh");
+    expect(window.sessionStorage.getItem("sb-token")).toBe("fresh");
+    expect(window.localStorage.getItem("sb-token")).toBeNull();
+
+    setRememberDevice(true);
+    authTokenStorage.setItem("sb-token", "kept");
+    expect(window.localStorage.getItem("sb-token")).toBe("kept");
+    expect(window.sessionStorage.getItem("sb-token")).toBeNull();
   });
 });

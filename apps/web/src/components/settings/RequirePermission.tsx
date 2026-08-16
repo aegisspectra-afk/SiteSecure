@@ -5,7 +5,7 @@ import { can } from "../../lib/can";
 import { useSession } from "../../lib/session";
 
 export function Forbidden() {
-  return <ErrorState title="403" description={he.forbiddenBody} />;
+  return <ErrorState title={he.forbiddenTitle} description={he.forbiddenBody} />;
 }
 
 export function RequirePermission({

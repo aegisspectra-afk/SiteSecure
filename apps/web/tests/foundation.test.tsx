@@ -106,15 +106,15 @@ describe("appNav", () => {
 
   it("is RBAC-aware and does not invent CRM routes", () => {
     const technician = paths("technician", solo);
-    expect(technician).toEqual(["/app/today", "/app/quotes"]);
+    expect(technician).toEqual(["/app/today", "/app/quotes", "/app/catalog"]);
     expect(technician.some((to) => to.includes("customer") || to.includes("site"))).toBe(false);
 
     const sales = paths("sales", solo);
-    expect(sales).toEqual(["/app/dashboard", "/app/quotes"]);
+    expect(sales).toEqual(["/app/dashboard", "/app/quotes", "/app/catalog"]);
     expect(sales).not.toContain("/app/settings/users");
 
     const viewer = paths("viewer", solo);
-    expect(viewer).toEqual(["/app/dashboard", "/app/quotes"]);
+    expect(viewer).toEqual(["/app/dashboard", "/app/quotes", "/app/catalog"]);
 
     const manager = paths("manager", solo);
     expect(manager).toContain("/app/dashboard");
@@ -147,7 +147,7 @@ describe("appNav", () => {
     expect(admin).toContain("/app/settings");
 
     const ft = paths("founding_technician", solo);
-    expect(ft).toEqual(["/app/today", "/app/quotes", "/app/settings/security"]);
+    expect(ft).toEqual(["/app/today", "/app/quotes", "/app/catalog", "/app/settings/security"]);
   });
 
   it("bottom nav is a short live spine, not a copied sidebar", () => {
@@ -159,7 +159,7 @@ describe("appNav", () => {
       false,
     );
 
-    expect(kinds("sales", solo)).toEqual(["/app/dashboard", "/app/quotes"]);
+    expect(kinds("sales", solo)).toEqual(["/app/dashboard", "/app/quotes", "more"]);
     expect(kinds("owner", solo)).toEqual(["/app/dashboard", "/app/quotes", "more"]);
     expect(kinds("owner", solo)).not.toContain("/app/settings");
     expect(kinds("owner", solo)).not.toContain("/app/settings/security");

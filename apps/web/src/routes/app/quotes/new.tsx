@@ -1,4 +1,4 @@
-import { Button, ErrorState, PageHeader, Textarea } from "@site-secure/ui";
+import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -23,10 +23,10 @@ function NewQuoteBody() {
   const { session, api } = useSession();
   const navigate = useNavigate();
   const workspaceId = session?.memberships[0]?.workspace_id;
-  const [notes, setNotes] = useState("");
+  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () => api.createQuote(workspaceId!, notes.trim() ? { customer_notes: notes.trim() } : {}),
+    mutationFn: () => api.createQuote(workspaceId!, title.trim() ? { title: title.trim() } : {}),
     onSuccess: (quote) => {
       void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: quote.id } });
     },
@@ -47,7 +47,7 @@ function NewQuoteBody() {
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <PageHeader title={he.newQuote} description={he.quoteCreateLead} />
       <form className="ops-card flex flex-col gap-4 p-5" onSubmit={onSubmit}>
-        <Textarea id="quote-notes" label={he.quoteNotes} value={notes} onChange={(ev) => setNotes(ev.target.value)} />
+        <Input id="title" label={he.quoteTitle} value={title} onChange={(ev) => setTitle(ev.target.value)} />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <Button type="submit" loading={mutation.isPending}>
           {he.quoteCreate}

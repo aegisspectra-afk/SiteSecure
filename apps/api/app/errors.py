@@ -51,4 +51,7 @@ MESSAGES = {
     "INVITE_ALREADY_PENDING": "כבר קיימת הזמנה ממתינה לכתובת הזו",
     "INVITE_USER_EXISTS": "הכתובת כבר שייכת לחבר פעיל בסביבה",
     "VALIDATION_ERROR": "נתונים לא תקינים",
+    "QUOTE_INCOMPLETE": "לא ניתן לשלוח את ההצעה",
+    "TEMPLATE_EMPTY": "לתבנית אין שורות להחלה",
+    "API_UNAVAILABLE": "השירות אינו זמין",
 }

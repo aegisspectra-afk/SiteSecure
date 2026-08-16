@@ -132,6 +132,38 @@ def test_quote_locked_state():
     assert d.code == "RESOURCE_STATE"
 
 
+def test_quote_sent_cannot_be_edited_in_place():
+    d = authorize(
+        ctx=_ctx("sales"),
+        action="quotes.edit",
+        resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state="sent"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+    d = authorize(
+        ctx=_ctx("sales"),
+        action="quotes.send",
+        resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state="sent"),
+    )
+    assert d.allowed is False
+
+
+def test_quote_revise_from_sent():
+    d = authorize(
+        ctx=_ctx("sales"),
+        action="quotes.create",
+        resource=ResourceRef(type="quote_revision", id="q1", owner_user_id="user-1", state="sent"),
+    )
+    assert d.allowed is True
+    d = authorize(
+        ctx=_ctx("sales"),
+        action="quotes.create",
+        resource=ResourceRef(type="quote_revision", id="q1", owner_user_id="user-1", state="draft"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+
+
 FOUNDATION_ACTIONS = (
     "dashboard.view",
     "settings.view",
@@ -234,4 +266,77 @@ def test_foundation_role_matrix():
         for action, allowed in expected.items():
             decision = authorize(ctx=_ctx(role), action=action)
             assert decision.allowed is allowed, f"{role} {action} expected {allowed} got {decision.code}"
+
+
+P0_ACTIONS = {
+    "owner": {
+        "quotes.create": True,
+        "quotes.edit": True,
+        "quotes.send": True,
+        "quotes.view_cost": True,
+        "catalog.view": True,
+        "catalog.edit": True,
+    },
+    "administrator": {
+        "quotes.create": True,
+        "quotes.send": True,
+        "quotes.view_cost": True,
+        "catalog.edit": True,
+    },
+    "manager": {
+        "quotes.create": True,
+        "quotes.send": True,
+        "quotes.view_cost": True,
+        "catalog.edit": True,
+    },
+    "sales": {
+        "quotes.create": True,
+        "quotes.edit": True,
+        "quotes.send": True,
+        "quotes.view_cost": False,
+        "catalog.view": True,
+        "catalog.edit": False,
+    },
+    "technician": {
+        "quotes.view": True,
+        "quotes.create": False,
+        "quotes.edit": False,
+        "quotes.send": False,
+        "quotes.view_cost": False,
+        "catalog.view": True,
+        "catalog.edit": False,
+    },
+    "founding_technician": {
+        "quotes.view": True,
+        "quotes.create": False,
+        "quotes.edit": True,
+        "quotes.send": False,
+        "catalog.view": True,
+        "catalog.edit": False,
+    },
+    "viewer": {
+        "quotes.view": True,
+        "quotes.create": False,
+        "quotes.edit": False,
+        "quotes.send": False,
+        "catalog.view": True,
+        "catalog.edit": False,
+    },
+}
+
+
+def test_p0_quote_catalog_role_matrix():
+    for role, expected in P0_ACTIONS.items():
+        for action, allowed in expected.items():
+            decision = authorize(ctx=_ctx(role), action=action)
+            assert decision.allowed is allowed, f"{role} {action} expected {allowed} got {decision.code}"
+
+
+def test_quotes_entitlement_comes_from_catalog_not_plan_name():
+    from dataclasses import replace
+
+    ctx = replace(_ctx("owner", plan="business"), features=frozenset({"core"}))
+    d = authorize(ctx=ctx, action="quotes.create")
+    assert d.allowed is False
+    assert d.code == "FEATURE_NOT_INCLUDED"
 

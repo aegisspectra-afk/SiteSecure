@@ -131,14 +131,33 @@ export type DashboardResponse = {
   recent_quotes: RecentQuote[];
 };
 
+export type QuoteGap = {
+  field: string;
+  code: string;
+  message: string;
+};
+
 export type QuoteOut = {
   id: string;
   workspace_id: string;
   number: string;
   status: string;
   customer_id: string | null;
+  customer_name?: string | null;
   site_id: string | null;
+  lead_id?: string | null;
   owner_user_id: string | null;
+  title?: string | null;
+  project_name?: string | null;
+  project_address?: string | null;
+  summary?: string | null;
+  key_points?: string | null;
+  warranty?: string | null;
+  general_terms?: string | null;
+  template_id?: string | null;
+  payment_terms?: string | null;
+  discount_type?: string | null;
+  discount_value?: number | null;
   currency?: string;
   vat_percent?: number | null;
   total_gross?: number | null;
@@ -151,6 +170,13 @@ export type QuoteOut = {
   customer_notes?: string | null;
   internal_notes?: string | null;
   version?: number;
+  sent_at?: string | null;
+  viewed_at?: string | null;
+  approved_at?: string | null;
+  rejected_at?: string | null;
+  public_url?: string | null;
+  public_token?: string | null;
+  validation?: { can_send: boolean; gaps: QuoteGap[] };
   updated_at?: string;
   created_at?: string;
   items?: QuoteItemOut[];
@@ -159,12 +185,126 @@ export type QuoteOut = {
 export type QuoteItemOut = {
   id: string;
   quote_id: string;
+  product_id?: string | null;
   description: string;
+  name?: string | null;
+  sku?: string | null;
+  unit?: string | null;
   qty: number;
   unit_price: number;
+  cost?: number;
   discount?: number;
   line_net?: number;
   item_type?: string;
+  catalog_snapshot?: Record<string, unknown>;
+};
+
+export type QuotePatchBody = {
+  customer_id?: string | null;
+  site_id?: string | null;
+  title?: string | null;
+  project_name?: string | null;
+  project_address?: string | null;
+  summary?: string | null;
+  key_points?: string | null;
+  warranty?: string | null;
+  general_terms?: string | null;
+  template_id?: string | null;
+  vat_percent?: number | null;
+  discount_type?: string | null;
+  discount_value?: number | null;
+  valid_until?: string | null;
+  payment_terms?: string | null;
+  customer_notes?: string | null;
+  internal_notes?: string | null;
+};
+
+export type QuoteItemIn = {
+  product_id?: string;
+  item_type?: string;
+  description?: string;
+  qty?: number;
+  unit_price?: number;
+  cost?: number;
+  discount?: number;
+  sort_order?: number;
+};
+
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  unit: string;
+  kind: string;
+  list_price: number;
+  selling_price?: number;
+  cost?: number;
+  vat_eligible?: boolean;
+  tax?: boolean;
+  active?: boolean;
+  is_active?: boolean;
+  item_type?: string;
+  category_id?: string | null;
+};
+
+export type CatalogCategory = {
+  id: string;
+  key: string;
+  name_he: string;
+  sort_order?: number;
+};
+
+export type QuoteTemplate = {
+  id: string;
+  key: string;
+  name_he: string;
+  item_count?: number;
+};
+
+export type CustomerOut = {
+  id: string;
+  display_name: string;
+  email?: string | null;
+  phone?: string | null;
+};
+
+export type SiteOut = {
+  id: string;
+  customer_id: string;
+  name: string;
+  address?: Record<string, unknown>;
+};
+
+export type PublicQuote = {
+  id: string;
+  number: string;
+  version: number;
+  status: string;
+  superseded: boolean;
+  can_approve: boolean;
+  can_reject: boolean;
+  title?: string | null;
+  summary?: string | null;
+  key_points?: string | null;
+  project_name?: string | null;
+  project_address?: string | null;
+  valid_until?: string | null;
+  payment_terms?: string | null;
+  warranty?: string | null;
+  general_terms?: string | null;
+  customer_notes?: string | null;
+  currency: string;
+  vat_percent: number;
+  subtotal_net: number;
+  vat_amount: number;
+  total_gross: number;
+  company: { name?: string | null };
+  customer: { display_name?: string | null; email?: string | null; phone?: string | null } | null;
+  site: { name?: string | null; address?: Record<string, unknown> } | null;
+  items: QuoteItemOut[];
+  approved_at?: string | null;
+  rejected_at?: string | null;
 };
 
 export type QuotePage = {
@@ -309,21 +449,143 @@ export function createApiClient(opts: {
       if (opts.status?.trim()) params.set("status", opts.status.trim());
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
     },
-    createQuote: (workspaceId: string, body: { customer_notes?: string; valid_until?: string } = {}) =>
+    createQuote: (workspaceId: string, body: QuotePatchBody = {}) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
     getQuote: (workspaceId: string, quoteId: string) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`),
-    addQuoteItem: (
-      workspaceId: string,
-      quoteId: string,
-      body: { description: string; qty: number; unit_price: number; item_type?: string },
-    ) =>
+    getQuotePreview: (workspaceId: string, quoteId: string) =>
+      request<PublicQuote>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/preview`),
+    patchQuote: (workspaceId: string, quoteId: string, body: QuotePatchBody) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    addQuoteItem: (workspaceId: string, quoteId: string, body: QuoteItemIn) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/items`, {
         method: "POST",
-        body: JSON.stringify({ item_type: "custom", ...body }),
+        body: JSON.stringify(body),
+      }),
+    patchQuoteItem: (
+      workspaceId: string,
+      quoteId: string,
+      itemId: string,
+      body: Partial<QuoteItemIn> & { name?: string },
+    ) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteQuoteItem: (workspaceId: string, quoteId: string, itemId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/items/${itemId}`, {
+        method: "DELETE",
+      }),
+    sendQuote: (workspaceId: string, quoteId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/send`, { method: "POST" }),
+    applyQuoteTemplate: (workspaceId: string, quoteId: string, body: { template_id?: string } = {}) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/apply-template`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    reviseQuote: (workspaceId: string, quoteId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/revise`, { method: "POST" }),
+    shareQuote: (workspaceId: string, quoteId: string) =>
+      request<{ public_url: string; public_token: string }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/share`,
+        { method: "POST" },
+      ),
+    listCustomers: (workspaceId: string, opts: { q?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      return request<{ items: CustomerOut[] }>(`/api/v1/workspaces/${workspaceId}/customers?${params}`);
+    },
+    createCustomer: (workspaceId: string, body: { display_name: string; email?: string; phone?: string }) =>
+      request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listSites: (workspaceId: string, opts: { customer_id?: string; q?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      return request<{ items: SiteOut[] }>(`/api/v1/workspaces/${workspaceId}/sites?${params}`);
+    },
+    createSite: (
+      workspaceId: string,
+      body: { customer_id: string; name: string; address?: { line?: string } },
+    ) =>
+      request<SiteOut>(`/api/v1/workspaces/${workspaceId}/sites`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listCatalogProducts: (
+      workspaceId: string,
+      opts: { q?: string; kind?: string; category_id?: string; limit?: number; include_inactive?: boolean; active?: boolean } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 30) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.kind) params.set("kind", opts.kind);
+      if (opts.category_id) params.set("category_id", opts.category_id);
+      if (opts.include_inactive) params.set("include_inactive", "true");
+      if (opts.active === false) params.set("active", "false");
+      return request<{ items: CatalogProduct[] }>(
+        `/api/v1/workspaces/${workspaceId}/catalog/products?${params}`,
+      );
+    },
+    createCatalogProduct: (
+      workspaceId: string,
+      body: {
+        name: string;
+        sku?: string;
+        kind?: string;
+        list_price?: number;
+        cost?: number;
+        description?: string;
+        unit?: string;
+        category_id?: string;
+        is_active?: boolean;
+      },
+    ) =>
+      request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchCatalogProduct: (
+      workspaceId: string,
+      productId: string,
+      body: {
+        name?: string;
+        sku?: string;
+        kind?: string;
+        list_price?: number;
+        cost?: number;
+        description?: string;
+        unit?: string;
+        category_id?: string | null;
+        is_active?: boolean;
+      },
+    ) =>
+      request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products/${productId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listCatalogCategories: (workspaceId: string) =>
+      request<{ items: CatalogCategory[] }>(`/api/v1/workspaces/${workspaceId}/catalog/categories`),
+    listQuoteTemplates: (workspaceId: string) =>
+      request<{ items: QuoteTemplate[] }>(`/api/v1/workspaces/${workspaceId}/catalog/templates`),
+    getPublicQuote: (token: string) =>
+      request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}`),
+    approvePublicQuote: (token: string, body: { name?: string } = {}) =>
+      request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}/approve`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    rejectPublicQuote: (token: string, body: { reason?: string } = {}) =>
+      request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}/reject`, {
+        method: "POST",
+        body: JSON.stringify(body),
       }),
     listMembers: (workspaceId: string) =>
       request<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`),

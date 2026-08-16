@@ -14,11 +14,13 @@ from .config import get_settings
 from .errors import ApiError, error_response
 from .routers import (
     auth,
+    catalog,
     customers,
     dashboard,
     documents,
     health,
     jobs,
+    public_quotes,
     quotes,
     sites,
     team,
@@ -34,7 +36,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="SITE SECURE V2 API",
-        version="0.6.0",
+        version="0.7.0",
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
     )
@@ -106,6 +108,8 @@ def create_app() -> FastAPI:
     app.include_router(sites.router)
     app.include_router(jobs.router)
     app.include_router(quotes.router)
+    app.include_router(catalog.router)
+    app.include_router(public_quotes.router)
     app.include_router(documents.router)
     app.include_router(dashboard.router)
     return app

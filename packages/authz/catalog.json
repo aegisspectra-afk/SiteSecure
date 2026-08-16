@@ -54,7 +54,18 @@
     "reports.financial": "finance",
     "audit.view": "audit",
     "roles.manage": "team",
-    "workspace.delete": "settings"
+    "workspace.delete": "settings",
+    "quotes.view": "quotes",
+    "quotes.create": "quotes",
+    "quotes.edit": "quotes",
+    "quotes.delete": "quotes",
+    "quotes.send": "quotes",
+    "quotes.approve": "quotes",
+    "quotes.export": "quotes",
+    "quotes.view_cost": "quotes",
+    "quotes.override_price": "quotes",
+    "catalog.view": "catalog",
+    "catalog.edit": "catalog"
   },
   "permissions": [
     { "key": "dashboard.view", "group": "core" },

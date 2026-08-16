@@ -11,7 +11,7 @@ import {
   type QuoteTab,
 } from "../../lib/quote-workspace";
 import { quoteConversion } from "../../lib/ux-metrics";
-import { formatDay, formatMoney, formatRelativeDay, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
+import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 
 const TABS: { id: QuoteTab; label: string }[] = [
   { id: "all", label: he.quotesTabAll },
@@ -199,10 +199,10 @@ function QuotesTable({
       <THead>
         <TR>
           <TH>{he.quotesColNumber}</TH>
-          <TH>{he.quotesColStatus}</TH>
+          <TH>{he.quotesColCustomer}</TH>
+          <TH>{he.quotesColTitle}</TH>
           <TH>{he.quotesColTotal}</TH>
-          <TH>{he.quotesColValidUntil}</TH>
-          <TH>{he.quotesColUpdated}</TH>
+          <TH>{he.quotesColStatus}</TH>
           <TH>{he.quoteOpen}</TH>
         </TR>
       </THead>
@@ -226,12 +226,12 @@ function QuotesTable({
                 <span className="ms-2 text-xs text-fg-muted">{he.quotesVersion(row.version)}</span>
               ) : null}
             </TD>
+            <TD>{row.customer_name?.trim() || he.quotesNoCustomer}</TD>
+            <TD>{row.title?.trim() || row.project_name?.trim() || "—"}</TD>
+            <TD>{formatMoney(row.total_gross, row.currency)}</TD>
             <TD>
               <Status label={quoteStatusLabel(row.status)} tone={quoteStatusTone(row.status)} />
             </TD>
-            <TD>{formatMoney(row.total_gross, row.currency)}</TD>
-            <TD>{formatDay(row.valid_until) || "—"}</TD>
-            <TD>{formatRelativeDay(row.updated_at)}</TD>
             <TD>
               <Link
                 to="/app/quotes/$quoteId"

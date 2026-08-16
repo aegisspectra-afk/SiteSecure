@@ -8,13 +8,18 @@ export function quoteStatusLabel(status: string): string {
 export function quoteStatusTone(status: string): StatusTone {
   if (status === "approved") return "success";
   if (status === "sent" || status === "viewed") return "info";
-  if (status === "rejected" || status === "expired" || status === "cancelled") return "danger";
+  if (status === "rejected" || status === "expired" || status === "cancelled" || status === "superseded") return "danger";
   return "neutral";
 }
 
 export function formatMoney(value: number | null | undefined, currency = "ILS"): string {
   if (value == null || Number.isNaN(value)) return "—";
-  return new Intl.NumberFormat("he-IL", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("he-IL", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 export function formatDay(value: string | null | undefined): string {

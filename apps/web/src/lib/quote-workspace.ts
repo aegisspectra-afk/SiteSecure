@@ -26,7 +26,15 @@ export function filterQuotes(quotes: QuoteOut[], tab: QuoteTab, search: string):
   return quotes.filter((quote) => {
     if (statuses && !statuses.includes(quote.status)) return false;
     if (!query) return true;
-    const haystack = [quote.number, quote.customer_notes, quote.internal_notes, quote.status]
+    const haystack = [
+      quote.number,
+      quote.title,
+      quote.project_name,
+      quote.customer_name,
+      quote.customer_notes,
+      quote.internal_notes,
+      quote.status,
+    ]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();

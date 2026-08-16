@@ -8,6 +8,7 @@ export type AppNavTo =
   | "/app/dashboard"
   | "/app/today"
   | "/app/quotes"
+  | "/app/catalog"
   | "/app/settings"
   | "/app/settings/users"
   | "/app/settings/roles"
@@ -18,6 +19,7 @@ export type NavIconKey =
   | "overview"
   | "today"
   | "quotes"
+  | "catalog"
   | "team"
   | "roles"
   | "security"
@@ -90,6 +92,12 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
           label: he.navQuotes,
           icon: "quotes",
           visible: allow("quotes.view") && hasFeature(features, "quotes"),
+        },
+        {
+          to: "/app/catalog",
+          label: he.navCatalog,
+          icon: "catalog",
+          visible: allow("catalog.view") && hasFeature(features, "catalog"),
         },
       ],
     },

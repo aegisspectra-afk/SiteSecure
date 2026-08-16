@@ -21,7 +21,7 @@ describe("RequirePermission", () => {
         <p>directory</p>
       </RequirePermission>,
     );
-    expect(screen.getByText("403")).toBeInTheDocument();
+    expect(screen.getByText(he.forbiddenTitle)).toBeInTheDocument();
     expect(screen.getByText(he.forbiddenBody)).toBeInTheDocument();
     expect(screen.queryByText("directory")).not.toBeInTheDocument();
   });

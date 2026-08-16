@@ -32,3 +32,32 @@ def test_client_totals_are_not_inputs():
     assert result["total_gross"] == 10.0
     assert result["cost_total"] == 4.0
     assert result["margin_amount"] == 6.0
+
+
+def test_invalid_inputs_do_not_produce_nan_or_negative_totals():
+    result = recalculate(
+        [
+            {"qty": -2, "unit_price": "nan", "discount": -5, "cost": "inf", "item_type": "catalog"},
+            {"qty": 1, "unit_price": 100, "discount": 0, "cost": 10, "item_type": "catalog"},
+        ],
+        vat_percent=18,
+        discount_type="percent",
+        discount_value=150,
+    )
+    assert result["subtotal_net"] == 0.0
+    assert result["vat_amount"] == 0.0
+    assert result["total_gross"] == 0.0
+    assert result["items"][0]["line_net"] == 0.0
+    assert result["items"][1]["line_net"] == 100.0
+
+
+def test_amount_discount_cannot_go_negative():
+    result = recalculate(
+        [{"qty": 1, "unit_price": 50, "discount": 0, "cost": 10, "item_type": "free"}],
+        vat_percent=0,
+        discount_type="amount",
+        discount_value=80,
+    )
+    assert result["subtotal_net"] == 0.0
+    assert result["total_gross"] == 0.0
+    assert result["cost_total"] == 10.0

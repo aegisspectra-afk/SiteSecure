@@ -10,6 +10,7 @@ from .authz.catalog import default_plan_key, load_catalog
 from .authz.types import AuthzContext
 from .config import Settings, get_settings
 from .errors import ApiError
+from .supabase_service import ServiceClient
 from .supabase_user import UserClient
 
 
@@ -31,6 +32,10 @@ def user_client(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> UserClient:
     return UserClient(settings, token)
+
+
+def service_client(settings: Annotated[Settings, Depends(get_settings)]) -> ServiceClient:
+    return ServiceClient(settings)
 
 
 def current_user(client: Annotated[UserClient, Depends(user_client)]) -> dict:

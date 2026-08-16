@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 TWOPLACES = Decimal("0.01")
 
 
 def _money(value: object) -> Decimal:
-    return Decimal(str(value or 0)).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    try:
+        raw = Decimal(str(0 if value is None else value))
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0.00")
+    if not raw.is_finite() or raw < 0:
+        raw = Decimal("0")
+    return raw.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
 
 def line_net(*, qty: object, unit_price: object, discount: object, item_type: str) -> Decimal:
@@ -47,6 +53,8 @@ def recalculate(
     dtype = (discount_type or "").lower()
     dvalue = _money(discount_value)
     if dtype == "percent":
+        if dvalue > Decimal("100"):
+            dvalue = Decimal("100")
         after_discount = subtotal * (Decimal("1") - (dvalue / Decimal("100")))
     elif dtype in {"amount", "fixed"}:
         after_discount = subtotal - dvalue

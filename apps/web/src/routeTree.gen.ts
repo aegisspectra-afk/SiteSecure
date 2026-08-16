@@ -18,6 +18,7 @@ import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
+import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
 import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
@@ -31,6 +32,8 @@ import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audi
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
 import { Route as AppSettingsSecurityRouteImport } from "./routes/app/settings/security"
 import { Route as AppSettingsUsersRouteImport } from "./routes/app/settings/users"
+import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
+import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId.preview"
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -75,6 +78,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCatalogRoute = AppCatalogRouteImport.update({
+  id: "/catalog",
+  path: "/catalog",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -142,6 +150,16 @@ const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   path: "/settings/users",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const PublicQuotesTokenRoute = PublicQuotesTokenRouteImport.update({
+  id: "/public/quotes/$token",
+  path: "/public/quotes/$token",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
+  id: "/preview",
+  path: "/preview",
+  getParentRoute: () => AppQuotesQuoteIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
@@ -152,20 +170,23 @@ export interface FileRoutesByFullPath {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
+  "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
@@ -175,20 +196,23 @@ export interface FileRoutesByTo {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/quotes": typeof AppQuotesIndexRoute
   "/app/settings": typeof AppSettingsIndexRoute
+  "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -200,20 +224,23 @@ export interface FileRoutesById {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
+  "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,6 +253,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
@@ -238,8 +266,10 @@ export interface FileRouteTypes {
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/public/quotes/$token"
     | "/app/quotes/"
     | "/app/settings/"
+    | "/app/quotes/$quoteId/preview"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
@@ -249,6 +279,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
@@ -261,8 +292,10 @@ export interface FileRouteTypes {
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/public/quotes/$token"
     | "/app/quotes"
     | "/app/settings"
+    | "/app/quotes/$quoteId/preview"
   id:
     | "__root__"
     | "/"
@@ -273,6 +306,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
@@ -285,8 +319,10 @@ export interface FileRouteTypes {
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/public/quotes/$token"
     | "/app/quotes/"
     | "/app/settings/"
+    | "/app/quotes/$quoteId/preview"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,6 +337,7 @@ export interface RootRouteChildren {
   DevUiRoute: typeof DevUiRoute
   LegalSlugRoute: typeof LegalSlugRoute
   LegalIndexRoute: typeof LegalIndexRoute
+  PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
 }
 
 declare module "@tanstack/react-router" {
@@ -366,6 +403,13 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/app/"
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/catalog": {
+      id: "/app/catalog"
+      path: "/catalog"
+      fullPath: "/app/catalog"
+      preLoaderRoute: typeof AppCatalogRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/dashboard": {
@@ -459,14 +503,40 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsUsersRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/public/quotes/$token": {
+      id: "/public/quotes/$token"
+      path: "/public/quotes/$token"
+      fullPath: "/public/quotes/$token"
+      preLoaderRoute: typeof PublicQuotesTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/app/quotes/$quoteId/preview": {
+      id: "/app/quotes/$quoteId/preview"
+      path: "/preview"
+      fullPath: "/app/quotes/$quoteId/preview"
+      preLoaderRoute: typeof AppQuotesQuoteIdPreviewRouteImport
+      parentRoute: typeof AppQuotesQuoteIdRoute
+    }
   }
 }
 
+interface AppQuotesQuoteIdRouteChildren {
+  AppQuotesQuoteIdPreviewRoute: typeof AppQuotesQuoteIdPreviewRoute
+}
+
+const AppQuotesQuoteIdRouteChildren: AppQuotesQuoteIdRouteChildren = {
+  AppQuotesQuoteIdPreviewRoute: AppQuotesQuoteIdPreviewRoute,
+}
+
+const AppQuotesQuoteIdRouteWithChildren =
+  AppQuotesQuoteIdRoute._addFileChildren(AppQuotesQuoteIdRouteChildren)
+
 interface AppRouteRouteChildren {
+  AppCatalogRoute: typeof AppCatalogRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
-  AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRoute
+  AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
   AppQuotesNewRoute: typeof AppQuotesNewRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
@@ -477,10 +547,11 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppCatalogRoute: AppCatalogRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
-  AppQuotesQuoteIdRoute: AppQuotesQuoteIdRoute,
+  AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
   AppQuotesNewRoute: AppQuotesNewRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
@@ -506,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevUiRoute: DevUiRoute,
   LegalSlugRoute: LegalSlugRoute,
   LegalIndexRoute: LegalIndexRoute,
+  PublicQuotesTokenRoute: PublicQuotesTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

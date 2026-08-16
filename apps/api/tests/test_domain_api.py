@@ -26,6 +26,15 @@ def test_openapi_and_health():
         "/api/v1/workspaces/{workspace_id}/jobs",
         "/api/v1/workspaces/{workspace_id}/quotes",
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/recalculate",
+        "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/send",
+        "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/revise",
+        "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/apply-template",
+        "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/preview",
+        "/api/v1/workspaces/{workspace_id}/catalog/products",
+        "/api/v1/workspaces/{workspace_id}/catalog/categories",
+        "/api/v1/public/quotes/{token}",
+        "/api/v1/public/quotes/{token}/approve",
+        "/api/v1/public/quotes/{token}/reject",
         "/api/v1/workspaces/{workspace_id}/documents/uploads",
         "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/start",
         "/api/v1/workspaces/{workspace_id}/dashboard",
@@ -97,3 +106,13 @@ def test_cost_permission_not_implied_by_quotes_view():
     assert authorize(ctx=ctx, action="quotes.view").allowed
     assert not authorize(ctx=ctx, action="quotes.view_cost").allowed
     assert authorize(ctx=ctx, action="quotes.create").allowed
+
+
+def test_flatten_quote_customer_name():
+    from app.routers.quotes import _flatten_quote
+
+    named = _flatten_quote({"id": "q1", "customers": {"display_name": "רומן קופן"}})
+    assert named["customer_name"] == "רומן קופן"
+    assert "customers" not in named
+    missing = _flatten_quote({"id": "q2", "customers": None})
+    assert missing["customer_name"] is None

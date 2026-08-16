@@ -4,7 +4,9 @@ from ..errors import MESSAGES
 from .catalog import load_catalog
 from .types import AuthzContext, Decision, ResourceRef
 
-QUOTE_LOCKED = frozenset({"approved", "cancelled"})
+QUOTE_EDITABLE = frozenset({"draft"})
+QUOTE_SENDABLE = frozenset({"draft"})
+QUOTE_REVISABLE = frozenset({"sent", "viewed", "approved", "rejected", "expired"})
 
 
 def _deny(code: str, **details: object) -> Decision:
@@ -83,9 +85,11 @@ def _scope_ok(scope: str, ctx: AuthzContext, resource: ResourceRef | None) -> bo
 def _resource_state(action: str, resource: ResourceRef | None) -> Decision | None:
     if resource is None or resource.state is None:
         return None
-    if action == "quotes.edit" and resource.state in QUOTE_LOCKED:
+    if action == "quotes.edit" and resource.state is not None and resource.state not in QUOTE_EDITABLE:
         return _deny("RESOURCE_STATE", state=resource.state)
-    if action == "quotes.send" and resource.state not in {"draft", "sent"}:
+    if action == "quotes.send" and resource.state is not None and resource.state not in QUOTE_SENDABLE:
+        return _deny("RESOURCE_STATE", state=resource.state)
+    if action == "quotes.create" and resource.type == "quote_revision" and resource.state not in QUOTE_REVISABLE:
         return _deny("RESOURCE_STATE", state=resource.state)
     if action == "jobs.start" and resource.state not in {"scheduled", None}:
         return _deny("RESOURCE_STATE", state=resource.state)

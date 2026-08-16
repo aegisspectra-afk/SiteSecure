@@ -101,7 +101,7 @@ describe("Quotes workspace", () => {
     expect(screen.queryByText(he.quotesKpiOpenValue)).not.toBeInTheDocument();
     expect(screen.queryByText("קטלוג")).not.toBeInTheDocument();
     expect(screen.queryByText("CATALOG")).not.toBeInTheDocument();
-    expect(screen.queryByText("לקוח")).not.toBeInTheDocument();
+    expect(screen.queryByText(he.quotesColCustomer)).not.toBeInTheDocument();
     expect(screen.queryByText("פרויקט")).not.toBeInTheDocument();
     expect(screen.queryByText("ממתינות לאישור")).not.toBeInTheDocument();
   });
@@ -113,6 +113,8 @@ describe("Quotes workspace", () => {
         number: "Q-2026-0001",
         status: "draft",
         total_gross: 8400,
+        customer_name: "רומן קופן",
+        title: "התקנת מערכת מצלמות",
         customer_notes: "התקנת מצלמות",
         updated_at: new Date().toISOString(),
       }),
@@ -142,7 +144,10 @@ describe("Quotes workspace", () => {
     render(<Harness quotes={quotes} summary={summary} />);
     expect(screen.queryByText(he.quotesEmptyLead)).not.toBeInTheDocument();
     expect(screen.getByText("Q-2026-0001")).toBeInTheDocument();
+    expect(screen.getByText("רומן קופן")).toBeInTheDocument();
+    expect(screen.getByText("התקנת מערכת מצלמות")).toBeInTheDocument();
     expect(screen.getByText("Q-2026-0002")).toBeInTheDocument();
+    expect(screen.getAllByText(he.quotesNoCustomer).length).toBeGreaterThan(0);
     expect(screen.getByText("Q-2026-0003")).toBeInTheDocument();
     expect(screen.getByText(he.quotesVersion(2))).toBeInTheDocument();
     expect(screen.getByText(he.quotesKpiDraft)).toBeInTheDocument();
@@ -154,7 +159,7 @@ describe("Quotes workspace", () => {
     expect(screen.getByLabelText(he.quotesSearchLabel)).toBeInTheDocument();
     expect(screen.getByText(he.quotePipelineTitle)).toBeInTheDocument();
     expect(screen.queryByText(he.kpiViewQuotes)).not.toBeInTheDocument();
-    expect(screen.queryByText("לקוח")).not.toBeInTheDocument();
+    expect(screen.getByText(he.quotesColCustomer)).toBeInTheDocument();
     expect(screen.queryByText("פרויקט")).not.toBeInTheDocument();
     expect(screen.queryByText(he.quotesKpiMargin)).not.toBeInTheDocument();
   });
@@ -173,6 +178,17 @@ describe("Quotes workspace", () => {
     fireEvent.change(screen.getByLabelText(he.quotesSearchLabel), { target: { value: "אזעקה" } });
     expect(screen.getByText("Q-0002")).toBeInTheDocument();
     expect(screen.queryByText("Q-0003")).not.toBeInTheDocument();
+  });
+
+  it("searches by customer name from the backend field", () => {
+    const quotes = [
+      quote({ id: "q1", number: "Q-0001", status: "draft", customer_name: "רומן קופן" }),
+      quote({ id: "q2", number: "Q-0002", status: "sent", customer_name: "לקוח אחר" }),
+    ];
+    render(<Harness quotes={quotes} />);
+    fireEvent.change(screen.getByLabelText(he.quotesSearchLabel), { target: { value: "רומן" } });
+    expect(screen.getByText("Q-0001")).toBeInTheDocument();
+    expect(screen.queryByText("Q-0002")).not.toBeInTheDocument();
   });
 
   it("opens a quote from the row", () => {
@@ -244,6 +260,13 @@ describe("quote workspace helpers", () => {
     expect(filterQuotes(quotes, "all", "Q-2026-0001").map((row) => row.id)).toEqual(["1"]);
     expect(filterQuotes(quotes, "all", "רומן").map((row) => row.id)).toEqual(["2"]);
     expect(filterQuotes(quotes, "all", "DEMO").map((row) => row.id)).toEqual(["1"]);
+    expect(
+      filterQuotes(
+        [quote({ id: "3", number: "Q-3", status: "draft", title: "בקרת כניסה" })],
+        "all",
+        "בקרת",
+      ).map((row) => row.id),
+    ).toEqual(["3"]);
   });
 
   it("hides margin totals when cost fields are absent", () => {

@@ -4,7 +4,7 @@ import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { ObserveDashboard, OpsDashboard } from "../../components/dashboard/OpsDashboard";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { he } from "../../i18n/he";
-import { can, canAny } from "../../lib/can";
+import { can } from "../../lib/can";
 import { homeVariant } from "../../lib/home";
 import { useSession } from "../../lib/session";
 
@@ -53,7 +53,7 @@ function DashboardBody({
   api: ReturnType<typeof useSession>["api"];
 }) {
   const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
-  const canSecurity = canAny(roleKey, ["settings.general", "workspace.edit"], features);
+  const canSecurity = can(roleKey, "settings.general", features) || can(roleKey, "workspace.edit", features);
 
   const query = useQuery({
     queryKey: ["dashboard", workspaceId],
@@ -87,17 +87,16 @@ function DashboardBody({
   }
 
   const memberCount = canTeam ? (usage.data?.active_members ?? null) : null;
-  const securityData = canSecurity ? (security.data ?? null) : null;
   const usageData = canTeam ? (usage.data ?? null) : null;
 
   if (variant === "observe") {
     return (
       <ObserveDashboard
         data={query.data}
-        security={securityData}
         workspaceStatus={workspaceStatus}
         roleKey={roleKey}
         features={features}
+        securitySignals={security.data?.signals ?? []}
       />
     );
   }
@@ -108,8 +107,8 @@ function DashboardBody({
       features={features}
       memberCount={memberCount}
       usage={usageData}
-      security={securityData}
       workspaceStatus={workspaceStatus}
+      securitySignals={security.data?.signals ?? []}
     />
   );
 }

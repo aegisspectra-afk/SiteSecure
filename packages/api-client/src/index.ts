@@ -88,6 +88,7 @@ export type DashboardItem = {
   scheduled_for: string | null;
   severity: "now" | "next" | "info";
   actions: string[];
+  updated_at?: string | null;
 };
 
 export type AttentionGroup = {
@@ -105,6 +106,7 @@ export type DashboardSummary = {
   quotes_rejected: number;
   quotes_open: number;
   quotes_approved_value: number;
+  quotes_open_value?: number;
   jobs_open: number;
   jobs_overdue: number;
   jobs_unassigned: number;
@@ -142,9 +144,13 @@ export type QuoteOut = {
   total_gross?: number | null;
   subtotal_net?: number | null;
   vat_amount?: number | null;
+  cost_total?: number | null;
+  margin_amount?: number | null;
+  margin_percent?: number | null;
   valid_until?: string | null;
   customer_notes?: string | null;
   internal_notes?: string | null;
+  version?: number;
   updated_at?: string;
   created_at?: string;
   items?: QuoteItemOut[];
@@ -208,6 +214,14 @@ export type SecurityCenter = {
   signals: SecuritySignal[];
 };
 
+export type UsageOccupant = {
+  kind: "member" | "invite";
+  role_key: string;
+  email: string | null;
+  label: string;
+  status: "active" | "pending";
+};
+
 export type WorkspaceUsageMeter = {
   key: string;
   label_he: string;
@@ -216,6 +230,7 @@ export type WorkspaceUsageMeter = {
   unlimited: boolean;
   unit: string;
   at_limit: boolean;
+  occupants?: UsageOccupant[];
 };
 
 export type WorkspaceUsage = {
@@ -288,8 +303,12 @@ export function createApiClient(opts: {
     getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
     getDashboard: (workspaceId: string) =>
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
-    listQuotes: (workspaceId: string) =>
-      request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?limit=50`),
+    listQuotes: (workspaceId: string, opts: { q?: string; status?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status?.trim()) params.set("status", opts.status.trim());
+      return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
+    },
     createQuote: (workspaceId: string, body: { customer_notes?: string; valid_until?: string } = {}) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes`, {
         method: "POST",

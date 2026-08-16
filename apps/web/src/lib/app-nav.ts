@@ -52,6 +52,12 @@ export function roleLabel(roleKey: string | undefined): string {
   return row?.label_he ?? roleKey;
 }
 
+export function roleLabelEn(roleKey: string | undefined): string {
+  if (!roleKey) return "";
+  const row = catalog.roles.find((role) => role.key === roleKey);
+  return row?.label_en ?? "";
+}
+
 export function planLabel(planKey: string | undefined): string {
   return catalogPlanLabel(planKey);
 }

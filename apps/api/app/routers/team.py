@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from ..audit import write_audit
 from ..authz.catalog import load_catalog
 from ..authz.engine import authorize
-from ..authz.usage import fetch_occupied_roles, seat_meters
+from ..authz.usage import fetch_occupancy, seat_meters
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import MESSAGES, ApiError
 
@@ -59,6 +59,14 @@ class SecurityCenterOut(BaseModel):
     signals: list[SecuritySignalOut]
 
 
+class UsageOccupantOut(BaseModel):
+    kind: Literal["member", "invite"]
+    role_key: str
+    email: str | None = None
+    label: str
+    status: Literal["active", "pending"]
+
+
 class UsageMeterOut(BaseModel):
     key: str
     label_he: str
@@ -67,6 +75,7 @@ class UsageMeterOut(BaseModel):
     unlimited: bool
     unit: str
     at_limit: bool
+    occupants: list[UsageOccupantOut] = Field(default_factory=list)
 
 
 class WorkspaceUsageOut(BaseModel):
@@ -152,13 +161,16 @@ def workspace_usage(
     billing = authorize(ctx=ctx, action="workspace.billing")
     if not view.allowed and not billing.allowed:
         _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
-    occupied, active, pending = fetch_occupied_roles(client, str(workspace_id))
-    meters = [UsageMeterOut(**row) for row in seat_meters(plan_key=ctx.plan_key, occupied_roles=occupied)]
+    occupancy = fetch_occupancy(client, str(workspace_id))
+    meters = [
+        UsageMeterOut(**row)
+        for row in seat_meters(plan_key=ctx.plan_key, occupants=occupancy.occupants)
+    ]
     return WorkspaceUsageOut(
         workspace_id=str(workspace_id),
         plan_key=ctx.plan_key,
-        active_members=active,
-        pending_invites=pending,
+        active_members=occupancy.active_members,
+        pending_invites=occupancy.pending_invites,
         meters=meters,
     )
 

@@ -42,6 +42,7 @@ def _quotes() -> list[dict]:
             "owner_user_id": "u-sales",
             "valid_until": "2026-08-20",
             "updated_at": "2026-08-13T10:00:00+00:00",
+            "total_gross": 8400,
             "cost_total": 9999,
         },
         {
@@ -141,7 +142,10 @@ def test_owner_attention_is_objects_not_kpis():
     assert "kpis" not in payload
     assert "revenue" not in payload
     assert payload["summary"]["quotes_open"] >= 1
+    assert payload["summary"]["quotes_open_value"] == 8400
     assert payload["recent_quotes"]
+    awaiting = next(g for g in payload["attention"] if g["kind"] == "quote_awaiting_customer")
+    assert awaiting["items"][0]["updated_at"]
     kinds = [g["kind"] for g in payload["attention"]]
     assert "quote_awaiting_customer" in kinds
     assert "job_unassigned" in kinds

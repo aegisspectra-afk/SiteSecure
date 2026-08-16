@@ -1,4 +1,4 @@
-import type { ReactNode, TableHTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode, TableHTMLAttributes } from "react";
 import { cn } from "./cn";
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
@@ -20,12 +20,12 @@ export function TBody({ children }: { children: ReactNode }) {
 export function TR({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+  ...props
+}: HTMLAttributes<HTMLTableRowElement>) {
   return (
-    <tr className={cn("h-10 border-t border-border", className)}>{children}</tr>
+    <tr className={cn("h-10 border-t border-border", className)} {...props}>
+      {children}
+    </tr>
   );
 }
 

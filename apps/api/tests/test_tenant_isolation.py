@@ -347,6 +347,44 @@ def test_solo_field_seat_limit_reached(settings, two_tenants):
     assert blocked.json()["error"]["details"]["limit_key"] == "seats_field"
 
 
+def test_duplicate_pending_invite_is_rejected(settings, two_tenants):
+    api = TestClient(app)
+    token = two_tenants["token_a"]
+    workspace_id = _new_workspace(token, f"Dup Invite {uuid.uuid4().hex[:8]}")
+    email = f"ss.dup.{uuid.uuid4().hex[:8]}@sitesecure.test"
+    first = api.post(
+        f"/api/v1/workspaces/{workspace_id}/invitations",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"email": email, "role_key": "technician"},
+    )
+    assert first.status_code == 200, first.text
+    usage = api.get(
+        f"/api/v1/workspaces/{workspace_id}/usage",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert usage.status_code == 200, usage.text
+    field = next(row for row in usage.json()["meters"] if row["key"] == "seats_field")
+    assert field["current"] == 1
+    assert field["occupants"][0]["email"] == email
+    assert field["occupants"][0]["kind"] == "invite"
+    office = next(row for row in usage.json()["meters"] if row["key"] == "seats_operator")
+    assert all(row["role_key"] != "owner" for row in field["occupants"])
+    assert any(row["role_key"] == "owner" for row in office["occupants"])
+    second = api.post(
+        f"/api/v1/workspaces/{workspace_id}/invitations",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"email": email.upper(), "role_key": "technician"},
+    )
+    assert second.status_code == 403
+    assert second.json()["error"]["code"] == "INVITE_ALREADY_PENDING"
+    again = api.get(
+        f"/api/v1/workspaces/{workspace_id}/usage",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    field_again = next(row for row in again.json()["meters"] if row["key"] == "seats_field")
+    assert field_again["current"] == 1
+
+
 def test_cannot_invite_owner_role(settings, two_tenants):
     api = TestClient(app)
     res = api.post(
@@ -384,6 +422,10 @@ def test_owner_usage_meters_are_catalog_seats(settings, two_tenants):
     office = next(row for row in body["meters"] if row["key"] == "seats_operator")
     assert office["current"] >= 1
     assert office["limit"] == 1
+    assert office["current"] == len(office["occupants"])
+    assert all(row["kind"] in {"member", "invite"} for row in office["occupants"])
+    field = next(row for row in body["meters"] if row["key"] == "seats_field")
+    assert field["current"] == len(field["occupants"])
     assert "storage" not in keys
 
 

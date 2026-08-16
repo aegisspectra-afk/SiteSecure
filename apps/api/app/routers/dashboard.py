@@ -34,6 +34,7 @@ class DashboardItemOut(BaseModel):
     scheduled_for: str | None = None
     severity: Literal["now", "next", "info"]
     actions: list[str] = Field(default_factory=list)
+    updated_at: str | None = None
 
 
 class AttentionGroupOut(BaseModel):
@@ -67,6 +68,7 @@ class DashboardSummaryOut(BaseModel):
     quotes_rejected: int
     quotes_open: int
     quotes_approved_value: float
+    quotes_open_value: float = 0
     jobs_open: int
     jobs_overdue: int
     jobs_unassigned: int

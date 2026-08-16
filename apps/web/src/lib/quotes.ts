@@ -23,3 +23,16 @@ export function formatDay(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" });
 }
+
+export function formatRelativeDay(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startThat = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = (startToday.getTime() - startThat.getTime()) / 86_400_000;
+  if (diff === 0) return he.quotesUpdatedToday;
+  if (diff === 1) return he.quotesUpdatedYesterday;
+  return formatDay(value);
+}

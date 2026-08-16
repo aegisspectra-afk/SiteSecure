@@ -2,7 +2,7 @@ import { cn, Drawer, Dropdown, DropdownItem, Status } from "@site-secure/ui";
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { he } from "../i18n/he";
-import { appNav, bottomNav, isNavSelected, planLabel, roleLabel } from "../lib/app-nav";
+import { appNav, bottomNav, isNavSelected, planLabel, roleLabel, roleLabelEn } from "../lib/app-nav";
 import { can, canAny } from "../lib/can";
 import { useDocumentMeta } from "../lib/document-meta";
 import { dayGreeting } from "../lib/greeting";
@@ -75,19 +75,37 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       ))}
+    </nav>
+  );
+
+  const aegisLink = (tone: "dark" | "light") => (
+    <div
+      className={cn(
+        "border-t px-3 py-3",
+        tone === "dark" ? "border-[var(--color-auth-border)]" : "border-border",
+      )}
+    >
+      <p
+        className={cn(
+          "public-mono px-3 pb-1 text-[10px] tracking-[0.16em]",
+          tone === "dark" ? "text-[var(--color-auth-muted)]" : "text-fg-muted",
+        )}
+      >
+        {he.navExternal}
+      </p>
       <Link
         to="/"
         className={cn(
-          "ops-sidebar-link mt-2 flex items-center rounded-[var(--radius-control)] px-3 py-2 text-sm",
+          "ops-sidebar-link flex items-center rounded-[var(--radius-control)] px-3 py-2 text-sm",
           tone === "dark"
-            ? "text-[var(--color-auth-muted)] hover:text-[var(--color-auth-fg)]"
-            : "text-fg-muted hover:text-fg",
+            ? "text-[var(--color-auth-muted)] hover:bg-[var(--color-auth-elevated)] hover:text-[var(--color-auth-fg)]"
+            : "text-fg-muted hover:bg-bg-subtle hover:text-fg",
         )}
         onClick={() => setOpen(false)}
       >
         {he.navAegis}
       </Link>
-    </nav>
+    </div>
   );
 
   return (
@@ -105,8 +123,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             {membership?.workspace_name}
           </p>
           <p className="mt-2 text-xs text-[var(--color-auth-muted)]">
-            {he.roleCaption}
-            <span className="ms-1 text-[var(--color-auth-fg)]">{roleLabel(roleKey)}</span>
+            {roleLabel(roleKey)}
+            {roleLabelEn(roleKey) ? (
+              <span className="ms-1 text-[var(--color-auth-fg)]">{roleLabelEn(roleKey)}</span>
+            ) : null}
           </p>
           {membership?.plan_key ? (
             <p className="text-xs text-[var(--color-auth-muted)]">
@@ -116,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </div>
         <div className="flex-1 overflow-y-auto">{navList("dark")}</div>
+        {aegisLink("dark")}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-bg-1 px-4 py-2 lg:px-6">
@@ -147,7 +168,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <p className="truncate text-sm font-medium text-fg">{displayName}</p>
                 <p className="ltr-meta truncate text-xs text-fg-muted">{session?.email}</p>
                 <p className="mt-1 text-xs text-fg-muted">
-                  {he.roleCaption}: {roleLabel(roleKey)}
+                  {roleLabel(roleKey)}
+                  {roleLabelEn(roleKey) ? ` · ${roleLabelEn(roleKey)}` : ""}
                 </p>
                 {membership?.plan_key ? (
                   <p className="text-xs text-fg-muted">
@@ -177,6 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppBottomNav items={tabs} pathname={pathname} moreOpen={open} onMore={() => setOpen(true)} />
       <Drawer open={open} onClose={() => setOpen(false)} title={he.navMore}>
         {navList("light")}
+        {aegisLink("light")}
       </Drawer>
     </div>
   );

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { DashboardResponse } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -11,7 +11,11 @@ import { he } from "../src/i18n/he";
 import { can, canAny, canAll } from "../src/lib/can";
 import { dayGreeting } from "../src/lib/greeting";
 import { homeVariant, moduleHref, quickActions } from "../src/lib/home";
+import { nextBestAction } from "../src/lib/next-best-action";
+import { quoteConversion, quotesInPlay, seatTone, seatUtilization } from "../src/lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../src/lib/workspace-setup";
+import { dashboardStage } from "../src/lib/dashboard-maturity";
+import { waitingDays } from "../src/lib/attention-queue";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -37,6 +41,7 @@ const emptySummary = {
   quotes_rejected: 0,
   quotes_open: 0,
   quotes_approved_value: 0,
+  quotes_open_value: 0,
   jobs_open: 0,
   jobs_overdue: 0,
   jobs_unassigned: 0,
@@ -106,14 +111,50 @@ describe("OpsDashboard", () => {
   it("empty state has no fake create CTAs or KPI copy", () => {
     render(<OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} />);
     expect(screen.getByRole("heading", { name: he.dashboardTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.dashboardEmptyTitle)).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
+    expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
+    expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.quotesSectionTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.recentQuotesTitle })).not.toBeInTheDocument();
+    expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "פרויקט חדש" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "קריאת שירות" })).not.toBeInTheDocument();
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
     expect(screen.queryByText("142")).not.toBeInTheDocument();
     expect(screen.queryByText("Storage")).not.toBeInTheDocument();
     expect(screen.queryByText("NPS")).not.toBeInTheDocument();
+    expect(screen.queryByText("Authentication")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tenant Isolation")).not.toBeInTheDocument();
+    expect(screen.queryByText("פתחו את מרכז האבטחה")).not.toBeInTheDocument();
+  });
+
+  it("shows live security signals when the security center payload is present", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="owner"
+        features={["settings"]}
+        securitySignals={[
+          { key: "authentication", label_he: "Authentication", status: "healthy", detail_he: "JWT" },
+          { key: "rbac", label_he: "RBAC", status: "healthy", detail_he: "owner" },
+          { key: "tenant_isolation", label_he: "Tenant Isolation", status: "healthy", detail_he: "workspace" },
+          { key: "sessions", label_he: "Sessions", status: "not_built", detail_he: "not built" },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.securityStatusTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.securityLabelAuth)).toBeInTheDocument();
+    expect(screen.getByText(he.securityLabelRbac)).toBeInTheDocument();
+    expect(screen.getByText(he.securityLabelTenant)).toBeInTheDocument();
+    expect(screen.getByText(he.securitySignalOperational)).toBeInTheDocument();
+    expect(screen.getAllByText(he.securitySignalEnforced).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Sessions")).not.toBeInTheDocument();
+    expect(screen.queryByText("RLS")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.securityCenterLink })).toHaveAttribute("href", "/app/settings/security");
   });
 
   it("owner empty state offers live quote creation first", () => {
@@ -126,7 +167,7 @@ describe("OpsDashboard", () => {
         workspaceStatus="active"
       />,
     );
-    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
   });
 
@@ -134,7 +175,7 @@ describe("OpsDashboard", () => {
     render(<OpsDashboard data={{ ...emptyDash, home_variant: "sales" }} roleKey="sales" features={["crm", "quotes"]} />);
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.newQuote }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
   });
 
   it("renders catalog usage meters from the server and not fake KPIs", () => {
@@ -143,6 +184,102 @@ describe("OpsDashboard", () => {
         data={emptyDash}
         roleKey="owner"
         features={["settings"]}
+        memberCount={1}
+        workspaceStatus="active"
+        usage={{
+          workspace_id: "w1",
+          plan_key: "solo",
+          active_members: 1,
+          pending_invites: 1,
+          meters: [
+            {
+              key: "seats_operator",
+              label_he: "משתמשים במשרד",
+              current: 1,
+              limit: 1,
+              unlimited: false,
+              unit: "seats",
+              at_limit: true,
+              occupants: [
+                {
+                  kind: "member",
+                  role_key: "owner",
+                  email: "aegisspectra@gmail.com",
+                  label: "Ilya Kerner",
+                  status: "active",
+                },
+              ],
+            },
+            {
+              key: "seats_field",
+              label_he: "משתמשים בשטח",
+              current: 1,
+              limit: 3,
+              unlimited: false,
+              unit: "seats",
+              at_limit: false,
+              occupants: [
+                {
+                  kind: "invite",
+                  role_key: "technician",
+                  email: "shimdurac@gmail.com",
+                  label: "shimdurac@gmail.com",
+                  status: "pending",
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.usageTitle })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים בשטח: 33 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByText("1 / 1")).toBeInTheDocument();
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    expect(screen.getByText(he.usageActiveMembersHint)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.usageManageUsers })).toHaveAttribute("href", "/app/settings/users");
+    expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
+    expect(screen.getByText(/shimdurac@gmail.com/)).toBeInTheDocument();
+    expect(screen.getByText(he.usageOccupantPending)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /משתמשים בשטח/ }));
+    expect(screen.getByText(he.usageWho)).toBeInTheDocument();
+    expect(screen.getAllByText(/shimdurac@gmail.com/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(he.usageOccupantPending).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /משתמשים במשרד/ }));
+    expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
+    expect(screen.getByText(he.usageOccupantActive)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /חברים פעילים/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Storage/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("לקוחות")).not.toBeInTheDocument();
+  });
+
+  it("renders circular UX metrics from real setup, seats, and quotes", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          summary: {
+            ...emptySummary,
+            quotes_draft: 1,
+            quotes_approved: 1,
+            quotes_open: 0,
+            quotes_approved_value: 250,
+            quotes_open_value: 0,
+          },
+          recent_quotes: [
+            {
+              id: "q1",
+              number: "Q-00001",
+              status: "approved",
+              customer_name: null,
+              total_gross: 250,
+              updated_at: "2026-08-15T12:00:00Z",
+            },
+          ],
+        }}
+        roleKey="owner"
+        features={["settings", "quotes"]}
         memberCount={1}
         workspaceStatus="active"
         usage={{
@@ -173,17 +310,115 @@ describe("OpsDashboard", () => {
         }}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.usageTitle })).toBeInTheDocument();
-    expect(screen.getByText("1 / 1")).toBeInTheDocument();
-    expect(screen.getByText("0 / 3")).toBeInTheDocument();
-    expect(screen.queryByText(/Storage/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("לקוחות")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.setupTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.uxPercent(50))).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.uxRingsTitle })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toHaveLength(1);
+    expect(screen.getAllByRole("img", { name: /משתמשים בשטח: 0 אחוז/ })).toHaveLength(1);
+    expect(screen.getByText(he.setupInvite)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: he.setupInviteCta })[0]).toHaveAttribute("href", "/app/settings/users");
+    expect(screen.getByText(he.uxSeatFull)).toBeInTheDocument();
+    expect(screen.queryByText(he.uxSeatEmpty)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.nextActionInvite)).toBeInTheDocument();
+    expect(screen.queryByText("NPS")).not.toBeInTheDocument();
+    expect(screen.queryByText("92%")).not.toBeInTheDocument();
+    expect(screen.queryByText("4.8")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Margin/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the setup ring after onboarding steps are actually done", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="owner"
+        features={["settings", "quotes"]}
+        memberCount={2}
+        workspaceStatus="active"
+      />,
+    );
+    expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
+    expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
+    expect(screen.getAllByText(he.uxStartFirstQuote).length).toBeGreaterThan(0);
+  });
+
+  it("does not invent quote conversion when there are no quotes", () => {
+    render(
+      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} memberCount={1} />,
+    );
+    expect(screen.queryByRole("img", { name: `${he.uxQuoteConversion}: ${he.uxMetricEmpty}` })).not.toBeInTheDocument();
+    expect(screen.queryByText(he.uxQuoteNone)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.businessTitle })).not.toBeInTheDocument();
   });
 
   it("attention rows link to the live quote route", () => {
     render(<AttentionList groups={attentionDash.attention} />);
+    expect(screen.getByText("Q-00012")).toBeInTheDocument();
     expect(screen.getByText(/ממתינות לאישור הלקוח/)).toBeInTheDocument();
+    expect(screen.getByText(he.commandOpenQuote)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/app/quotes/$quoteId");
+  });
+
+  it("shows business health from real quote values once the workspace is operating", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          summary: {
+            ...emptySummary,
+            quotes_sent: 2,
+            quotes_approved: 1,
+            quotes_open: 2,
+            quotes_approved_value: 21400,
+            quotes_open_value: 48250,
+          },
+        }}
+        roleKey="owner"
+        features={["quotes"]}
+        memberCount={2}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.businessOpenValue)).toBeInTheDocument();
+    expect(screen.getAllByText(/48,250/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/21,400/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(he.quotesKpiMargin)).not.toBeInTheDocument();
+    expect(screen.getByText(he.dashboardSynced)).toBeInTheDocument();
+  });
+
+  it("renders active work from live today jobs and not an empty placeholder", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          today: {
+            label_he: "היום",
+            items: [
+              {
+                entity_type: "job",
+                entity_id: "j1",
+                number: "J-00005",
+                title_he: "בביצוע",
+                customer_name: "לקוח א",
+                site_name: "DEMO Site A",
+                scheduled_for: "2026-08-14T09:00:00+00:00",
+                severity: "now",
+                actions: [],
+              },
+            ],
+          },
+        }}
+        roleKey="owner"
+        features={["quotes"]}
+        memberCount={2}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
+    expect(screen.getByText("J-00005")).toBeInTheDocument();
+    expect(screen.getByText("DEMO Site A")).toBeInTheDocument();
+    expect(screen.getByText("בביצוע")).toBeInTheDocument();
+    expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
   });
 });
 
@@ -270,17 +505,31 @@ describe("permission helpers", () => {
 });
 
 describe("workspaceSetup", () => {
-  it("computes real setup steps without decorative percent", () => {
+  it("computes real setup steps and a matching completion percent", () => {
     const solo = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
     expect(solo.complete).toBe(false);
+    expect(solo.done).toBe(1);
+    expect(solo.total).toBe(2);
+    expect(solo.percent).toBe(50);
     expect(solo.steps.map((step) => step.id)).toEqual(["workspace", "invite"]);
     expect(solo.steps.find((step) => step.id === "invite")?.current).toBe(true);
 
     const staffed = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 2 });
     expect(staffed.complete).toBe(true);
+    expect(staffed.percent).toBe(100);
+
+    const pending = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings"],
+      memberCount: 1,
+      pendingInvites: 1,
+    });
+    expect(pending.complete).toBe(false);
+    expect(pending.percent).toBe(50);
 
     const sales = workspaceSetup({ roleKey: "sales", features: ["crm"], memberCount: 1 });
     expect(sales.complete).toBe(true);
+    expect(sales.percent).toBe(100);
     expect(sales.steps.map((step) => step.id)).toEqual(["workspace"]);
   });
 
@@ -293,6 +542,168 @@ describe("workspaceSetup", () => {
       "/app/settings/security",
     ]);
     expect(liveAdminActions("technician", ["core"])).toEqual([]);
+  });
+});
+
+describe("nextBestAction", () => {
+  it("picks invite while setup is incomplete, then the first quote", () => {
+    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 1 });
+    expect(
+      nextBestAction({
+        setup,
+        summary: emptySummary,
+        attention: [],
+        usage: null,
+        canCreateQuote: true,
+        canInvite: true,
+        canViewQuotes: true,
+      })?.id,
+    ).toBe("setup-invite");
+
+    const staffed = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 2 });
+    expect(
+      nextBestAction({
+        setup: staffed,
+        summary: emptySummary,
+        attention: [],
+        usage: null,
+        canCreateQuote: true,
+        canInvite: true,
+        canViewQuotes: true,
+      })?.id,
+    ).toBe("first-quote");
+
+    const invited = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "quotes"],
+      memberCount: 1,
+      pendingInvites: 1,
+    });
+    expect(
+      nextBestAction({
+        setup: invited,
+        summary: emptySummary,
+        attention: [],
+        usage: null,
+        canCreateQuote: true,
+        canInvite: true,
+        canViewQuotes: true,
+      })?.id,
+    ).toBe("setup-invite");
+  });
+
+  it("does not ask sales to administer the team", () => {
+    const setup = workspaceSetup({ roleKey: "sales", features: ["crm", "quotes"], memberCount: 1 });
+    expect(
+      nextBestAction({
+        setup,
+        summary: emptySummary,
+        attention: [],
+        usage: null,
+        canCreateQuote: true,
+        canInvite: false,
+        canViewQuotes: true,
+      })?.id,
+    ).toBe("first-quote");
+  });
+});
+
+describe("ux metrics", () => {
+  it("computes quote conversion only from real quote counts", () => {
+    expect(quoteConversion(emptySummary)).toEqual({ percent: null, approved: 0, total: 0 });
+    expect(
+      quoteConversion({
+        ...emptySummary,
+        quotes_draft: 1,
+        quotes_approved: 1,
+      }),
+    ).toEqual({ percent: 50, approved: 1, total: 2 });
+    expect(quotesInPlay(emptySummary)).toBe(0);
+    expect(quotesInPlay({ ...emptySummary, quotes_draft: 2, quotes_sent: 1 })).toBe(3);
+  });
+
+  it("skips seat percent when the meter is unlimited", () => {
+    expect(
+      seatUtilization({
+        key: "seats_field",
+        label_he: "משתמשים בשטח",
+        current: 2,
+        limit: 0,
+        unlimited: true,
+        unit: "seats",
+        at_limit: false,
+      }),
+    ).toBeNull();
+    expect(
+      seatUtilization({
+        key: "seats_operator",
+        label_he: "משתמשים במשרד",
+        current: 1,
+        limit: 1,
+        unlimited: false,
+        unit: "seats",
+        at_limit: true,
+      }),
+    ).toBe(100);
+    expect(
+      seatUtilization({
+        key: "seats_field",
+        label_he: "משתמשים בשטח",
+        current: 2,
+        limit: 3,
+        unlimited: false,
+        unit: "seats",
+        at_limit: false,
+      }),
+    ).toBe(67);
+    expect(
+      seatTone({
+        key: "seats_operator",
+        label_he: "משתמשים במשרד",
+        current: 1,
+        limit: 1,
+        unlimited: false,
+        unit: "seats",
+        at_limit: true,
+      }),
+    ).toBe("warning");
+    expect(
+      seatTone({
+        key: "seats_field",
+        label_he: "משתמשים בשטח",
+        current: 1,
+        limit: 3,
+        unlimited: false,
+        unit: "seats",
+        at_limit: false,
+      }),
+    ).toBe("success");
+  });
+});
+
+describe("dashboard maturity", () => {
+  it("moves from setup to operating only when real work exists", () => {
+    expect(
+      dashboardStage({ setupComplete: false, summary: emptySummary, todayCount: 0, jobsOpen: 0 }),
+    ).toBe("setup");
+    expect(
+      dashboardStage({ setupComplete: true, summary: emptySummary, todayCount: 0, jobsOpen: 0 }),
+    ).toBe("early");
+    expect(
+      dashboardStage({
+        setupComplete: true,
+        summary: { ...emptySummary, quotes_approved: 1 },
+        todayCount: 0,
+        jobsOpen: 0,
+      }),
+    ).toBe("operating");
+  });
+});
+
+describe("attention waiting days", () => {
+  it("counts whole days from the quote timestamp", () => {
+    expect(waitingDays("2026-08-12T10:00:00Z", new Date("2026-08-16T12:00:00+03:00"))).toBe(4);
+    expect(waitingDays(null)).toBeNull();
   });
 });
 

@@ -90,6 +90,7 @@ def _item(
     scheduled_for: str | None,
     severity: str,
     actions: list[str] | None = None,
+    updated_at: str | None = None,
 ) -> dict[str, Any]:
     return {
         "entity_type": entity_type,
@@ -101,6 +102,7 @@ def _item(
         "scheduled_for": scheduled_for,
         "severity": severity,
         "actions": actions or [],
+        "updated_at": updated_at,
     }
 
 
@@ -216,6 +218,7 @@ def _quote_attention(
             site_name=names.get(str(quote["site_id"])) if quote.get("site_id") else None,
             scheduled_for=None,
             severity="next",
+            updated_at=str(quote["updated_at"]) if quote.get("updated_at") else None,
         )
         if status == "sent":
             awaiting_customer.append(row)
@@ -391,12 +394,16 @@ def _ops_summary(
     statuses = ("draft", "sent", "viewed", "approved", "rejected", "expired", "cancelled")
     counts = {key: 0 for key in statuses}
     approved_value = 0.0
+    open_value = 0.0
     for quote in quotes:
         status = str(quote.get("status") or "")
         if status in counts:
             counts[status] += 1
+        amount = float(quote.get("total_gross") or 0)
         if status == "approved":
-            approved_value += float(quote.get("total_gross") or 0)
+            approved_value += amount
+        if status in {"draft", "sent", "viewed"}:
+            open_value += amount
 
     open_jobs = [job for job in jobs if job.get("status") in OPEN_JOB]
     overdue = 0
@@ -417,6 +424,7 @@ def _ops_summary(
         "quotes_rejected": counts["rejected"],
         "quotes_open": counts["sent"] + counts["viewed"],
         "quotes_approved_value": round(approved_value, 2),
+        "quotes_open_value": round(open_value, 2),
         "jobs_open": 0 if variant == "sales" else len(open_jobs),
         "jobs_overdue": 0 if variant == "sales" else overdue,
         "jobs_unassigned": 0 if variant in {"sales", "today"} or not assignments_reliable else unassigned,

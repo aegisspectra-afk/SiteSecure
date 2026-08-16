@@ -12,7 +12,7 @@ from ..audit import write_audit
 from ..authz.catalog import default_plan_key
 from ..authz.engine import authorize
 from ..authz.limits import evaluate_seat_limit
-from ..authz.usage import fetch_occupied_roles
+from ..authz.usage import fetch_occupancy, occupant_for_email
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import MESSAGES, ApiError
 
@@ -176,11 +176,22 @@ def create_invitation(
             metadata={"result": "denied", "code": decision.code, "role_key": role_key},
         )
         _raise_decision(decision)
-    occupied, _, _ = fetch_occupied_roles(client, str(workspace_id))
+    occupancy = fetch_occupancy(client, str(workspace_id))
+    email = str(body.email).strip().lower()
+    existing = occupant_for_email(occupancy, email)
+    if existing is not None:
+        code = "INVITE_USER_EXISTS" if existing.kind == "member" else "INVITE_ALREADY_PENDING"
+        write_audit(
+            client,
+            str(workspace_id),
+            "users.invite",
+            metadata={"result": "denied", "code": code, "email": email, "role_key": role_key},
+        )
+        raise ApiError(403, code, MESSAGES[code])
     limit = evaluate_seat_limit(
         plan_key=ctx.plan_key,
         invite_role=role_key,
-        occupied_roles=occupied,
+        occupied_roles=occupancy.roles,
     )
     if not limit.allowed:
         write_audit(
@@ -196,7 +207,7 @@ def create_invitation(
         "invitations",
         {
             "workspace_id": str(workspace_id),
-            "email": str(body.email).lower(),
+            "email": email,
             "role_key": role_key,
             "token_hash": token_hash,
             "invited_by": user["id"],

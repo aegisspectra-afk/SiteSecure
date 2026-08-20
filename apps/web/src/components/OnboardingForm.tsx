@@ -2,6 +2,7 @@ import { Button, ProgressList, type ProgressStep } from "@site-secure/ui";
 import { useMemo, useState, type FormEvent } from "react";
 import { he } from "../i18n/he";
 import { AuthAlert, AuthField, AuthForm } from "./auth";
+import { LottieAnimation } from "./lottie";
 
 export function OnboardingForm({
   email,
@@ -78,9 +79,12 @@ export function OnboardingForm({
       ) : null}
       <ProgressList steps={steps} />
       {created ? (
-        <Button type="button" variant="primary" className="h-12 w-full" onClick={onEnter}>
-          {he.enterWorkspace}
-        </Button>
+        <div className="flex flex-col items-center gap-6">
+          <LottieAnimation name="success" size={72} />
+          <Button type="button" variant="primary" className="h-12 w-full" onClick={onEnter}>
+            {he.enterWorkspace}
+          </Button>
+        </div>
       ) : profileDone ? (
         <AuthForm onSubmit={handleWorkspace}>
           <AuthField

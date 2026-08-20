@@ -2,13 +2,51 @@
 <html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="index, follow" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f5f9" />
     <title>SITE SECURE — מערכת ההפעלה לחברות התקנה ושירות</title>
     <meta
       name="description"
       content="SITE SECURE מחברת משרד ושטח לחברות התקנה, אבטחה ושירות. תיק אתר חי, תפעול, ואחריות — במקום WhatsApp, Excel ו־Drive."
     />
+    <style>
+      html {
+        background-color: #f1f5f9;
+        color-scheme: light;
+      }
+      html.dark {
+        background-color: #0b1220;
+        color-scheme: dark;
+      }
+    </style>
+    <script>
+      (function () {
+        var KEY = "site-secure-theme";
+        var mode = "system";
+        try {
+          var stored = localStorage.getItem(KEY);
+          if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
+        } catch (e) {}
+        var dark = mode === "dark";
+        if (mode === "system") {
+          try {
+            dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          } catch (e) {
+            dark = false;
+          }
+        }
+        var root = document.documentElement;
+        root.dataset.themeMode = mode;
+        root.dataset.theme = dark ? "dark" : "light";
+        root.classList.toggle("dark", dark);
+        root.style.colorScheme = dark ? "dark" : "light";
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", dark ? "#0b1220" : "#f1f5f9");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

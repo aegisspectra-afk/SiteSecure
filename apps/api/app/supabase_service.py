@@ -7,7 +7,7 @@ from .errors import ApiError
 
 
 class ServiceClient:
-    """PostgREST with the service role. Public quote access only — never a user JWT."""
+    """PostgREST with the service role. Used after authorize() and for public quote access."""
 
     def __init__(self, settings: Settings) -> None:
         key = settings.supabase_service_role_key
@@ -38,11 +38,14 @@ class ServiceClient:
                 params=params,
             )
 
-    def patch(self, path: str, json: dict, params: dict | None = None) -> httpx.Response:
+    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None) -> httpx.Response:
+        headers = dict(self._headers)
+        if prefer:
+            headers["Prefer"] = prefer
         with httpx.Client(timeout=20.0) as client:
             return client.patch(
                 f"{self.rest}/{path.lstrip('/')}",
-                headers=self._headers,
+                headers=headers,
                 json=json,
                 params=params,
             )

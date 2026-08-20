@@ -7,6 +7,7 @@ from .types import AuthzContext, Decision, ResourceRef
 QUOTE_EDITABLE = frozenset({"draft"})
 QUOTE_SENDABLE = frozenset({"draft"})
 QUOTE_REVISABLE = frozenset({"sent", "viewed", "approved", "rejected", "expired"})
+QUOTE_DELETABLE = frozenset({"draft", "sent", "viewed", "rejected", "expired", "cancelled"})
 
 
 def _deny(code: str, **details: object) -> Decision:
@@ -86,6 +87,8 @@ def _resource_state(action: str, resource: ResourceRef | None) -> Decision | Non
     if resource is None or resource.state is None:
         return None
     if action == "quotes.edit" and resource.state is not None and resource.state not in QUOTE_EDITABLE:
+        return _deny("RESOURCE_STATE", state=resource.state)
+    if action == "quotes.delete" and resource.state is not None and resource.state not in QUOTE_DELETABLE:
         return _deny("RESOURCE_STATE", state=resource.state)
     if action == "quotes.send" and resource.state is not None and resource.state not in QUOTE_SENDABLE:
         return _deny("RESOURCE_STATE", state=resource.state)

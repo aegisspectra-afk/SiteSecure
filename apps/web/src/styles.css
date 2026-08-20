@@ -11,6 +11,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  background: var(--color-bg-0);
+}
+
 body {
   margin: 0;
   background: var(--color-bg-0);
@@ -166,6 +170,18 @@ body {
   border: 0;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link:focus,
 .skip-link:focus-visible {
   width: auto;
@@ -272,19 +288,80 @@ body {
 
 .ops-sidebar {
   display: none;
-  width: 15rem;
+  width: 16.5rem;
   flex-shrink: 0;
   flex-direction: column;
-  background: var(--color-auth-bg);
-  color: var(--color-auth-fg);
-  border-inline-end: 1px solid var(--color-auth-border);
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg-nav);
+  color: var(--color-fg);
+  border-inline-end: 1px solid var(--color-border);
+}
+
+.ops-sidebar-brand {
+  flex-shrink: 0;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ops-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .ops-sidebar-link {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: var(--radius-control);
+  border-inline-start: 2px solid transparent;
+  color: var(--color-fg-muted);
+  font-size: 13px;
+  line-height: 1.3;
+  text-decoration: none;
   transition:
     background-color 180ms ease,
     color 180ms ease,
     border-color 180ms ease;
+}
+
+.ops-sidebar-link:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-fg);
+}
+
+.ops-sidebar-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ops-sidebar-link.is-active {
+  border-inline-start-color: var(--color-action);
+  background: color-mix(in srgb, var(--color-action) 12%, var(--color-bg-nav));
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.ops-sidebar-external {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.ops-sidebar-external-link {
+  color: var(--color-fg-subtle);
+}
+
+.ops-sidebar-account {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--color-border);
 }
 
 .ops-status-pulse {
@@ -305,7 +382,7 @@ body {
 }
 
 .ops-card-interactive:hover {
-  border-color: rgb(11 107 203 / 35%);
+  border-color: color-mix(in srgb, var(--color-action) 40%, var(--color-border));
 }
 
 .ops-ring-metric {
@@ -370,6 +447,10 @@ button.ops-ring-metric {
   stroke: var(--color-warning);
 }
 
+.ops-ring-value--info {
+  stroke: var(--color-info);
+}
+
 .ops-ring-value--neutral {
   stroke: var(--color-fg-muted);
 }
@@ -407,6 +488,71 @@ button.ops-ring-metric {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Portaled header panels. Opaque surface so page content cannot paint through. Above bottom nav (40). */
+.ops-header-popover,
+.ops-account-popover {
+  position: fixed;
+  z-index: 60;
+  isolation: isolate;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg);
+  box-shadow: var(--shadow-popover);
+}
+
+.ops-header-popover-enter,
+.ops-account-popover-enter {
+  animation: ops-header-popover-in 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-header-popover-enter,
+  .ops-account-popover-enter {
+    animation: none;
+  }
+}
+
+html.theme-revealing::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  z-index: 1;
+}
+
+html.theme-revealing::view-transition-new(root) {
+  animation: theme-circle 200ms ease-out;
+  mix-blend-mode: normal;
+  z-index: 2;
+}
+
+@keyframes theme-circle {
+  from {
+    clip-path: circle(0px at var(--theme-x) var(--theme-y));
+  }
+  to {
+    clip-path: circle(var(--theme-r) at var(--theme-x) var(--theme-y));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-revealing::view-transition-old(root),
+  html.theme-revealing::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+@keyframes ops-header-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .ops-bottom-nav {
   position: fixed;
   inset-inline: 0;
@@ -416,7 +562,7 @@ button.ops-ring-metric {
   justify-content: space-around;
   gap: 4px;
   border-top: 1px solid var(--color-border);
-  background: var(--color-bg-1);
+  background: var(--color-bg-nav);
   padding: 4px 8px calc(8px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -476,6 +622,7 @@ button.ops-ring-metric {
   .ops-status-pulse,
   .ops-card-interactive,
   .ops-bottom-nav-item,
+  .ops-sidebar-link,
   .ops-ring-value {
     animation: none;
     transition: none;

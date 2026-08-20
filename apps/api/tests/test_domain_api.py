@@ -1,3 +1,4 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -28,6 +29,7 @@ def test_openapi_and_health():
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/recalculate",
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/send",
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/revise",
+        "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/duplicate",
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/apply-template",
         "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/preview",
         "/api/v1/workspaces/{workspace_id}/catalog/products",
@@ -108,6 +110,20 @@ def test_cost_permission_not_implied_by_quotes_view():
     assert authorize(ctx=ctx, action="quotes.create").allowed
 
 
+def test_acked_or_403_accepts_no_content():
+    from app.rest import acked_or_403
+
+    acked_or_403(httpx.Response(204))
+    acked_or_403(httpx.Response(200, json=[]))
+    with pytest.raises(ApiError) as exc:
+        acked_or_403(httpx.Response(403, json={"message": "denied"}))
+    assert exc.value.status_code == 403
+    with pytest.raises(ApiError) as mapped:
+        acked_or_403(httpx.Response(404, json={"message": "not found"}))
+    assert mapped.value.status_code == 403
+    assert mapped.value.code == "PERMISSION_DENIED"
+
+
 def test_flatten_quote_customer_name():
     from app.routers.quotes import _flatten_quote
 
@@ -116,3 +132,7 @@ def test_flatten_quote_customer_name():
     assert "customers" not in named
     missing = _flatten_quote({"id": "q2", "customers": None})
     assert missing["customer_name"] is None
+    assert missing["site_name"] is None
+    sited = _flatten_quote({"id": "q3", "sites": {"name": "מחסן"}})
+    assert sited["site_name"] == "מחסן"
+    assert "sites" not in sited

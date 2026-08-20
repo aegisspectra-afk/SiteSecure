@@ -6,7 +6,7 @@ import { RingMetric } from "./RingMetric";
 export function UxRings({ summary }: { summary?: DashboardSummary | null }) {
   if (!summary) return null;
   const conversion = quoteConversion(summary);
-  if (conversion.percent == null) return null;
+  if (conversion.total === 0) return null;
 
   return (
     <section className="ops-card p-5" aria-labelledby="ux-rings-heading">
@@ -18,7 +18,9 @@ export function UxRings({ summary }: { summary?: DashboardSummary | null }) {
         <RingMetric
           percent={conversion.percent}
           label={he.uxQuoteConversion}
-          hint={he.uxQuoteConversionHint(conversion.approved, conversion.total)}
+          hint={
+            conversion.percent == null ? he.quotesNoneApproved : he.uxQuoteConversionHint(conversion.approved, conversion.total)
+          }
           action={he.kpiViewQuotes}
           href="/app/quotes"
           tone="action"

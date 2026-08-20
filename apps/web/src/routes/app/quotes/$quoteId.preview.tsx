@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { QuoteCustomerView } from "../../../components/quotes/QuoteCustomerView";
+import { SendQuoteConfirm } from "../../../components/quotes/SendQuoteConfirm";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
@@ -23,7 +24,7 @@ function QuotePreviewPage() {
 
 function QuotePreviewBody() {
   const { quoteId } = Route.useParams();
-  const { session, api } = useSession();
+  const { session, api, loading } = useSession();
   const queryClient = useQueryClient();
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
@@ -31,6 +32,7 @@ function QuotePreviewBody() {
   const canSend = can(membership?.role_key, "quotes.send", features);
   const [formError, setFormError] = useState<string | null>(null);
   const [publicUrl, setPublicUrl] = useState("");
+  const [confirmSend, setConfirmSend] = useState(false);
 
   const previewQuery = useQuery({
     queryKey: ["quote-preview", workspaceId, quoteId],
@@ -48,10 +50,10 @@ function QuotePreviewBody() {
     onSuccess: (row) => {
       setPublicUrl(row.public_url ?? "");
       setFormError(null);
+      setConfirmSend(false);
       void queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, quoteId] });
       void queryClient.invalidateQueries({ queryKey: ["quote-preview", workspaceId, quoteId] });
       void queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
     },
     onError: (err) => {
       if (err instanceof ApiClientError && err.code === "QUOTE_INCOMPLETE") {
@@ -62,7 +64,7 @@ function QuotePreviewBody() {
     },
   });
 
-  if (!workspaceId) return <ErrorState title={he.quotesError} />;
+  if (loading || !workspaceId) return <LoadingBlock />;
   if (previewQuery.isLoading || quoteQuery.isLoading) return <LoadingBlock />;
   if (previewQuery.isError || !previewQuery.data || quoteQuery.isError || !quoteQuery.data) {
     return <ErrorState title={he.quotesError} />;
@@ -105,13 +107,23 @@ function QuotePreviewBody() {
                 {he.quotePreviewBack}
               </Link>
               {quote.status === "draft" && canSend ? (
-                <Button disabled={!canSendNow} loading={send.isPending} onClick={() => send.mutate()}>
+                <Button disabled={!canSendNow} onClick={() => setConfirmSend(true)}>
                   {he.quoteSend}
                 </Button>
               ) : null}
             </div>
           </div>
         }
+      />
+      <SendQuoteConfirm
+        open={confirmSend}
+        onClose={() => setConfirmSend(false)}
+        onConfirm={() => send.mutate()}
+        pending={send.isPending}
+        customer={preview.customer?.display_name}
+        number={preview.number}
+        amount={preview.total_gross}
+        currency={preview.currency}
       />
     </div>
   );

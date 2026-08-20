@@ -31,11 +31,11 @@ class UserClient:
     def storage(self) -> str:
         return f"{self._settings.supabase_url}/storage/v1"
 
-    def _rest_headers(self) -> dict[str, str]:
+    def _rest_headers(self, prefer: str | None = None) -> dict[str, str]:
         return {
             **self._headers,
             "Content-Type": "application/json",
-            "Prefer": "return=representation",
+            "Prefer": prefer or "return=representation",
         }
 
     def get_user(self) -> dict:
@@ -62,11 +62,11 @@ class UserClient:
                 params=params,
             )
 
-    def patch(self, path: str, json: dict, params: dict | None = None) -> httpx.Response:
+    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None) -> httpx.Response:
         with httpx.Client(timeout=20.0) as client:
             return client.patch(
                 f"{self.rest}/{path.lstrip('/')}",
-                headers=self._rest_headers(),
+                headers=self._rest_headers(prefer),
                 json=json,
                 params=params,
             )

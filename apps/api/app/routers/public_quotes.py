@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/public/quotes", tags=["public-quotes"])
 
 QUOTE_SELECT = (
     "id,workspace_id,number,status,version,valid_until,sent_at,viewed_at,"
-    "approved_at,rejected_at,approved_name,rejection_reason"
+    "approved_at,rejected_at,approved_name,rejection_reason,deleted_at"
 )
 DECISION_STATES = frozenset({"sent", "viewed"})
 
@@ -79,7 +79,10 @@ def _load_quote(svc: ServiceClient, access: dict) -> dict:
     )
     if not rows:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
-    return rows[0]
+    quote = rows[0]
+    if quote.get("deleted_at"):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    return quote
 
 
 def _load_version(svc: ServiceClient, access: dict) -> dict:

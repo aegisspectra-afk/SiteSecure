@@ -1,11 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteBuilder } from "../src/components/quotes/QuoteBuilder";
 import { he } from "../src/i18n/he";
-import { headerFromQuote, headerPatch, parseNonNegative } from "../src/lib/quote-builder";
+import {
+  draftHasContent,
+  headerFromQuote,
+  headerPatch,
+  parseNonNegative,
+  unsavedQuote,
+} from "../src/lib/quote-builder";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -20,6 +26,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 const api = {
   listCustomers: vi.fn(async () => ({ items: [{ id: "c1", display_name: "לקוח א" }] })),
+  getCustomer: vi.fn(async () => ({ id: "c1", display_name: "לקוח א" })),
   listSites: vi.fn(async () => ({ items: [] })),
   listCatalogProducts: vi.fn(async () => ({ items: [] })),
   listQuoteTemplates: vi.fn(async () => ({ items: [{ id: "t1", key: "apartment", name_he: "דירה", item_count: 2 }] })),
@@ -30,6 +37,7 @@ const api = {
     timezone: "Asia/Jerusalem",
     vat_percent: 18,
   })),
+  createQuote: vi.fn(),
   patchQuote: vi.fn(),
   addQuoteItem: vi.fn(),
   patchQuoteItem: vi.fn(),
@@ -93,9 +101,20 @@ describe("quote builder helpers", () => {
     expect(parseNonNegative("abc")).toBe(0);
     expect(parseNonNegative("NaN")).toBe(0);
   });
+
+  it("treats an empty unsaved header as having no content", () => {
+    const empty = headerFromQuote(unsavedQuote("ws"));
+    expect(draftHasContent(empty)).toBe(false);
+    expect(draftHasContent({ ...empty, title: "התקנה" })).toBe(true);
+    expect(draftHasContent({ ...empty, discount_value: "0" })).toBe(false);
+  });
 });
 
 describe("CPQ builder", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("shows go-to-field when the quote is not sendable", () => {
     renderBuilder(quote());
     expect(screen.getByText(he.quoteSendBlocked)).toBeInTheDocument();
@@ -104,6 +123,23 @@ describe("CPQ builder", () => {
     expect(screen.getByRole("button", { name: he.quotePreview })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.quoteSend })).toBeDisabled();
     expect(screen.getByRole("button", { name: he.quoteApplyTemplate })).toBeDisabled();
+    expect(screen.getByText(he.quoteBackToList)).toBeInTheDocument();
+  });
+
+  it("opens an unsaved quote locally without creating a draft", async () => {
+    vi.useFakeTimers();
+    renderBuilder(unsavedQuote("ws"));
+    expect(screen.getByText(he.quoteUnsaved)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.quotePreview })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(api.createQuote).not.toHaveBeenCalled();
+    expect(api.listCustomers).not.toHaveBeenCalled();
+    expect(api.listCatalogProducts).not.toHaveBeenCalled();
+    expect(api.listQuoteTemplates).not.toHaveBeenCalled();
+    expect(api.getWorkspace).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("hides cost until quotes.view_cost is granted", () => {

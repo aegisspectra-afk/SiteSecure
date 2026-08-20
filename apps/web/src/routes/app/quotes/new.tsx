@@ -1,10 +1,9 @@
-import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
-import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { ErrorState, LoadingBlock } from "@site-secure/ui";
+import { createFileRoute } from "@tanstack/react-router";
+import { QuoteBuilder } from "../../../components/quotes/QuoteBuilder";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
-import { ApiClientError } from "@site-secure/api-client";
+import { unsavedQuote } from "../../../lib/quote-builder";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/quotes/new")({
@@ -20,39 +19,20 @@ function NewQuotePage() {
 }
 
 function NewQuoteBody() {
-  const { session, api } = useSession();
-  const navigate = useNavigate();
-  const workspaceId = session?.memberships[0]?.workspace_id;
-  const [title, setTitle] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const mutation = useMutation({
-    mutationFn: () => api.createQuote(workspaceId!, title.trim() ? { title: title.trim() } : {}),
-    onSuccess: (quote) => {
-      void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: quote.id } });
-    },
-    onError: (err) => {
-      setError(err instanceof ApiClientError ? err.message : he.quotesError);
-    },
-  });
+  const { session, loading } = useSession();
+  const membership = session?.memberships[0];
+  const workspaceId = membership?.workspace_id;
 
-  if (!workspaceId) return <ErrorState title={he.quotesError} />;
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    mutation.mutate();
-  }
+  if (loading || !workspaceId) return <LoadingBlock label={he.loading} />;
+  if (!membership) return <ErrorState title={he.quotesError} />;
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
-      <PageHeader title={he.newQuote} description={he.quoteCreateLead} />
-      <form className="ops-card flex flex-col gap-4 p-5" onSubmit={onSubmit}>
-        <Input id="title" label={he.quoteTitle} value={title} onChange={(ev) => setTitle(ev.target.value)} />
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
-        <Button type="submit" loading={mutation.isPending}>
-          {he.quoteCreate}
-        </Button>
-      </form>
-    </div>
+    <QuoteBuilder
+      quote={unsavedQuote(workspaceId)}
+      workspaceId={workspaceId}
+      roleKey={membership.role_key}
+      features={membership.features ?? []}
+      workspaceName={membership.workspace_name}
+    />
   );
 }

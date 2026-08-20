@@ -1,17 +1,21 @@
-import { cn, Drawer, Dropdown, DropdownItem, Status } from "@site-secure/ui";
+import { Drawer } from "@site-secure/ui";
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { he } from "../i18n/he";
-import { appNav, bottomNav, isNavSelected, planLabel, roleLabel, roleLabelEn } from "../lib/app-nav";
+import { appNav, bottomNav } from "../lib/app-nav";
 import { can, canAny } from "../lib/can";
 import { useDocumentMeta } from "../lib/document-meta";
 import { dayGreeting } from "../lib/greeting";
+import { useOnlineStatus } from "../lib/use-online-status";
 import { useSession } from "../lib/session";
+import { greetingLine, workspaceSystemChecks } from "../lib/workspace-header";
 import { AppBottomNav } from "./AppBottomNav";
-import { NavIcon } from "./NavIcon";
+import { SidebarAccount, SidebarBrand, SidebarExternal, SidebarNav } from "./AppSidebar";
+import { UserAccountMenu } from "./UserAccountMenu";
+import { WorkspaceSystemStatus } from "./WorkspaceSystemStatus";
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { session, signOut } = useSession();
+  const { session, user, error, signOut } = useSession();
   const navigate = useNavigate();
   const membership = session?.memberships[0];
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -22,90 +26,42 @@ export function AppShell({ children }: { children: ReactNode }) {
   const tabs = bottomNav(roleKey, features);
   const displayName = session?.profile?.full_name?.trim() || session?.email || he.brand;
   const workspaceActive = membership?.workspace_status === "active";
+  const online = useOnlineStatus();
+  const checks = workspaceSystemChecks({
+    workspaceStatus: membership?.workspace_status,
+    hasSession: Boolean(session),
+    sessionError: error,
+    online,
+    authenticated: Boolean(user),
+  });
+  const greeting = greetingLine(dayGreeting(), session?.profile?.full_name);
   const statusLabel = workspaceActive ? he.statusOperational : he.workspaceInactive;
-  const statusTone = workspaceActive ? "success" : "warning";
+  const account = {
+    displayName,
+    email: session?.email,
+    roleKey,
+    planKey: membership?.plan_key,
+    canSettings: can(roleKey, "workspace.edit", features),
+    canSecurity: canAny(roleKey, ["settings.general", "workspace.edit"], features),
+    canUsers: can(roleKey, "users.view", features),
+    onSettings: () => void navigate({ to: "/app/settings" }),
+    onSecurity: () => void navigate({ to: "/app/settings/security" }),
+    onUsers: () => void navigate({ to: "/app/settings/users" }),
+    onSignOut: () => void signOut(),
+  };
   useDocumentMeta({
     title: `${membership?.workspace_name ?? he.brand} — ${he.homeTitle}`,
     robots: "noindex, nofollow",
   });
 
-  const navList = (tone: "dark" | "light") => (
-    <nav aria-label="ראשי" className="flex flex-col gap-6 p-3">
-      {groups.map((group) => (
-        <div key={group.id} className="flex flex-col gap-1">
-          <p
-            className={cn(
-              "public-mono px-3 text-[10px] tracking-[0.16em]",
-              tone === "dark" ? "text-[var(--color-auth-muted)]" : "text-fg-muted",
-            )}
-          >
-            {group.label}
-          </p>
-          {group.items.map((item) => {
-            const selected = isNavSelected(item.to, pathname);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "ops-sidebar-link flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-sm",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2",
-                  tone === "dark"
-                    ? "focus-visible:outline-[var(--color-auth-accent)]"
-                    : "focus-visible:outline-focus",
-                  selected
-                    ? tone === "dark"
-                      ? "border-s-2 border-[var(--color-auth-accent)] bg-[var(--color-auth-elevated)] font-semibold text-[var(--color-auth-fg)]"
-                      : "border-s-2 border-action bg-bg-subtle font-semibold text-fg"
-                    : tone === "dark"
-                      ? "border-s-2 border-transparent text-[var(--color-auth-muted)] hover:bg-[var(--color-auth-elevated)] hover:text-[var(--color-auth-fg)]"
-                      : "border-s-2 border-transparent text-fg-muted hover:bg-bg-subtle hover:text-fg",
-                )}
-                aria-current={selected ? "page" : undefined}
-                onClick={() => setOpen(false)}
-              >
-                <NavIcon
-                  name={item.icon}
-                  active={selected}
-                  className="size-4 shrink-0"
-                />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
-    </nav>
-  );
-
-  const aegisLink = (tone: "dark" | "light") => (
-    <div
-      className={cn(
-        "border-t px-3 py-3",
-        tone === "dark" ? "border-[var(--color-auth-border)]" : "border-border",
-      )}
-    >
-      <p
-        className={cn(
-          "public-mono px-3 pb-1 text-[10px] tracking-[0.16em]",
-          tone === "dark" ? "text-[var(--color-auth-muted)]" : "text-fg-muted",
-        )}
-      >
-        {he.navExternal}
-      </p>
-      <Link
-        to="/"
-        className={cn(
-          "ops-sidebar-link flex items-center rounded-[var(--radius-control)] px-3 py-2 text-sm",
-          tone === "dark"
-            ? "text-[var(--color-auth-muted)] hover:bg-[var(--color-auth-elevated)] hover:text-[var(--color-auth-fg)]"
-            : "text-fg-muted hover:bg-bg-subtle hover:text-fg",
-        )}
-        onClick={() => setOpen(false)}
-      >
-        {he.navAegis}
-      </Link>
-    </div>
+  const nav = <SidebarNav groups={groups} pathname={pathname} onNavigate={() => setOpen(false)} />;
+  const external = <SidebarExternal onNavigate={() => setOpen(false)} />;
+  const brand = (
+    <SidebarBrand
+      workspaceName={membership?.workspace_name}
+      roleKey={roleKey}
+      planKey={membership?.plan_key}
+    />
   );
 
   return (
@@ -114,82 +70,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         דלגו לתוכן
       </a>
       <aside className="ops-sidebar" aria-label={he.navDesktop}>
-        <div className="border-b border-[var(--color-auth-border)] px-4 py-4">
-          <p className="text-sm font-semibold tracking-[-0.02em] text-[var(--color-auth-fg)]">{he.brand}</p>
-          <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-[var(--color-auth-muted)]">
-            {he.opsPlatform}
-          </p>
-          <p className="mt-4 truncate text-sm font-medium text-[var(--color-auth-fg)]">
-            {membership?.workspace_name}
-          </p>
-          <p className="mt-2 text-xs text-[var(--color-auth-muted)]">
-            {roleLabel(roleKey)}
-            {roleLabelEn(roleKey) ? (
-              <span className="ms-1 text-[var(--color-auth-fg)]">{roleLabelEn(roleKey)}</span>
-            ) : null}
-          </p>
-          {membership?.plan_key ? (
-            <p className="text-xs text-[var(--color-auth-muted)]">
-              {he.planCaption}
-              <span className="ms-1 text-[var(--color-auth-fg)]">{planLabel(membership.plan_key)}</span>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex-1 overflow-y-auto">{navList("dark")}</div>
-        {aegisLink("dark")}
+        {brand}
+        <div className="ops-sidebar-scroll">{nav}</div>
+        {external}
+        <SidebarAccount {...account} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-bg-1 px-4 py-2 lg:px-6">
+        <header className="flex items-start justify-between gap-3 border-b border-border bg-bg-1 px-4 py-3 lg:px-6">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-fg lg:text-base">
-              {dayGreeting()}
-              {session?.profile?.full_name ? ` · ${session.profile.full_name}` : ""}
+            <p className="truncate text-sm font-semibold text-fg lg:text-base">{greeting}</p>
+            <p className="public-mono mt-1 truncate text-[10px] tracking-[0.16em] text-fg-muted">
+              {membership?.workspace_name} · {he.overviewKicker}
             </p>
-            <div className="mt-0.5 hidden items-center gap-3 sm:flex">
-              <p className="truncate text-xs text-fg-muted">
-                {membership?.workspace_name} · {he.overviewKicker}
-              </p>
-              <Status label={statusLabel} tone={statusTone} />
-            </div>
+            <p className="mt-1 text-sm text-fg">{statusLabel}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="sm:hidden">
-              <Status label={statusLabel} tone={statusTone} />
-            </span>
-            <Dropdown
-              label={
-                <span className="flex max-w-48 flex-col items-start text-start">
-                  <span className="max-w-40 truncate text-sm font-medium">{displayName}</span>
-                  <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{session?.email}</span>
-                </span>
-              }
-            >
-              <div className="border-b border-border px-3 py-2">
-                <p className="truncate text-sm font-medium text-fg">{displayName}</p>
-                <p className="ltr-meta truncate text-xs text-fg-muted">{session?.email}</p>
-                <p className="mt-1 text-xs text-fg-muted">
-                  {roleLabel(roleKey)}
-                  {roleLabelEn(roleKey) ? ` · ${roleLabelEn(roleKey)}` : ""}
-                </p>
-                {membership?.plan_key ? (
-                  <p className="text-xs text-fg-muted">
-                    {he.planCaption}: {planLabel(membership.plan_key)}
-                  </p>
-                ) : null}
-              </div>
-              {can(roleKey, "workspace.edit", features) ? (
-                <DropdownItem onClick={() => void navigate({ to: "/app/settings" })}>{he.navSettings}</DropdownItem>
-              ) : null}
-              {canAny(roleKey, ["settings.general", "workspace.edit"], features) ? (
-                <DropdownItem onClick={() => void navigate({ to: "/app/settings/security" })}>
-                  {he.navSecurity}
-                </DropdownItem>
-              ) : null}
-              {can(roleKey, "users.view", features) ? (
-                <DropdownItem onClick={() => void navigate({ to: "/app/settings/users" })}>{he.navUsers}</DropdownItem>
-              ) : null}
-              <DropdownItem onClick={() => void signOut()}>{he.signOut}</DropdownItem>
-            </Dropdown>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <WorkspaceSystemStatus checks={checks} />
+            <div className="lg:hidden">
+              <UserAccountMenu {...account} />
+            </div>
           </div>
         </header>
         <main id="main" className="ops-main flex-1 p-4 lg:p-6">
@@ -198,8 +97,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <AppBottomNav items={tabs} pathname={pathname} moreOpen={open} onMore={() => setOpen(true)} />
       <Drawer open={open} onClose={() => setOpen(false)} title={he.navMore}>
-        {navList("light")}
-        {aegisLink("light")}
+        {brand}
+        {nav}
+        {external}
+        <SidebarAccount {...account} />
       </Drawer>
     </div>
   );

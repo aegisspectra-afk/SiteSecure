@@ -1,7 +1,8 @@
 import { Button, ErrorState, Input, LoadingBlock, Textarea } from "@site-secure/ui";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { LottieAnimation } from "../../../components/lottie";
 import { QuoteCustomerView } from "../../../components/quotes/QuoteCustomerView";
 import { he } from "../../../i18n/he";
 import { useSession } from "../../../lib/session";
@@ -13,19 +14,21 @@ export const Route = createFileRoute("/public/quotes/$token")({
 function PublicQuotePage() {
   const { token } = Route.useParams();
   const { api } = useSession();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
   const query = useQuery({
     queryKey: ["public-quote", token],
     queryFn: () => api.getPublicQuote(token),
+    staleTime: 30_000,
   });
   const approve = useMutation({
     mutationFn: () => api.approvePublicQuote(token, { name: name.trim() || undefined }),
-    onSuccess: () => void query.refetch(),
+    onSuccess: (row) => queryClient.setQueryData(["public-quote", token], row),
   });
   const reject = useMutation({
     mutationFn: () => api.rejectPublicQuote(token, { reason: reason.trim() || undefined }),
-    onSuccess: () => void query.refetch(),
+    onSuccess: (row) => queryClient.setQueryData(["public-quote", token], row),
   });
 
   if (query.isLoading) return <LoadingBlock />;
@@ -46,7 +49,12 @@ function PublicQuotePage() {
         actions={
           <>
             {quote.superseded ? <p className="text-sm text-danger">{he.quotePublicSuperseded}</p> : null}
-            {quote.status === "approved" ? <p className="text-sm font-medium">{he.quotePublicThanks}</p> : null}
+            {quote.status === "approved" ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <LottieAnimation name="success" size={64} />
+                <p className="text-sm font-medium">{he.quotePublicThanks}</p>
+              </div>
+            ) : null}
             {quote.status === "rejected" ? <p className="text-sm font-medium">{he.quotePublicRejected}</p> : null}
             {quote.status === "expired" ? <p className="text-sm font-medium">{he.quotePublicExpired}</p> : null}
             {quote.can_approve ? (

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { OnboardingForm } from "../src/components/OnboardingForm";
 import { he } from "../src/i18n/he";
 import { can, canAny, canAll } from "../src/lib/can";
-import { appNav, bottomNav } from "../src/lib/app-nav";
+import { appNav, bottomNav, nextSidebarIndex } from "../src/lib/app-nav";
 import { roleGranted } from "../src/lib/role-catalog";
 
 describe("OnboardingForm", () => {
@@ -129,6 +129,11 @@ describe("appNav", () => {
     expect(soloOwner).toContain("/app/dashboard");
     expect(soloOwner).toContain("/app/quotes");
     expect(appNav("owner", solo)[0]?.items[0]?.label).toBe(he.navDashboard);
+    expect(appNav("owner", solo).map((group) => group.id)).toEqual(["overview", "sales", "admin", "system"]);
+    expect(appNav("owner", solo).find((group) => group.id === "admin")?.items.map((item) => item.to)).toEqual([
+      "/app/settings/users",
+      "/app/settings/roles",
+    ]);
     expect(soloOwner).toContain("/app/settings/users");
     expect(soloOwner).toContain("/app/settings/roles");
     expect(soloOwner).toContain("/app/settings/security");
@@ -175,6 +180,17 @@ describe("appNav", () => {
     for (const item of bottomNav("owner", solo)) {
       if (item.kind === "route") expect(owned.has(item.to)).toBe(true);
     }
+  });
+
+  it("walks sidebar links with arrow keys without adding hidden modules", () => {
+    expect(nextSidebarIndex(0, "ArrowDown", 4)).toBe(1);
+    expect(nextSidebarIndex(0, "ArrowUp", 4)).toBe(3);
+    expect(nextSidebarIndex(2, "Home", 4)).toBe(0);
+    expect(nextSidebarIndex(2, "End", 4)).toBe(3);
+    expect(nextSidebarIndex(0, "Tab", 4)).toBeNull();
+    expect(appNav("owner", ["core", "quotes", "catalog", "settings"]).some((group) =>
+      group.items.some((item) => ["לקוחות", "לידים", "פרויקטים", "תיקי אתר", "קריאות שירות", "אחריות"].includes(item.label)),
+    )).toBe(false);
   });
 });
 

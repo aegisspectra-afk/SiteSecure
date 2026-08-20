@@ -15,8 +15,10 @@ export function quoteConversion(summary: DashboardSummary | null | undefined): {
     summary.quotes_viewed +
     summary.quotes_approved +
     summary.quotes_rejected;
+  const progressed =
+    summary.quotes_sent + summary.quotes_viewed + summary.quotes_approved + summary.quotes_rejected;
   return {
-    percent: total === 0 ? null : Math.round((summary.quotes_approved / total) * 100),
+    percent: total === 0 || progressed === 0 ? null : Math.round((summary.quotes_approved / total) * 100),
     approved: summary.quotes_approved,
     total,
   };

@@ -1,13 +1,17 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import type { DashboardSummary, QuoteOut } from "@site-secure/api-client";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { QuotesWorkspace } from "../src/components/quotes/QuotesWorkspace";
+import { QuoteCustomerView } from "../src/components/quotes/QuoteCustomerView";
+import { SendQuoteConfirm } from "../src/components/quotes/SendQuoteConfirm";
 import { he } from "../src/i18n/he";
 import { formatMoney } from "../src/lib/quotes";
 import {
   filterQuotes,
+  quoteDraftGap,
+  quoteIsDeletable,
   quotesMarginTotals,
   quotesOpenValue,
   quotesWorkspaceKpis,
@@ -32,19 +36,6 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-const emptySummary: DashboardSummary = {
-  quotes_draft: 0,
-  quotes_sent: 0,
-  quotes_viewed: 0,
-  quotes_approved: 0,
-  quotes_rejected: 0,
-  quotes_open: 0,
-  quotes_approved_value: 0,
-  jobs_open: 0,
-  jobs_overdue: 0,
-  jobs_unassigned: 0,
-};
-
 function quote(partial: Partial<QuoteOut> & Pick<QuoteOut, "id" | "number" | "status">): QuoteOut {
   return {
     workspace_id: "ws",
@@ -59,30 +50,36 @@ function quote(partial: Partial<QuoteOut> & Pick<QuoteOut, "id" | "number" | "st
 
 function Harness({
   quotes,
-  summary = null,
   canCreate = true,
+  canDelete = false,
   canViewCost = false,
   onOpenQuote = vi.fn(),
+  onDelete,
+  onDuplicate,
 }: {
   quotes: QuoteOut[];
-  summary?: DashboardSummary | null;
   canCreate?: boolean;
+  canDelete?: boolean;
   canViewCost?: boolean;
   onOpenQuote?: (id: string) => void;
+  onDelete?: (ids: string[]) => Promise<void>;
+  onDuplicate?: (ids: string[]) => Promise<void>;
 }) {
   const [tab, setTab] = useState<QuoteTab>("all");
   const [search, setSearch] = useState("");
   return (
     <QuotesWorkspace
       quotes={quotes}
-      summary={summary}
       search={search}
       tab={tab}
       canCreate={canCreate}
+      canDelete={canDelete}
       canViewCost={canViewCost}
       onSearch={setSearch}
       onTab={setTab}
       onOpenQuote={onOpenQuote}
+      onDelete={onDelete}
+      onDuplicate={onDuplicate}
     />
   );
 }
@@ -133,15 +130,7 @@ describe("Quotes workspace", () => {
         version: 2,
       }),
     ];
-    const summary: DashboardSummary = {
-      ...emptySummary,
-      quotes_draft: 1,
-      quotes_sent: 1,
-      quotes_approved: 1,
-      quotes_open: 2,
-      quotes_approved_value: 12400,
-    };
-    render(<Harness quotes={quotes} summary={summary} />);
+    render(<Harness quotes={quotes} />);
     expect(screen.queryByText(he.quotesEmptyLead)).not.toBeInTheDocument();
     expect(screen.getByText("Q-2026-0001")).toBeInTheDocument();
     expect(screen.getByText("רומן קופן")).toBeInTheDocument();
@@ -154,7 +143,6 @@ describe("Quotes workspace", () => {
     expect(screen.getAllByText(he.quoteStatuses.sent).length).toBeGreaterThan(0);
     expect(screen.getByText(he.quotesKpiApproved)).toBeInTheDocument();
     expect(screen.getByText(he.quotesKpiOpenValue)).toBeInTheDocument();
-    expect(screen.getByText(he.quotesKpiOpenHint(2))).toBeInTheDocument();
     expect(screen.getByText(he.quotesTabAll)).toBeInTheDocument();
     expect(screen.getByLabelText(he.quotesSearchLabel)).toBeInTheDocument();
     expect(screen.getByText(he.quotePipelineTitle)).toBeInTheDocument();
@@ -203,6 +191,36 @@ describe("Quotes workspace", () => {
     expect(onOpenQuote).toHaveBeenCalledWith("q1");
   });
 
+  it("selects quotes for bulk delete without opening the row", async () => {
+    const onOpenQuote = vi.fn();
+    const onDelete = vi.fn(async () => undefined);
+    render(
+      <Harness
+        quotes={[
+          quote({ id: "q1", number: "Q-0001", status: "draft" }),
+          quote({ id: "q2", number: "Q-0002", status: "approved" }),
+        ]}
+        canDelete
+        onOpenQuote={onOpenQuote}
+        onDelete={onDelete}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(he.quotesSelectRow("Q-0001")));
+    expect(onOpenQuote).not.toHaveBeenCalled();
+    expect(screen.getByText(he.quotesSelectedCount(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: he.quotesDelete }));
+    fireEvent.click(screen.getByRole("button", { name: he.quotesDeleteConfirm }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(["q1"]));
+  });
+
+  it("hides selection for viewers", () => {
+    render(
+      <Harness quotes={[quote({ id: "q1", number: "Q-0001", status: "draft" })]} canCreate={false} />,
+    );
+    expect(screen.queryByLabelText(he.quotesSelectAll)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: he.quotesDelete })).not.toBeInTheDocument();
+  });
+
   it("shows margin only when cost fields exist and the user may view them", () => {
     const quotes = [
       quote({
@@ -221,21 +239,45 @@ describe("Quotes workspace", () => {
   });
 
   it("shows conversion after enough real quotes", () => {
-    const summary: DashboardSummary = {
-      ...emptySummary,
-      quotes_draft: 1,
-      quotes_sent: 1,
-      quotes_approved: 1,
-    };
     const quotes = [
       quote({ id: "a", number: "Q-1", status: "draft" }),
       quote({ id: "b", number: "Q-2", status: "sent" }),
       quote({ id: "c", number: "Q-3", status: "approved" }),
     ];
-    render(<Harness quotes={quotes} summary={summary} />);
+    render(<Harness quotes={quotes} />);
     expect(
       screen.getByText(`${he.uxQuoteConversion}: ${he.uxPercent(33)} · ${he.uxQuoteConversionHint(1, 3)}`),
     ).toBeInTheDocument();
+  });
+
+  it("does not treat empty drafts as a conversion rate", () => {
+    render(
+      <Harness
+        quotes={[
+          quote({ id: "a", number: "Q-1", status: "draft" }),
+          quote({ id: "b", number: "Q-2", status: "draft" }),
+          quote({ id: "c", number: "Q-3", status: "draft" }),
+        ]}
+      />,
+    );
+    expect(screen.queryByText(he.uxQuoteConversion, { exact: false })).not.toBeInTheDocument();
+    expect(screen.getByText(he.quotesNoneApproved)).toBeInTheDocument();
+  });
+
+  it("keeps the row checkbox label off-screen", () => {
+    render(
+      <Harness quotes={[quote({ id: "q1", number: "Q-0001", status: "draft" })]} canDelete />,
+    );
+    expect(screen.queryByText(he.quotesSelectRow("Q-0001"))).not.toBeInTheDocument();
+    expect(screen.getByLabelText(he.quotesSelectRow("Q-0001"))).toBeInTheDocument();
+  });
+
+  it("marks an empty draft so it can be cleaned up", () => {
+    render(<Harness quotes={[quote({ id: "q9", number: "Q-00009", status: "draft" })]} canDelete />);
+    expect(screen.getByText(he.quotesDraftEmpty)).toBeInTheDocument();
+    expect(screen.getByText(he.quotesDraftNoCustomer)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${he.quoteStatuses.draft} 1` }));
+    expect(screen.getByText("Q-00009")).toBeInTheDocument();
   });
 });
 
@@ -250,6 +292,12 @@ describe("quote workspace helpers", () => {
     expect(quotesOpenValue(quotes)).toBe(400);
     expect(quotesWorkspaceKpis(null, quotes).openCount).toBe(3);
     expect(quotesWorkspaceKpis(null, quotes).awaiting).toBe(2);
+  });
+
+  it("allows delete for drafts and sent quotes but not approved", () => {
+    expect(quoteIsDeletable("draft")).toBe(true);
+    expect(quoteIsDeletable("sent")).toBe(true);
+    expect(quoteIsDeletable("approved")).toBe(false);
   });
 
   it("filters search across number and notes", () => {
@@ -269,19 +317,101 @@ describe("quote workspace helpers", () => {
     ).toEqual(["3"]);
   });
 
-  it("hides margin totals when cost fields are absent", () => {
+  it("hides margin totals when cost fields are absent or only one priced draft exists", () => {
     expect(quotesMarginTotals([quote({ id: "1", number: "A", status: "draft", total_gross: 10 })])).toBeNull();
     expect(
       quotesMarginTotals([quote({ id: "1", number: "A", status: "draft", margin_amount: 4, total_gross: 10 })]),
+    ).toBeNull();
+    expect(
+      quotesMarginTotals([quote({ id: "1", number: "A", status: "approved", margin_amount: 4, total_gross: 10 })]),
     ).toEqual({
       amount: 4,
       percent: 40,
     });
+    expect(quoteDraftGap(quote({ id: "1", number: "A", status: "draft" }))).toBe("empty");
   });
 });
 
 describe("quote money helper used in KPIs", () => {
   it("formats open value in ILS", () => {
     expect(formatMoney(48250)).toMatch(/48,250/);
+  });
+});
+
+describe("customer-facing quote document", () => {
+  it("shows commercial fields and hides cost, margin and internal notes", () => {
+    render(
+      <QuoteCustomerView
+        quote={{
+          id: "q1",
+          number: "Q-00009",
+          version: 1,
+          status: "draft",
+          superseded: false,
+          can_approve: false,
+          can_reject: false,
+          title: "התקנת מצלמות",
+          issued_at: "2026-08-01",
+          valid_until: "2026-09-01",
+          currency: "ILS",
+          vat_percent: 18,
+          discount_type: "percent",
+          discount_value: 10,
+          subtotal_net: 900,
+          vat_amount: 162,
+          total_gross: 1062,
+          company: { name: "אגיס מערכות בע״מ" },
+          customer: { display_name: "רומן קופן" },
+          site: { name: "אתר הרצליה", address: {} },
+          project_address: "הרצליה",
+          payment_terms: "שוטף 30",
+          warranty: "12 חודשים",
+          customer_notes: "גישה מהחניה",
+          items: [
+            {
+              id: "i1",
+              quote_id: "q1",
+              description: "מצלמה",
+              qty: 2,
+              unit_price: 500,
+              line_net: 1000,
+              item_type: "catalog",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("אגיס מערכות בע״מ")).toBeInTheDocument();
+    expect(screen.getByText(/Q-00009/)).toBeInTheDocument();
+    expect(screen.getByText("רומן קופן")).toBeInTheDocument();
+    expect(screen.getByText("אתר הרצליה")).toBeInTheDocument();
+    expect(screen.getByText(he.quoteDiscount)).toBeInTheDocument();
+    expect(screen.getByText(he.quoteWarranty)).toBeInTheDocument();
+    expect(screen.getByText("גישה מהחניה")).toBeInTheDocument();
+    expect(screen.queryByText(he.quoteCost)).not.toBeInTheDocument();
+    expect(screen.queryByText(he.quoteMargin)).not.toBeInTheDocument();
+    expect(screen.queryByText(he.quoteInternalNotes)).not.toBeInTheDocument();
+    expect(screen.queryByText("cost_total")).not.toBeInTheDocument();
+  });
+});
+
+describe("send confirmation", () => {
+  it("asks to confirm with customer, number and amount before sending", () => {
+    const onConfirm = vi.fn();
+    render(
+      <SendQuoteConfirm
+        open
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        customer="רומן קופן"
+        number="Q-00009"
+        amount={1062}
+      />,
+    );
+    expect(screen.getByRole("dialog", { name: he.quoteSendTitle })).toBeInTheDocument();
+    expect(screen.getByText("רומן קופן")).toBeInTheDocument();
+    expect(screen.getByText("Q-00009")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: he.quoteSendAction }));
+    expect(onConfirm).toHaveBeenCalled();
   });
 });

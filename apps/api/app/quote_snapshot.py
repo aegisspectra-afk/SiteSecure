@@ -89,6 +89,8 @@ def public_payload(
         "subtotal_net": _num(quote.get("subtotal_net")),
         "vat_amount": _num(quote.get("vat_amount")),
         "total_gross": _num(quote.get("total_gross")),
+        "issued_at": quote.get("sent_at") or quote.get("created_at"),
+        "sent_at": quote.get("sent_at"),
         "company": {"name": workspace.get("name")},
         "customer": None
         if not customer

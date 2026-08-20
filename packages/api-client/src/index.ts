@@ -145,6 +145,7 @@ export type QuoteOut = {
   customer_id: string | null;
   customer_name?: string | null;
   site_id: string | null;
+  site_name?: string | null;
   lead_id?: string | null;
   owner_user_id: string | null;
   title?: string | null;
@@ -296,6 +297,8 @@ export type PublicQuote = {
   customer_notes?: string | null;
   currency: string;
   vat_percent: number;
+  discount_type?: string | null;
+  discount_value?: number | null;
   subtotal_net: number;
   vat_amount: number;
   total_gross: number;
@@ -303,13 +306,28 @@ export type PublicQuote = {
   customer: { display_name?: string | null; email?: string | null; phone?: string | null } | null;
   site: { name?: string | null; address?: Record<string, unknown> } | null;
   items: QuoteItemOut[];
+  issued_at?: string | null;
+  sent_at?: string | null;
   approved_at?: string | null;
   rejected_at?: string | null;
+};
+
+export type QuoteListCounts = {
+  draft: number;
+  sent: number;
+  viewed: number;
+  approved: number;
+  rejected: number;
+  expired: number;
+  cancelled: number;
+  total: number;
+  open_value: number;
 };
 
 export type QuotePage = {
   items: QuoteOut[];
   next_cursor: string | null;
+  counts?: QuoteListCounts;
 };
 
 export type MemberOut = {
@@ -443,10 +461,14 @@ export function createApiClient(opts: {
     getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
     getDashboard: (workspaceId: string) =>
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
-    listQuotes: (workspaceId: string, opts: { q?: string; status?: string; limit?: number } = {}) => {
+    listQuotes: (
+      workspaceId: string,
+      opts: { q?: string; status?: string; limit?: number; cursor?: string | null } = {},
+    ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status?.trim()) params.set("status", opts.status.trim());
+      if (opts.cursor) params.set("cursor", opts.cursor);
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
     },
     createQuote: (workspaceId: string, body: QuotePatchBody = {}) =>
@@ -484,6 +506,10 @@ export function createApiClient(opts: {
       }),
     sendQuote: (workspaceId: string, quoteId: string) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/send`, { method: "POST" }),
+    deleteQuote: (workspaceId: string, quoteId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`, { method: "DELETE" }),
+    duplicateQuote: (workspaceId: string, quoteId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/duplicate`, { method: "POST" }),
     applyQuoteTemplate: (workspaceId: string, quoteId: string, body: { template_id?: string } = {}) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/apply-template`, {
         method: "POST",
@@ -501,6 +527,8 @@ export function createApiClient(opts: {
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       return request<{ items: CustomerOut[] }>(`/api/v1/workspaces/${workspaceId}/customers?${params}`);
     },
+    getCustomer: (workspaceId: string, customerId: string) =>
+      request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}`),
     createCustomer: (workspaceId: string, body: { display_name: string; email?: string; phone?: string }) =>
       request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers`, {
         method: "POST",

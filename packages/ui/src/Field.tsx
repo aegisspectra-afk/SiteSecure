@@ -3,7 +3,7 @@ import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttr
 import { cn } from "./cn";
 
 const fieldClass =
-  "min-h-11 w-full rounded-[var(--radius-control)] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-fg-muted";
+  "min-h-11 w-full rounded-[var(--radius-control)] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-fg-muted";
 
 export type FieldProps = {
   label: string;

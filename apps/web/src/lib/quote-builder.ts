@@ -77,6 +77,42 @@ export function headersEqual(a: QuoteHeaderDraft, b: QuoteHeaderDraft) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+export function draftHasContent(draft: QuoteHeaderDraft): boolean {
+  return Boolean(
+    draft.customer_id ||
+      draft.site_id ||
+      draft.title.trim() ||
+      draft.project_name.trim() ||
+      draft.project_address.trim() ||
+      draft.summary.trim() ||
+      draft.key_points.trim() ||
+      draft.payment_terms.trim() ||
+      draft.warranty.trim() ||
+      draft.general_terms.trim() ||
+      draft.customer_notes.trim() ||
+      draft.internal_notes.trim() ||
+      draft.template_id ||
+      (draft.discount_value.trim() !== "" && draft.discount_value !== "0"),
+  );
+}
+
+export function unsavedQuote(workspaceId: string): QuoteOut {
+  return {
+    id: "",
+    workspace_id: workspaceId,
+    number: "",
+    status: "draft",
+    customer_id: null,
+    site_id: null,
+    owner_user_id: null,
+    currency: "ILS",
+    items: [],
+    version: 1,
+    total_gross: 0,
+    validation: { can_send: false, gaps: [] },
+  };
+}
+
 export function parseNonNegative(raw: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return 0;

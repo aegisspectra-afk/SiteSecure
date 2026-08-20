@@ -58,3 +58,5 @@ def test_public_payload_omits_internal_pricing():
     assert "400" not in blob
     assert payload["total_gross"] == 118
     assert payload["customer"]["display_name"] == "רומן"
+    assert payload["issued_at"] is None
+    assert "cost" not in payload["items"][0]

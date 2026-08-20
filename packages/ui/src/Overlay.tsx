@@ -22,6 +22,7 @@ export function Modal({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -31,11 +32,14 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-bg-2 p-6 text-fg shadow-popover backdrop:bg-fg/40"
+      aria-labelledby={titleId}
+      className="w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-bg-2 p-6 text-fg shadow-popover backdrop:bg-scrim"
       onClose={onClose}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 id={titleId} className="text-lg font-semibold">
+          {title}
+        </h2>
         <button
           type="button"
           className="rounded-[var(--radius-control)] p-2 text-fg-muted hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-focus"
@@ -74,12 +78,12 @@ export function Drawer({
     <div className="fixed inset-0 z-50">
       <button
         type="button"
-        className="absolute inset-0 bg-fg/40"
+        className="absolute inset-0 bg-scrim"
         aria-label="סגור תפריט"
         onClick={onClose}
       />
       <aside
-        className="absolute inset-y-0 start-0 flex w-[min(100%,20rem)] flex-col bg-bg-1 shadow-popover"
+        className="absolute inset-y-0 start-0 flex w-[min(100%,20rem)] flex-col bg-bg-nav shadow-popover"
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -104,9 +108,13 @@ export function Drawer({
 
 export function Dropdown({
   label,
+  menuLabel,
+  menuClassName,
   children,
 }: {
   label: ReactNode;
+  menuLabel?: string;
+  menuClassName?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -132,6 +140,7 @@ export function Dropdown({
         className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 text-sm hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-focus"
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={menuLabel}
         onClick={() => setOpen((v) => !v)}
       >
         {label}
@@ -139,7 +148,10 @@ export function Dropdown({
       {open ? (
         <div
           role="menu"
-          className="absolute end-0 z-40 mt-1 min-w-44 rounded-[var(--radius-panel)] border border-border bg-bg-2 py-1 shadow-popover"
+          className={cn(
+            "absolute end-0 z-40 mt-1 min-w-44 rounded-[var(--radius-panel)] border border-border bg-bg-2 py-1 shadow-popover",
+            menuClassName,
+          )}
         >
           <div onClick={() => setOpen(false)}>{children}</div>
         </div>
@@ -173,7 +185,7 @@ export function Tooltip({
       <span
         id={id}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full start-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-control)] bg-fg px-2 py-1 text-xs text-bg opacity-0 shadow-popover transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute bottom-full start-1/2 z-30 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-control)] border border-border bg-bg-2 px-2 py-1 text-xs text-fg opacity-0 shadow-popover transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         {content}
       </span>

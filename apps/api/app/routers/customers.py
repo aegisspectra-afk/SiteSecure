@@ -9,11 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
 from ..authz.types import ResourceRef
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
-from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["customers"])
 
@@ -208,6 +209,7 @@ def delete_customer(
     customer_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     existing = one_or_404(
@@ -217,11 +219,12 @@ def delete_customer(
         )
     )
     require(ctx, "crm.delete", resource=ResourceRef(type="customer", id=existing["id"]))
-    patched_or_403(
-        client.patch(
+    acked_or_403(
+        svc.patch(
             "customers",
             {"deleted_at": datetime.now(UTC).isoformat()},
             params={"id": f"eq.{customer_id}", "workspace_id": f"eq.{workspace_id}"},
+            prefer="return=minimal",
         )
     )
     return {"ok": True}

@@ -3,21 +3,23 @@ import { cn } from "./cn";
 
 type BoxProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
+  hideLabel?: boolean;
 };
 
-export function Checkbox({ label, className, id, ...props }: BoxProps) {
+export function Checkbox({ label, hideLabel, className, id, ...props }: BoxProps) {
   return (
     <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-fg">
       <input
         id={id}
         type="checkbox"
+        aria-label={hideLabel ? label : undefined}
         className={cn(
           "size-4 rounded-[3px] border-border text-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}
       />
-      <span>{label}</span>
+      {hideLabel ? null : <span>{label}</span>}
     </label>
   );
 }

@@ -102,8 +102,8 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
       ],
     },
     {
-      id: "system",
-      label: he.navGroupSystem,
+      id: "admin",
+      label: he.navGroupAdmin,
       items: [
         { to: "/app/settings/users", label: he.navUsers, icon: "team", visible: allow("users.view") },
         {
@@ -112,6 +112,12 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
           icon: "roles",
           visible: allow("users.view") || allow("roles.manage"),
         },
+      ],
+    },
+    {
+      id: "system",
+      label: he.navGroupSystem,
+      items: [
         {
           to: "/app/settings/security",
           label: he.navSecurity,
@@ -155,4 +161,13 @@ export function bottomNav(roleKey: string | undefined, features: string[] = []):
     items.push({ kind: "more", label: he.navMore, icon: "more" });
   }
   return items;
+}
+
+export function nextSidebarIndex(current: number, key: string, count: number): number | null {
+  if (count < 1) return null;
+  if (key === "Home") return 0;
+  if (key === "End") return count - 1;
+  if (key === "ArrowDown") return (current + 1) % count;
+  if (key === "ArrowUp") return (current - 1 + count) % count;
+  return null;
 }

@@ -614,6 +614,12 @@ describe("ux metrics", () => {
     expect(
       quoteConversion({
         ...emptySummary,
+        quotes_draft: 9,
+      }),
+    ).toEqual({ percent: null, approved: 0, total: 9 });
+    expect(
+      quoteConversion({
+        ...emptySummary,
         quotes_draft: 1,
         quotes_approved: 1,
       }),

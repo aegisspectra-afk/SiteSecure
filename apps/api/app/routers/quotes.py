@@ -20,7 +20,7 @@ from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..quote_snapshot import catalog_line_snapshot, public_payload, version_snapshot
 from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import validate_for_send
-from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["quotes"])
@@ -31,9 +31,16 @@ QUOTE_SELECT = (
     "total_gross,cost_total,margin_amount,margin_percent,valid_until,payment_terms,"
     "customer_notes,internal_notes,title,project_name,project_address,summary,"
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
-    "approved_at,rejected_at,approved_name,rejection_reason,created_at,updated_at"
+    "approved_at,rejected_at,approved_name,rejection_reason,created_at,updated_at,"
+    "customers(display_name),sites(name)"
 )
-QUOTE_LIST_SELECT = QUOTE_SELECT + ",customers(display_name)"
+QUOTE_LIST_SELECT = (
+    "id,workspace_id,number,status,customer_id,site_id,owner_user_id,currency,"
+    "total_gross,cost_total,margin_amount,margin_percent,valid_until,title,"
+    "project_name,version,created_at,updated_at,"
+    "customers(display_name),sites(name)"
+)
+OPEN_LIST_STATUSES = frozenset({"draft", "sent", "viewed"})
 ITEM_SELECT = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,cost,discount,"
     "line_net,sort_order,sku,name,unit,catalog_snapshot"
@@ -137,22 +144,51 @@ def _can_view_cost(ctx) -> bool:
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
 
 
-def _customer_name(row: dict) -> str | None:
-    nested = row.get("customers")
+def _nested_name(row: dict, key: str, field: str) -> str | None:
+    nested = row.get(key)
     name = None
     if isinstance(nested, dict):
-        name = nested.get("display_name")
+        name = nested.get(field)
     elif isinstance(nested, list) and nested:
-        name = nested[0].get("display_name") if isinstance(nested[0], dict) else None
+        name = nested[0].get(field) if isinstance(nested[0], dict) else None
     cleaned = str(name or "").strip()
     return cleaned or None
 
 
 def _flatten_quote(row: dict) -> dict:
     out = dict(row)
-    out.pop("customers", None)
-    out["customer_name"] = _customer_name(row)
+    if "customers" in out:
+        out["customer_name"] = _nested_name(row, "customers", "display_name")
+        out.pop("customers", None)
+    else:
+        out.setdefault("customer_name", None)
+    if "sites" in out:
+        out["site_name"] = _nested_name(row, "sites", "name")
+        out.pop("sites", None)
+    else:
+        out.setdefault("site_name", None)
     return out
+
+
+def _quote_list_counts(rows: list[dict]) -> dict:
+    counts = {
+        "draft": 0,
+        "sent": 0,
+        "viewed": 0,
+        "approved": 0,
+        "rejected": 0,
+        "expired": 0,
+        "cancelled": 0,
+        "total": len(rows),
+        "open_value": 0.0,
+    }
+    for row in rows:
+        status = str(row.get("status") or "")
+        if status in counts:
+            counts[status] += 1
+        if status in OPEN_LIST_STATUSES:
+            counts["open_value"] += float(row.get("total_gross") or 0)
+    return counts
 
 
 def _strip_cost(quote: dict, items: list[dict], *, show_cost: bool) -> dict:
@@ -345,7 +381,7 @@ def _record_event(client: UserClient, workspace_id: UUID, quote_id: UUID, event_
 def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items: list[dict], *, show_cost: bool) -> dict:
     workspace = _load_workspace(client, workspace_id)
     gaps = validate_for_send(quote, items, workspace)
-    out = _strip_cost(quote, items, show_cost=show_cost)
+    out = _strip_cost(_flatten_quote(quote), items, show_cost=show_cost)
     out["validation"] = {"can_send": len(gaps) == 0, "gaps": gaps}
     return out
 
@@ -353,6 +389,41 @@ def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items:
 def _public_url(token: str) -> str:
     base = get_settings().web_public_url.rstrip("/")
     return f"{base}/public/quotes/{token}"
+
+
+def _revoke_public_access(svc: ServiceClient, workspace_id: UUID, quote_id: UUID) -> None:
+    svc.patch(
+        "quote_public_access",
+        {"revoked_at": datetime.now(UTC).isoformat()},
+        params={
+            "quote_id": f"eq.{quote_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "revoked_at": "is.null",
+        },
+    )
+
+
+DUPLICATE_FIELDS = (
+    "customer_id",
+    "site_id",
+    "lead_id",
+    "title",
+    "project_name",
+    "project_address",
+    "summary",
+    "key_points",
+    "warranty",
+    "general_terms",
+    "template_id",
+    "vat_percent",
+    "discount_type",
+    "discount_value",
+    "valid_until",
+    "payment_terms",
+    "customer_notes",
+    "internal_notes",
+    "currency",
+)
 
 
 def _related(client: UserClient, workspace_id: UUID, quote: dict) -> tuple[dict, dict | None, dict | None]:
@@ -399,6 +470,7 @@ def list_quotes(
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
+        "deleted_at": "is.null",
         "select": QUOTE_LIST_SELECT,
         "order": "created_at.desc",
         "limit": str(page_size + 1),
@@ -421,7 +493,21 @@ def list_quotes(
     page = page_from_rows(rows, page_size)
     show_cost = _can_view_cost(ctx)
     items = [_strip_cost(_flatten_quote(row), [], show_cost=show_cost) for row in page.items]
-    return {"items": items, "next_cursor": page.next_cursor}
+    count_rows = as_list(
+        client.get(
+            "quotes",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "deleted_at": "is.null",
+                "select": "status,total_gross",
+            },
+        )
+    )
+    return {
+        "items": items,
+        "next_cursor": page.next_cursor,
+        "counts": _quote_list_counts(count_rows),
+    }
 
 
 @router.post("/quotes")
@@ -795,6 +881,116 @@ def share_quote(
     token = new_public_token()
     _mint_access(svc, existing, token)
     return {"public_url": _public_url(token), "public_token": token}
+
+
+@router.delete("/quotes/{quote_id}")
+def delete_quote(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.delete", resource=_ref(existing))
+    now = datetime.now(UTC).isoformat()
+    patch: dict = {"deleted_at": now}
+    if existing.get("status") in {"sent", "viewed"}:
+        patch["status"] = "cancelled"
+    _record_event(client, workspace_id, quote_id, "deleted", actor_id(user), {"from_status": existing.get("status")})
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.delete",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"from_status": existing.get("status")},
+    )
+    # SELECT RLS is `deleted_at IS NULL`. A user-JWT PATCH that stamps deleted_at
+    # cannot RETURN the row; PostgREST answers 404 and the API used to surface 403.
+    # authorize() already ran against the live row. Service role only stamps that id.
+    acked_or_403(
+        svc.patch(
+            "quotes",
+            patch,
+            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            prefer="return=minimal",
+        )
+    )
+    try:
+        _revoke_public_access(svc, workspace_id, quote_id)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@router.post("/quotes/{quote_id}/duplicate")
+def duplicate_quote(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.view", resource=_ref(existing))
+    require(ctx, "quotes.create")
+    payload = {
+        "workspace_id": str(workspace_id),
+        "created_by": actor_id(user),
+        "owner_user_id": actor_id(user),
+    }
+    for field in DUPLICATE_FIELDS:
+        if existing.get(field) is not None:
+            payload[field] = existing[field]
+    title = str(existing.get("title") or "").strip()
+    if title:
+        payload["title"] = f"{title} (העתק)"
+    row = created_or_403(client.post("quotes", payload))
+    items = _load_items(client, workspace_id, quote_id)
+    for item in items:
+        created_or_403(
+            client.post(
+                "quote_items",
+                {
+                    "workspace_id": str(workspace_id),
+                    "quote_id": row["id"],
+                    "product_id": item.get("product_id"),
+                    "item_type": item.get("item_type") or "free",
+                    "description": item.get("description") or "",
+                    "qty": item.get("qty") or 0,
+                    "unit_price": item.get("unit_price") or 0,
+                    "cost": item.get("cost") or 0,
+                    "discount": item.get("discount") or 0,
+                    "sort_order": item.get("sort_order") or 0,
+                    "sku": item.get("sku"),
+                    "name": item.get("name"),
+                    "unit": item.get("unit"),
+                    "catalog_snapshot": item.get("catalog_snapshot") or {},
+                    "line_net": item.get("line_net") or 0,
+                },
+            )
+        )
+    copied = _load_items(client, workspace_id, UUID(row["id"]))
+    row, copied = _persist_totals(client, workspace_id, row, copied)
+    _record_event(
+        client,
+        workspace_id,
+        UUID(row["id"]),
+        "duplicated",
+        actor_id(user),
+        {"source_quote_id": str(quote_id)},
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.duplicate",
+        entity_type="quote",
+        entity_id=row["id"],
+        metadata={"source_quote_id": str(quote_id)},
+    )
+    return _with_validation(client, workspace_id, row, copied, show_cost=_can_view_cost(ctx))
 
 
 @router.get("/quotes/{quote_id}/preview")

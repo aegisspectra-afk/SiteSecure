@@ -15,7 +15,13 @@
   --color-danger-fg: #ffffff;
   --color-warning: #b54708;
   --color-success: #067647;
+  --color-info: #0b6bcb;
+  --color-analytics: #6d5ae8;
+  --color-tech: #0e7490;
   --color-focus: #0b6bcb;
+  --color-bg-nav: #ffffff;
+  --color-fg-subtle: #64748b;
+  --color-scrim: rgb(15 23 42 / 40%);
   --color-primary-50: #f0f7fd;
   --color-primary-100: #dcecf9;
   --color-primary-200: #b9d7f3;
@@ -59,6 +65,7 @@
 }
 
 :root {
+  color-scheme: light;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
@@ -69,29 +76,37 @@
   --space-64: 64px;
 }
 
+/* Product dark: navy / steel / slate layers. Not black, not neon. */
 .dark {
-  --color-action: #4d9adc;
-  --color-action-hover: #6aade4;
-  --color-action-active: #3d88c8;
-  --color-action-fg: #0b1220;
+  color-scheme: dark;
+  --color-action: #2f80ed;
+  --color-action-hover: #4a93f5;
+  --color-action-active: #1e6fe0;
+  --color-action-fg: #f1f5f9;
   --color-fg: #f1f5f9;
-  --color-fg-muted: #94a3b8;
-  --color-border: #334155;
-  --color-bg: #111827;
-  --color-bg-subtle: #1e293b;
+  --color-fg-muted: #a9b8cc;
+  --color-fg-subtle: #71839a;
+  --color-border: #243550;
+  --color-bg: #0d192b;
+  --color-bg-subtle: #16243a;
   --color-bg-0: #0b1220;
-  --color-bg-1: #111827;
-  --color-bg-2: #1e293b;
-  --color-danger: #f97066;
-  --color-danger-fg: #0b1220;
-  --color-warning: #f79009;
-  --color-success: #32d583;
-  --color-focus: #4d9adc;
+  --color-bg-nav: #0f172a;
+  --color-bg-1: #111c2e;
+  --color-bg-2: #16243a;
+  --color-danger: #ef4444;
+  --color-danger-fg: #f1f5f9;
+  --color-warning: #f59e0b;
+  --color-success: #22c55e;
+  --color-info: #38bdf8;
+  --color-analytics: #8b7cf6;
+  --color-tech: #22d3ee;
+  --color-focus: #2f80ed;
+  --color-scrim: rgb(11 18 32 / 72%);
   --color-auth-panel: #0d131d;
   --color-auth-panel-fg: #e8eef6;
   --color-auth-panel-muted: #8b9bb0;
-  --shadow-card: none;
-  --shadow-popover: none;
+  --shadow-card: 0 1px 2px rgb(8 15 28 / 28%);
+  --shadow-popover: 0 12px 32px rgb(8 15 28 / 42%);
 }
 
 /* Auth-only dark console. Does not convert the rest of the product to dark mode. */

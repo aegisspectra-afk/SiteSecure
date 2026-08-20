@@ -33,3 +33,10 @@ def created_or_403(res: httpx.Response) -> dict:
 
 def patched_or_403(res: httpx.Response) -> dict:
     return created_or_403(res)
+
+
+def acked_or_403(res: httpx.Response) -> None:
+    """Success for mutations that must not RETURN the row (soft-delete vs SELECT RLS)."""
+    if res.status_code in {200, 201, 204}:
+        return
+    raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])

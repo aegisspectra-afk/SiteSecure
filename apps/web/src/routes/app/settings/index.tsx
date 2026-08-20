@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
+import { ThemePicker } from "../../../components/ThemePicker";
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
 import { useSession } from "../../../lib/session";
@@ -81,6 +82,10 @@ function SettingsBody() {
   return (
     <div className="flex max-w-lg flex-col gap-8">
       <PageHeader title={he.settingsTitle} description={he.settingsLead} />
+      <section className="ops-card flex flex-col gap-3 p-5">
+        <p className="text-sm font-medium text-fg">{he.appearanceTitle}</p>
+        <ThemePicker id="settings-theme" />
+      </section>
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
         <Input id="ws-name" label={he.workspaceName} value={name} onChange={(ev) => setName(ev.target.value)} />
         <Input

@@ -132,7 +132,23 @@ def test_quote_locked_state():
     assert d.code == "RESOURCE_STATE"
 
 
-def test_quote_sent_cannot_be_edited_in_place():
+def test_quote_approved_cannot_be_deleted():
+    d = authorize(
+        ctx=_ctx("owner"),
+        action="quotes.delete",
+        resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state="approved"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+    d = authorize(
+        ctx=_ctx("owner"),
+        action="quotes.delete",
+        resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state="draft"),
+    )
+    assert d.allowed is True
+    d = authorize(ctx=_ctx("sales"), action="quotes.delete")
+    assert d.allowed is False
+    assert d.code == "PERMISSION_DENIED"
     d = authorize(
         ctx=_ctx("sales"),
         action="quotes.edit",
@@ -272,6 +288,7 @@ P0_ACTIONS = {
     "owner": {
         "quotes.create": True,
         "quotes.edit": True,
+        "quotes.delete": True,
         "quotes.send": True,
         "quotes.view_cost": True,
         "catalog.view": True,
@@ -279,12 +296,14 @@ P0_ACTIONS = {
     },
     "administrator": {
         "quotes.create": True,
+        "quotes.delete": True,
         "quotes.send": True,
         "quotes.view_cost": True,
         "catalog.edit": True,
     },
     "manager": {
         "quotes.create": True,
+        "quotes.delete": True,
         "quotes.send": True,
         "quotes.view_cost": True,
         "catalog.edit": True,
@@ -292,6 +311,7 @@ P0_ACTIONS = {
     "sales": {
         "quotes.create": True,
         "quotes.edit": True,
+        "quotes.delete": False,
         "quotes.send": True,
         "quotes.view_cost": False,
         "catalog.view": True,
@@ -301,6 +321,7 @@ P0_ACTIONS = {
         "quotes.view": True,
         "quotes.create": False,
         "quotes.edit": False,
+        "quotes.delete": False,
         "quotes.send": False,
         "quotes.view_cost": False,
         "catalog.view": True,
@@ -310,6 +331,7 @@ P0_ACTIONS = {
         "quotes.view": True,
         "quotes.create": False,
         "quotes.edit": True,
+        "quotes.delete": False,
         "quotes.send": False,
         "catalog.view": True,
         "catalog.edit": False,
@@ -318,6 +340,7 @@ P0_ACTIONS = {
         "quotes.view": True,
         "quotes.create": False,
         "quotes.edit": False,
+        "quotes.delete": False,
         "quotes.send": False,
         "catalog.view": True,
         "catalog.edit": False,

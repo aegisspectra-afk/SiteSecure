@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Button } from "../src/Button";
+import { Checkbox } from "../src/Controls";
 import { Input } from "../src/Field";
 import { ProgressList } from "../src/ProgressList";
 import { Status } from "../src/Display";
@@ -70,6 +71,21 @@ describe("Status", () => {
     render(<Status label="ממתין לאישור הלקוח" tone="warning" />);
     expect(screen.getByText("ממתין לאישור הלקוח")).toBeInTheDocument();
     expect(screen.queryByText("PENDING_APPROVAL")).not.toBeInTheDocument();
+  });
+
+  it("marks info with the info token, not the primary action fill", () => {
+    const { container } = render(<Status label="נשלחה" tone="info" />);
+    const dot = container.querySelector("[aria-hidden]");
+    expect(dot?.className).toContain("bg-info");
+    expect(dot?.className).not.toContain("bg-action");
+  });
+});
+
+describe("Checkbox", () => {
+  it("can hide the label from the visual tree while keeping it accessible", () => {
+    render(<Checkbox hideLabel label="בחירת Q-00009" />);
+    expect(screen.queryByText("בחירת Q-00009")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("בחירת Q-00009")).toBeInTheDocument();
   });
 });
 

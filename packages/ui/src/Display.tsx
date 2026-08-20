@@ -36,7 +36,7 @@ export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const toneDot: Record<StatusTone, string> = {
   neutral: "bg-fg-muted",
-  info: "bg-action",
+  info: "bg-info",
   success: "bg-success",
   warning: "bg-warning",
   danger: "bg-danger",

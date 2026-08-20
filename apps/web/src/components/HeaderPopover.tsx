@@ -19,7 +19,13 @@ export function HeaderPopover({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [coords, setCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -106,6 +112,7 @@ export function HeaderPopover({
               className={reducedMotion ? "ops-header-popover" : "ops-header-popover ops-header-popover-enter"}
               style={{
                 top: coords.top,
+                bottom: coords.bottom,
                 left: coords.left,
                 width: coords.width,
                 maxHeight: coords.maxHeight,

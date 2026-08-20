@@ -135,8 +135,14 @@ describe("theme helpers", () => {
     const start = vi.fn(function (this: Document, update?: () => void) {
       if (this !== document) throw new TypeError("Illegal invocation");
       update?.();
-      return { finished: Promise.resolve() };
-    });
+      return {
+        finished: Promise.resolve(),
+        ready: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+        types: new Set<string>(),
+        skipTransition() {},
+      };
+    }) as unknown as typeof document.startViewTransition;
     document.startViewTransition = start;
     setThemeMode("dark", { x: 12, y: 20 });
     expect(start).toHaveBeenCalledTimes(1);

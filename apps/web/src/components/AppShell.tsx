@@ -85,8 +85,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const brand = (
     <SidebarBrand
       workspaceName={membership?.workspace_name}
-      roleKey={roleKey}
       planKey={membership?.plan_key}
+      workspaceActive={workspaceActive}
       collapsed={collapsed}
       onToggleCollapse={toggleCollapse}
     />
@@ -94,8 +94,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const drawerBrand = (
     <SidebarBrand
       workspaceName={membership?.workspace_name}
-      roleKey={roleKey}
       planKey={membership?.plan_key}
+      workspaceActive={workspaceActive}
     />
   );
 

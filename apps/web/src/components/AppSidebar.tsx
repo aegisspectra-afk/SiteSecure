@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen, SquareArrowOutUpRight } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, SquareArrowOutUpRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
 import type { KeyboardEvent } from "react";
@@ -7,38 +7,69 @@ import {
   isNavSelected,
   nextSidebarIndex,
   planLabel,
-  roleLabel,
   type AppNavGroup,
 } from "../lib/app-nav";
 import { NavIcon } from "./NavIcon";
 import { UserAccountMenu } from "./UserAccountMenu";
 
-function tenureLine(roleKey?: string, planKey?: string): string {
-  return [roleLabel(roleKey), planLabel(planKey)].filter(Boolean).join(" · ");
+function workspaceMetaLine(planKey?: string, active?: boolean): string {
+  const plan = planLabel(planKey);
+  const status = active === false ? he.workspaceMetaInactive : he.workspaceMetaActive;
+  return [plan, status].filter(Boolean).join(" · ");
+}
+
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 2.75 20.25 8v5.2c0 4.35-3.35 8.05-8.25 9.8-4.9-1.75-8.25-5.45-8.25-9.8V8L12 2.75Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 7.25 16 11l-4 3.75L8 11l4-3.75Z"
+        fill="currentColor"
+        opacity="0.28"
+      />
+      <path
+        d="M12 7.25 16 11l-4 3.75L8 11l4-3.75Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function SidebarBrand({
   workspaceName,
-  roleKey,
   planKey,
+  workspaceActive = true,
   collapsed = false,
   onToggleCollapse,
 }: {
   workspaceName?: string | null;
-  roleKey?: string;
   planKey?: string;
+  workspaceActive?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
-  const tenure = tenureLine(roleKey, planKey);
+  const meta = workspaceMetaLine(planKey, workspaceActive);
+
   return (
     <div className={cn("ops-sidebar-brand", collapsed && "is-collapsed")}>
       <div className="ops-sidebar-brand-row">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold tracking-[-0.02em] text-fg">{collapsed ? "SS" : he.brand}</p>
+        <div className="ops-sidebar-brand-identity">
+          <BrandMark className="ops-sidebar-brand-mark" />
           {!collapsed ? (
-            <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.opsPlatform}</p>
-          ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="ops-sidebar-brand-name">{he.brand}</p>
+              <p className="ops-sidebar-brand-tagline">{he.opsPlatform}</p>
+            </div>
+          ) : (
+            <span className="sr-only">{he.brand}</span>
+          )}
         </div>
         {onToggleCollapse ? (
           <button
@@ -56,20 +87,23 @@ export function SidebarBrand({
           </button>
         ) : null}
       </div>
+
       {workspaceName ? (
-        <>
-          {!collapsed ? (
-            <p className="public-mono mt-3 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navWorkspace}</p>
-          ) : null}
-          <p
-            className={cn("truncate text-sm font-medium text-fg", collapsed ? "mt-3 text-center" : "mt-1")}
+        <div className={cn("ops-sidebar-workspace", collapsed && "is-collapsed")}>
+          {!collapsed ? <p className="ops-sidebar-workspace-label">{he.navWorkspace}</p> : null}
+          <div
+            className="ops-sidebar-workspace-control"
             title={workspaceName}
+            aria-label={`${he.navWorkspace}: ${workspaceName}`}
           >
-            {collapsed ? workspaceName.slice(0, 1) : workspaceName}
-          </p>
-        </>
+            <span className={cn("ops-sidebar-workspace-name", collapsed && "is-collapsed")}>
+              {collapsed ? workspaceName.slice(0, 1) : workspaceName}
+            </span>
+            {!collapsed ? <ChevronDown className="ops-sidebar-workspace-chevron" aria-hidden /> : null}
+          </div>
+          {!collapsed && meta ? <p className="ops-sidebar-workspace-meta">{meta}</p> : null}
+        </div>
       ) : null}
-      {!collapsed && tenure ? <p className="mt-1 truncate text-xs text-fg-muted">{tenure}</p> : null}
     </div>
   );
 }
@@ -142,9 +176,9 @@ export function SidebarExternal({
   return (
     <div className="ops-sidebar-external">
       {!collapsed ? (
-        <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navExternal}</p>
+        <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navResources}</p>
       ) : (
-        <span className="sr-only">{he.navExternal}</span>
+        <span className="sr-only">{he.navResources}</span>
       )}
       <Link
         to="/"

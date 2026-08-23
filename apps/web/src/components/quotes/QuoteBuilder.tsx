@@ -678,7 +678,7 @@ export function QuoteBuilder({
   }
 
   return (
-    <div className="quote-builder cpq-builder grid gap-4 pb-28 xl:grid-cols-[minmax(0,1fr)_19rem]">
+    <div className="quote-builder cpq-builder grid gap-4 pb-28 lg:pb-0 xl:grid-cols-[minmax(0,1fr)_19rem]">
       <header className="cpq-builder-header sticky top-0 z-10 xl:col-span-2">
         <nav className="cpq-breadcrumb" aria-label="breadcrumb">
           <Link to="/app/quotes" className="cpq-breadcrumb-link">
@@ -702,7 +702,7 @@ export function QuoteBuilder({
               {saveLabel}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="cpq-header-actions hidden flex-wrap items-center gap-2 lg:flex">
             {canEdit ? (
               <Button
                 variant="secondary"
@@ -1186,7 +1186,7 @@ export function QuoteBuilder({
         {live.id ? <QuoteAuditStrip workspaceId={workspaceId} quoteId={live.id} /> : null}
       </aside>
 
-      <footer className="quote-builder-actions">
+      <footer className="quote-builder-actions lg:hidden" aria-label={he.cpqMobileActions}>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
           <p className="cpq-mobile-total me-auto text-base font-semibold tracking-tight">
             {formatMoney(live.total_gross, currency)}
@@ -1198,7 +1198,7 @@ export function QuoteBuilder({
               disabled={!live.id && !draftHasContent(draft)}
               onClick={() => save.mutate()}
             >
-              {he.quoteSaveDraft}
+              {he.save}
             </Button>
           ) : null}
           <Button
@@ -1211,6 +1211,7 @@ export function QuoteBuilder({
           {live.status === "draft" && canSend ? (
             <Button
               disabled={!canSendNow}
+              title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
               onClick={async () => {
                 if (!canSendNow) {
                   focusValidation();
@@ -1230,11 +1231,6 @@ export function QuoteBuilder({
             >
               {he.quoteSaveAndSend}
             </Button>
-          ) : null}
-          {!canSendNow && live.status === "draft" && canSend ? (
-            <p className="w-full text-xs text-fg-muted sm:w-auto">
-              {he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))}
-            </p>
           ) : null}
           {live.status === "approved" ? <Status label={he.quoteApprovedState} tone="success" /> : null}
           {live.status === "approved" && linkedProject && canViewProjects ? (

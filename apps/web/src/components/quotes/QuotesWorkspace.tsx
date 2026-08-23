@@ -18,6 +18,7 @@ import {
 } from "@site-secure/ui";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { he } from "../../i18n/he";
+import { NewQuoteButton } from "./NewQuoteButton";
 import {
   filterQuotes,
   pipelineTabForStatus,
@@ -142,14 +143,7 @@ export function QuotesWorkspace({
     });
   }
 
-  const createCta = canCreate ? (
-    <Link
-      to="/app/quotes/new"
-      className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg hover:bg-action-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-    >
-      {he.newQuoteAction}
-    </Link>
-  ) : null;
+  const createCta = canCreate ? <NewQuoteButton /> : null;
 
   return (
     <div className="flex flex-col gap-5">

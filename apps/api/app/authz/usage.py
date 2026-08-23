@@ -12,7 +12,10 @@ from .limits import is_unlimited, plan_limit_value, seat_limit_key
 METER_LABELS = {
     "seats_operator": "משתמשים במשרד",
     "seats_field": "משתמשים בשטח",
+    "storage_gb": "אחסון",
 }
+
+BYTES_PER_GB = 1024**3
 
 OccupantKind = Literal["member", "invite"]
 OccupantStatus = Literal["active", "pending"]
@@ -233,3 +236,53 @@ def meter_for_invite_role(meters: list[dict[str, Any]], invite_role: str) -> dic
     if bucket is None:
         return None
     return next((row for row in meters if row["key"] == bucket), None)
+
+
+def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:
+    """Sum of documents.byte_size for the workspace. Missing/null sizes count as 0."""
+    res = client.get(
+        "documents",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "byte_size.sum()",
+        },
+    )
+    if res.status_code != 200:
+        return 0
+    rows = res.json() or []
+    if not rows:
+        return 0
+    raw = rows[0].get("sum") if isinstance(rows[0], dict) else None
+    try:
+        return max(0, int(raw or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def storage_meter(*, plan_key: str, used_bytes: int) -> dict[str, Any]:
+    limit_gb = plan_limit_value(plan_key, "storage_gb")
+    unlimited = is_unlimited(limit_gb)
+    limit_bytes = 0 if unlimited else limit_gb * BYTES_PER_GB
+    current = max(0, int(used_bytes or 0))
+    return {
+        "key": "storage_gb",
+        "label_he": METER_LABELS["storage_gb"],
+        "current": current,
+        "limit": limit_bytes,
+        "unlimited": unlimited,
+        "unit": "bytes",
+        "at_limit": (not unlimited) and current >= limit_bytes,
+        "occupants": [],
+    }
+
+
+def workspace_meters(
+    *,
+    plan_key: str,
+    occupants: Iterable[SeatOccupant] | None = None,
+    occupied_roles: Iterable[str] | None = None,
+    used_bytes: int = 0,
+) -> list[dict[str, Any]]:
+    meters = seat_meters(plan_key=plan_key, occupants=occupants, occupied_roles=occupied_roles)
+    meters.append(storage_meter(plan_key=plan_key, used_bytes=used_bytes))
+    return meters

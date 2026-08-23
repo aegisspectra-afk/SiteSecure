@@ -331,7 +331,7 @@ Before modifying anything, inspect Auth, Workspace, RBAC, Subscription, Usage, a
 | 4 Signup / workspace | Register → workspace → type → plan | Type deferred until schema; plan = catalog default |
 | 5 Onboarding | Real progress, smart defaults, first **honest** business action | No “add customer” until CRM UI |
 | 6 Billing | Upgrade, downgrade, payment, cancel, failure, grace | Roadmap Phase 14 — do not fake |
-| 7 Application shell | Sidebar, header, workspace, user, plan, security, **bottom nav** | Live routes only; [V2-APP-SHELL.md](../ux/V2-APP-SHELL.md) |
+| 7 Application shell | Sidebar, header, workspace, user, plan, security, **bottom nav** | Live routes only; Target IA locked in [V2-IA.md](./V2-IA.md); [V2-APP-SHELL.md](../ux/V2-APP-SHELL.md) |
 | 8 Dashboard | Role-aware, data-driven | [V2-DASHBOARD-SPEC.md](../ux/V2-DASHBOARD-SPEC.md) |
 
 This order does **not** unlock CRM, Site File, or Mobile. Those stay on the locked product sequence.

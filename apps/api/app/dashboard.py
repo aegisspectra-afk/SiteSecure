@@ -129,6 +129,7 @@ def build_dashboard(
     can_jobs_start: bool,
     can_jobs_complete: bool,
     assignments_reliable: bool,
+    project_source_quote_ids: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     variant = home_variant(role_key)
     if now.tzinfo is None:
@@ -148,9 +149,10 @@ def build_dashboard(
     if variant == "sales":
         visible_jobs = []
 
+    linked = project_source_quote_ids or frozenset()
     attention: list[dict[str, Any]] = []
     if variant in {"ops", "sales", "observe"}:
-        attention.extend(_quote_attention(visible_quotes, names, now, variant))
+        attention.extend(_quote_attention(visible_quotes, names, now, variant, linked))
     if variant == "ops" and assignments_reliable:
         unassigned = _unassigned_jobs(visible_jobs, job_assignees, names)
         group = _group("job_unassigned", "עבודות ללא טכנאי", unassigned)
@@ -199,19 +201,22 @@ def _quote_attention(
     names: dict[str, str],
     now: datetime,
     variant: HomeVariant,
+    project_source_quote_ids: frozenset[str],
 ) -> list[dict[str, Any]]:
     awaiting_customer: list[dict[str, Any]] = []
     awaiting_us: list[dict[str, Any]] = []
     expiring: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
+    pending_project: list[dict[str, Any]] = []
     horizon = now + timedelta(days=7)
     stale_before = now - timedelta(days=3)
 
     for quote in quotes:
         status = quote.get("status")
+        quote_id = str(quote["id"])
         row = _item(
             entity_type="quote",
-            entity_id=str(quote["id"]),
+            entity_id=quote_id,
             number=str(quote.get("number") or ""),
             title_he=QUOTE_LABEL_HE.get(str(status), "הצעת מחיר"),
             customer_name=names.get(str(quote["customer_id"])) if quote.get("customer_id") else None,
@@ -224,6 +229,15 @@ def _quote_attention(
             awaiting_customer.append(row)
         elif status == "viewed":
             awaiting_us.append({**row, "severity": "now"})
+        elif status == "approved" and quote_id not in project_source_quote_ids:
+            pending_project.append(
+                {
+                    **row,
+                    "title_he": "אושרה · ממתינה לפרויקט",
+                    "severity": "now",
+                    "actions": ["create_project"],
+                }
+            )
         until = _parse_dt(quote.get("valid_until") if isinstance(quote.get("valid_until"), str) else None)
         if status in {"sent", "viewed"} and until and now <= until <= horizon:
             expiring.append({**row, "title_he": "פג תוקף בקרוב", "severity": "now"})
@@ -233,6 +247,7 @@ def _quote_attention(
 
     groups: list[dict[str, Any]] = []
     for kind, label, items in (
+        ("quote_approved_pending_project", "הצעות שאושרו וממתינות לפרויקט", pending_project),
         ("quote_awaiting_customer", "ממתינות לאישור הלקוח", awaiting_customer),
         ("quote_awaiting_us", "הצעות לאישור אצלנו", awaiting_us),
         ("quote_expiring", "הצעות שפג תוקפן בקרוב", expiring),

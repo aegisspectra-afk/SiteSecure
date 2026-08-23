@@ -5,6 +5,7 @@
 **Application shell / primitives / mobile bottom nav:** [V2-APP-SHELL.md](./V2-APP-SHELL.md)  
 **Visual tokens:** [V2-DESIGN-SYSTEM.md](./V2-DESIGN-SYSTEM.md)  
 **Web IA (authenticated `/app`):** [V2-WEB.md](../architecture/V2-WEB.md)  
+**Target product map (sidebar lifecycle):** [V2-IA.md](../architecture/V2-IA.md)  
 **Public Web (visitor origin):** [V2-PUBLIC-WEB.md](../architecture/V2-PUBLIC-WEB.md)  
 **Mobile IA:** [V2-MOBILE.md](../architecture/V2-MOBILE.md)
 

@@ -12,44 +12,38 @@ function labelFor(key: string, fallback: string): string {
   return fallback;
 }
 
-function statusLabel(key: string, signal: SecuritySignal): string {
-  if (signal.status !== "healthy") return signal.detail_he;
-  if (key === "authentication") return he.securitySignalOperational;
-  return he.securitySignalEnforced;
-}
-
 export function SecurityStatus({ signals }: { signals: SecuritySignal[] }) {
   const rows = DASHBOARD_KEYS.map((key) => {
     const signal = signals.find((row) => row.key === key);
     return signal && signal.status !== "not_built" ? { key, signal } : null;
   }).filter((row): row is { key: (typeof DASHBOARD_KEYS)[number]; signal: SecuritySignal } => Boolean(row));
   if (!rows.length) return null;
+  const allHealthy = rows.every(({ signal }) => signal.status === "healthy");
 
   return (
-    <section className="ops-card p-5" aria-labelledby="security-status-heading">
+    <section className="ops-card px-5 py-4" aria-labelledby="security-status-heading">
       <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.securityStatusKicker}</p>
       <h2 id="security-status-heading" className="mt-1 text-base font-semibold text-fg">
         {he.securityStatusTitle}
       </h2>
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="mt-3 flex flex-col gap-2">
         {rows.map(({ key, signal }) => (
-          <li key={key} className="flex items-start justify-between gap-3 text-sm">
-            <span className="flex items-center gap-2 text-fg">
-              <span
-                className={`size-2 rounded-full ${signal.status === "healthy" ? "bg-success" : "bg-fg-muted"}`}
-                aria-hidden
-              />
-              {labelFor(key, signal.label_he)}
-            </span>
-            <span className={`public-mono text-xs ${signal.status === "healthy" ? "text-success" : "text-fg-muted"}`}>
-              {statusLabel(key, signal)}
+          <li key={key} className="flex items-center gap-2 text-sm text-fg">
+            <span
+              className={`size-2 shrink-0 rounded-full ${signal.status === "healthy" ? "bg-success" : "bg-fg-muted"}`}
+              aria-hidden
+            />
+            <span>{labelFor(key, signal.label_he)}</span>
+            <span className="sr-only">
+              {signal.status === "healthy" ? he.securitySignalOperational : signal.detail_he}
             </span>
           </li>
         ))}
       </ul>
+      {allHealthy ? <p className="mt-3 text-sm text-fg-muted">{he.securityAllHealthy}</p> : null}
       <Link
         to="/app/settings/security"
-        className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {he.securityCenterLink}
       </Link>

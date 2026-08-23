@@ -35,8 +35,10 @@ def test_enterprise_zero_means_unlimited():
 
 
 def test_seat_meters_read_catalog_not_hardcoded_fives():
-    from app.authz.usage import seat_meters
+    from app.authz.catalog import load_catalog
+    from app.authz.usage import seat_meters, storage_meter, workspace_meters
 
+    load_catalog.cache_clear()
     meters = {row["key"]: row for row in seat_meters(plan_key="solo", occupied_roles=["owner"])}
     assert meters["seats_operator"]["current"] == 1
     assert meters["seats_operator"]["limit"] == 1
@@ -44,5 +46,28 @@ def test_seat_meters_read_catalog_not_hardcoded_fives():
     assert meters["seats_field"]["current"] == 0
     assert meters["seats_field"]["limit"] == 3
     assert meters["seats_field"]["unlimited"] is False
-    assert "storage" not in meters
+    assert "storage_gb" not in meters
+
+    storage = storage_meter(plan_key="solo", used_bytes=0)
+    assert storage["key"] == "storage_gb"
+    assert storage["unit"] == "bytes"
+    assert storage["current"] == 0
+    assert storage["limit"] == 15 * (1024**3)
+    assert storage["unlimited"] is False
+    assert storage["at_limit"] is False
+
+    combined = {row["key"]: row for row in workspace_meters(plan_key="solo", occupied_roles=["owner"], used_bytes=1024)}
+    assert combined["storage_gb"]["current"] == 1024
+    assert combined["seats_operator"]["limit"] == 1
+
+
+def test_enterprise_storage_unlimited():
+    from app.authz.catalog import load_catalog
+    from app.authz.usage import storage_meter
+
+    load_catalog.cache_clear()
+    storage = storage_meter(plan_key="enterprise", used_bytes=10_000_000_000)
+    assert storage["unlimited"] is True
+    assert storage["limit"] == 0
+    assert storage["at_limit"] is False
 

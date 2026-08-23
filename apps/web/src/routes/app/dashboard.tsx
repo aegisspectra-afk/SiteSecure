@@ -2,6 +2,7 @@ import { Button, ErrorState } from "@site-secure/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { ObserveDashboard, OpsDashboard } from "../../components/dashboard/OpsDashboard";
+import { filterLeadAttention } from "../../components/dashboard/LeadsAttention";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
@@ -70,6 +71,17 @@ function DashboardBody({
     enabled: Boolean(workspaceId) && canSecurity,
     queryFn: () => api.getSecurityCenter(workspaceId!),
   });
+  const leadAttentionQuery = useQuery({
+    queryKey: ["dashboard-lead-next", workspaceId],
+    enabled: Boolean(workspaceId) && can(roleKey, "leads.view", features),
+    queryFn: () => api.listLeads(workspaceId!, { limit: 20 }),
+  });
+
+  const leadAttention =
+    (leadAttentionQuery.data?.items ?? []).find(
+      (row) => row.status === "visit_scheduling" || row.status === "new" || row.status === "contacted",
+    ) ?? null;
+  const leadAttentionItems = filterLeadAttention(leadAttentionQuery.data?.items ?? []);
 
   if (!workspaceId) return <ErrorState title={he.dashboardError} />;
   if (query.isLoading) return <DashboardSkeleton />;
@@ -109,6 +121,8 @@ function DashboardBody({
       usage={usageData}
       workspaceStatus={workspaceStatus}
       securitySignals={security.data?.signals ?? []}
+      leadAttention={leadAttention}
+      leadAttentionItems={leadAttentionItems}
     />
   );
 }

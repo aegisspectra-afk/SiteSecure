@@ -1,4 +1,4 @@
-import { SquareArrowOutUpRight } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, SquareArrowOutUpRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
 import type { KeyboardEvent } from "react";
@@ -21,23 +21,55 @@ export function SidebarBrand({
   workspaceName,
   roleKey,
   planKey,
+  collapsed = false,
+  onToggleCollapse,
 }: {
   workspaceName?: string | null;
   roleKey?: string;
   planKey?: string;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   const tenure = tenureLine(roleKey, planKey);
   return (
-    <div className="ops-sidebar-brand">
-      <p className="text-sm font-semibold tracking-[-0.02em] text-fg">{he.brand}</p>
-      <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.opsPlatform}</p>
+    <div className={cn("ops-sidebar-brand", collapsed && "is-collapsed")}>
+      <div className="ops-sidebar-brand-row">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold tracking-[-0.02em] text-fg">{collapsed ? "SS" : he.brand}</p>
+          {!collapsed ? (
+            <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.opsPlatform}</p>
+          ) : null}
+        </div>
+        {onToggleCollapse ? (
+          <button
+            type="button"
+            className="ops-sidebar-collapse"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? he.sidebarExpand : he.sidebarCollapse}
+            title={collapsed ? he.sidebarExpand : he.sidebarCollapse}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4" aria-hidden />
+            ) : (
+              <PanelLeftClose className="size-4" aria-hidden />
+            )}
+          </button>
+        ) : null}
+      </div>
       {workspaceName ? (
         <>
-          <p className="public-mono mt-4 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navWorkspace}</p>
-          <p className="mt-1 truncate text-sm font-medium text-fg">{workspaceName}</p>
+          {!collapsed ? (
+            <p className="public-mono mt-3 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navWorkspace}</p>
+          ) : null}
+          <p
+            className={cn("truncate text-sm font-medium text-fg", collapsed ? "mt-3 text-center" : "mt-1")}
+            title={workspaceName}
+          >
+            {collapsed ? workspaceName.slice(0, 1) : workspaceName}
+          </p>
         </>
       ) : null}
-      {tenure ? <p className="mt-1 truncate text-xs text-fg-muted">{tenure}</p> : null}
+      {!collapsed && tenure ? <p className="mt-1 truncate text-xs text-fg-muted">{tenure}</p> : null}
     </div>
   );
 }
@@ -46,10 +78,12 @@ export function SidebarNav({
   groups,
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   groups: AppNavGroup[];
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const links = Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>("[data-sidebar-item]"));
@@ -62,10 +96,18 @@ export function SidebarNav({
   };
 
   return (
-    <nav aria-label={he.navDesktop} className="flex flex-col gap-5 px-2 py-3" onKeyDown={onKeyDown}>
+    <nav
+      aria-label={he.navDesktop}
+      className={cn("flex flex-col gap-5 px-2 py-3", collapsed && "items-stretch")}
+      onKeyDown={onKeyDown}
+    >
       {groups.map((group) => (
         <div key={group.id} className="flex flex-col gap-0.5">
-          <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{group.label}</p>
+          {!collapsed ? (
+            <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{group.label}</p>
+          ) : (
+            <span className="sr-only">{group.label}</span>
+          )}
           {group.items.map((item) => {
             const selected = isNavSelected(item.to, pathname);
             return (
@@ -74,12 +116,13 @@ export function SidebarNav({
                 to={item.to}
                 data-sidebar-item
                 title={item.label}
-                className={cn("ops-sidebar-link", selected && "is-active")}
+                className={cn("ops-sidebar-link", selected && "is-active", collapsed && "is-collapsed")}
                 aria-current={selected ? "page" : undefined}
+                aria-label={item.label}
                 onClick={onNavigate}
               >
                 <NavIcon name={item.icon} active={selected} className="size-4 shrink-0" />
-                <span className="min-w-0 truncate">{item.label}</span>
+                {!collapsed ? <span className="min-w-0 truncate">{item.label}</span> : null}
               </Link>
             );
           })}
@@ -89,19 +132,30 @@ export function SidebarNav({
   );
 }
 
-export function SidebarExternal({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarExternal({
+  onNavigate,
+  collapsed = false,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   return (
     <div className="ops-sidebar-external">
-      <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navExternal}</p>
+      {!collapsed ? (
+        <p className="public-mono px-3 pb-1 text-[10px] tracking-[0.16em] text-fg-subtle">{he.navExternal}</p>
+      ) : (
+        <span className="sr-only">{he.navExternal}</span>
+      )}
       <Link
         to="/"
         data-sidebar-item
-        className="ops-sidebar-link ops-sidebar-external-link"
+        className={cn("ops-sidebar-link ops-sidebar-external-link", collapsed && "is-collapsed")}
         title={he.navAegis}
+        aria-label={he.navAegis}
         onClick={onNavigate}
       >
         <SquareArrowOutUpRight className="size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 truncate">{he.navAegis}</span>
+        {!collapsed ? <span className="min-w-0 truncate">{he.navAegis}</span> : null}
       </Link>
     </div>
   );
@@ -119,6 +173,7 @@ export function SidebarAccount({
   onSecurity,
   onUsers,
   onSignOut,
+  collapsed = false,
 }: {
   displayName: string;
   email?: string | null;
@@ -131,9 +186,10 @@ export function SidebarAccount({
   onSecurity: () => void;
   onUsers: () => void;
   onSignOut: () => void;
+  collapsed?: boolean;
 }) {
   return (
-    <div className="ops-sidebar-account">
+    <div className={cn("ops-sidebar-account", collapsed && "is-collapsed")}>
       <UserAccountMenu
         variant="sidebar"
         displayName={displayName}
@@ -147,6 +203,7 @@ export function SidebarAccount({
         onSecurity={onSecurity}
         onUsers={onUsers}
         onSignOut={onSignOut}
+        compact={collapsed}
       />
     </div>
   );

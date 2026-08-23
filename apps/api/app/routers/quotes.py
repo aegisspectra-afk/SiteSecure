@@ -19,7 +19,7 @@ from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..quote_snapshot import catalog_line_snapshot, public_payload, version_snapshot
 from ..quote_tokens import hash_public_token, new_public_token
-from ..quote_validation import validate_for_send
+from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 from ..supabase_service import ServiceClient
 
@@ -31,11 +31,12 @@ QUOTE_SELECT = (
     "total_gross,cost_total,margin_amount,margin_percent,valid_until,payment_terms,"
     "customer_notes,internal_notes,title,project_name,project_address,summary,"
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
-    "approved_at,rejected_at,approved_name,rejection_reason,created_at,updated_at,"
-    "customers(display_name),sites(name)"
+    "approved_at,rejected_at,approved_name,rejection_reason,"
+    "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "created_at,updated_at,customers(display_name),sites(name)"
 )
 QUOTE_LIST_SELECT = (
-    "id,workspace_id,number,status,customer_id,site_id,owner_user_id,currency,"
+    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,currency,"
     "total_gross,cost_total,margin_amount,margin_percent,valid_until,title,"
     "project_name,version,created_at,updated_at,"
     "customers(display_name),sites(name)"
@@ -43,7 +44,11 @@ QUOTE_LIST_SELECT = (
 OPEN_LIST_STATUSES = frozenset({"draft", "sent", "viewed"})
 ITEM_SELECT = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,cost,discount,"
-    "line_net,sort_order,sku,name,unit,catalog_snapshot"
+    "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
+    "section_id,package_instance_id,package_id,package_name"
+)
+SECTION_SELECT = (
+    "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
 )
 PRODUCT_SELECT = (
     "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active"
@@ -106,7 +111,12 @@ class QuoteItemIn(BaseModel):
     unit_price: float | None = Field(default=None, ge=0)
     cost: float | None = Field(default=None, ge=0)
     discount: float = Field(default=0, ge=0)
+    discount_type: str = "amount"
     sort_order: int = 0
+    section_id: str | None = None
+    package_instance_id: str | None = None
+    package_id: str | None = None
+    package_name: str | None = None
 
 
 class QuoteItemPatch(BaseModel):
@@ -116,9 +126,11 @@ class QuoteItemPatch(BaseModel):
     unit_price: float | None = Field(default=None, ge=0)
     cost: float | None = Field(default=None, ge=0)
     discount: float | None = Field(default=None, ge=0)
+    discount_type: str | None = None
     sort_order: int | None = None
     item_type: str | None = None
     name: str | None = None
+    section_id: str | None = None
 
 
 class ApplyTemplateIn(BaseModel):
@@ -233,10 +245,49 @@ def _load_items(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[
     )
 
 
+def _load_sections(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[dict]:
+    try:
+        return as_list(
+            client.get(
+                "quote_sections",
+                params={
+                    "quote_id": f"eq.{quote_id}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": SECTION_SELECT,
+                    "order": "sort_order.asc",
+                },
+            )
+        )
+    except Exception:
+        return []
+
+
 def _load_workspace(client: UserClient, workspace_id: UUID) -> dict:
     return one_or_404(
         client.get("workspaces", params={"id": f"eq.{workspace_id}", "select": "id,name,vat_percent"})
     )
+
+
+def _load_quote_settings(client: UserClient, workspace_id: UUID) -> dict:
+    try:
+        rows = as_list(
+            client.get(
+                "workspace_settings",
+                params={"workspace_id": f"eq.{workspace_id}", "select": "quotes,taxes,branding"},
+            )
+        )
+        return rows[0] if rows else {}
+    except Exception:
+        return {}
+
+
+def _normalize_discount_type(raw: str | None) -> str:
+    value = (raw or "amount").lower().strip()
+    if value in {"percent", "%"}:
+        return "percent"
+    if value in {"amount", "fixed"}:
+        return "amount"
+    raise ApiError(400, "VALIDATION_ERROR", "סוג הנחה לא תקין")
 
 
 def _maybe_row(client: UserClient, table: str, row_id: str | None, workspace_id: UUID, select: str) -> dict | None:
@@ -254,11 +305,13 @@ def _maybe_row(client: UserClient, table: str, row_id: str | None, workspace_id:
 def _persist_totals(
     client: UserClient, workspace_id: UUID, quote: dict, items: list[dict]
 ) -> tuple[dict, list[dict]]:
+    sections = _load_sections(client, workspace_id, UUID(quote["id"]))
     computed = pricing.recalculate(
         items,
         vat_percent=quote.get("vat_percent"),
         discount_type=quote.get("discount_type"),
         discount_value=quote.get("discount_value"),
+        sections=sections,
     )
     for item, computed_item in zip(items, computed["items"], strict=True):
         if float(item.get("line_net") or 0) != computed_item["line_net"]:
@@ -288,6 +341,7 @@ def _persist_totals(
 
 def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: QuoteItemIn, ctx) -> bool:
     item_type = _normalize_item_type(body.item_type)
+    discount_type = _normalize_discount_type(body.discount_type)
     product = None
     snapshot: dict = {}
     unit_price = body.unit_price
@@ -318,6 +372,9 @@ def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: Q
             description = (product.get("description") or product.get("name") or "").strip()
         if unit_price is None:
             unit_price = float(product.get("list_price") or 0)
+        elif abs(float(unit_price) - float(product.get("list_price") or 0)) > 0.009:
+            if not authorize(ctx=ctx, action="quotes.override_price").allowed:
+                raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לדריסת מחיר מכירה")
         if cost is None:
             cost = float(product.get("cost") or 0)
         if item_type == "free":
@@ -338,13 +395,24 @@ def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: Q
         "unit_price": unit_price,
         "cost": cost,
         "discount": body.discount,
+        "discount_type": discount_type,
         "sort_order": body.sort_order,
         "sku": sku,
         "name": name,
         "unit": unit,
         "catalog_snapshot": snapshot,
+        "section_id": body.section_id,
+        "package_instance_id": body.package_instance_id,
+        "package_id": body.package_id,
+        "package_name": body.package_name,
         "line_net": float(
-            pricing.line_net(qty=body.qty, unit_price=unit_price, discount=body.discount, item_type=item_type)
+            pricing.line_net(
+                qty=body.qty,
+                unit_price=unit_price,
+                discount=body.discount,
+                item_type=item_type,
+                discount_type=discount_type,
+            )
         ),
     }
     created_or_403(client.post("quote_items", payload))
@@ -380,9 +448,23 @@ def _record_event(client: UserClient, workspace_id: UUID, quote_id: UUID, event_
 
 def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items: list[dict], *, show_cost: bool) -> dict:
     workspace = _load_workspace(client, workspace_id)
-    gaps = validate_for_send(quote, items, workspace)
+    settings = _load_quote_settings(client, workspace_id)
+    critical = validate_for_send(quote, items, workspace, settings)
+    soft = advisory_checks(quote, items, workspace, settings)
+    gaps = [*critical, *soft]
     out = _strip_cost(_flatten_quote(quote), items, show_cost=show_cost)
-    out["validation"] = {"can_send": len(gaps) == 0, "gaps": gaps}
+    sections = _load_sections(client, workspace_id, UUID(quote["id"]))
+    out["sections"] = sections
+    quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
+    if show_cost:
+        out["margin_status"] = pricing.margin_status(
+            quote.get("margin_percent"),
+            target=quotes_cfg.get("margin_target", 30),
+            minimum=quotes_cfg.get("margin_minimum", 15),
+        )
+        out["margin_target"] = float(quotes_cfg.get("margin_target", 30))
+        out["margin_minimum"] = float(quotes_cfg.get("margin_minimum", 15))
+    out["validation"] = {"can_send": len(critical_gaps_only(gaps)) == 0, "gaps": gaps}
     return out
 
 
@@ -464,6 +546,7 @@ def list_quotes(
     q: str | None = Query(default=None),
     status: str | None = Query(default=None),
     customer_id: str | None = Query(default=None),
+    lead_id: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "quotes.view")
@@ -479,6 +562,8 @@ def list_quotes(
         params["status"] = f"eq.{status}"
     if customer_id:
         params["customer_id"] = f"eq.{customer_id}"
+    if lead_id:
+        params["lead_id"] = f"eq.{lead_id}"
     if q:
         safe = q.replace(",", " ").replace("*", " ").strip()
         if safe:
@@ -531,6 +616,16 @@ def create_quote(
         **body.model_dump(exclude_none=True, exclude={"vat_percent"}),
     }
     row = created_or_403(client.post("quotes", payload))
+    lead_id = row.get("lead_id") or body.lead_id
+    if lead_id:
+        try:
+            client.patch(
+                "leads",
+                {"status": "quoted"},
+                params={"id": f"eq.{lead_id}", "workspace_id": f"eq.{workspace_id}"},
+            )
+        except Exception:
+            pass
     return _with_validation(client, workspace_id, row, [], show_cost=_can_view_cost(ctx))
 
 
@@ -586,6 +681,14 @@ def add_item(
     require(ctx, "quotes.edit", resource=_ref(existing))
     if not _insert_line(client, workspace_id, quote_id, body, ctx):
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "item_added",
+        actor_id(user),
+        {"product_id": body.product_id, "description": body.description},
+    )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, existing, items)
     return _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
@@ -658,6 +761,14 @@ def apply_template(
             params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
         )
     )
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "template_applied",
+        actor_id(user),
+        {"template_id": template["id"], "lines": inserted},
+    )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, patched, items)
     return _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
@@ -678,8 +789,49 @@ def patch_item(
     patch = body.model_dump(exclude_none=True)
     if "item_type" in patch:
         patch["item_type"] = _normalize_item_type(patch["item_type"])
+    if "discount_type" in patch:
+        patch["discount_type"] = _normalize_discount_type(patch["discount_type"])
     if "cost" in patch and not _can_view_cost(ctx) and not authorize(ctx=ctx, action="quotes.override_price").allowed:
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לעלות")
+    before_rows = as_list(
+        client.get(
+            "quote_items",
+            params={
+                "id": f"eq.{item_id}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ITEM_SELECT,
+            },
+        )
+    )
+    before = before_rows[0] if before_rows else {}
+    if "unit_price" in patch and before:
+        snap = before.get("catalog_snapshot") or {}
+        list_price = snap.get("list_price")
+        if list_price is not None and abs(float(patch["unit_price"]) - float(list_price)) > 0.009:
+            if not authorize(ctx=ctx, action="quotes.override_price").allowed:
+                raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לדריסת מחיר מכירה")
+            _record_event(
+                client,
+                workspace_id,
+                quote_id,
+                "price_override",
+                actor_id(user),
+                {
+                    "item_id": str(item_id),
+                    "before": before.get("unit_price"),
+                    "after": patch["unit_price"],
+                    "list_price": list_price,
+                },
+            )
+            write_audit(
+                client,
+                str(workspace_id),
+                "quotes.price_override",
+                entity_type="quote_item",
+                entity_id=str(item_id),
+                metadata={"before": before.get("unit_price"), "after": patch["unit_price"]},
+            )
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
     patched_or_403(
@@ -688,6 +840,14 @@ def patch_item(
             patch,
             params={"id": f"eq.{item_id}", "quote_id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
         )
+    )
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "item_updated",
+        actor_id(user),
+        {"item_id": str(item_id), "before": {k: before.get(k) for k in patch}, "after": patch},
     )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, existing, items)
@@ -711,6 +871,14 @@ def delete_item(
     )
     if res.status_code not in {200, 204}:
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לפעולה זו")
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "item_removed",
+        actor_id(user),
+        {"item_id": str(item_id)},
+    )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, existing, items)
     return _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
@@ -745,9 +913,16 @@ def send_quote(
     items = _load_items(client, workspace_id, quote_id)
     existing, items = _persist_totals(client, workspace_id, existing, items)
     workspace, customer, site = _related(client, workspace_id, existing)
-    gaps = validate_for_send(existing, items, workspace)
+    settings = _load_quote_settings(client, workspace_id)
+    gaps = validate_for_send(existing, items, workspace, settings)
     if gaps:
         raise ApiError(400, "QUOTE_INCOMPLETE", MESSAGES["QUOTE_INCOMPLETE"], {"gaps": gaps})
+    # Low margin without override is warning only — never silent invent; managers can override
+    soft = advisory_checks(existing, items, workspace, settings)
+    margin_criticalish = [g for g in soft if g.get("code") == "margin_below_minimum"]
+    if margin_criticalish and not existing.get("margin_override_at"):
+        # Still allow send (Phase 2: warning), but surface in response metadata via validation
+        pass
     now = datetime.now(UTC).isoformat()
     version = int(existing.get("version") or 1)
     already = as_list(
@@ -814,6 +989,7 @@ def revise_quote(
     quote_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    reason: str | None = None,
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
@@ -829,19 +1005,24 @@ def revise_quote(
         ),
     )
     next_version = int(existing.get("version") or 1) + 1
+    patch = {
+        "status": "draft",
+        "version": next_version,
+        "sent_at": None,
+        "viewed_at": None,
+        "approved_at": None,
+        "rejected_at": None,
+        "approved_name": None,
+        "rejection_reason": None,
+        "margin_override_reason": None,
+        "margin_override_by": None,
+        "margin_override_at": None,
+        "revise_reason": (reason or "").strip() or None,
+    }
     row = patched_or_403(
         client.patch(
             "quotes",
-            {
-                "status": "draft",
-                "version": next_version,
-                "sent_at": None,
-                "viewed_at": None,
-                "approved_at": None,
-                "rejected_at": None,
-                "approved_name": None,
-                "rejection_reason": None,
-            },
+            patch,
             params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
         )
     )
@@ -852,7 +1033,7 @@ def revise_quote(
         quote_id,
         "revised",
         actor_id(user),
-        {"from_version": next_version - 1, "to_version": next_version},
+        {"from_version": next_version - 1, "to_version": next_version, "reason": reason},
     )
     write_audit(
         client,
@@ -860,7 +1041,7 @@ def revise_quote(
         "quotes.revise",
         entity_type="quote",
         entity_id=str(quote_id),
-        metadata={"version": next_version},
+        metadata={"version": next_version, "reason": reason},
     )
     return _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
 
@@ -963,11 +1144,16 @@ def duplicate_quote(
                     "unit_price": item.get("unit_price") or 0,
                     "cost": item.get("cost") or 0,
                     "discount": item.get("discount") or 0,
+                    "discount_type": item.get("discount_type") or "amount",
                     "sort_order": item.get("sort_order") or 0,
                     "sku": item.get("sku"),
                     "name": item.get("name"),
                     "unit": item.get("unit"),
                     "catalog_snapshot": item.get("catalog_snapshot") or {},
+                    "section_id": item.get("section_id"),
+                    "package_instance_id": item.get("package_instance_id"),
+                    "package_id": item.get("package_id"),
+                    "package_name": item.get("package_name"),
                     "line_net": item.get("line_net") or 0,
                 },
             )

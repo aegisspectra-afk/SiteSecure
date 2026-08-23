@@ -135,6 +135,18 @@ export type QuoteGap = {
   field: string;
   code: string;
   message: string;
+  severity?: "critical" | "warning" | "info";
+  action?: "fix" | "review" | "ignore";
+};
+
+export type QuoteSection = {
+  id: string;
+  quote_id?: string;
+  name: string;
+  sort_order: number;
+  discount_type?: string;
+  discount_value?: number;
+  collapsed?: boolean;
 };
 
 export type QuoteOut = {
@@ -167,6 +179,15 @@ export type QuoteOut = {
   cost_total?: number | null;
   margin_amount?: number | null;
   margin_percent?: number | null;
+  margin_status?: "healthy" | "warning" | "critical";
+  margin_target?: number;
+  margin_minimum?: number;
+  margin_override_reason?: string | null;
+  margin_override_at?: string | null;
+  revise_reason?: string | null;
+  lines_subtotal?: number | null;
+  section_discount_amount?: number | null;
+  quote_discount_amount?: number | null;
   valid_until?: string | null;
   customer_notes?: string | null;
   internal_notes?: string | null;
@@ -181,6 +202,7 @@ export type QuoteOut = {
   updated_at?: string;
   created_at?: string;
   items?: QuoteItemOut[];
+  sections?: QuoteSection[];
 };
 
 export type QuoteItemOut = {
@@ -195,14 +217,21 @@ export type QuoteItemOut = {
   unit_price: number;
   cost?: number;
   discount?: number;
+  discount_type?: string;
   line_net?: number;
   item_type?: string;
   catalog_snapshot?: Record<string, unknown>;
+  sort_order?: number;
+  section_id?: string | null;
+  package_instance_id?: string | null;
+  package_id?: string | null;
+  package_name?: string | null;
 };
 
 export type QuotePatchBody = {
   customer_id?: string | null;
   site_id?: string | null;
+  lead_id?: string | null;
   title?: string | null;
   project_name?: string | null;
   project_address?: string | null;
@@ -228,7 +257,48 @@ export type QuoteItemIn = {
   unit_price?: number;
   cost?: number;
   discount?: number;
+  discount_type?: string;
   sort_order?: number;
+  section_id?: string | null;
+  package_instance_id?: string | null;
+  package_id?: string | null;
+  package_name?: string | null;
+};
+
+export type QuotePackage = {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  is_active?: boolean;
+};
+
+export type QuoteVersionMeta = {
+  id: string;
+  version: number;
+  created_at?: string;
+  created_by?: string | null;
+};
+
+export type QuoteRevisionCompare = {
+  from_version: number;
+  to_version: number;
+  total_from?: number | null;
+  total_to?: number | null;
+  changes: Array<{
+    key: string;
+    change: "added" | "removed" | "modified";
+    from?: unknown;
+    to?: unknown;
+  }>;
+};
+
+export type QuoteEvent = {
+  id: string;
+  event_type: string;
+  actor_id?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
 };
 
 export type CatalogProduct = {
@@ -265,16 +335,164 @@ export type QuoteTemplate = {
 
 export type CustomerOut = {
   id: string;
+  workspace_id?: string;
   display_name: string;
+  type?: string;
+  status?: string;
+  legal_name?: string | null;
+  tax_id?: string | null;
   email?: string | null;
   phone?: string | null;
+  billing_address?: Record<string, unknown>;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CustomerContact = {
+  id: string;
+  customer_id: string;
+  full_name: string;
+  role_title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  is_primary?: boolean;
 };
 
 export type SiteOut = {
   id: string;
+  workspace_id?: string;
   customer_id: string;
+  code?: string;
   name: string;
   address?: Record<string, unknown>;
+  installation_status?: string;
+  access_notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type DocumentOut = {
+  id: string;
+  workspace_id: string;
+  entity_type: string;
+  entity_id: string;
+  kind: string;
+  storage_bucket?: string;
+  mime_type?: string | null;
+  byte_size?: number | null;
+  original_filename?: string | null;
+  created_at: string;
+};
+
+export type LeadRequirements = {
+  camera_count?: number | null;
+  location?: string | null;
+  infrastructure?: string | null;
+  recording?: boolean | null;
+  remote_viewing?: boolean | null;
+  system_type?: string | null;
+  zone_count?: number | null;
+  detectors?: string | null;
+  magnets?: boolean | null;
+  siren?: boolean | null;
+  app?: boolean | null;
+};
+
+export type LeadOut = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  status: string;
+  source: string;
+  priority?: string;
+  service_type?: string | null;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  next_action?: string | null;
+  next_action_at?: string | null;
+  estimated_value_cents?: number | null;
+  requirements?: LeadRequirements | null;
+  address_text?: string | null;
+  property_notes?: string | null;
+  customer_id?: string | null;
+  site_id?: string | null;
+  owner_user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaskOut = {
+  id: string;
+  workspace_id: string;
+  type: string;
+  status: string;
+  title: string;
+  due_at?: string | null;
+  assignee_id?: string | null;
+  customer_id?: string | null;
+  site_id?: string | null;
+  lead_id?: string | null;
+  quote_id?: string | null;
+  job_id?: string | null;
+  notes?: string | null;
+  time_window?: string | null;
+  visit_status?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectOut = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  status: string;
+  customer_id: string;
+  site_id?: string | null;
+  source_quote_id?: string | null;
+  assigned_to?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ServiceCallOut = {
+  id: string;
+  workspace_id: string;
+  status: string;
+  priority: string;
+  customer_id: string;
+  site_id: string;
+  title: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WarrantyOut = {
+  id: string;
+  workspace_id: string;
+  number: string;
+  type: string;
+  status: string;
+  customer_id: string;
+  site_id: string;
+  starts_on: string;
+  ends_on: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeOut = {
+  id: string;
+  workspace_id: string;
+  category: string;
+  title: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type PublicQuote = {
@@ -302,10 +520,11 @@ export type PublicQuote = {
   subtotal_net: number;
   vat_amount: number;
   total_gross: number;
-  company: { name?: string | null };
+  company: { name?: string | null; logo_url?: string | null; brand_name?: string | null };
   customer: { display_name?: string | null; email?: string | null; phone?: string | null } | null;
   site: { name?: string | null; address?: Record<string, unknown> } | null;
   items: QuoteItemOut[];
+  sections?: Array<{ id: string; name?: string | null; sort_order?: number }>;
   issued_at?: string | null;
   sent_at?: string | null;
   approved_at?: string | null;
@@ -463,11 +682,13 @@ export function createApiClient(opts: {
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
     listQuotes: (
       workspaceId: string,
-      opts: { q?: string; status?: string; limit?: number; cursor?: string | null } = {},
+      opts: { q?: string; status?: string; customer_id?: string; lead_id?: string; limit?: number; cursor?: string | null } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status?.trim()) params.set("status", opts.status.trim());
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
+      if (opts.lead_id) params.set("lead_id", opts.lead_id);
       if (opts.cursor) params.set("cursor", opts.cursor);
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
     },
@@ -515,37 +736,395 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    reviseQuote: (workspaceId: string, quoteId: string) =>
-      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/revise`, { method: "POST" }),
+    reviseQuote: (workspaceId: string, quoteId: string, reason?: string) => {
+      const params = reason?.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : "";
+      return request<QuoteOut>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/revise${params}`,
+        { method: "POST" },
+      );
+    },
     shareQuote: (workspaceId: string, quoteId: string) =>
       request<{ public_url: string; public_token: string }>(
         `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/share`,
         { method: "POST" },
       ),
-    listCustomers: (workspaceId: string, opts: { q?: string; limit?: number } = {}) => {
+    createQuoteSection: (
+      workspaceId: string,
+      quoteId: string,
+      body: { name?: string; sort_order?: number } = {},
+    ) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/sections`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchQuoteSection: (
+      workspaceId: string,
+      quoteId: string,
+      sectionId: string,
+      body: Partial<{
+        name: string;
+        sort_order: number;
+        discount_type: string;
+        discount_value: number;
+        collapsed: boolean;
+      }>,
+    ) =>
+      request<QuoteOut>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/sections/${sectionId}`,
+        { method: "PATCH", body: JSON.stringify(body) },
+      ),
+    deleteQuoteSection: (workspaceId: string, quoteId: string, sectionId: string) =>
+      request<QuoteOut>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/sections/${sectionId}`,
+        { method: "DELETE" },
+      ),
+    duplicateQuoteSection: (workspaceId: string, quoteId: string, sectionId: string) =>
+      request<QuoteOut>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/sections/${sectionId}/duplicate`,
+        { method: "POST" },
+      ),
+    listQuotePackages: (workspaceId: string) =>
+      request<{ items: QuotePackage[] }>(`/api/v1/workspaces/${workspaceId}/catalog/packages`),
+    applyQuotePackage: (
+      workspaceId: string,
+      quoteId: string,
+      body: { package_id: string; section_id?: string },
+    ) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/apply-package`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    saveQuoteAsPackage: (
+      workspaceId: string,
+      quoteId: string,
+      body: { name: string; description?: string; category?: string },
+    ) =>
+      request<QuotePackage>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/save-as-package`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    saveQuoteAsTemplate: (
+      workspaceId: string,
+      quoteId: string,
+      body: { name_he: string; key?: string; description?: string; category?: string; include_terms?: boolean },
+    ) =>
+      request<QuoteTemplate>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/save-as-template`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    overrideQuoteMargin: (workspaceId: string, quoteId: string, reason: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/margin-override`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    listQuoteVersions: (workspaceId: string, quoteId: string) =>
+      request<{ items: QuoteVersionMeta[]; current_version: number }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions`,
+      ),
+    compareQuoteVersions: (
+      workspaceId: string,
+      quoteId: string,
+      fromVersion: number,
+      toVersion?: number,
+    ) => {
+      const params = new URLSearchParams({ from_version: String(fromVersion) });
+      if (toVersion != null) params.set("to_version", String(toVersion));
+      return request<QuoteRevisionCompare>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions/compare?${params}`,
+      );
+    },
+    listQuoteEvents: (workspaceId: string, quoteId: string) =>
+      request<{ items: QuoteEvent[] }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/events`,
+      ),
+    getQuoteDocument: (workspaceId: string, quoteId: string) =>
+      request<PublicQuote>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/document`),
+    listCustomers: (workspaceId: string, opts: { q?: string; limit?: number; status?: string } = {}) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
-      return request<{ items: CustomerOut[] }>(`/api/v1/workspaces/${workspaceId}/customers?${params}`);
+      if (opts.status) params.set("status", opts.status);
+      return request<{ items: CustomerOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/customers?${params}`,
+      );
     },
     getCustomer: (workspaceId: string, customerId: string) =>
       request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}`),
-    createCustomer: (workspaceId: string, body: { display_name: string; email?: string; phone?: string }) =>
+    createCustomer: (
+      workspaceId: string,
+      body: {
+        display_name: string;
+        type?: string;
+        status?: string;
+        email?: string;
+        phone?: string;
+        legal_name?: string;
+        notes?: string;
+        billing_address?: Record<string, unknown> | null;
+      },
+    ) =>
       request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    listSites: (workspaceId: string, opts: { customer_id?: string; q?: string; limit?: number } = {}) => {
+    patchCustomer: (
+      workspaceId: string,
+      customerId: string,
+      body: Partial<{
+        display_name: string;
+        type: string;
+        status: string;
+        email: string | null;
+        phone: string | null;
+        legal_name: string | null;
+        notes: string | null;
+        billing_address: Record<string, unknown> | null;
+      }>,
+    ) =>
+      request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteCustomer: (workspaceId: string, customerId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}`, {
+        method: "DELETE",
+      }),
+    listCustomerContacts: (workspaceId: string, customerId: string) =>
+      request<CustomerContact[]>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/contacts`),
+    createCustomerContact: (
+      workspaceId: string,
+      customerId: string,
+      body: { full_name: string; role_title?: string; email?: string; phone?: string; is_primary?: boolean },
+    ) =>
+      request<CustomerContact>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/contacts`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listSites: (
+      workspaceId: string,
+      opts: { customer_id?: string; q?: string; limit?: number; status?: string } = {},
+    ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.customer_id) params.set("customer_id", opts.customer_id);
       if (opts.q?.trim()) params.set("q", opts.q.trim());
-      return request<{ items: SiteOut[] }>(`/api/v1/workspaces/${workspaceId}/sites?${params}`);
+      if (opts.status) params.set("status", opts.status);
+      return request<{ items: SiteOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/sites?${params}`,
+      );
     },
+    getSite: (workspaceId: string, siteId: string) =>
+      request<SiteOut>(`/api/v1/workspaces/${workspaceId}/sites/${siteId}`),
     createSite: (
       workspaceId: string,
-      body: { customer_id: string; name: string; address?: { line?: string } },
+      body: {
+        customer_id: string;
+        name: string;
+        address?: Record<string, unknown>;
+        installation_status?: string;
+        access_notes?: string;
+      },
     ) =>
       request<SiteOut>(`/api/v1/workspaces/${workspaceId}/sites`, {
         method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchSite: (
+      workspaceId: string,
+      siteId: string,
+      body: Partial<{
+        name: string;
+        address: Record<string, unknown>;
+        installation_status: string;
+        access_notes: string | null;
+      }>,
+    ) =>
+      request<SiteOut>(`/api/v1/workspaces/${workspaceId}/sites/${siteId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteSite: (workspaceId: string, siteId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/sites/${siteId}`, { method: "DELETE" }),
+    listDocuments: (
+      workspaceId: string,
+      opts: { entity_type?: string; entity_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.entity_type) params.set("entity_type", opts.entity_type);
+      if (opts.entity_id) params.set("entity_id", opts.entity_id);
+      return request<{ items: DocumentOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/documents?${params}`,
+      );
+    },
+    createDocumentUpload: (
+      workspaceId: string,
+      body: { entity_type: string; entity_id: string; kind?: string; mime_type?: string; original_filename?: string },
+    ) =>
+      request<{
+        document_id: string;
+        storage_path: string;
+        storage_bucket: string;
+        upload_url: string;
+        expires_in: number;
+      }>(`/api/v1/workspaces/${workspaceId}/documents/uploads`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    completeDocumentUpload: (
+      workspaceId: string,
+      documentId: string,
+      body: { byte_size?: number; mime_type?: string } = {},
+    ) =>
+      request<{ id: string }>(`/api/v1/workspaces/${workspaceId}/documents/${documentId}/complete`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getDocumentUrl: (workspaceId: string, documentId: string) =>
+      request<{ url: string; expires_in: number }>(
+        `/api/v1/workspaces/${workspaceId}/documents/${documentId}/url`,
+      ),
+    listLeads: (
+      workspaceId: string,
+      opts: {
+        q?: string;
+        status?: string;
+        priority?: string;
+        source?: string;
+        customer_id?: string;
+        site_id?: string;
+        limit?: number;
+      } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status) params.set("status", opts.status);
+      if (opts.priority) params.set("priority", opts.priority);
+      if (opts.source) params.set("source", opts.source);
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
+      if (opts.site_id) params.set("site_id", opts.site_id);
+      return request<{ items: LeadOut[] }>(`/api/v1/workspaces/${workspaceId}/leads?${params}`);
+    },
+    getLead: (workspaceId: string, leadId: string) =>
+      request<LeadOut>(`/api/v1/workspaces/${workspaceId}/leads/${leadId}`),
+    createLead: (workspaceId: string, body: Partial<LeadOut> & { title: string }) =>
+      request<LeadOut>(`/api/v1/workspaces/${workspaceId}/leads`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchLead: (workspaceId: string, leadId: string, body: Partial<LeadOut>) =>
+      request<LeadOut>(`/api/v1/workspaces/${workspaceId}/leads/${leadId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listProjects: (
+      workspaceId: string,
+      opts: { q?: string; status?: string; customer_id?: string; source_quote_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status) params.set("status", opts.status);
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
+      if (opts.source_quote_id) params.set("source_quote_id", opts.source_quote_id);
+      return request<{ items: ProjectOut[] }>(`/api/v1/workspaces/${workspaceId}/projects?${params}`);
+    },
+    getProject: (workspaceId: string, projectId: string) =>
+      request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects/${projectId}`),
+    createProject: (
+      workspaceId: string,
+      body: { name: string; customer_id: string; site_id?: string; status?: string; source_quote_id?: string },
+    ) =>
+      request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    createProjectFromQuote: (workspaceId: string, body: { source_quote_id: string }) =>
+      request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects/from-quote`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchProject: (workspaceId: string, projectId: string, body: Partial<{ name: string; status: string }>) =>
+      request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects/${projectId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listServiceCalls: (workspaceId: string, opts: { q?: string; status?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status) params.set("status", opts.status);
+      return request<{ items: ServiceCallOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/service-calls?${params}`,
+      );
+    },
+    createServiceCall: (
+      workspaceId: string,
+      body: { title: string; customer_id: string; site_id: string; priority?: string; description?: string },
+    ) =>
+      request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchServiceCall: (
+      workspaceId: string,
+      callId: string,
+      body: Partial<{ title: string; status: string; priority: string; description: string }>,
+    ) =>
+      request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listWarranties: (
+      workspaceId: string,
+      opts: { status?: string; site_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.status) params.set("status", opts.status);
+      if (opts.site_id) params.set("site_id", opts.site_id);
+      return request<{ items: WarrantyOut[] }>(`/api/v1/workspaces/${workspaceId}/warranties?${params}`);
+    },
+    createWarranty: (
+      workspaceId: string,
+      body: { customer_id: string; site_id: string; type?: string; starts_on: string; ends_on: string },
+    ) =>
+      request<WarrantyOut>(`/api/v1/workspaces/${workspaceId}/warranties`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listTasks: (
+      workspaceId: string,
+      opts: { status?: string; type?: string; lead_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.status) params.set("status", opts.status);
+      if (opts.type) params.set("type", opts.type);
+      if (opts.lead_id) params.set("lead_id", opts.lead_id);
+      return request<{ items: TaskOut[] }>(`/api/v1/workspaces/${workspaceId}/tasks?${params}`);
+    },
+    createTask: (workspaceId: string, body: Partial<TaskOut> & { title: string }) =>
+      request<TaskOut>(`/api/v1/workspaces/${workspaceId}/tasks`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchTask: (workspaceId: string, taskId: string, body: Partial<TaskOut>) =>
+      request<TaskOut>(`/api/v1/workspaces/${workspaceId}/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listKnowledge: (workspaceId: string, opts: { q?: string; category?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.category) params.set("category", opts.category);
+      return request<{ items: KnowledgeOut[] }>(`/api/v1/workspaces/${workspaceId}/knowledge?${params}`);
+    },
+    createKnowledge: (workspaceId: string, body: { title: string; body: string; category?: string }) =>
+      request<KnowledgeOut>(`/api/v1/workspaces/${workspaceId}/knowledge`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchKnowledge: (
+      workspaceId: string,
+      articleId: string,
+      body: Partial<{ title: string; body: string; category: string }>,
+    ) =>
+      request<KnowledgeOut>(`/api/v1/workspaces/${workspaceId}/knowledge/${articleId}`, {
+        method: "PATCH",
         body: JSON.stringify(body),
       }),
     listCatalogProducts: (

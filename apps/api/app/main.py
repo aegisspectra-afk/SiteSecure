@@ -20,7 +20,9 @@ from .routers import (
     documents,
     health,
     jobs,
+    ops_modules,
     public_quotes,
+    quote_cpq,
     quotes,
     sites,
     team,
@@ -107,7 +109,9 @@ def create_app() -> FastAPI:
     app.include_router(customers.router)
     app.include_router(sites.router)
     app.include_router(jobs.router)
+    app.include_router(ops_modules.router)
     app.include_router(quotes.router)
+    app.include_router(quote_cpq.router)
     app.include_router(catalog.router)
     app.include_router(public_quotes.router)
     app.include_router(documents.router)

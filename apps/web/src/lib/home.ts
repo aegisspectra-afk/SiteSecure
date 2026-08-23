@@ -22,11 +22,15 @@ export function hasFeature(features: string[], feature: string): boolean {
 
 /** Product screens that exist as click-through. */
 export function moduleHref(
-  kind: "customer.create" | "quote.create" | "job.create" | "quote" | "job" | "service",
+  kind: "customer.create" | "quote.create" | "job.create" | "quote" | "job" | "service" | "customer" | "site",
   id?: string,
 ): string | null {
   if (kind === "quote.create") return "/app/quotes/new";
+  if (kind === "customer.create") return "/app/customers";
   if (kind === "quote" && id) return `/app/quotes/${id}`;
+  if (kind === "customer" && id) return `/app/customers/${id}`;
+  if (kind === "site" && id) return `/app/sites/${id}`;
+  if (kind === "service") return "/app/service";
   return null;
 }
 
@@ -39,7 +43,10 @@ export function quickActions(
     feature?: string;
     kind: "customer.create" | "quote.create" | "job.create";
     label: string;
-  }[] = [{ permission: "quotes.create", feature: "quotes", kind: "quote.create", label: "הצעת מחיר חדשה" }];
+  }[] = [
+    { permission: "crm.create", feature: "crm", kind: "customer.create", label: "לקוח חדש" },
+    { permission: "quotes.create", feature: "quotes", kind: "quote.create", label: "הצעת מחיר חדשה" },
+  ];
   const out: { permission: string; label: string; href: string }[] = [];
   for (const item of candidates) {
     const href = moduleHref(item.kind);
@@ -53,6 +60,8 @@ export function quickActions(
 
 export function itemHref(entityType: string, entityId: string): string | null {
   if (entityType === "quote") return moduleHref("quote", entityId);
+  if (entityType === "customer") return moduleHref("customer", entityId);
+  if (entityType === "site") return moduleHref("site", entityId);
   if (entityType === "job") return moduleHref("job", entityId);
   return null;
 }

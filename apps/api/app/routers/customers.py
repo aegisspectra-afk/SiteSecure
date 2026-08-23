@@ -129,7 +129,12 @@ def list_customers(
     if status:
         params["status"] = f"eq.{status}"
     if q:
-        params["display_name"] = f"ilike.*{q}*"
+        needle = q.strip()
+        params["or"] = (
+            f"(display_name.ilike.*{needle}*,phone.ilike.*{needle}*,email.ilike.*{needle}*,"
+            f"billing_address->>line.ilike.*{needle}*,billing_address->>street.ilike.*{needle}*,"
+            f"billing_address->>city.ilike.*{needle}*,billing_address->>formatted.ilike.*{needle}*)"
+        )
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
@@ -281,7 +286,7 @@ def create_contact(
             {
                 "workspace_id": str(workspace_id),
                 "customer_id": str(customer_id),
-                **body.model_dump(),
+                **body.model_dump(exclude_none=True),
             },
         )
     )

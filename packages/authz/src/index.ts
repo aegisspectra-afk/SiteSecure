@@ -1,6 +1,7 @@
 import catalog from "../catalog.json";
 
 export type SeatLimitKey = "seats_operator" | "seats_field";
+export type ResourceLimitKey = SeatLimitKey | "storage_gb";
 
 export type SeatUsage = {
   key: SeatLimitKey;
@@ -8,6 +9,15 @@ export type SeatUsage = {
   limit: number;
   unlimited: boolean;
   remaining: number | null;
+};
+
+export type StorageUsage = {
+  key: "storage_gb";
+  /** Used bytes when tracked; 0 when empty. */
+  current_bytes: number;
+  /** Allocated bytes; 0 means unlimited. */
+  limit_bytes: number;
+  unlimited: boolean;
 };
 
 type PlanRow = {
@@ -88,4 +98,18 @@ export function seatLimitReached(
   const row = seatUsage(planKey, occupiedRoleKeys).find((item) => item.key === bucket);
   if (!row || row.unlimited) return false;
   return row.current >= row.limit;
+}
+
+const BYTES_PER_GB = 1024 ** 3;
+
+/** Workspace storage entitlement from catalog limits.storage_gb (0 = unlimited). */
+export function storageUsage(planKey: string | undefined, usedBytes = 0): StorageUsage {
+  const limitGb = planLimit(planKey, "storage_gb");
+  const unlimited = isUnlimited(limitGb);
+  return {
+    key: "storage_gb",
+    current_bytes: Math.max(0, Math.floor(usedBytes)),
+    limit_bytes: unlimited ? 0 : limitGb * BYTES_PER_GB,
+    unlimited,
+  };
 }

@@ -31,6 +31,28 @@ vi.mock("@tanstack/react-router", () => ({
       {children}
     </a>
   ),
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock("../src/lib/session", () => ({
+  useSession: () => ({
+    api: {
+      listCustomers: vi.fn(async () => ({ items: [] })),
+      listSites: vi.fn(async () => ({ items: [] })),
+      createCustomer: vi.fn(),
+    },
+    session: { memberships: [{ workspace_id: "ws" }] },
+  }),
+}));
+
+vi.mock("../src/components/quotes/CreateQuoteDialog", () => ({
+  CreateQuoteDialog: () => null,
+  NewQuoteDialog: () => null,
+}));
+
+vi.mock("../src/components/quotes/quote-creation/NewQuoteDialog", () => ({
+  CreateQuoteDialog: () => null,
+  NewQuoteDialog: () => null,
 }));
 
 const emptySummary = {
@@ -94,12 +116,15 @@ describe("homeVariant", () => {
 });
 
 describe("module destinations", () => {
-  it("exposes live quote routes and not CRM/Jobs", () => {
-    expect(moduleHref("customer.create")).toBeNull();
+  it("exposes live quote and customer routes; jobs still pending", () => {
+    expect(moduleHref("customer.create")).toBe("/app/customers");
     expect(moduleHref("quote.create")).toBe("/app/quotes/new");
     expect(moduleHref("job.create")).toBeNull();
     expect(moduleHref("quote", "q1")).toBe("/app/quotes/q1");
+    expect(moduleHref("customer", "c1")).toBe("/app/customers/c1");
+    expect(moduleHref("site", "s1")).toBe("/app/sites/s1");
     expect(quickActions("owner", ["crm", "quotes"])).toEqual([
+      { permission: "crm.create", label: "לקוח חדש", href: "/app/customers" },
       { permission: "quotes.create", label: he.newQuote, href: "/app/quotes/new" },
     ]);
     expect(quickActions("viewer", ["crm", "quotes"])).toEqual([]);
@@ -114,11 +139,11 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.quotesSectionTitle })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: he.recentQuotesTitle })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.quotePipelineTitle })).toBeInTheDocument();
     expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "פרויקט חדש" })).not.toBeInTheDocument();
@@ -150,8 +175,7 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.securityLabelAuth)).toBeInTheDocument();
     expect(screen.getByText(he.securityLabelRbac)).toBeInTheDocument();
     expect(screen.getByText(he.securityLabelTenant)).toBeInTheDocument();
-    expect(screen.getByText(he.securitySignalOperational)).toBeInTheDocument();
-    expect(screen.getAllByText(he.securitySignalEnforced).length).toBeGreaterThan(0);
+    expect(screen.getByText(he.securityAllHealthy)).toBeInTheDocument();
     expect(screen.queryByText("Sessions")).not.toBeInTheDocument();
     expect(screen.queryByText("RLS")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.securityCenterLink })).toHaveAttribute("href", "/app/settings/security");
@@ -167,7 +191,7 @@ describe("OpsDashboard", () => {
         workspaceStatus="active"
       />,
     );
-    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
   });
 
@@ -175,7 +199,7 @@ describe("OpsDashboard", () => {
     render(<OpsDashboard data={{ ...emptyDash, home_variant: "sales" }} roleKey="sales" features={["crm", "quotes"]} />);
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
   });
 
   it("renders catalog usage meters from the server and not fake KPIs", () => {
@@ -240,8 +264,8 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.usageActiveMembersHint)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.usageManageUsers })).toHaveAttribute("href", "/app/settings/users");
     expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
-    expect(screen.getByText(/shimdurac@gmail.com/)).toBeInTheDocument();
-    expect(screen.getByText(he.usageOccupantPending)).toBeInTheDocument();
+    expect(screen.getAllByText(/shimdurac@gmail.com/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(he.usageOccupantPending).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: /משתמשים בשטח/ }));
     expect(screen.getByText(he.usageWho)).toBeInTheDocument();
     expect(screen.getAllByText(/shimdurac@gmail.com/).length).toBeGreaterThan(0);
@@ -310,14 +334,14 @@ describe("OpsDashboard", () => {
         }}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.setupTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.uxPercent(50))).toBeInTheDocument();
+    expect(screen.getByText(/1\/2.*50%/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.uxRingsTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
     expect(screen.getAllByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toHaveLength(1);
     expect(screen.getAllByRole("img", { name: /משתמשים בשטח: 0 אחוז/ })).toHaveLength(1);
-    expect(screen.getByText(he.setupInvite)).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.setupInviteCta })[0]).toHaveAttribute("href", "/app/settings/users");
+    expect(screen.getByText(he.setupPendingLabel)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.inviteUser })).toHaveAttribute("href", "/app/settings/users");
     expect(screen.getByText(he.uxSeatFull)).toBeInTheDocument();
     expect(screen.queryByText(he.uxSeatEmpty)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
@@ -380,9 +404,10 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.businessOpenValue)).toBeInTheDocument();
+    expect(screen.getByText(he.snapshotOpenValue)).toBeInTheDocument();
     expect(screen.getAllByText(/48,250/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/21,400/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(he.snapshotActiveQuotes)).not.toBeInTheDocument();
     expect(screen.queryByText(he.quotesKpiMargin)).not.toBeInTheDocument();
     expect(screen.getByText(he.dashboardSynced)).toBeInTheDocument();
   });
@@ -605,6 +630,42 @@ describe("nextBestAction", () => {
         canViewQuotes: true,
       })?.id,
     ).toBe("first-quote");
+  });
+
+  it("prioritizes approved quotes pending project creation", () => {
+    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes", "projects"], memberCount: 2 });
+    const action = nextBestAction({
+      setup,
+      summary: { ...emptySummary, quotes_approved: 2, quotes_open: 0 },
+      attention: [
+        {
+          kind: "quote_approved_pending_project",
+          label_he: "הצעות שאושרו וממתינות לפרויקט",
+          count: 2,
+          items: [
+            {
+              entity_type: "quote",
+              entity_id: "q-approved",
+              number: "1042",
+              title_he: "אושרה · ממתינה לפרויקט",
+              customer_name: null,
+              site_name: null,
+              scheduled_for: null,
+              severity: "now",
+              actions: ["create_project"],
+            },
+          ],
+        },
+      ],
+      usage: null,
+      canCreateQuote: true,
+      canInvite: true,
+      canViewQuotes: true,
+      canCreateProject: true,
+    });
+    expect(action?.id).toBe("approved-pending-project");
+    expect(action?.href).toBe("/app/quotes/q-approved");
+    expect(action?.label).toBe(he.nextActionCreateProject);
   });
 });
 

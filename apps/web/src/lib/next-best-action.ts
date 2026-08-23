@@ -1,9 +1,18 @@
-import type { AttentionGroup, DashboardSummary, WorkspaceUsage } from "@site-secure/api-client";
+import type { AttentionGroup, DashboardSummary, LeadOut, WorkspaceUsage } from "@site-secure/api-client";
 import { he } from "../i18n/he";
 import { quoteConversion } from "./ux-metrics";
+import { leadDisplayTitle, leadRequirementsSummary } from "./leads";
 import type { SetupStep } from "./workspace-setup";
 
-export type NextActionHref = "/app/quotes" | "/app/quotes/new" | "/app/settings/users";
+export type NextActionHref =
+  | "/app/quotes"
+  | "/app/quotes/new"
+  | `/app/quotes/${string}`
+  | `/app/leads/${string}`
+  | "/app/settings/users"
+  | "/app/settings"
+  | "/app/settings/roles"
+  | "/app/settings/security";
 
 export type NextAction = {
   id: string;
@@ -21,6 +30,8 @@ export function nextBestAction(opts: {
   canCreateQuote: boolean;
   canInvite: boolean;
   canViewQuotes: boolean;
+  canCreateProject?: boolean;
+  leadAttention?: LeadOut | null;
 }): NextAction | null {
   const current = opts.setup.steps.find((step) => step.current);
   if (!opts.setup.complete && current?.href && opts.canInvite) {
@@ -33,6 +44,18 @@ export function nextBestAction(opts: {
     };
   }
 
+  if (opts.leadAttention) {
+    const lead = opts.leadAttention;
+    const name = lead.contact_name || leadDisplayTitle(lead);
+    return {
+      id: `lead-attention-${lead.id}`,
+      title: he.leadNextActionVisit(name),
+      body: `${leadRequirementsSummary(lead)} · ${he.leadNextActionVisitBody}`,
+      href: `/app/leads/${lead.id}` as NextActionHref,
+      label: he.leadNextActionOpenLead,
+    };
+  }
+
   const conversion = quoteConversion(opts.summary);
   if (opts.canCreateQuote && conversion.total === 0) {
     return {
@@ -41,6 +64,18 @@ export function nextBestAction(opts: {
       body: he.nextActionFirstQuoteBody,
       href: "/app/quotes/new",
       label: he.nextActionCreateQuote,
+    };
+  }
+
+  const pendingProject = opts.attention.find((group) => group.kind === "quote_approved_pending_project");
+  if (opts.canViewQuotes && pendingProject && pendingProject.count > 0) {
+    const first = pendingProject.items[0];
+    return {
+      id: "approved-pending-project",
+      title: he.nextActionPendingProjects(pendingProject.count),
+      body: he.nextActionPendingProjectsBody,
+      href: first ? (`/app/quotes/${first.entity_id}` as NextActionHref) : "/app/quotes",
+      label: opts.canCreateProject ? he.nextActionCreateProject : he.kpiViewQuotes,
     };
   }
 

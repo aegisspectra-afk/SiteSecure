@@ -3,6 +3,7 @@ import type { QuoteOut, QuotePatchBody } from "@site-secure/api-client";
 export type QuoteHeaderDraft = {
   customer_id: string;
   site_id: string;
+  lead_id: string;
   title: string;
   valid_until: string;
   project_name: string;
@@ -11,6 +12,8 @@ export type QuoteHeaderDraft = {
   key_points: string;
   discount_type: string;
   discount_value: string;
+  discount_amount: string;
+  discount_percent: string;
   payment_terms: string;
   warranty: string;
   general_terms: string;
@@ -31,9 +34,12 @@ export const QUOTE_FIELD_IDS: Record<string, string> = {
 };
 
 export function headerFromQuote(quote: QuoteOut): QuoteHeaderDraft {
+  const dtype = (quote.discount_type ?? "").toLowerCase();
+  const dvalue = quote.discount_value != null ? String(quote.discount_value) : "";
   return {
     customer_id: quote.customer_id ?? "",
     site_id: quote.site_id ?? "",
+    lead_id: quote.lead_id ?? "",
     title: quote.title ?? "",
     valid_until: (quote.valid_until ?? "").slice(0, 10),
     project_name: quote.project_name ?? "",
@@ -41,7 +47,9 @@ export function headerFromQuote(quote: QuoteOut): QuoteHeaderDraft {
     summary: quote.summary ?? "",
     key_points: quote.key_points ?? "",
     discount_type: quote.discount_type ?? "",
-    discount_value: quote.discount_value != null ? String(quote.discount_value) : "",
+    discount_value: dvalue,
+    discount_amount: dtype === "amount" ? dvalue : "",
+    discount_percent: dtype === "percent" ? dvalue : "",
     payment_terms: quote.payment_terms ?? "",
     warranty: quote.warranty ?? "",
     general_terms: quote.general_terms ?? "",
@@ -52,18 +60,33 @@ export function headerFromQuote(quote: QuoteOut): QuoteHeaderDraft {
 }
 
 export function headerPatch(draft: QuoteHeaderDraft): QuotePatchBody {
-  const discountValue = draft.discount_value.trim() === "" ? 0 : Number(draft.discount_value);
+  const amount = draft.discount_amount.trim() === "" ? 0 : Number(draft.discount_amount);
+  const percent = draft.discount_percent.trim() === "" ? 0 : Number(draft.discount_percent);
+  let discount_type: string | undefined;
+  let discount_value = 0;
+  if (Number.isFinite(percent) && percent > 0) {
+    discount_type = "percent";
+    discount_value = percent;
+  } else if (Number.isFinite(amount) && amount > 0) {
+    discount_type = "amount";
+    discount_value = amount;
+  } else if (draft.discount_type) {
+    discount_type = draft.discount_type;
+    const fallback = draft.discount_value.trim() === "" ? 0 : Number(draft.discount_value);
+    discount_value = Number.isFinite(fallback) ? fallback : 0;
+  }
   return {
     customer_id: draft.customer_id || undefined,
     site_id: draft.site_id || undefined,
+    lead_id: draft.lead_id || undefined,
     title: draft.title.trim() || undefined,
     valid_until: draft.valid_until || undefined,
     project_name: draft.project_name.trim() || undefined,
     project_address: draft.project_address.trim() || undefined,
     summary: draft.summary.trim() || undefined,
     key_points: draft.key_points.trim() || undefined,
-    discount_type: draft.discount_type || undefined,
-    discount_value: Number.isFinite(discountValue) ? discountValue : 0,
+    discount_type,
+    discount_value,
     payment_terms: draft.payment_terms.trim() || undefined,
     warranty: draft.warranty.trim() || undefined,
     general_terms: draft.general_terms.trim() || undefined,
@@ -92,18 +115,24 @@ export function draftHasContent(draft: QuoteHeaderDraft): boolean {
       draft.customer_notes.trim() ||
       draft.internal_notes.trim() ||
       draft.template_id ||
+      (draft.discount_amount.trim() !== "" && draft.discount_amount !== "0") ||
+      (draft.discount_percent.trim() !== "" && draft.discount_percent !== "0") ||
       (draft.discount_value.trim() !== "" && draft.discount_value !== "0"),
   );
 }
 
-export function unsavedQuote(workspaceId: string): QuoteOut {
+export function unsavedQuote(
+  workspaceId: string,
+  context?: { customerId?: string; siteId?: string; leadId?: string },
+): QuoteOut {
   return {
     id: "",
     workspace_id: workspaceId,
     number: "",
     status: "draft",
-    customer_id: null,
-    site_id: null,
+    customer_id: context?.customerId ?? null,
+    site_id: context?.siteId ?? null,
+    lead_id: context?.leadId ?? null,
     owner_user_id: null,
     currency: "ILS",
     items: [],

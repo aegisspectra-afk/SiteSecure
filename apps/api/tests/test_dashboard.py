@@ -126,6 +126,29 @@ def _build(role: str, **overrides):
     return build_dashboard(**kwargs)
 
 
+def test_approved_quotes_without_project_are_attention():
+    quotes = _quotes() + [
+        {
+            "id": "q-approved",
+            "number": "Q-00100",
+            "status": "approved",
+            "customer_id": "c1",
+            "site_id": "s1",
+            "owner_user_id": "u1",
+            "valid_until": "2026-12-01",
+            "updated_at": "2026-08-14T10:00:00+00:00",
+            "total_gross": 1000,
+        }
+    ]
+    payload = _build("owner", quotes=quotes, project_source_quote_ids=frozenset())
+    pending = next(g for g in payload["attention"] if g["kind"] == "quote_approved_pending_project")
+    assert pending["count"] == 1
+    assert pending["items"][0]["entity_id"] == "q-approved"
+
+    linked = _build("owner", quotes=quotes, project_source_quote_ids=frozenset({"q-approved"}))
+    assert all(g["kind"] != "quote_approved_pending_project" for g in linked["attention"])
+
+
 def test_home_variant_matrix():
     assert home_variant("owner") == "ops"
     assert home_variant("administrator") == "ops"

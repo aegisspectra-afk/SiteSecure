@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router";
 import type { DashboardSummary, RecentQuote } from "@site-secure/api-client";
 import { he } from "../../i18n/he";
 import { formatMoney } from "../../lib/quotes";
 import { hasQuoteRecords, quoteConversion, quotesInPlay } from "../../lib/ux-metrics";
+import { NewQuoteButton } from "../quotes/NewQuoteButton";
 import { RecentQuotes } from "./RecentQuotes";
 
 export function SalesSnapshot({
@@ -57,12 +57,7 @@ export function SalesSnapshot({
         <div className="mt-5 border-t border-border pt-4">
           <p className="text-sm text-fg-muted">{he.quotesSectionEmpty}</p>
           {canCreate ? (
-            <Link
-              to="/app/quotes/new"
-              className="mt-4 inline-flex min-h-11 items-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg hover:bg-action-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              {he.newQuoteAction}
-            </Link>
+            <NewQuoteButton className="mt-4" />
           ) : null}
         </div>
       )}

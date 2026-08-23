@@ -65,6 +65,7 @@ export function UserAccountMenu({
   onUsers,
   onSignOut,
   variant = "header",
+  compact = false,
 }: {
   displayName: string;
   email?: string | null;
@@ -78,6 +79,7 @@ export function UserAccountMenu({
   onUsers?: () => void;
   onSignOut: () => void;
   variant?: "header" | "sidebar";
+  compact?: boolean;
 }) {
   const menuId = useId();
   const reducedMotion = useReducedMotion();
@@ -197,12 +199,22 @@ export function UserAccountMenu({
   };
 
   const identity = (
-    <span className={cn("flex min-w-0 items-center gap-2 text-start", variant === "sidebar" && "w-full")}>
+    <span
+      className={cn(
+        "flex min-w-0 items-center gap-2 text-start",
+        variant === "sidebar" && "w-full",
+        compact && "justify-center",
+      )}
+    >
       <AvatarMark initials={initials} />
-      <span className={cn("min-w-0 flex-col", variant === "sidebar" ? "flex" : "hidden sm:flex")}>
-        <span className="max-w-40 truncate text-sm font-medium text-fg">{displayName}</span>
-        {email ? <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{email}</span> : null}
-      </span>
+      {!compact ? (
+        <span className={cn("min-w-0 flex-col", variant === "sidebar" ? "flex" : "hidden sm:flex")}>
+          <span className="max-w-40 truncate text-sm font-medium text-fg">{displayName}</span>
+          {email ? <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{email}</span> : null}
+        </span>
+      ) : (
+        <span className="sr-only">{displayName}</span>
+      )}
     </span>
   );
 

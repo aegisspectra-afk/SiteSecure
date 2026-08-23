@@ -11,6 +11,12 @@ import { listStatusParam, type QuoteTab } from "../../../lib/quote-workspace";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/quotes/")({
+  validateSearch: (search: Record<string, unknown>): { tab?: QuoteTab } => {
+    const tab = typeof search.tab === "string" ? search.tab : undefined;
+    const allowed = new Set(["all", "draft", "open", "approved", "rejected", "expired"]);
+    if (tab && allowed.has(tab) && tab !== "all") return { tab: tab as QuoteTab };
+    return {};
+  },
   component: QuotesPage,
 });
 
@@ -40,11 +46,25 @@ function QuotesBody() {
   const canCreate = can(membership?.role_key, "quotes.create", features);
   const canDelete = can(membership?.role_key, "quotes.delete", features);
   const canViewCost = can(membership?.role_key, "quotes.view_cost", features);
-  const [tab, setTab] = useState<QuoteTab>("all");
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 350);
+  const routeSearch = Route.useSearch();
+  const [tab, setTab] = useState<QuoteTab>(routeSearch.tab ?? "all");
+  const [query, setQuery] = useState("");
+  const debouncedSearch = useDebouncedValue(query, 350);
   const status = listStatusParam(tab);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (routeSearch.tab) setTab(routeSearch.tab);
+  }, [routeSearch.tab]);
+
+  const onTab = (next: QuoteTab) => {
+    setTab(next);
+    void navigate({
+      to: "/app/quotes",
+      search: next === "all" ? {} : { tab: next },
+      replace: true,
+    });
+  };
 
   const quotesQuery = useInfiniteQuery({
     queryKey: ["quotes", workspaceId, debouncedSearch, status ?? "any"],
@@ -116,7 +136,7 @@ function QuotesBody() {
     <QuotesWorkspace
       quotes={quotes}
       counts={counts}
-      search={search}
+      search={query}
       tab={tab}
       canCreate={canCreate}
       canDelete={canDelete}
@@ -124,8 +144,8 @@ function QuotesBody() {
       loading={quotesQuery.isLoading}
       busy={remove.isPending || duplicate.isPending || quotesQuery.isFetchingNextPage}
       hasMore={Boolean(quotesQuery.hasNextPage)}
-      onSearch={setSearch}
-      onTab={setTab}
+      onSearch={setQuery}
+      onTab={onTab}
       onOpenQuote={(quoteId) =>
         void navigate({ to: "/app/quotes/$quoteId", params: { quoteId } })
       }

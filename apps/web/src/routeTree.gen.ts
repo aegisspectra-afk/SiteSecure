@@ -24,14 +24,26 @@ import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
+import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
+import { Route as AppKnowledgeIndexRouteImport } from "./routes/app/knowledge/index"
+import { Route as AppLeadsIndexRouteImport } from "./routes/app/leads/index"
+import { Route as AppLeadsLeadIdRouteImport } from "./routes/app/leads/$leadId"
+import { Route as AppProjectsIndexRouteImport } from "./routes/app/projects/index"
+import { Route as AppProjectsProjectIdRouteImport } from "./routes/app/projects/$projectId"
 import { Route as AppQuotesIndexRouteImport } from "./routes/app/quotes/index"
 import { Route as AppQuotesQuoteIdRouteImport } from "./routes/app/quotes/$quoteId"
 import { Route as AppQuotesNewRouteImport } from "./routes/app/quotes/new"
+import { Route as AppServiceIndexRouteImport } from "./routes/app/service/index"
 import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
 import { Route as AppSettingsSecurityRouteImport } from "./routes/app/settings/security"
 import { Route as AppSettingsUsersRouteImport } from "./routes/app/settings/users"
+import { Route as AppSitesIndexRouteImport } from "./routes/app/sites/index"
+import { Route as AppSitesSiteIdRouteImport } from "./routes/app/sites/$siteId"
+import { Route as AppTasksIndexRouteImport } from "./routes/app/tasks/index"
+import { Route as AppWarrantiesIndexRouteImport } from "./routes/app/warranties/index"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
 import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId.preview"
 
@@ -110,6 +122,41 @@ const LegalSlugRoute = LegalSlugRouteImport.update({
   path: "/legal/$slug",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
+  id: "/customers/",
+  path: "/customers/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCustomersCustomerIdRoute = AppCustomersCustomerIdRouteImport.update({
+  id: "/customers/$customerId",
+  path: "/customers/$customerId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppKnowledgeIndexRoute = AppKnowledgeIndexRouteImport.update({
+  id: "/knowledge/",
+  path: "/knowledge/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLeadsIndexRoute = AppLeadsIndexRouteImport.update({
+  id: "/leads/",
+  path: "/leads/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLeadsLeadIdRoute = AppLeadsLeadIdRouteImport.update({
+  id: "/leads/$leadId",
+  path: "/leads/$leadId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppProjectsIndexRoute = AppProjectsIndexRouteImport.update({
+  id: "/projects/",
+  path: "/projects/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppProjectsProjectIdRoute = AppProjectsProjectIdRouteImport.update({
+  id: "/projects/$projectId",
+  path: "/projects/$projectId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
   id: "/quotes/",
   path: "/quotes/",
@@ -123,6 +170,11 @@ const AppQuotesQuoteIdRoute = AppQuotesQuoteIdRouteImport.update({
 const AppQuotesNewRoute = AppQuotesNewRouteImport.update({
   id: "/quotes/new",
   path: "/quotes/new",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppServiceIndexRoute = AppServiceIndexRouteImport.update({
+  id: "/service/",
+  path: "/service/",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -148,6 +200,26 @@ const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: "/settings/users",
   path: "/settings/users",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSitesIndexRoute = AppSitesIndexRouteImport.update({
+  id: "/sites/",
+  path: "/sites/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSitesSiteIdRoute = AppSitesSiteIdRouteImport.update({
+  id: "/sites/$siteId",
+  path: "/sites/$siteId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
+  id: "/tasks/",
+  path: "/tasks/",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppWarrantiesIndexRoute = AppWarrantiesIndexRouteImport.update({
+  id: "/warranties/",
+  path: "/warranties/",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const PublicQuotesTokenRoute = PublicQuotesTokenRouteImport.update({
@@ -177,15 +249,27 @@ export interface FileRoutesByFullPath {
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
+  "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/knowledge/": typeof AppKnowledgeIndexRoute
+  "/app/leads/": typeof AppLeadsIndexRoute
+  "/app/projects/": typeof AppProjectsIndexRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
+  "/app/service/": typeof AppServiceIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
+  "/app/sites/": typeof AppSitesIndexRoute
+  "/app/tasks/": typeof AppTasksIndexRoute
+  "/app/warranties/": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -203,15 +287,27 @@ export interface FileRoutesByTo {
   "/legal/$slug": typeof LegalSlugRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
+  "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
+  "/app/customers": typeof AppCustomersIndexRoute
+  "/app/knowledge": typeof AppKnowledgeIndexRoute
+  "/app/leads": typeof AppLeadsIndexRoute
+  "/app/projects": typeof AppProjectsIndexRoute
   "/app/quotes": typeof AppQuotesIndexRoute
+  "/app/service": typeof AppServiceIndexRoute
   "/app/settings": typeof AppSettingsIndexRoute
+  "/app/sites": typeof AppSitesIndexRoute
+  "/app/tasks": typeof AppTasksIndexRoute
+  "/app/warranties": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRoutesById {
@@ -231,15 +327,27 @@ export interface FileRoutesById {
   "/legal/$slug": typeof LegalSlugRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
+  "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
+  "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/knowledge/": typeof AppKnowledgeIndexRoute
+  "/app/leads/": typeof AppLeadsIndexRoute
+  "/app/projects/": typeof AppProjectsIndexRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
+  "/app/service/": typeof AppServiceIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
+  "/app/sites/": typeof AppSitesIndexRoute
+  "/app/tasks/": typeof AppTasksIndexRoute
+  "/app/warranties/": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
 }
 export interface FileRouteTypes {
@@ -260,15 +368,27 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app/"
     | "/legal/"
+    | "/app/customers/$customerId"
+    | "/app/leads/$leadId"
+    | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/sites/$siteId"
     | "/public/quotes/$token"
+    | "/app/customers/"
+    | "/app/knowledge/"
+    | "/app/leads/"
+    | "/app/projects/"
     | "/app/quotes/"
+    | "/app/service/"
     | "/app/settings/"
+    | "/app/sites/"
+    | "/app/tasks/"
+    | "/app/warranties/"
     | "/app/quotes/$quoteId/preview"
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -286,15 +406,27 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app"
     | "/legal"
+    | "/app/customers/$customerId"
+    | "/app/leads/$leadId"
+    | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/sites/$siteId"
     | "/public/quotes/$token"
+    | "/app/customers"
+    | "/app/knowledge"
+    | "/app/leads"
+    | "/app/projects"
     | "/app/quotes"
+    | "/app/service"
     | "/app/settings"
+    | "/app/sites"
+    | "/app/tasks"
+    | "/app/warranties"
     | "/app/quotes/$quoteId/preview"
   id:
     | "__root__"
@@ -313,15 +445,27 @@ export interface FileRouteTypes {
     | "/legal/$slug"
     | "/app/"
     | "/legal/"
+    | "/app/customers/$customerId"
+    | "/app/leads/$leadId"
+    | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
     | "/app/settings/audit"
     | "/app/settings/roles"
     | "/app/settings/security"
     | "/app/settings/users"
+    | "/app/sites/$siteId"
     | "/public/quotes/$token"
+    | "/app/customers/"
+    | "/app/knowledge/"
+    | "/app/leads/"
+    | "/app/projects/"
     | "/app/quotes/"
+    | "/app/service/"
     | "/app/settings/"
+    | "/app/sites/"
+    | "/app/tasks/"
+    | "/app/warranties/"
     | "/app/quotes/$quoteId/preview"
   fileRoutesById: FileRoutesById
 }
@@ -447,6 +591,55 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LegalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/app/customers/": {
+      id: "/app/customers/"
+      path: "/customers"
+      fullPath: "/app/customers/"
+      preLoaderRoute: typeof AppCustomersIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/customers/$customerId": {
+      id: "/app/customers/$customerId"
+      path: "/customers/$customerId"
+      fullPath: "/app/customers/$customerId"
+      preLoaderRoute: typeof AppCustomersCustomerIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/knowledge/": {
+      id: "/app/knowledge/"
+      path: "/knowledge"
+      fullPath: "/app/knowledge/"
+      preLoaderRoute: typeof AppKnowledgeIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/leads/": {
+      id: "/app/leads/"
+      path: "/leads"
+      fullPath: "/app/leads/"
+      preLoaderRoute: typeof AppLeadsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/leads/$leadId": {
+      id: "/app/leads/$leadId"
+      path: "/leads/$leadId"
+      fullPath: "/app/leads/$leadId"
+      preLoaderRoute: typeof AppLeadsLeadIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/projects/": {
+      id: "/app/projects/"
+      path: "/projects"
+      fullPath: "/app/projects/"
+      preLoaderRoute: typeof AppProjectsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/projects/$projectId": {
+      id: "/app/projects/$projectId"
+      path: "/projects/$projectId"
+      fullPath: "/app/projects/$projectId"
+      preLoaderRoute: typeof AppProjectsProjectIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/app/quotes/": {
       id: "/app/quotes/"
       path: "/quotes"
@@ -466,6 +659,13 @@ declare module "@tanstack/react-router" {
       path: "/quotes/new"
       fullPath: "/app/quotes/new"
       preLoaderRoute: typeof AppQuotesNewRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/service/": {
+      id: "/app/service/"
+      path: "/service"
+      fullPath: "/app/service/"
+      preLoaderRoute: typeof AppServiceIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/settings/": {
@@ -503,6 +703,34 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsUsersRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/sites/": {
+      id: "/app/sites/"
+      path: "/sites"
+      fullPath: "/app/sites/"
+      preLoaderRoute: typeof AppSitesIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/sites/$siteId": {
+      id: "/app/sites/$siteId"
+      path: "/sites/$siteId"
+      fullPath: "/app/sites/$siteId"
+      preLoaderRoute: typeof AppSitesSiteIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/tasks/": {
+      id: "/app/tasks/"
+      path: "/tasks"
+      fullPath: "/app/tasks/"
+      preLoaderRoute: typeof AppTasksIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/warranties/": {
+      id: "/app/warranties/"
+      path: "/warranties"
+      fullPath: "/app/warranties/"
+      preLoaderRoute: typeof AppWarrantiesIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/public/quotes/$token": {
       id: "/public/quotes/$token"
       path: "/public/quotes/$token"
@@ -536,14 +764,26 @@ interface AppRouteRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
+  AppLeadsLeadIdRoute: typeof AppLeadsLeadIdRoute
+  AppProjectsProjectIdRoute: typeof AppProjectsProjectIdRoute
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
   AppQuotesNewRoute: typeof AppQuotesNewRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+  AppSitesSiteIdRoute: typeof AppSitesSiteIdRoute
+  AppCustomersIndexRoute: typeof AppCustomersIndexRoute
+  AppKnowledgeIndexRoute: typeof AppKnowledgeIndexRoute
+  AppLeadsIndexRoute: typeof AppLeadsIndexRoute
+  AppProjectsIndexRoute: typeof AppProjectsIndexRoute
   AppQuotesIndexRoute: typeof AppQuotesIndexRoute
+  AppServiceIndexRoute: typeof AppServiceIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppSitesIndexRoute: typeof AppSitesIndexRoute
+  AppTasksIndexRoute: typeof AppTasksIndexRoute
+  AppWarrantiesIndexRoute: typeof AppWarrantiesIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -551,14 +791,26 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
+  AppLeadsLeadIdRoute: AppLeadsLeadIdRoute,
+  AppProjectsProjectIdRoute: AppProjectsProjectIdRoute,
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
   AppQuotesNewRoute: AppQuotesNewRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsUsersRoute: AppSettingsUsersRoute,
+  AppSitesSiteIdRoute: AppSitesSiteIdRoute,
+  AppCustomersIndexRoute: AppCustomersIndexRoute,
+  AppKnowledgeIndexRoute: AppKnowledgeIndexRoute,
+  AppLeadsIndexRoute: AppLeadsIndexRoute,
+  AppProjectsIndexRoute: AppProjectsIndexRoute,
   AppQuotesIndexRoute: AppQuotesIndexRoute,
+  AppServiceIndexRoute: AppServiceIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppSitesIndexRoute: AppSitesIndexRoute,
+  AppTasksIndexRoute: AppTasksIndexRoute,
+  AppWarrantiesIndexRoute: AppWarrantiesIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

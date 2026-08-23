@@ -1,5 +1,5 @@
 import { LoaderCircle } from "lucide-react";
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "./cn";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -24,21 +24,25 @@ const disabledVisual: Record<ButtonVariant, string> = {
   danger: "bg-bg-subtle text-fg-muted border border-border hover:bg-bg-subtle",
 };
 
-export function Button({
-  variant = "primary",
-  loading = false,
-  loadingLabel,
-  className,
-  disabled,
-  children,
-  type = "button",
-  ...props
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = "primary",
+    loading = false,
+    loadingLabel,
+    className,
+    disabled,
+    children,
+    type = "button",
+    ...props
+  },
+  ref,
+) {
   const isDisabled = Boolean(disabled) || loading;
   const showDisabledLook = Boolean(disabled) && !loading;
   const showLoadingLabel = loading && Boolean(loadingLabel);
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
         "relative inline-flex min-h-11 min-w-24 items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 text-sm font-medium transition-colors duration-150",
@@ -54,16 +58,23 @@ export function Button({
       {...props}
     >
       {showLoadingLabel ? (
-        <>
-          <LoaderCircle className="size-4 animate-spin" aria-hidden />
+        <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+          <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
           <span>{loadingLabel}</span>
-        </>
+        </span>
       ) : (
         <>
-          {loading ? <LoaderCircle className="absolute size-4 animate-spin" aria-hidden /> : null}
-          <span className={loading ? "invisible" : undefined}>{children}</span>
+          {loading ? <LoaderCircle className="absolute size-4 shrink-0 animate-spin" aria-hidden /> : null}
+          <span
+            className={cn(
+              "inline-flex items-center justify-center gap-2 whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0",
+              loading && "invisible",
+            )}
+          >
+            {children}
+          </span>
         </>
       )}
     </button>
   );
-}
+});

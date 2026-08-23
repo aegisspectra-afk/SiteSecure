@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -34,6 +35,28 @@ vi.mock("@tanstack/react-router", () => ({
       {children}
     </a>
   ),
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock("../src/lib/session", () => ({
+  useSession: () => ({
+    api: {
+      listCustomers: vi.fn(async () => ({ items: [] })),
+      listSites: vi.fn(async () => ({ items: [] })),
+      createCustomer: vi.fn(),
+    },
+    session: { memberships: [{ workspace_id: "ws" }] },
+  }),
+}));
+
+vi.mock("../src/components/quotes/CreateQuoteDialog", () => ({
+  CreateQuoteDialog: () => null,
+  NewQuoteDialog: () => null,
+}));
+
+vi.mock("../src/components/quotes/quote-creation/NewQuoteDialog", () => ({
+  CreateQuoteDialog: () => null,
+  NewQuoteDialog: () => null,
 }));
 
 function quote(partial: Partial<QuoteOut> & Pick<QuoteOut, "id" | "number" | "status">): QuoteOut {
@@ -46,6 +69,11 @@ function quote(partial: Partial<QuoteOut> & Pick<QuoteOut, "id" | "number" | "st
     total_gross: 0,
     ...partial,
   };
+}
+
+function withClient(ui: ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
 }
 
 function Harness({
@@ -67,7 +95,7 @@ function Harness({
 }) {
   const [tab, setTab] = useState<QuoteTab>("all");
   const [search, setSearch] = useState("");
-  return (
+  return withClient(
     <QuotesWorkspace
       quotes={quotes}
       search={search}
@@ -80,7 +108,7 @@ function Harness({
       onOpenQuote={onOpenQuote}
       onDelete={onDelete}
       onDuplicate={onDuplicate}
-    />
+    />,
   );
 }
 
@@ -91,7 +119,7 @@ describe("Quotes workspace", () => {
     expect(screen.getByText(he.quotesLead)).toBeInTheDocument();
     expect(screen.getByText(he.quotesEmptyLead)).toBeInTheDocument();
     expect(screen.getByText(he.quotesEmptyBody)).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.getByText(he.quotesFlowCreate)).toBeInTheDocument();
     expect(screen.getByText(he.quotesFlowPrice)).toBeInTheDocument();
     expect(screen.getByText(he.quotesFlowTrack)).toBeInTheDocument();

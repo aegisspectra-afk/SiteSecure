@@ -55,14 +55,18 @@ Settings, security, billing, help, and legal are **low-frequency**. They must no
 
 One configuration. Permission-aware, feature-aware, plan-aware. No second nav system. No placeholder modules. No “coming soon.”
 
-Conceptual groups (show only when live):
+**Target IA (binding):** [V2-IA.md](../architecture/V2-IA.md)
 
-- סקירה
-- OPERATIONS — לקוחות, אתרים, עבודות, קריאות שירות, לוח שנה
-- DOCUMENTS — הצעות מחיר, מסמכים
-- ASSETS — ציוד, מלאי
-- ANALYTICS — דוחות
-- ADMINISTRATION — צוות, תפקידים, אבטחה, הגדרות, ניהול תוכנית
+Conceptual groups (show only when at least one child is Live):
+
+- **סקירה** — לוח בקרה, היום, יומן ומשימות  
+- **מכירות ולקוחות** — לקוחות, לידים, הצעות מחיר, קטלוג  
+- **תפעול** — פרויקטים, תיקי אתר, קריאות שירות, אחריות, מודיעין טכני  
+- **ניהול** — צוות, תפקידים והרשאות  
+- **מערכת** — אבטחה, הגדרות  
+- **חיצוני** — אתר Aegis  
+
+The sidebar reflects the business lifecycle (customer → lead → quote → project → site → service → warranty). Do not invent a new taxonomy when a module ships — flip Planned → Live in `TARGET_IA`.
 
 Nested navigation when modules grow. Do not create dozens of top-level items.
 

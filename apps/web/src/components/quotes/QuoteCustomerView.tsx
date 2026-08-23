@@ -62,7 +62,12 @@ export function QuoteCustomerView({
         </dl>
       </section>
 
-      {quote.summary ? <p className="text-sm leading-7 text-fg">{quote.summary}</p> : null}
+      {quote.summary ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-fg">{he.quotePublicScope}</h2>
+          <p className="text-sm leading-7 text-fg">{quote.summary}</p>
+        </section>
+      ) : null}
       {quote.key_points ? <p className="whitespace-pre-wrap text-sm leading-7 text-fg">{quote.key_points}</p> : null}
 
       <section className="ops-card overflow-x-auto p-5">
@@ -76,14 +81,7 @@ export function QuoteCustomerView({
             </tr>
           </thead>
           <tbody>
-            {quote.items.map((item) => (
-              <tr key={item.id} className="border-t border-border">
-                <td className="py-2">{item.description || item.name}</td>
-                <td className="py-2">{item.item_type === "note" ? "" : item.qty}</td>
-                <td className="py-2">{item.item_type === "note" ? "" : formatMoney(item.unit_price, currency)}</td>
-                <td className="py-2">{item.item_type === "note" ? "" : formatMoney(item.line_net, currency)}</td>
-              </tr>
-            ))}
+            {renderCustomerLines(quote)}
           </tbody>
         </table>
         <dl className="mt-4 flex flex-col gap-2 text-sm">
@@ -133,5 +131,46 @@ export function QuoteCustomerView({
         </section>
       ) : null}
     </article>
+  );
+}
+
+function renderCustomerLines(quote: PublicQuote) {
+  const currency = quote.currency || "ILS";
+  const sections = quote.sections ?? [];
+  const bySection = new Map<string, typeof quote.items>();
+  for (const section of sections) bySection.set(section.id, []);
+  const loose: typeof quote.items = [];
+  for (const item of quote.items) {
+    const sid = item.section_id;
+    if (sid && bySection.has(sid)) bySection.get(sid)!.push(item);
+    else loose.push(item);
+  }
+  const rows: ReactNode[] = [];
+  for (const section of sections) {
+    const items = bySection.get(section.id) ?? [];
+    if (!items.length && !section.name) continue;
+    rows.push(
+      <tr key={`sec-${section.id}`} className="border-t border-border bg-bg-2/40">
+        <td className="py-2 font-semibold" colSpan={4}>
+          {section.name || he.cpqSectionUntitled}
+        </td>
+      </tr>,
+    );
+    for (const item of items) {
+      rows.push(customerLineRow(item, currency));
+    }
+  }
+  for (const item of loose) rows.push(customerLineRow(item, currency));
+  return rows;
+}
+
+function customerLineRow(item: PublicQuote["items"][number], currency: string) {
+  return (
+    <tr key={item.id} className="border-t border-border">
+      <td className="py-2">{item.description || item.name}</td>
+      <td className="py-2">{item.item_type === "note" ? "" : item.qty}</td>
+      <td className="py-2">{item.item_type === "note" ? "" : formatMoney(item.unit_price, currency)}</td>
+      <td className="py-2">{item.item_type === "note" ? "" : formatMoney(item.line_net, currency)}</td>
+    </tr>
   );
 }

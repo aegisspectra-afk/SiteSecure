@@ -59,20 +59,18 @@ def get_session(
         params={
             "user_id": f"eq.{user_id}",
             "status": "eq.active",
-            "select": "workspace_id,role_key,technician_code,program_type",
+            "select": "workspace_id,role_key,technician_code,program_type,workspaces(id,name,status)",
         },
     )
     memberships: list[MembershipOut] = []
     if members_res.status_code == 200:
         for row in members_res.json():
             ws_id = row["workspace_id"]
-            ws_res = client.get(
-                "workspaces",
-                params={"id": f"eq.{ws_id}", "select": "id,name,status"},
-            )
-            if ws_res.status_code != 200 or not ws_res.json():
+            nested = row.get("workspaces")
+            if isinstance(nested, list):
+                nested = nested[0] if nested else None
+            if not isinstance(nested, dict):
                 continue
-            ws = ws_res.json()[0]
             ent_res = client.rpc("my_workspace_entitlements", {"p_workspace_id": ws_id})
             plan_key = default_plan_key()
             features: list[str] = []
@@ -83,8 +81,8 @@ def get_session(
             memberships.append(
                 MembershipOut(
                     workspace_id=ws_id,
-                    workspace_name=ws["name"],
-                    workspace_status=ws["status"],
+                    workspace_name=nested["name"],
+                    workspace_status=nested["status"],
                     role_key=row["role_key"],
                     technician_code=row.get("technician_code"),
                     program_type=row.get("program_type"),

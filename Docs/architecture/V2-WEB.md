@@ -57,18 +57,24 @@ RTL: `dir="rtl"` on `<html>`. Numbers, SKUs, IPs, MACs use `dir="ltr"` spans.
 
 ## 3. Information architecture (authenticated management)
 
-Groups (Hebrew labels in UI). Shown only after login + workspace, filtered by `authorize()` + features. Hidden ≠ secured.
+**Target IA (locked):** [V2-IA.md](./V2-IA.md) — lifecycle map of a security-systems business.
 
-**Do not show** placeholder modules. If inventory is not shipped, it is absent.
+**Runtime rule:** Sidebar shows **Live** destinations only (`apps/web/src/lib/app-nav.ts`). Planned modules stay documented in Target IA until UI + API + RBAC + RLS + flow exist. No Coming Soon. Hidden ≠ secured (`authorize()` + RLS).
 
-This IA is **not** the public marketing sitemap. Visitors never see לקוחות / הצעות מחיר as a public nav.
+Target groups (Hebrew in UI):
 
-1. **סקירה** — Dashboard, Calendar/tasks  
-2. **לקוחות ומכירות** — Customers, Leads, Quotes, Catalog  
-3. **תפעול** — Projects, Jobs (ops view), Sites, Service, Warranties  
-4. **משאבים** — Inventory (when feature), Knowledge  
-5. **תובנות** — Reports / Finance when those features exist  
-6. **הגדרות / חיוב** — Settings, Billing (owner)
+1. **סקירה** — לוח בקרה, היום, יומן ומשימות  
+2. **מכירות ולקוחות** — לקוחות, לידים, הצעות מחיר, קטלוג  
+3. **תפעול** — פרויקטים, תיקי אתר, קריאות שירות, אחריות, מודיעין טכני  
+4. **ניהול** — צוות, תפקידים והרשאות  
+5. **מערכת** — אבטחה, הגדרות  
+6. **חיצוני** — אתר Aegis  
+
+**Not** in primary Target IA: מלאי, חשבוניות, דוחות מתקדמים, Billing, AI, API admin.
+
+This IA is **not** the public marketing sitemap.
+
+**Next Live investment after the quote revenue loop:** לקוחות → תיקי אתר (customer → site → quote → project → service → history).
 
 ---
 

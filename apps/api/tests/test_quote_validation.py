@@ -1,4 +1,4 @@
-from app.quote_validation import validate_for_send
+from app.quote_validation import advisory_checks, critical_gaps_only, validate_for_send
 
 
 def test_send_requires_customer_title_terms_and_item():
@@ -11,6 +11,7 @@ def test_send_requires_customer_title_terms_and_item():
     gaps = validate_for_send(quote, [], {"name": "Aegis"})
     codes = {gap["code"] for gap in gaps}
     assert codes == {"customer", "title", "valid_until", "payment_terms", "items"}
+    assert all(gap.get("severity") == "critical" for gap in gaps)
 
 
 def test_send_accepts_complete_quote():
@@ -46,3 +47,14 @@ def test_company_name_required():
     items = [{"item_type": "free", "qty": 1, "unit_price": 10, "discount": 0}]
     codes = {gap["code"] for gap in validate_for_send(quote, items, {"name": "  "})}
     assert "company" in codes
+
+
+def test_advisory_checks_do_not_block_send():
+    quote = {"summary": ""}
+    items = [
+        {"description": "מצלמת IPC", "name": "Camera", "qty": 9, "item_type": "catalog"},
+    ]
+    soft = advisory_checks(quote, items)
+    assert soft
+    assert all(gap["severity"] in {"warning", "info"} for gap in soft)
+    assert critical_gaps_only(soft) == []

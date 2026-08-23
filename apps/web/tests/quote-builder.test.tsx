@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +27,8 @@ vi.mock("@tanstack/react-router", () => ({
 const api = {
   listCustomers: vi.fn(async () => ({ items: [{ id: "c1", display_name: "לקוח א" }] })),
   getCustomer: vi.fn(async () => ({ id: "c1", display_name: "לקוח א" })),
-  listSites: vi.fn(async () => ({ items: [] })),
+  listSites: vi.fn(async () => ({ items: [] as { id: string; name: string }[] })),
+  listLeads: vi.fn(async () => ({ items: [] })),
   listCatalogProducts: vi.fn(async () => ({ items: [] })),
   listQuoteTemplates: vi.fn(async () => ({ items: [{ id: "t1", key: "apartment", name_he: "דירה", item_count: 2 }] })),
   getWorkspace: vi.fn(async () => ({
@@ -48,6 +49,17 @@ const api = {
   shareQuote: vi.fn(),
   createCustomer: vi.fn(),
   createSite: vi.fn(),
+  listProjects: vi.fn(async () => ({ items: [] as Array<{ id: string; name: string; status?: string; customer_id?: string; workspace_id?: string; created_at?: string; updated_at?: string }> })),
+  listQuoteEvents: vi.fn(async () => ({ items: [] })),
+  createQuoteSection: vi.fn(),
+  patchQuoteSection: vi.fn(),
+  deleteQuoteSection: vi.fn(),
+  duplicateQuoteSection: vi.fn(),
+  saveQuoteAsTemplate: vi.fn(),
+  saveQuoteAsPackage: vi.fn(),
+  overrideQuoteMargin: vi.fn(),
+  compareQuoteVersions: vi.fn(),
+  listQuoteVersions: vi.fn(async () => ({ items: [], current_version: 1 })),
 };
 
 vi.mock("../src/lib/session", () => ({
@@ -76,13 +88,24 @@ function quote(partial: Partial<QuoteOut> = {}): QuoteOut {
   };
 }
 
-const FEATURES = ["quotes", "catalog", "crm", "sales"];
+const FEATURES = ["quotes", "catalog", "crm", "sales", "projects"];
 
-function renderBuilder(row: QuoteOut, roleKey = "owner") {
+function renderBuilder(
+  row: QuoteOut,
+  roleKey = "owner",
+  extra?: { initialCustomerId?: string; initialSiteId?: string },
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <QuoteBuilder quote={row} workspaceId="ws" roleKey={roleKey} features={FEATURES} />
+      <QuoteBuilder
+        quote={row}
+        workspaceId="ws"
+        roleKey={roleKey}
+        features={FEATURES}
+        initialCustomerId={extra?.initialCustomerId}
+        initialSiteId={extra?.initialSiteId}
+      />
     </QueryClientProvider>,
   );
 }
@@ -117,20 +140,21 @@ describe("CPQ builder", () => {
 
   it("shows go-to-field when the quote is not sendable", () => {
     renderBuilder(quote());
-    expect(screen.getByText(he.quoteSendBlocked)).toBeInTheDocument();
+    expect(screen.getByText(/שלמות/)).toBeInTheDocument();
     expect(screen.getByText("בחרו לקוח.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.quoteGoToField }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: he.quotePreview })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.quoteSend })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: he.cpqCustomerView }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: he.quoteSaveAndSend }).every((btn) => (btn as HTMLButtonElement).disabled)).toBe(true);
     expect(screen.getByRole("button", { name: he.quoteApplyTemplate })).toBeDisabled();
-    expect(screen.getByText(he.quoteBackToList)).toBeInTheDocument();
+    expect(screen.getByText(`${he.quoteDetailTitle} #Q-00001`)).toBeInTheDocument();
+    expect(screen.getByText(he.cpqEmptyTitle)).toBeInTheDocument();
   });
 
   it("opens an unsaved quote locally without creating a draft", async () => {
     vi.useFakeTimers();
     renderBuilder(unsavedQuote("ws"));
     expect(screen.getByText(he.quoteUnsaved)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.quotePreview })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: he.cpqCustomerView })[0]).toBeDisabled();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
@@ -140,6 +164,13 @@ describe("CPQ builder", () => {
     expect(api.listQuoteTemplates).not.toHaveBeenCalled();
     expect(api.getWorkspace).not.toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it("seeds customer context from initial props", async () => {
+    api.listSites.mockResolvedValueOnce({ items: [{ id: "s1", name: "אתר 1" }] });
+    renderBuilder(unsavedQuote("ws", { customerId: "c1" }), "owner", { initialCustomerId: "c1" });
+    await waitFor(() => expect(api.getCustomer).toHaveBeenCalled());
+    await waitFor(() => expect(document.getElementById("customer_id")).toBeTruthy());
   });
 
   it("hides cost until quotes.view_cost is granted", () => {
@@ -156,5 +187,37 @@ describe("CPQ builder", () => {
     );
     expect(screen.queryByText(he.quoteCost)).not.toBeInTheDocument();
     expect(screen.queryByText(he.quoteMargin)).not.toBeInTheDocument();
+  });
+
+  it("shows create project CTA on approved quote without linked project", async () => {
+    api.listProjects.mockResolvedValue({ items: [] });
+    renderBuilder(quote({ status: "approved", customer_id: "c1", title: "מצלמות", number: "1042" }));
+    await waitFor(() => expect(api.listProjects).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: he.workflowCreateProject })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: he.workflowOpenProjectArrow })).not.toBeInTheDocument();
+  });
+
+  it("shows open project CTA when linked project exists", async () => {
+    api.listProjects.mockResolvedValue({
+      items: [
+        {
+          id: "p1",
+          name: "פרויקט",
+          status: "planned",
+          customer_id: "c1",
+          workspace_id: "ws",
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    });
+    renderBuilder(quote({ status: "approved", customer_id: "c1", number: "1042" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: he.workflowOpenProjectArrow })).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
+  });
+
+  it("does not show create project on draft quotes", () => {
+    renderBuilder(quote({ status: "draft" }));
+    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
   });
 });

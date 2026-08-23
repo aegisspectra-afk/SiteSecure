@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from ..audit import write_audit
 from ..authz.catalog import load_catalog
 from ..authz.engine import authorize
-from ..authz.usage import fetch_occupancy, seat_meters
+from ..authz.usage import fetch_occupancy, fetch_storage_used_bytes, workspace_meters
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import MESSAGES, ApiError
 
@@ -162,9 +162,14 @@ def workspace_usage(
     if not view.allowed and not billing.allowed:
         _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
     occupancy = fetch_occupancy(client, str(workspace_id))
+    used_bytes = fetch_storage_used_bytes(client, str(workspace_id))
     meters = [
         UsageMeterOut(**row)
-        for row in seat_meters(plan_key=ctx.plan_key, occupants=occupancy.occupants)
+        for row in workspace_meters(
+            plan_key=ctx.plan_key,
+            occupants=occupancy.occupants,
+            used_bytes=used_bytes,
+        )
     ]
     return WorkspaceUsageOut(
         workspace_id=str(workspace_id),

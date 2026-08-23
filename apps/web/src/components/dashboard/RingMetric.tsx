@@ -2,7 +2,7 @@ import { Tooltip } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 
-export type RingTone = "action" | "success" | "warning" | "info" | "neutral";
+export type RingTone = "action" | "success" | "warning" | "danger" | "info" | "neutral" | "tech" | "analytics";
 export type RingSize = "primary" | "secondary";
 export type RingHref = "/app/quotes" | "/app/quotes/new" | "/app/settings/users";
 

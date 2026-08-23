@@ -3,8 +3,14 @@ import type { UsageOccupant, WorkspaceUsage, WorkspaceUsageMeter } from "@site-s
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { roleLabel } from "../../lib/app-nav";
-import { seatTone, seatUtilization } from "../../lib/ux-metrics";
-import { RingMetric } from "./RingMetric";
+import {
+  formatStorageBytes,
+  meterTone,
+  meterUtilization,
+  storageHint,
+  storageNext,
+} from "../../lib/ux-metrics";
+import { RingMetric, type RingTone } from "./RingMetric";
 
 function occupantStatus(row: UsageOccupant): string {
   return row.status === "pending" ? he.usageOccupantPending : he.usageOccupantActive;
@@ -48,6 +54,53 @@ function OccupantTable({ meter }: { meter: WorkspaceUsageMeter }) {
   );
 }
 
+function ringToneFor(meter: WorkspaceUsageMeter): RingTone {
+  if (meter.key === "seats_operator") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "action";
+  }
+  if (meter.key === "seats_field") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "tech";
+  }
+  if (meter.key === "storage_gb") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "analytics";
+  }
+  return meterTone(meter);
+}
+
+function meterTip(meter: WorkspaceUsageMeter): string | undefined {
+  if (meter.key === "seats_operator") return he.uxSeatOfficeTip;
+  if (meter.key === "seats_field") return he.uxSeatFieldTip;
+  return undefined;
+}
+
+function meterNext(meter: WorkspaceUsageMeter): string | undefined {
+  if (meter.unit === "bytes") {
+    if (meter.at_limit) return he.uxStorageFull;
+    return storageNext(meter);
+  }
+  if (meter.at_limit) return he.uxSeatFull;
+  if (meter.key === "seats_field" && !meter.unlimited && meter.limit > meter.current) {
+    return he.usageSeatsLeft(Math.max(0, meter.limit - meter.current));
+  }
+  return undefined;
+}
+
+function meterHint(meter: WorkspaceUsageMeter): string {
+  if (meter.unit === "bytes") {
+    if (!meter.unlimited && meter.limit > 0 && meter.current <= 0) {
+      return he.usageStorageAllocated(formatStorageBytes(meter.limit));
+    }
+    return storageHint(meter);
+  }
+  if (meter.unlimited || meter.limit <= 0) return he.usersUsageUnlimited;
+  return `${meter.current} / ${meter.limit}`;
+}
+
+const RING_ORDER = ["seats_operator", "seats_field", "storage_gb"];
+
 export function UsageSnapshot({
   usage,
   canManageTeam = false,
@@ -55,10 +108,22 @@ export function UsageSnapshot({
   usage: WorkspaceUsage;
   canManageTeam?: boolean;
 }) {
-  const quotaMeters = usage.meters.filter((meter) => seatUtilization(meter) != null);
-  const unlimitedMeters = usage.meters.filter((meter) => meter.unlimited || meter.limit <= 0);
+  const ordered = RING_ORDER.map((key) => usage.meters.find((meter) => meter.key === key)).filter(
+    (meter): meter is WorkspaceUsageMeter => Boolean(meter),
+  );
+  const ringMeters = ordered.filter((meter) => meterUtilization(meter) != null || meter.unit === "bytes");
+  const unlimitedOnly = ordered.filter((meter) => meter.unlimited || (meter.limit <= 0 && meter.unit !== "bytes"));
   const [openKey, setOpenKey] = useState<string | null>(null);
   const panelId = useId();
+  const pendingRows = usage.meters.flatMap((meter) => meter.occupants ?? []).filter((row) => row.status === "pending");
+  const seenPending = new Set<string>();
+  const uniquePending: UsageOccupant[] = [];
+  for (const row of pendingRows) {
+    const key = (row.email || row.label || "").toLowerCase();
+    if (!key || seenPending.has(key)) continue;
+    seenPending.add(key);
+    uniquePending.push(row);
+  }
 
   return (
     <section className="ops-card p-5" aria-labelledby="usage-heading">
@@ -66,31 +131,30 @@ export function UsageSnapshot({
       <h2 id="usage-heading" className="mt-1 text-base font-semibold text-fg">
         {he.usageTitle}
       </h2>
-      {quotaMeters.length ? (
-        <div className="mt-5 grid grid-cols-2 gap-6">
-          {quotaMeters.map((meter) => {
-            const percent = seatUtilization(meter);
-            const office = meter.key === "seats_operator";
-            const field = meter.key === "seats_field";
+      {ringMeters.length ? (
+        <div className="ops-usage-rings mt-5">
+          {ringMeters.map((meter) => {
+            const percent = meterUtilization(meter);
             const open = openKey === meter.key;
+            const expandable = (meter.occupants?.length ?? 0) > 0 && meter.unit === "seats";
             return (
               <div key={meter.key} className="flex min-w-0 flex-col items-center">
                 <RingMetric
                   percent={percent}
                   label={meter.label_he}
-                  hint={`${meter.current} / ${meter.limit}`}
-                  next={meter.at_limit ? he.uxSeatFull : undefined}
-                  tone={seatTone(meter)}
-                  onActivate={() => setOpenKey(open ? null : meter.key)}
+                  hint={meterHint(meter)}
+                  next={meterNext(meter)}
+                  tone={ringToneFor(meter)}
+                  onActivate={expandable ? () => setOpenKey(open ? null : meter.key) : undefined}
                   expanded={open}
                   controlsId={`${panelId}-${meter.key}`}
-                  tip={office ? he.uxSeatOfficeTip : field ? he.uxSeatFieldTip : undefined}
+                  tip={meterTip(meter)}
                 />
-                {open ? (
+                {open && expandable ? (
                   <div id={`${panelId}-${meter.key}`} className="w-full">
                     <OccupantTable meter={meter} />
                   </div>
-                ) : meter.occupants && meter.occupants.length === 1 ? (
+                ) : meter.occupants && meter.occupants.length === 1 && meter.unit === "seats" ? (
                   <p className="mt-2 text-center text-xs text-fg-muted">
                     <span className="block">{meter.occupants[0].label}</span>
                     {meter.occupants[0].status === "pending" ? (
@@ -103,20 +167,37 @@ export function UsageSnapshot({
           })}
         </div>
       ) : null}
-      {unlimitedMeters.length ? (
+      {unlimitedOnly.length ? (
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-          {unlimitedMeters.map((row) => (
+          {unlimitedOnly.map((row) => (
             <div key={row.key} className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
               <dt className="text-xs font-medium text-fg-muted">{row.label_he}</dt>
-              <dd className="mt-1 text-sm font-semibold text-fg">{he.usersUsageUnlimited}</dd>
+              <dd className="mt-1 text-sm font-semibold text-fg">
+                {row.unit === "bytes" ? he.usageStorageUnlimited : he.usersUsageUnlimited}
+              </dd>
             </div>
           ))}
         </dl>
       ) : null}
-      <div className="mt-5 border-t border-border pt-4">
-        <p className="text-xs font-medium text-fg-muted">{he.usageActiveMembers}</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-fg">{usage.active_members}</p>
-        <p className="mt-1 text-xs text-fg-muted">{he.usageActiveMembersHint}</p>
+      <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+        <div>
+          <p className="text-xs font-medium text-fg-muted">{he.usageActiveMembers}</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-fg">{usage.active_members}</p>
+          <p className="mt-1 text-xs text-fg-muted">{he.usageActiveMembersHint}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-fg-muted">{he.usagePendingInvites}</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-fg">{usage.pending_invites}</p>
+          {uniquePending[0] ? (
+            <p className="mt-1 truncate text-xs text-fg-muted">
+              <span className="ltr-meta">{uniquePending[0].email ?? uniquePending[0].label}</span>
+              {" · "}
+              {he.usageOccupantPending}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-fg-muted">{he.usagePendingEmpty}</p>
+          )}
+        </div>
       </div>
       {canManageTeam ? (
         <Link

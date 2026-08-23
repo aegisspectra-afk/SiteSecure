@@ -13,9 +13,14 @@ PUBLIC_ITEM_KEYS = (
     "qty",
     "unit_price",
     "discount",
+    "discount_type",
     "line_net",
     "sort_order",
+    "section_id",
+    "package_instance_id",
+    "package_name",
 )
+
 
 
 def _num(value: object) -> float:

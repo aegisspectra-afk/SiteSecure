@@ -102,7 +102,12 @@ def list_sites(
     if status:
         params["installation_status"] = f"eq.{status}"
     if q:
-        params["name"] = f"ilike.*{q}*"
+        needle = q.strip()
+        params["or"] = (
+            f"(name.ilike.*{needle}*,"
+            f"address->>line.ilike.*{needle}*,address->>street.ilike.*{needle}*,"
+            f"address->>city.ilike.*{needle}*,address->>formatted.ilike.*{needle}*)"
+        )
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"

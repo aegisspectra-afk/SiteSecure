@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import httpx
-
 from .config import Settings
 from .errors import ApiError
+from .http_supabase import supabase_request
 
 
 class UserClient:
@@ -39,61 +38,60 @@ class UserClient:
         }
 
     def get_user(self) -> dict:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.get(f"{self.auth}/user", headers=self._headers)
+        response = supabase_request("GET", f"{self.auth}/user", headers=self._headers)
         if response.status_code != 200:
             raise ApiError(401, "UNAUTHENTICATED", "נדרשת התחברות")
         return response.json()
 
-    def get(self, path: str, params: dict | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.get(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=self._rest_headers(),
-                params=params,
-            )
+    def get(self, path: str, params: dict | None = None):
+        return supabase_request(
+            "GET",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._rest_headers(),
+            params=params,
+        )
 
-    def post(self, path: str, json: dict | list | None = None, params: dict | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.post(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=self._rest_headers(),
-                json=json,
-                params=params,
-            )
+    def post(self, path: str, json: dict | list | None = None, params: dict | None = None):
+        return supabase_request(
+            "POST",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._rest_headers(),
+            params=params,
+            json=json,
+        )
 
-    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.patch(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=self._rest_headers(prefer),
-                json=json,
-                params=params,
-            )
+    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None):
+        return supabase_request(
+            "PATCH",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._rest_headers(prefer),
+            params=params,
+            json=json,
+        )
 
-    def delete(self, path: str, params: dict | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.delete(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=self._rest_headers(),
-                params=params,
-            )
+    def delete(self, path: str, params: dict | None = None):
+        return supabase_request(
+            "DELETE",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._rest_headers(),
+            params=params,
+        )
 
-    def rpc(self, name: str, payload: dict) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.post(
-                f"{self.rest}/rpc/{name}",
-                headers=self._rest_headers(),
-                json=payload,
-            )
+    def rpc(self, name: str, payload: dict):
+        return supabase_request(
+            "POST",
+            f"{self.rest}/rpc/{name}",
+            headers=self._rest_headers(),
+            json=payload,
+        )
 
     def storage_sign_upload(self, bucket: str, path: str) -> dict:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.post(
-                f"{self.storage}/object/upload/sign/{bucket}/{path}",
-                headers=self._rest_headers(),
-                json={},
-            )
+        response = supabase_request(
+            "POST",
+            f"{self.storage}/object/upload/sign/{bucket}/{path}",
+            headers=self._rest_headers(),
+            json={},
+        )
         if response.status_code not in {200, 201}:
             raise ApiError(403, "PERMISSION_DENIED", "לא ניתן ליצור כתובת העלאה")
         data = response.json()
@@ -105,12 +103,12 @@ class UserClient:
         return {"upload_url": upload_url, "token": token, "path": data.get("path") or path}
 
     def storage_sign_download(self, bucket: str, path: str, expires_in: int = 60) -> str:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.post(
-                f"{self.storage}/object/sign/{bucket}/{path}",
-                headers=self._rest_headers(),
-                json={"expiresIn": expires_in},
-            )
+        response = supabase_request(
+            "POST",
+            f"{self.storage}/object/sign/{bucket}/{path}",
+            headers=self._rest_headers(),
+            json={"expiresIn": expires_in},
+        )
         if response.status_code != 200:
             raise ApiError(404, "NOT_FOUND", "לא נמצא")
         data = response.json()

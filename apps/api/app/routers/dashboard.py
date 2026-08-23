@@ -200,6 +200,25 @@ def get_dashboard(
             event["quote_number"] = quote_numbers.get(str(event.get("quote_id") or ""), "")
             events.append(event)
 
+    project_source_quote_ids: frozenset[str] = frozenset()
+    if can_quotes_view:
+        approved_ids = {str(q["id"]) for q in quotes if q.get("status") == "approved"}
+        if approved_ids:
+            project_rows = _optional_list(
+                client.get(
+                    "projects",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "source_quote_id": f"in.({','.join(sorted(approved_ids))})",
+                        "select": "source_quote_id",
+                        "limit": "100",
+                    },
+                )
+            )
+            project_source_quote_ids = frozenset(
+                str(row["source_quote_id"]) for row in project_rows if row.get("source_quote_id")
+            )
+
     payload = build_dashboard(
         role_key=ctx.role_key,
         user_id=ctx.user_id,
@@ -215,5 +234,6 @@ def get_dashboard(
         can_jobs_start=can_jobs_start,
         can_jobs_complete=can_jobs_complete,
         assignments_reliable=assignments_reliable,
+        project_source_quote_ids=project_source_quote_ids,
     )
     return DashboardOut.model_validate(payload)

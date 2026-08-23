@@ -244,6 +244,7 @@ describe("dark color system", () => {
     const styles = readFileSync(path.resolve(__dirname, "../src/styles.css"), "utf8");
     expect(styles).toContain("background: var(--color-bg-nav)");
     expect(styles).toContain("background-color: var(--color-bg-2)");
-    expect(styles).not.toMatch(/\.ops-sidebar[\s\S]{0,200}background: var\(--color-bg-1\)/);
+    expect(styles).toMatch(/\.ops-sidebar\s*\{[^}]*background:\s*var\(--color-bg-nav\)/s);
+    expect(styles).not.toMatch(/\.ops-sidebar\s*\{[^}]*background:\s*var\(--color-bg-1\)/s);
   });
 });

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import httpx
-
 from .config import Settings
 from .errors import ApiError
+from .http_supabase import supabase_request
 
 
 class ServiceClient:
@@ -25,27 +24,31 @@ class ServiceClient:
     def rest(self) -> str:
         return f"{self._settings.supabase_url}/rest/v1"
 
-    def get(self, path: str, params: dict | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.get(f"{self.rest}/{path.lstrip('/')}", headers=self._headers, params=params)
+    def get(self, path: str, params: dict | None = None):
+        return supabase_request(
+            "GET",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._headers,
+            params=params,
+        )
 
-    def post(self, path: str, json: dict | list | None = None, params: dict | None = None) -> httpx.Response:
-        with httpx.Client(timeout=20.0) as client:
-            return client.post(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=self._headers,
-                json=json,
-                params=params,
-            )
+    def post(self, path: str, json: dict | list | None = None, params: dict | None = None):
+        return supabase_request(
+            "POST",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._headers,
+            params=params,
+            json=json,
+        )
 
-    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None) -> httpx.Response:
+    def patch(self, path: str, json: dict, params: dict | None = None, *, prefer: str | None = None):
         headers = dict(self._headers)
         if prefer:
             headers["Prefer"] = prefer
-        with httpx.Client(timeout=20.0) as client:
-            return client.patch(
-                f"{self.rest}/{path.lstrip('/')}",
-                headers=headers,
-                json=json,
-                params=params,
-            )
+        return supabase_request(
+            "PATCH",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=headers,
+            params=params,
+            json=json,
+        )

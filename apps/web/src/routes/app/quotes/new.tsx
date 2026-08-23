@@ -7,6 +7,11 @@ import { unsavedQuote } from "../../../lib/quote-builder";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/quotes/new")({
+  validateSearch: (search: Record<string, unknown>): { customerId?: string; siteId?: string; leadId?: string } => ({
+    customerId: typeof search.customerId === "string" && search.customerId ? search.customerId : undefined,
+    siteId: typeof search.siteId === "string" && search.siteId ? search.siteId : undefined,
+    leadId: typeof search.leadId === "string" && search.leadId ? search.leadId : undefined,
+  }),
   component: NewQuotePage,
 });
 
@@ -19,6 +24,7 @@ function NewQuotePage() {
 }
 
 function NewQuoteBody() {
+  const { customerId, siteId, leadId } = Route.useSearch();
   const { session, loading } = useSession();
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
@@ -28,11 +34,14 @@ function NewQuoteBody() {
 
   return (
     <QuoteBuilder
-      quote={unsavedQuote(workspaceId)}
+      quote={unsavedQuote(workspaceId, { customerId, siteId, leadId })}
       workspaceId={workspaceId}
       roleKey={membership.role_key}
       features={membership.features ?? []}
       workspaceName={membership.workspace_name}
+      initialCustomerId={customerId}
+      initialSiteId={siteId}
+      initialLeadId={leadId}
     />
   );
 }

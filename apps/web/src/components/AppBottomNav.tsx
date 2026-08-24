@@ -8,12 +8,20 @@ export function AppBottomNav({
   items,
   pathname,
   moreOpen,
+  workOpen,
+  workActive,
+  moreActive,
   onMore,
+  onWork,
 }: {
   items: BottomNavEntry[];
   pathname: string;
   moreOpen?: boolean;
+  workOpen?: boolean;
+  workActive?: boolean;
+  moreActive?: boolean;
   onMore?: () => void;
+  onWork?: () => void;
 }) {
   if (items.length === 0) return null;
 
@@ -21,15 +29,33 @@ export function AppBottomNav({
     <nav className="ops-bottom-nav" aria-label={he.navMobile}>
       {items.map((item) => {
         if (item.kind === "more") {
+          const active = Boolean(moreOpen || moreActive);
           return (
             <button
               key="more"
               type="button"
-              className={cn("ops-bottom-nav-item", moreOpen && "is-active")}
+              className={cn("ops-bottom-nav-item", active && "is-active")}
               aria-expanded={moreOpen}
+              aria-haspopup="dialog"
               onClick={onMore}
             >
-              <NavIcon name="more" active={moreOpen} className="size-6" />
+              <NavIcon name="more" active={active} className="size-6" />
+              <span>{item.label}</span>
+            </button>
+          );
+        }
+        if (item.kind === "work") {
+          const active = Boolean(workOpen || workActive);
+          return (
+            <button
+              key="work"
+              type="button"
+              className={cn("ops-bottom-nav-item", active && "is-active")}
+              aria-expanded={workOpen}
+              aria-haspopup="dialog"
+              onClick={onWork}
+            >
+              <NavIcon name="work" active={active} className="size-6" />
               <span>{item.label}</span>
             </button>
           );

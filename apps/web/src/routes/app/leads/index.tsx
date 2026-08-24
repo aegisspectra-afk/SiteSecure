@@ -45,7 +45,18 @@ function LeadsBody() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<LeadPriority | "">("");
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(() => {
+    try {
+      if (sessionStorage.getItem("site-secure-open-new-lead") === "1") {
+        sessionStorage.removeItem("site-secure-open-new-lead");
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("new") === "1";
+  });
 
   const listQuery = useQuery({
     queryKey: ["leads", workspaceId, q, statusFilter, priorityFilter],

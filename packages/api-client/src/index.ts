@@ -54,6 +54,8 @@ export type SessionMembership = {
   program_type: string | null;
   plan_key: string;
   features: string[];
+  is_beta?: boolean;
+  beta_program?: string | null;
 };
 
 export type SessionResponse = {
@@ -68,6 +70,7 @@ export type SessionResponse = {
   } | null;
   memberships: SessionMembership[];
   has_workspace: boolean;
+  is_platform_admin?: boolean;
 };
 
 export type WorkspaceOut = {
@@ -76,6 +79,76 @@ export type WorkspaceOut = {
   status: string;
   timezone: string | null;
   vat_percent: number | null;
+  business_type?: string | null;
+  is_beta?: boolean;
+  beta_program?: string | null;
+  beta_enrolled_at?: string | null;
+};
+
+export type FeedbackReport = {
+  id: string;
+  ticket_id: string;
+  workspace_id: string;
+  report_type: "bug" | "feature" | "general";
+  severity: string;
+  status: string;
+  title: string;
+  body: string;
+  page_url?: string | null;
+  created_at: string;
+  is_beta?: boolean;
+  user_id?: string;
+  user_agent?: string | null;
+  viewport?: string | null;
+  role_key?: string | null;
+  plan_key?: string | null;
+  screenshot_url?: string | null;
+  internal_notes?: string | null;
+  updated_at?: string;
+};
+
+export type FeatureFlag = {
+  id: string;
+  name: string;
+  description?: string | null;
+  enabled_for_beta: boolean;
+  enabled_for_production: boolean;
+  enabled?: boolean;
+  updated_at?: string;
+};
+
+export type AdminOrganization = {
+  id: string;
+  name: string;
+  status: string;
+  is_beta: boolean;
+  beta_program: string | null;
+  beta_enrolled_at: string | null;
+  created_at?: string;
+  plan_key?: string | null;
+  subscription_status?: string | null;
+};
+
+export type AdminUser = {
+  id: string;
+  email: string | null;
+  full_name: string;
+  is_platform_admin: boolean;
+  created_at: string;
+  memberships: {
+    workspace_id: string;
+    workspace_name?: string | null;
+    role_key: string;
+    is_beta?: boolean;
+  }[];
+};
+
+export type AdminSummary = {
+  organizations: number;
+  beta_organizations: number;
+  users: number;
+  feedback_open: number;
+  feedback_total: number;
 };
 
 export type DashboardItem = {
@@ -630,7 +703,73 @@ export type JobOut = {
   workspace_id: string;
   number: string;
   title: string;
+  kind?: string;
   status: string;
+  project_id?: string | null;
+  service_call_id?: string | null;
+  customer_id?: string;
+  site_id?: string;
+  scheduled_for?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  completion_notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type JobChecklistItem = {
+  id: string;
+  label_he: string;
+  required?: boolean;
+  completed?: boolean;
+  completed_at?: string | null;
+  sort_order?: number;
+};
+
+export type SystemOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  type: string;
+  name: string;
+  status: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  panel_id?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EquipmentOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  system_id?: string | null;
+  category: string;
+  status: string;
+  name: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  serial?: string | null;
+  mac?: string | null;
+  ip?: string | null;
+  location_note?: string | null;
+  installed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GlobalSearchHit = {
+  entity_type: "customer" | "site" | "lead" | "quote" | "project" | "service" | "equipment";
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  href: string;
+};
+
+export type GlobalSearchResponse = {
+  q: string;
+  items: GlobalSearchHit[];
 };
 
 export function createApiClient(opts: {
@@ -664,14 +803,14 @@ export function createApiClient(opts: {
     getSession: () => request<SessionResponse>("/api/v1/auth/session"),
     patchMe: (body: { full_name?: string; phone?: string; locale?: string }) =>
       request("/api/v1/me", { method: "PATCH", body: JSON.stringify(body) }),
-    createWorkspace: (body: { name: string; plan_key?: string }) =>
+    createWorkspace: (body: { name: string; plan_key?: string; business_type?: string }) =>
       request<WorkspaceOut>("/api/v1/workspaces", {
         method: "POST",
         body: JSON.stringify(body),
       }),
     patchWorkspace: (
       workspaceId: string,
-      body: { timezone?: string; vat_percent?: number; name?: string },
+      body: { timezone?: string; vat_percent?: number; name?: string; business_type?: string },
     ) =>
       request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`, {
         method: "PATCH",
@@ -1072,11 +1211,12 @@ export function createApiClient(opts: {
       }),
     listWarranties: (
       workspaceId: string,
-      opts: { status?: string; site_id?: string; limit?: number } = {},
+      opts: { status?: string; site_id?: string; customer_id?: string; limit?: number } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.status) params.set("status", opts.status);
       if (opts.site_id) params.set("site_id", opts.site_id);
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
       return request<{ items: WarrantyOut[] }>(`/api/v1/workspaces/${workspaceId}/warranties?${params}`);
     },
     createWarranty: (
@@ -1085,6 +1225,98 @@ export function createApiClient(opts: {
     ) =>
       request<WarrantyOut>(`/api/v1/workspaces/${workspaceId}/warranties`, {
         method: "POST",
+        body: JSON.stringify(body),
+      }),
+    globalSearch: (workspaceId: string, q: string, limit = 12) => {
+      const params = new URLSearchParams({ q: q.trim(), limit: String(limit) });
+      return request<GlobalSearchResponse>(`/api/v1/workspaces/${workspaceId}/search?${params}`);
+    },
+    listSystems: (workspaceId: string, siteId: string) =>
+      request<{ items: SystemOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/systems?site_id=${encodeURIComponent(siteId)}`,
+      ),
+    createSystem: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        type?: string;
+        name: string;
+        status?: string;
+        manufacturer?: string;
+        model?: string;
+      },
+    ) =>
+      request<SystemOut>(`/api/v1/workspaces/${workspaceId}/systems`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listEquipment: (workspaceId: string, siteId: string) =>
+      request<{ items: EquipmentOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/equipment?site_id=${encodeURIComponent(siteId)}`,
+      ),
+    createEquipment: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        name: string;
+        category?: string;
+        status?: string;
+        system_id?: string;
+        manufacturer?: string;
+        model?: string;
+        serial?: string;
+        ip?: string;
+        location_note?: string;
+      },
+    ) =>
+      request<EquipmentOut>(`/api/v1/workspaces/${workspaceId}/equipment`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listJobs: (
+      workspaceId: string,
+      opts: { q?: string; status?: string; site_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status) params.set("status", opts.status);
+      if (opts.site_id) params.set("site_id", opts.site_id);
+      return request<{ items: JobOut[] }>(`/api/v1/workspaces/${workspaceId}/jobs?${params}`);
+    },
+    getJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}`),
+    createJob: (
+      workspaceId: string,
+      body: {
+        title: string;
+        customer_id: string;
+        site_id: string;
+        kind?: string;
+        scheduled_for?: string;
+        project_id?: string;
+      },
+    ) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    startJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
+    completeJob: (workspaceId: string, jobId: string, body: { completion_notes?: string } = {}) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/complete`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listJobChecklist: (workspaceId: string, jobId: string) =>
+      request<JobChecklistItem[]>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/checklist`),
+    patchJobChecklistItem: (
+      workspaceId: string,
+      jobId: string,
+      itemId: string,
+      body: { completed: boolean },
+    ) =>
+      request<JobChecklistItem>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/checklist/${itemId}`, {
+        method: "PATCH",
         body: JSON.stringify(body),
       }),
     listTasks: (
@@ -1217,12 +1449,64 @@ export function createApiClient(opts: {
     getSecurityCenter: (workspaceId: string) =>
       request<SecurityCenter>(`/api/v1/workspaces/${workspaceId}/security`),
     getAuthzCatalog: () => request<AuthzCatalog>("/api/v1/authz/catalog"),
-    startJob: (workspaceId: string, jobId: string) =>
-      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
-    completeJob: (workspaceId: string, jobId: string) =>
-      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/complete`, {
+    listFeedback: (workspaceId?: string) => {
+      const params = new URLSearchParams();
+      if (workspaceId) params.set("workspace_id", workspaceId);
+      const q = params.toString();
+      return request<FeedbackReport[]>(`/api/v1/feedback${q ? `?${q}` : ""}`);
+    },
+    createFeedback: (body: {
+      workspace_id: string;
+      report_type: "bug" | "feature" | "general";
+      title: string;
+      body: string;
+      severity?: string;
+      page_url?: string;
+      user_agent?: string;
+      viewport?: string;
+      screenshot_url?: string;
+    }) =>
+      request<FeedbackReport>("/api/v1/feedback", {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify(body),
+      }),
+    listFeatureFlags: (workspaceId?: string) => {
+      const params = new URLSearchParams();
+      if (workspaceId) params.set("workspace_id", workspaceId);
+      const q = params.toString();
+      return request<FeatureFlag[]>(`/api/v1/feature-flags${q ? `?${q}` : ""}`);
+    },
+    adminSummary: () => request<AdminSummary>("/api/v1/admin/summary"),
+    adminOrganizations: () => request<AdminOrganization[]>("/api/v1/admin/organizations"),
+    adminPatchOrganization: (workspaceId: string, body: { is_beta?: boolean; beta_program?: string }) =>
+      request<AdminOrganization>(`/api/v1/admin/organizations/${workspaceId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminUsers: () => request<AdminUser[]>("/api/v1/admin/users"),
+    adminFeedback: (opts: { status?: string; report_type?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.report_type) params.set("report_type", opts.report_type);
+      const q = params.toString();
+      return request<FeedbackReport[]>(`/api/v1/admin/feedback${q ? `?${q}` : ""}`);
+    },
+    adminPatchFeedback: (
+      id: string,
+      body: { status?: string; internal_notes?: string; severity?: string },
+    ) =>
+      request<FeedbackReport>(`/api/v1/admin/feedback/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminFeatureFlags: () => request<FeatureFlag[]>("/api/v1/admin/feature-flags"),
+    adminPatchFeatureFlag: (
+      id: string,
+      body: { enabled_for_beta?: boolean; enabled_for_production?: boolean; description?: string },
+    ) =>
+      request<FeatureFlag>(`/api/v1/admin/feature-flags/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
       }),
   };
 }

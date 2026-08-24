@@ -3,7 +3,14 @@ import { he } from "../i18n/he";
 
 const LEAD_ATTENTION_STATUSES = new Set(["new", "contacted", "visit_scheduling", "quote_preparing", "follow_up"]);
 
-export type CustomerProfileTab = "overview" | "sites" | "quotes" | "projects" | "service" | "documents";
+export type CustomerProfileTab =
+  | "overview"
+  | "sites"
+  | "quotes"
+  | "projects"
+  | "service"
+  | "warranties"
+  | "documents";
 
 export type CustomerActivityEvent = {
   id: string;
@@ -228,6 +235,7 @@ export const CUSTOMER_PROFILE_TABS: { id: CustomerProfileTab; label: string }[] 
   { id: "quotes", label: he.customer360TabQuotes },
   { id: "projects", label: he.customer360TabProjects },
   { id: "service", label: he.customer360TabService },
+  { id: "warranties", label: he.customer360TabWarranties },
   { id: "documents", label: he.customer360TabDocuments },
 ];
 
@@ -236,6 +244,7 @@ export function customerProfileTabs(counts: {
   quotes: number;
   projects: number;
   service: number;
+  warranties: number;
   documents: number;
 }) {
   return CUSTOMER_PROFILE_TABS.map((tab) => {
@@ -249,7 +258,9 @@ export function customerProfileTabs(counts: {
             ? counts.projects
             : tab.id === "service"
               ? counts.service
-              : counts.documents;
+              : tab.id === "warranties"
+                ? counts.warranties
+                : counts.documents;
     return { ...tab, count };
   });
 }

@@ -1,5 +1,6 @@
 import { Button, Status } from "@site-secure/ui";
 import type { DashboardItem } from "@site-secure/api-client";
+import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 
 function formatTime(value: string | null): string | null {
@@ -32,6 +33,7 @@ export function TodayList({
           const start = item.actions.includes("start") && onStart;
           const complete = item.actions.includes("complete") && onComplete;
           const busy = busyId === item.entity_id;
+          const isJob = item.entity_type === "job";
           return (
             <li
               key={item.entity_id}
@@ -48,26 +50,27 @@ export function TodayList({
                 label={item.title_he}
                 tone={item.severity === "now" ? "warning" : "info"}
               />
-              {start ? (
-                <Button
-                  variant="primary"
-                  loading={busy}
-                  onClick={() => onStart(item.entity_id)}
-                  className="self-start"
-                >
-                  {he.startJob}
-                </Button>
-              ) : null}
-              {complete ? (
-                <Button
-                  variant="primary"
-                  loading={busy}
-                  onClick={() => onComplete(item.entity_id)}
-                  className="self-start"
-                >
-                  {he.completeJob}
-                </Button>
-              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {isJob ? (
+                  <Link
+                    to="/app/jobs/$jobId"
+                    params={{ jobId: item.entity_id }}
+                    className="inline-flex min-h-10 items-center rounded-[var(--radius-control)] border border-border px-3 text-sm font-medium text-fg hover:bg-bg-subtle"
+                  >
+                    {he.siteTabField}
+                  </Link>
+                ) : null}
+                {start ? (
+                  <Button variant="primary" loading={busy} onClick={() => onStart(item.entity_id)}>
+                    {he.startJob}
+                  </Button>
+                ) : null}
+                {complete ? (
+                  <Button variant="primary" loading={busy} onClick={() => onComplete(item.entity_id)}>
+                    {he.completeJob}
+                  </Button>
+                ) : null}
+              </div>
             </li>
           );
         })}

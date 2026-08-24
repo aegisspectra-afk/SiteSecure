@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Briefcase,
   Building2,
   CalendarDays,
   ClipboardList,
@@ -8,6 +9,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Lock,
+  MapPinned,
   MoreHorizontal,
   Package,
   ScrollText,
@@ -39,6 +41,8 @@ const icons: Record<NavIconKey, LucideIcon> = {
   security: Lock,
   audit: ScrollText,
   settings: Settings,
+  work: Briefcase,
+  visits: MapPinned,
   more: MoreHorizontal,
 };
 

@@ -158,11 +158,9 @@ describe("LoginForm", () => {
     expect(screen.queryByRole("button", { name: he.loginSecondaryRegister })).not.toBeInTheDocument();
   });
 
-  it("shows authenticating and granted labels without a second primary", () => {
-    const { rerender } = render(<LoginForm loading onSubmit={vi.fn()} />);
+  it("shows connecting label while submitting", () => {
+    render(<LoginForm loading onSubmit={vi.fn()} />);
     expect(screen.getByRole("button", { name: he.authenticating })).toBeDisabled();
-    rerender(<LoginForm granted onSubmit={vi.fn()} />);
-    expect(screen.getByRole("button", { name: he.accessGranted })).toBeDisabled();
   });
 
   it("blocks submit with invalid email", async () => {
@@ -178,7 +176,7 @@ describe("LoginForm", () => {
 });
 
 describe("RegisterForm", () => {
-  it("primary action is the Hebrew verb צור חשבון", () => {
+  it("primary action continues account creation", () => {
     render(<RegisterForm onSubmit={vi.fn()} />);
     expect(screen.getByRole("button", { name: he.registerPrimary })).toBeInTheDocument();
     expect(screen.getByText(he.passwordStrength)).toBeInTheDocument();
@@ -215,31 +213,37 @@ describe("register identity copy", () => {
         title={he.registerTitle}
         heading={he.registerTitle}
         description={he.registerLead}
+        steps={[
+          { n: "01", label: he.stepAccount, status: "current" },
+          { n: "02", label: he.stepBusiness, status: "upcoming" },
+          { n: "03", label: he.stepReady, status: "upcoming" },
+        ]}
       >
         <p>form</p>
       </AuthLayout>,
     );
     expect(screen.getByRole("heading", { name: he.registerTitle })).toBeInTheDocument();
     expect(screen.getByText(he.registerLead)).toBeInTheDocument();
-    expect(screen.queryByText(he.stepAccount)).not.toBeInTheDocument();
-    expect(screen.queryByText(he.stepWorkspace)).not.toBeInTheDocument();
+    expect(screen.getByText(he.stepAccount)).toBeInTheDocument();
+    expect(screen.getByText(he.stepBusiness)).toBeInTheDocument();
+    expect(screen.getByText(he.authStepOf(1, 3))).toBeInTheDocument();
+    expect(screen.queryByText(he.businessName)).not.toBeInTheDocument();
   });
 });
 
 describe("VerifyEmailPanel", () => {
-  it("names the inbox and offers a real resend, not a fake open-mail button", () => {
+  it("names the inbox and offers resend plus change-email", () => {
     const onResend = vi.fn();
     render(<VerifyEmailPanel email="ilya@example.com" onResend={onResend} />);
     expect(screen.getByText("ilya@example.com")).toBeInTheDocument();
     expect(screen.getByText(he.verifyNext)).toBeInTheDocument();
-    expect(screen.getByText(he.openEmail)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.verifyResend })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: he.openEmail })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.verifyChangeEmail })).toHaveAttribute("href", "/register");
   });
 });
 
 describe("AuthLayout", () => {
-  it("is a dark operations console that belongs to the same product as the public site", () => {
+  it("is a quiet product entry that belongs to the same system as the app", () => {
     render(
       <AuthLayout kicker={he.authWelcomeBack} title={he.loginTitle} heading={he.loginLead}>
         <p>form</p>
@@ -252,14 +256,20 @@ describe("AuthLayout", () => {
     expect(screen.getByText(he.authHeadlineLine2)).toBeInTheDocument();
     expect(screen.getByText(he.authHebrewSupport)).toBeInTheDocument();
     expect(screen.getByText(he.authWelcomeBack)).toBeInTheDocument();
-    expect(screen.getByLabelText(he.authOpsAria)).toBeInTheDocument();
-    expect(screen.getByText(he.authOpsPreviewLabel)).toBeInTheDocument();
-    expect(screen.getAllByText(he.authOpsStatusLabel).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.authOpsStatusValue).length).toBeGreaterThan(0);
-    expect(screen.getByText(he.authOpsWorkspaceName)).toBeInTheDocument();
-    expect(screen.getAllByText(he.authOpsNetworkLabel).length).toBeGreaterThan(0);
-    expect(screen.getByText(he.authOpsSystemsLabel)).toBeInTheDocument();
-    expect(screen.getByText(he.authTrustAuth)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.authProductFlowAria)).toBeInTheDocument();
+    expect(screen.getByText(he.authProductFlowLabel)).toBeInTheDocument();
+    expect(screen.getByText("LEAD")).toBeInTheDocument();
+    expect(screen.getByText("SERVICE")).toBeInTheDocument();
+    expect(screen.getByText(he.authFlowLead)).toBeInTheDocument();
+    expect(screen.getByText(he.authFlowService)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.authTrustQuiet)).toBeInTheDocument();
+    expect(screen.getByText(he.authTrustAccess)).toBeInTheDocument();
+    expect(screen.getByText(he.authTrustRbacShort)).toBeInTheDocument();
+    expect(screen.getByText(he.authTrustAuditShort)).toBeInTheDocument();
+    expect(screen.queryByText(/142/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/DEMO DATA/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ACTIVE JOBS/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/EU-CENTRAL/i)).not.toBeInTheDocument();
     expect(screen.getByText(he.authFooterLegal)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/legal/privacy");
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/legal/terms");
@@ -271,8 +281,6 @@ describe("AuthLayout", () => {
     expect(screen.getAllByRole("link", { name: he.brand }).every((el) => el.getAttribute("href") === "/")).toBe(true);
     expect(screen.queryByText(/99\.9/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ROI/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/ENCRYPTED/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/פיילוט/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /google/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /microsoft/i })).not.toBeInTheDocument();
   });

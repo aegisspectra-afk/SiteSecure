@@ -207,6 +207,9 @@ export function SidebarAccount({
   onSecurity,
   onUsers,
   onSignOut,
+  onAdmin,
+  isBeta = false,
+  isPlatformAdmin = false,
   collapsed = false,
 }: {
   displayName: string;
@@ -220,6 +223,9 @@ export function SidebarAccount({
   onSecurity: () => void;
   onUsers: () => void;
   onSignOut: () => void;
+  onAdmin?: () => void;
+  isBeta?: boolean;
+  isPlatformAdmin?: boolean;
   collapsed?: boolean;
 }) {
   return (
@@ -237,6 +243,9 @@ export function SidebarAccount({
         onSecurity={onSecurity}
         onUsers={onUsers}
         onSignOut={onSignOut}
+        onAdmin={onAdmin}
+        isBeta={isBeta}
+        isPlatformAdmin={isPlatformAdmin}
         compact={collapsed}
       />
     </div>

@@ -256,6 +256,11 @@ export function CustomerProfile({
     queryFn: () => api.listDocuments(workspaceId, { entity_type: "customer", entity_id: customerId, limit: 100 }),
   });
 
+  const warrantiesQuery = useQuery({
+    queryKey: ["customer-warranties", workspaceId, customerId],
+    queryFn: () => api.listWarranties(workspaceId, { customer_id: customerId, limit: 100 }),
+  });
+
   const leadsQuery = useQuery({
     queryKey: ["customer-leads", workspaceId, customerId],
     queryFn: () => api.listLeads(workspaceId, { customer_id: customerId, limit: 20 }),
@@ -268,6 +273,7 @@ export function CustomerProfile({
   const serviceCalls = serviceQuery.data?.items ?? [];
   const contacts = contactsQuery.data ?? [];
   const documents = docsQuery.data?.items ?? [];
+  const warranties = warrantiesQuery.data?.items ?? [];
   const leads = leadsQuery.data?.items ?? [];
   const siteStats = buildSiteStats(sites, quotes, serviceCalls, projects);
   const activity = customer
@@ -295,6 +301,7 @@ export function CustomerProfile({
     void queryClient.invalidateQueries({ queryKey: ["customer-projects", workspaceId, customerId] });
     void queryClient.invalidateQueries({ queryKey: ["customer-service", workspaceId] });
     void queryClient.invalidateQueries({ queryKey: ["customer-docs", workspaceId, customerId] });
+    void queryClient.invalidateQueries({ queryKey: ["customer-warranties", workspaceId, customerId] });
     void queryClient.invalidateQueries({ queryKey: ["customer-leads", workspaceId, customerId] });
   }
 
@@ -512,6 +519,7 @@ export function CustomerProfile({
     quotes: quotes.length,
     projects: projects.length,
     service: serviceCalls.length,
+    warranties: warranties.length,
     documents: documents.length,
   });
 
@@ -733,6 +741,29 @@ export function CustomerProfile({
 
         {tab === "service" ? (
           <ServicePanel serviceCalls={serviceCalls} canCreate={canCreateService} onCreate={openServiceSheet} />
+        ) : null}
+
+        {tab === "warranties" ? (
+          <section className="ops-card p-4">
+            <h2 className="text-sm font-semibold text-fg">{he.customer360TabWarranties}</h2>
+            {warranties.length === 0 ? (
+              <p className="mt-4 text-sm text-fg-muted">{he.customer360WarrantiesEmpty}</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-border">
+                {warranties.map((row) => (
+                  <li key={row.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                    <div>
+                      <p className="font-medium">{row.number}</p>
+                      <p className="text-xs text-fg-muted">
+                        {row.type} · {row.starts_on} → {row.ends_on}
+                      </p>
+                    </div>
+                    <Status label={row.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         ) : null}
 
         {tab === "documents" ? (

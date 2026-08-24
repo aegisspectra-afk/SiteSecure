@@ -112,6 +112,13 @@ def test_foundation_routes_require_bearer():
         f"/api/v1/workspaces/{ws}/security",
         "/api/v1/authz/catalog",
         "/api/v1/me",
+        "/api/v1/feedback",
+        "/api/v1/feature-flags",
+        "/api/v1/admin/summary",
+        "/api/v1/admin/organizations",
+        "/api/v1/admin/users",
+        "/api/v1/admin/feedback",
+        "/api/v1/admin/feature-flags",
     ):
         res = client.get(path) if path != "/api/v1/me" else client.patch(path, json={"full_name": "x"})
         assert res.status_code == 401, path

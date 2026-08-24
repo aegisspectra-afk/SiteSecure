@@ -29,6 +29,8 @@ class MembershipOut(BaseModel):
     program_type: str | None = None
     plan_key: str
     features: list[str]
+    is_beta: bool = False
+    beta_program: str | None = None
 
 
 class SessionOut(BaseModel):
@@ -37,6 +39,7 @@ class SessionOut(BaseModel):
     profile: ProfileOut | None = None
     memberships: list[MembershipOut]
     has_workspace: bool
+    is_platform_admin: bool = False
 
 
 class ProfilePatch(BaseModel):
@@ -59,7 +62,10 @@ def get_session(
         params={
             "user_id": f"eq.{user_id}",
             "status": "eq.active",
-            "select": "workspace_id,role_key,technician_code,program_type,workspaces(id,name,status)",
+            "select": "workspace_id,role_key,technician_code,program_type,workspaces(id,name,status,is_beta,beta_program)",
+            # Important for UI stability: the frontend uses `memberships[0]` as the active workspace.
+            # Make the ordering deterministic.
+            "order": "created_at.desc",
         },
     )
     memberships: list[MembershipOut] = []
@@ -88,6 +94,8 @@ def get_session(
                     program_type=row.get("program_type"),
                     plan_key=plan_key,
                     features=features,
+                    is_beta=bool(nested.get("is_beta")),
+                    beta_program=nested.get("beta_program"),
                 )
             )
 
@@ -107,6 +115,7 @@ def get_session(
         profile=profile,
         memberships=memberships,
         has_workspace=len(memberships) > 0,
+        is_platform_admin=bool(profile_row.get("is_platform_admin")) if profile_row else False,
     )
 
 

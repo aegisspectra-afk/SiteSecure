@@ -626,6 +626,7 @@ def list_warranties(
     cursor: str | None = Query(default=None),
     status: str | None = Query(default=None),
     site_id: str | None = Query(default=None),
+    customer_id: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "warranties.view")
@@ -640,6 +641,8 @@ def list_warranties(
         params["status"] = f"eq.{status}"
     if site_id:
         params["site_id"] = f"eq.{site_id}"
+    if customer_id:
+        params["customer_id"] = f"eq.{customer_id}"
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"

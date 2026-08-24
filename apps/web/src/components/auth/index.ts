@@ -1,13 +1,14 @@
 export { AuthAlert, AuthFooter } from "./AuthFooter";
 export { AuthBrandPanel } from "./AuthBrandPanel";
+export { AuthExperienceProvider, useAuthExperience } from "./AuthExperience";
 export { AuthField } from "./AuthField";
 export { AuthForm } from "./AuthForm";
 export { AuthHeader } from "./AuthHeader";
 export { AuthHydrateError } from "./AuthHydrateError";
+export { AuthLaunchScreen } from "./AuthLaunchScreen";
 export { AuthLayout } from "./AuthLayout";
-export { AuthNetwork } from "./AuthNetwork";
-export { AuthOpsBoard } from "./AuthOpsBoard";
-export { AuthStatusStrip } from "./AuthStatusStrip";
+export { AuthProductFlow } from "./AuthProductFlow";
+export { AuthStepRail, onboardingSteps, registerSteps } from "./AuthStepRail";
 export { AuthTrust } from "./AuthTrust";
 export { PasswordField } from "./PasswordField";
 export { PasswordStrength } from "./PasswordStrength";

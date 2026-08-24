@@ -158,6 +158,18 @@ def list_jobs(
     return {"items": [_out(row).model_dump() for row in page.items], "next_cursor": page.next_cursor}
 
 
+INSTALLATION_CHECKLIST = (
+    "תשתית",
+    "ציוד",
+    "התקנה",
+    "חיבור",
+    "בדיקות",
+    "תמונות",
+    "מסירה",
+    "חתימה",
+)
+
+
 @router.post("/jobs", response_model=JobOut)
 def create_job(
     workspace_id: UUID,
@@ -186,6 +198,21 @@ def create_job(
     if body.project_id:
         payload["project_id"] = body.project_id
     row = created_or_403(client.post("jobs", payload))
+    if body.kind == "installation":
+        for index, label in enumerate(INSTALLATION_CHECKLIST):
+            try:
+                client.post(
+                    "job_checklist_items",
+                    {
+                        "workspace_id": str(workspace_id),
+                        "job_id": row["id"],
+                        "label_he": label,
+                        "required": True,
+                        "sort_order": index,
+                    },
+                )
+            except Exception:
+                break
     return _out(row)
 
 

@@ -1,4 +1,4 @@
-import { Button, cn } from "@site-secure/ui";
+import { Button } from "@site-secure/ui";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { he } from "../i18n/he";
@@ -17,19 +17,17 @@ export function RegisterForm({
   onSubmit,
   error,
   loading,
-  created,
 }: {
   onSubmit: (input: { fullName: string; email: string; password: string }) => Promise<void>;
   error?: string | null;
   loading?: boolean;
-  created?: boolean;
 }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const busy = Boolean(loading || created);
+  const busy = Boolean(loading);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -101,12 +99,12 @@ export function RegisterForm({
       <Button
         type="submit"
         variant="primary"
-        loading={Boolean(loading) && !created}
+        loading={busy}
         loadingLabel={he.creatingAccount}
-        disabled={created}
-        className={cn("auth-cta mt-2 h-12 w-full", created && "bg-action text-action-fg")}
+        disabled={busy}
+        className="auth-cta mt-2 h-12 w-full"
       >
-        {created ? he.accountCreated : he.registerPrimary}
+        {he.registerPrimary}
       </Button>
     </AuthForm>
   );

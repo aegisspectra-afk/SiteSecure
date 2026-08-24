@@ -29,24 +29,24 @@ export function VerifyEmailPanel({
         <p className="text-sm leading-6 text-fg-muted">{he.verifyMissingEmail}</p>
       )}
       <p className="text-sm leading-6 text-fg-muted">{he.verifyNext}</p>
-      <p className="text-sm font-medium text-fg">{he.openEmail}</p>
       {error ? <AuthAlert>{error}</AuthAlert> : null}
       {resent ? <p className="text-sm text-fg-muted">{he.verifyResent}</p> : null}
-      {email ? (
-        <Button
-          type="button"
-          variant="secondary"
-          loading={loading}
-          className="h-12 w-full"
-          onClick={() => void onResend()}
-        >
-          {he.verifyResend}
-        </Button>
-      ) : (
-        <Link to="/register" className="font-medium text-action hover:underline">
-          {he.registerPrimary}
+      <div className="flex flex-col gap-3">
+        {email ? (
+          <Button
+            type="button"
+            variant="primary"
+            loading={loading}
+            className="auth-cta h-12 w-full"
+            onClick={() => void onResend()}
+          >
+            {he.verifyResend}
+          </Button>
+        ) : null}
+        <Link to="/register" className="text-center text-sm font-medium text-action hover:underline">
+          {he.verifyChangeEmail}
         </Link>
-      )}
+      </div>
     </div>
   );
 }

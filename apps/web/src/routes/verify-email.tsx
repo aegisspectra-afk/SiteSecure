@@ -1,7 +1,6 @@
-import { LoadingBlock } from "@site-secure/ui";
 import { Link, Navigate, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AuthFooter, AuthLayout } from "../components/auth";
+import { AuthFooter, AuthLaunchScreen, AuthLayout } from "../components/auth";
 import { VerifyEmailPanel } from "../components/VerifyEmailPanel";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
@@ -25,11 +24,7 @@ function VerifyEmailPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (loading) {
-    return (
-      <AuthLayout title={he.verifyTitle} kicker={he.verifyKicker} heading={he.verifyTitle}>
-        <LoadingBlock label={he.loading} />
-      </AuthLayout>
-    );
+    return <AuthLaunchScreen phase="session" />;
   }
   if (user && session) return <Navigate to={afterAuthPath(session.has_workspace)} />;
 

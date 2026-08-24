@@ -1,10 +1,10 @@
-import { Button, Checkbox, cn } from "@site-secure/ui";
+import { Button, Checkbox } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { he } from "../i18n/he";
 import { getRememberDevice, setRememberDevice } from "../lib/remember-device";
-import { AuthAlert, AuthField, AuthForm, PasswordField } from "./auth";
+import { AuthAlert, AuthField, AuthForm, PasswordField, useAuthExperience } from "./auth";
 
 const schema = z.object({
   email: z.string().email(he.invalidEmail),
@@ -15,18 +15,22 @@ export function LoginForm({
   onSubmit,
   error,
   loading,
-  granted,
 }: {
   onSubmit: (email: string, password: string) => Promise<void>;
   error?: string | null;
   loading?: boolean;
-  granted?: boolean;
 }) {
+  const { setPasswordScan } = useAuthExperience();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(() => getRememberDevice());
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const busy = Boolean(loading || granted);
+  const busy = Boolean(loading);
+
+  useEffect(() => {
+    setPasswordScan(password.length);
+    return () => setPasswordScan(0);
+  }, [password, setPasswordScan]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,30 +51,36 @@ export function LoginForm({
   }
 
   return (
-    <AuthForm onSubmit={handleSubmit} aria-busy={busy || undefined}>
-      <AuthField
-        id="email"
-        name="email"
-        label={he.email}
-        type="email"
-        autoComplete="email"
-        ltr
-        value={email}
-        onChange={(ev) => setEmail(ev.target.value)}
-        error={fieldErrors.email}
-        disabled={busy}
-      />
-      <PasswordField
-        id="password"
-        name="password"
-        label={he.password}
-        autoComplete="current-password"
-        value={password}
-        onChange={(ev) => setPassword(ev.target.value)}
-        error={fieldErrors.password}
-        disabled={busy}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+    <AuthForm onSubmit={handleSubmit} aria-busy={busy || undefined} className="auth-login-form gap-5">
+      <div className="flex flex-col gap-4">
+        <AuthField
+          id="email"
+          name="email"
+          label={he.email}
+          type="email"
+          autoComplete="email"
+          ltr
+          value={email}
+          onChange={(ev) => setEmail(ev.target.value)}
+          error={fieldErrors.email}
+          disabled={busy}
+        />
+        <PasswordField
+          id="password"
+          name="password"
+          label={he.password}
+          autoComplete="current-password"
+          value={password}
+          onChange={(ev) => setPassword(ev.target.value)}
+          error={fieldErrors.password}
+          disabled={busy}
+        />
+        <Link
+          to="/forgot-password"
+          className="auth-forgot-link self-start text-sm text-fg-muted transition-colors duration-150 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          {he.loginSecondaryForgot}
+        </Link>
         <Checkbox
           id="remember"
           name="remember"
@@ -80,23 +90,19 @@ export function LoginForm({
           disabled={busy}
           className="accent-action"
         />
-        <Link
-          to="/forgot-password"
-          className="text-sm text-fg-muted hover:text-fg hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {he.loginSecondaryForgot}
-        </Link>
       </div>
+
       {error ? <AuthAlert>{error}</AuthAlert> : null}
+
       <Button
         type="submit"
         variant="primary"
-        loading={Boolean(loading) && !granted}
+        loading={busy}
         loadingLabel={he.authenticating}
-        disabled={granted}
-        className={cn("auth-cta mt-2 h-12 w-full", granted && "bg-action text-action-fg")}
+        disabled={busy}
+        className="auth-cta h-12 w-full"
       >
-        {granted ? he.accessGranted : he.loginPrimary}
+        {he.loginPrimary}
       </Button>
     </AuthForm>
   );

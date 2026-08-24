@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { OnboardingForm } from "../src/components/OnboardingForm";
 import { he } from "../src/i18n/he";
 import { can, canAny, canAll } from "../src/lib/can";
-import { appNav, bottomNav, liveTargetRouteHints, nextSidebarIndex, TARGET_IA } from "../src/lib/app-nav";
+import { appNav, bottomNav, liveTargetRouteHints, mobileMoreNav, mobileWorkNav, nextSidebarIndex, TARGET_IA } from "../src/lib/app-nav";
 import { roleGranted } from "../src/lib/role-catalog";
 
 describe("OnboardingForm", () => {
@@ -16,20 +16,9 @@ describe("OnboardingForm", () => {
         onEnter={vi.fn()}
       />,
     );
-    const items = screen.getAllByRole("listitem").map((el) => el.textContent ?? "");
-    expect(items).toHaveLength(4);
-    expect(items[0]).toContain(he.stepAccount);
-    expect(items[0]).toContain("✓");
-    expect(items[1]).toContain(he.stepProfile);
-    expect(items[1]).toContain("●");
-    expect(items[2]).toContain(he.stepWorkspace);
-    expect(items[2]).toContain("○");
-    expect(items[3]).toContain(he.stepReady);
-    expect(items[3]).toContain("○");
     expect(screen.getByLabelText(he.fullName)).toBeInTheDocument();
-    expect(screen.queryByLabelText(he.workspaceName)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(he.businessName)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.profileContinue })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: he.onboardingPrimary })).not.toBeInTheDocument();
   });
 
   it("names the signed-in email so workspace creation is not anonymous", () => {
@@ -55,15 +44,9 @@ describe("OnboardingForm", () => {
         onEnter={vi.fn()}
       />,
     );
-    const items = screen.getAllByRole("listitem").map((el) => el.textContent ?? "");
-    expect(items[1]).toContain("✓");
-    expect(items[2]).toContain("●");
-    expect(items[3]).toContain("○");
-    expect(screen.getByRole("button", { name: he.onboardingPrimary })).toBeInTheDocument();
-    expect(screen.getByLabelText(he.workspaceName)).toBeInTheDocument();
-    expect(screen.getByLabelText(he.timezone)).toHaveValue("Asia/Jerusalem");
-    expect(screen.getByLabelText(he.vat)).toHaveValue(18);
-    expect(screen.getByText(he.currencyValue)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.profileContinue })).toBeInTheDocument();
+    expect(screen.getByLabelText(he.businessName)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.businessType)).toBeInTheDocument();
     expect(screen.queryByText(/לקוח/)).not.toBeInTheDocument();
     expect(screen.queryByText(/הצעת מחיר/)).not.toBeInTheDocument();
   });
@@ -73,16 +56,30 @@ describe("OnboardingForm", () => {
       <OnboardingForm
         profileDone
         created
+        workspaceName="אגיס מערכות בע״מ"
         onSaveProfile={vi.fn()}
         onCreateWorkspace={vi.fn()}
         onEnter={vi.fn()}
       />,
     );
-    const items = screen.getAllByRole("listitem").map((el) => el.textContent ?? "");
-    expect(items[2]).toContain("✓");
-    expect(items[3]).toContain("●");
+    expect(screen.getByText("אגיס מערכות בע״מ")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.enterWorkspace })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.onboardingPrimary })).not.toBeInTheDocument();
+  });
+
+  it("shows beta welcome copy only for beta workspaces", () => {
+    render(
+      <OnboardingForm
+        profileDone
+        created
+        isBeta
+        workspaceName="אגיס מערכות בע״מ"
+        onSaveProfile={vi.fn()}
+        onCreateWorkspace={vi.fn()}
+        onEnter={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(he.onboardingBetaTitle, { exact: false })).toBeInTheDocument();
   });
 });
 
@@ -200,19 +197,27 @@ describe("appNav", () => {
 
   it("bottom nav is a short live spine, not a copied sidebar", () => {
     const kinds = (role: string, features: string[]) =>
-      bottomNav(role, features).map((item) => (item.kind === "more" ? "more" : item.to));
+      bottomNav(role, features).map((item) =>
+        item.kind === "more" ? "more" : item.kind === "work" ? "work" : item.to,
+      );
 
     expect(kinds("technician", solo)[0]).toBe("/app/today");
+    expect(kinds("technician", solo)).toContain("/app/customers");
+    expect(kinds("technician", solo)).toContain("work");
+    expect(kinds("technician", solo)).toContain("/app/tasks");
     expect(kinds("technician", solo)).toContain("more");
     expect(kinds("technician", solo).length).toBeLessThanOrEqual(5);
 
     expect(kinds("sales", solo)[0]).toBe("/app/dashboard");
-    expect(kinds("sales", solo)).toContain("/app/quotes");
+    expect(kinds("sales", solo)).toContain("/app/customers");
+    expect(kinds("sales", solo)).toContain("work");
+    expect(kinds("sales", solo)).not.toContain("/app/quotes");
     expect(kinds("sales", solo)).toContain("more");
 
     expect(kinds("owner", solo)[0]).toBe("/app/dashboard");
-    expect(kinds("owner", solo)).toContain("/app/quotes");
+    expect(kinds("owner", solo)).toContain("work");
     expect(kinds("owner", solo)).toContain("more");
+    expect(kinds("owner", solo)).not.toContain("/app/quotes");
     expect(kinds("owner", solo)).not.toContain("/app/settings");
     expect(kinds("owner", solo)).not.toContain("/app/settings/security");
 
@@ -227,6 +232,18 @@ describe("appNav", () => {
     for (const item of bottomNav("owner", solo)) {
       if (item.kind === "route") expect(owned.has(item.to)).toBe(true);
     }
+  });
+
+  it("mobile more excludes primary bottom and work destinations", () => {
+    const more = mobileMoreNav("owner", solo);
+    const morePaths = more.flatMap((g) => g.items.map((i) => i.to));
+    expect(morePaths).not.toContain("/app/dashboard");
+    expect(morePaths).not.toContain("/app/customers");
+    expect(morePaths).not.toContain("/app/tasks");
+    expect(morePaths).toContain("/app/projects");
+    expect(morePaths).toContain("/app/quotes");
+    expect(morePaths).toContain("/app/leads");
+    expect(mobileWorkNav("owner", solo).some((item) => item.to === "/app/sites")).toBe(true);
   });
 
   it("walks sidebar links with arrow keys and respects feature gates", () => {

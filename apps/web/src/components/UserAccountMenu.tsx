@@ -1,4 +1,4 @@
-import { LogOut, Settings, Shield, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, Settings, Shield, Users } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -15,6 +15,7 @@ import { he } from "../i18n/he";
 import { planLabel, roleLabelEn } from "../lib/app-nav";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 import { initialsFromName, placeAccountPopover } from "../lib/workspace-header";
+import { BetaBadge } from "./BetaBadge";
 
 function AvatarMark({ initials }: { initials: string }) {
   return (
@@ -64,6 +65,9 @@ export function UserAccountMenu({
   onSecurity,
   onUsers,
   onSignOut,
+  onAdmin,
+  isBeta = false,
+  isPlatformAdmin = false,
   variant = "header",
   compact = false,
 }: {
@@ -78,6 +82,9 @@ export function UserAccountMenu({
   onSecurity: () => void;
   onUsers?: () => void;
   onSignOut: () => void;
+  onAdmin?: () => void;
+  isBeta?: boolean;
+  isPlatformAdmin?: boolean;
   variant?: "header" | "sidebar";
   compact?: boolean;
 }) {
@@ -98,7 +105,7 @@ export function UserAccountMenu({
   const plan = planLabel(planKey);
   const tenure = [roleEn, plan].filter(Boolean).join(" · ");
   const showTeam = Boolean(canUsers && onUsers);
-  const showManage = canSettings || canSecurity || showTeam;
+  const showManage = canSettings || canSecurity || showTeam || Boolean(isPlatformAdmin && onAdmin);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -210,6 +217,7 @@ export function UserAccountMenu({
       {!compact ? (
         <span className={cn("min-w-0 flex-col", variant === "sidebar" ? "flex" : "hidden sm:flex")}>
           <span className="max-w-40 truncate text-sm font-medium text-fg">{displayName}</span>
+          {isBeta ? <BetaBadge className="mt-0.5 self-start" /> : null}
           {email ? <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{email}</span> : null}
         </span>
       ) : (
@@ -261,7 +269,10 @@ export function UserAccountMenu({
                 <div className="mt-3 flex items-center gap-3">
                   <AvatarMark initials={initials} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg">{displayName}</p>
+                    <p className="truncate text-sm font-medium text-fg">
+                      {displayName}
+                      {isBeta ? <BetaBadge className="ms-2 align-middle" /> : null}
+                    </p>
                     {email ? <p className="ltr-meta truncate text-xs text-fg-muted">{email}</p> : null}
                   </div>
                 </div>
@@ -290,6 +301,11 @@ export function UserAccountMenu({
                   {showTeam ? (
                     <AccountAction icon={<Users className="size-4" />} onClick={() => closeThen(onUsers!)}>
                       {he.navUsers}
+                    </AccountAction>
+                  ) : null}
+                  {isPlatformAdmin && onAdmin ? (
+                    <AccountAction icon={<LayoutDashboard className="size-4" />} onClick={() => closeThen(onAdmin)}>
+                      {he.adminNav}
                     </AccountAction>
                   ) : null}
                 </div>

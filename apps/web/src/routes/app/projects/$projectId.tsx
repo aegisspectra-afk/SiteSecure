@@ -1,12 +1,13 @@
 import { ApiClientError } from "@site-secure/api-client";
 import { Button, ErrorState, PageHeader, Status } from "@site-secure/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { addressLine } from "../../../components/modules/ModuleKit";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
+import { can } from "../../../lib/can";
 import { projectStatusLabel } from "../../../lib/customer-profile";
 import { formatDay } from "../../../lib/quotes";
 import { useSession } from "../../../lib/session";
@@ -27,8 +28,10 @@ function ProjectDetailBody() {
   const { projectId } = Route.useParams();
   const { session, api } = useSession();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
+  const canJobs = can(membership?.role_key, "jobs.create", membership?.features ?? []);
 
   const projectQuery = useQuery({
     queryKey: ["project", workspaceId, projectId],
@@ -50,6 +53,21 @@ function ProjectDetailBody() {
     queryKey: ["site", workspaceId, siteId],
     enabled: Boolean(workspaceId && siteId),
     queryFn: () => api.getSite(workspaceId!, siteId!),
+  });
+
+  const startInstall = useMutation({
+    mutationFn: () =>
+      api.createJob(workspaceId!, {
+        title: he.installationJobTitle(projectQuery.data?.name ?? siteQuery.data?.name ?? ""),
+        customer_id: customerId!,
+        site_id: siteId!,
+        kind: "installation",
+        project_id: projectId,
+      }),
+    onSuccess: (job) => {
+      void queryClient.invalidateQueries({ queryKey: ["site-jobs", workspaceId, siteId] });
+      void navigate({ to: "/app/jobs/$jobId", params: { jobId: job.id } });
+    },
   });
 
   const quoteQuery = useQuery({
@@ -101,6 +119,11 @@ function ProjectDetailBody() {
               >
                 <FileText className="size-4" aria-hidden />
                 {he.projectSourceQuoteLabel}
+              </Button>
+            ) : null}
+            {canJobs && customerId && siteId ? (
+              <Button type="button" loading={startInstall.isPending} onClick={() => startInstall.mutate()}>
+                {he.projectStartInstallation}
               </Button>
             ) : null}
           </div>

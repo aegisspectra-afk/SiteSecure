@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { LoadingBlock } from "@site-secure/ui";
+import { AuthLaunchScreen } from "../components/auth";
 import { PublicHome } from "../components/public/PublicHome";
-import { he } from "../i18n/he";
 import { hasAuthCallback } from "../lib/auth-redirect";
 
 export const Route = createFileRoute("/")({
@@ -19,6 +18,6 @@ function HomePage() {
     window.location.replace(`/login${window.location.search}${window.location.hash}`);
   }, [handoff]);
 
-  if (handoff) return <LoadingBlock label={he.loading} />;
+  if (handoff) return <AuthLaunchScreen phase="session" />;
   return <PublicHome />;
 }

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -18,10 +18,20 @@ from ..errors import MESSAGES, ApiError
 
 router = APIRouter(prefix="/api/v1", tags=["workspaces"])
 
+BusinessType = Literal[
+    "security_company",
+    "security_installer",
+    "low_voltage",
+    "integrator",
+    "electrician",
+    "other",
+]
+
 
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     plan_key: str | None = None
+    business_type: BusinessType | None = None
 
 
 class WorkspaceOut(BaseModel):
@@ -30,12 +40,17 @@ class WorkspaceOut(BaseModel):
     status: str
     timezone: str | None = None
     vat_percent: float | None = None
+    business_type: str | None = None
+    is_beta: bool = False
+    beta_program: str | None = None
+    beta_enrolled_at: str | None = None
 
 
 class WorkspacePatch(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
     timezone: str | None = None
     vat_percent: float | None = Field(default=None, ge=0, le=100)
+    business_type: BusinessType | None = None
 
 
 class InviteCreate(BaseModel):
@@ -53,6 +68,20 @@ class InviteOut(BaseModel):
 
 class InviteAccept(BaseModel):
     token: str = Field(min_length=16)
+
+
+def _workspace_out(row: dict) -> WorkspaceOut:
+    return WorkspaceOut(
+        id=row["id"],
+        name=row["name"],
+        status=row["status"],
+        timezone=row.get("timezone"),
+        vat_percent=float(row["vat_percent"]) if row.get("vat_percent") is not None else None,
+        business_type=row.get("business_type"),
+        is_beta=bool(row.get("is_beta")),
+        beta_program=row.get("beta_program"),
+        beta_enrolled_at=row.get("beta_enrolled_at"),
+    )
 
 
 def _raise_decision(decision) -> None:
@@ -82,21 +111,28 @@ def create_workspace(
     if ws.status_code != 200 or not ws.json():
         raise ApiError(500, "BUSINESS_RULE", "הסביבה נוצרה אך לא ניתן לטעון אותה")
     row = ws.json()[0]
+    if body.business_type:
+        patched = client.patch(
+            "workspaces",
+            {"business_type": body.business_type},
+            params={"id": f"eq.{workspace_id}"},
+        )
+        if patched.status_code in {200, 204} and patched.json():
+            row = patched.json()[0]
     write_audit(
         client,
         str(workspace_id),
         "workspace.create",
         entity_type="workspace",
         entity_id=str(workspace_id),
-        metadata={"result": "success", "name": row["name"], "role_key": "owner"},
+        metadata={
+            "result": "success",
+            "name": row["name"],
+            "role_key": "owner",
+            "business_type": row.get("business_type"),
+        },
     )
-    return WorkspaceOut(
-        id=row["id"],
-        name=row["name"],
-        status=row["status"],
-        timezone=row.get("timezone"),
-        vat_percent=float(row["vat_percent"]) if row.get("vat_percent") is not None else None,
-    )
+    return _workspace_out(row)
 
 
 @router.get("/workspaces/{workspace_id}", response_model=WorkspaceOut)
@@ -110,13 +146,7 @@ def get_workspace(
     if ws.status_code != 200 or not ws.json():
         raise ApiError(404, "NOT_FOUND", "לא נמצא")
     row = ws.json()[0]
-    return WorkspaceOut(
-        id=row["id"],
-        name=row["name"],
-        status=row["status"],
-        timezone=row.get("timezone"),
-        vat_percent=float(row["vat_percent"]) if row.get("vat_percent") is not None else None,
-    )
+    return _workspace_out(row)
 
 
 @router.patch("/workspaces/{workspace_id}", response_model=WorkspaceOut)
@@ -141,13 +171,7 @@ def patch_workspace(
         entity_id=str(workspace_id),
         metadata={"result": "success", "fields": sorted(patch.keys())},
     )
-    return WorkspaceOut(
-        id=row["id"],
-        name=row["name"],
-        status=row["status"],
-        timezone=row.get("timezone"),
-        vat_percent=float(row["vat_percent"]) if row.get("vat_percent") is not None else None,
-    )
+    return _workspace_out(row)
 
 
 @router.post("/workspaces/{workspace_id}/invitations", response_model=InviteOut)

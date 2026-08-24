@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from "./routes/__root"
 import { Route as IndexRouteImport } from "./routes/index"
+import { Route as AdminRouteRouteImport } from "./routes/admin/route"
 import { Route as AppRouteRouteImport } from "./routes/app/route"
 import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password"
 import { Route as LoginRouteImport } from "./routes/login"
@@ -17,6 +18,12 @@ import { Route as OnboardingRouteImport } from "./routes/onboarding"
 import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
+import { Route as AdminIndexRouteImport } from "./routes/admin/index"
+import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
+import { Route as AdminFeedbackRouteImport } from "./routes/admin/feedback"
+import { Route as AdminFlagsRouteImport } from "./routes/admin/flags"
+import { Route as AdminOrganizationsRouteImport } from "./routes/admin/organizations"
+import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
 import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
@@ -26,6 +33,7 @@ import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
 import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
 import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
+import { Route as AppJobsJobIdRouteImport } from "./routes/app/jobs/$jobId"
 import { Route as AppKnowledgeIndexRouteImport } from "./routes/app/knowledge/index"
 import { Route as AppLeadsIndexRouteImport } from "./routes/app/leads/index"
 import { Route as AppLeadsLeadIdRouteImport } from "./routes/app/leads/$leadId"
@@ -50,6 +58,11 @@ import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes
 const IndexRoute = IndexRouteImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: "/admin",
+  path: "/admin",
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -86,6 +99,36 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: "/verify-email",
   path: "/verify-email",
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBetaRoute = AdminBetaRouteImport.update({
+  id: "/beta",
+  path: "/beta",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
+  id: "/feedback",
+  path: "/feedback",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminFlagsRoute = AdminFlagsRouteImport.update({
+  id: "/flags",
+  path: "/flags",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
+  id: "/organizations",
+  path: "/organizations",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: "/users",
+  path: "/users",
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: "/",
@@ -130,6 +173,11 @@ const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
 const AppCustomersCustomerIdRoute = AppCustomersCustomerIdRouteImport.update({
   id: "/customers/$customerId",
   path: "/customers/$customerId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppJobsJobIdRoute = AppJobsJobIdRouteImport.update({
+  id: "/jobs/$jobId",
+  path: "/jobs/$jobId",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppKnowledgeIndexRoute = AppKnowledgeIndexRouteImport.update({
@@ -235,6 +283,7 @@ const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
+  "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
@@ -242,14 +291,21 @@ export interface FileRoutesByFullPath {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/admin/beta": typeof AdminBetaRoute
+  "/admin/feedback": typeof AdminFeedbackRoute
+  "/admin/flags": typeof AdminFlagsRoute
+  "/admin/organizations": typeof AdminOrganizationsRoute
+  "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
@@ -280,14 +336,21 @@ export interface FileRoutesByTo {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/admin/beta": typeof AdminBetaRoute
+  "/admin/feedback": typeof AdminFeedbackRoute
+  "/admin/flags": typeof AdminFlagsRoute
+  "/admin/organizations": typeof AdminOrganizationsRoute
+  "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
@@ -313,6 +376,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
+  "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
@@ -320,14 +384,21 @@ export interface FileRoutesById {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/admin/beta": typeof AdminBetaRoute
+  "/admin/feedback": typeof AdminFeedbackRoute
+  "/admin/flags": typeof AdminFlagsRoute
+  "/admin/organizations": typeof AdminOrganizationsRoute
+  "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
@@ -354,6 +425,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | "/"
+    | "/admin"
     | "/app"
     | "/forgot-password"
     | "/login"
@@ -361,14 +433,21 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/admin/beta"
+    | "/admin/feedback"
+    | "/admin/flags"
+    | "/admin/organizations"
+    | "/admin/users"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/admin/"
     | "/app/"
     | "/legal/"
     | "/app/customers/$customerId"
+    | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
@@ -399,14 +478,21 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/admin/beta"
+    | "/admin/feedback"
+    | "/admin/flags"
+    | "/admin/organizations"
+    | "/admin/users"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/admin"
     | "/app"
     | "/legal"
     | "/app/customers/$customerId"
+    | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
@@ -431,6 +517,7 @@ export interface FileRouteTypes {
   id:
     | "__root__"
     | "/"
+    | "/admin"
     | "/app"
     | "/forgot-password"
     | "/login"
@@ -438,14 +525,21 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/admin/beta"
+    | "/admin/feedback"
+    | "/admin/flags"
+    | "/admin/organizations"
+    | "/admin/users"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/admin/"
     | "/app/"
     | "/legal/"
     | "/app/customers/$customerId"
+    | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
@@ -471,6 +565,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AppRouteRoute: typeof AppRouteRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
@@ -491,6 +586,13 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/"
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/admin": {
+      id: "/admin"
+      path: "/admin"
+      fullPath: "/admin"
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/app": {
@@ -541,6 +643,48 @@ declare module "@tanstack/react-router" {
       fullPath: "/verify-email"
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    "/admin/": {
+      id: "/admin/"
+      path: "/"
+      fullPath: "/admin/"
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/beta": {
+      id: "/admin/beta"
+      path: "/beta"
+      fullPath: "/admin/beta"
+      preLoaderRoute: typeof AdminBetaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/feedback": {
+      id: "/admin/feedback"
+      path: "/feedback"
+      fullPath: "/admin/feedback"
+      preLoaderRoute: typeof AdminFeedbackRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/flags": {
+      id: "/admin/flags"
+      path: "/flags"
+      fullPath: "/admin/flags"
+      preLoaderRoute: typeof AdminFlagsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/organizations": {
+      id: "/admin/organizations"
+      path: "/organizations"
+      fullPath: "/admin/organizations"
+      preLoaderRoute: typeof AdminOrganizationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/users": {
+      id: "/admin/users"
+      path: "/users"
+      fullPath: "/admin/users"
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     "/app/": {
       id: "/app/"
@@ -603,6 +747,13 @@ declare module "@tanstack/react-router" {
       path: "/customers/$customerId"
       fullPath: "/app/customers/$customerId"
       preLoaderRoute: typeof AppCustomersCustomerIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/jobs/$jobId": {
+      id: "/app/jobs/$jobId"
+      path: "/jobs/$jobId"
+      fullPath: "/app/jobs/$jobId"
+      preLoaderRoute: typeof AppJobsJobIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/knowledge/": {
@@ -748,6 +899,28 @@ declare module "@tanstack/react-router" {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminBetaRoute: typeof AdminBetaRoute
+  AdminFeedbackRoute: typeof AdminFeedbackRoute
+  AdminFlagsRoute: typeof AdminFlagsRoute
+  AdminOrganizationsRoute: typeof AdminOrganizationsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminBetaRoute: AdminBetaRoute,
+  AdminFeedbackRoute: AdminFeedbackRoute,
+  AdminFlagsRoute: AdminFlagsRoute,
+  AdminOrganizationsRoute: AdminOrganizationsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 interface AppQuotesQuoteIdRouteChildren {
   AppQuotesQuoteIdPreviewRoute: typeof AppQuotesQuoteIdPreviewRoute
 }
@@ -765,6 +938,7 @@ interface AppRouteRouteChildren {
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
+  AppJobsJobIdRoute: typeof AppJobsJobIdRoute
   AppLeadsLeadIdRoute: typeof AppLeadsLeadIdRoute
   AppProjectsProjectIdRoute: typeof AppProjectsProjectIdRoute
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
@@ -792,6 +966,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
+  AppJobsJobIdRoute: AppJobsJobIdRoute,
   AppLeadsLeadIdRoute: AppLeadsLeadIdRoute,
   AppProjectsProjectIdRoute: AppProjectsProjectIdRoute,
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
@@ -819,6 +994,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,

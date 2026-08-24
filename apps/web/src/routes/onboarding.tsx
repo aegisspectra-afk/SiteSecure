@@ -1,10 +1,11 @@
-import { Button, ErrorState, LoadingBlock } from "@site-secure/ui";
+import { Button, ErrorState } from "@site-secure/ui";
 import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthLayout } from "../components/AuthLayout";
-import { AuthFooter } from "../components/auth";
+import { AuthFooter, AuthLaunchScreen, onboardingSteps } from "../components/auth";
 import { OnboardingForm } from "../components/OnboardingForm";
 import { he } from "../i18n/he";
+import { authLaunchSequence } from "../lib/auth-launch";
 import { afterAuthPath, guestEntryPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 
@@ -18,6 +19,10 @@ function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState(false);
+  const [createdName, setCreatedName] = useState<string | null>(null);
+  const [createdIsBeta, setCreatedIsBeta] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const [launchReady, setLaunchReady] = useState(false);
   const email = user?.email ?? session?.email ?? null;
   const accountFooter = (
     <AuthFooter
@@ -32,9 +37,10 @@ function OnboardingPage() {
 
   if (loading) {
     return (
-      <AuthLayout title={he.onboardingTitle} kicker={he.onboardingKicker} heading={he.onboardingTitle}>
-        <LoadingBlock label={he.loading} />
-      </AuthLayout>
+      <AuthLaunchScreen
+        phase={session?.has_workspace ? "workspace" : "session"}
+        workspaceName={session?.memberships[0]?.workspace_name}
+      />
     );
   }
   if (!user) return <Navigate to={guestEntryPath()} />;
@@ -45,6 +51,8 @@ function OnboardingPage() {
         kicker={he.onboardingKicker}
         heading={he.onboardingTitle}
         footer={accountFooter}
+        showTrust={false}
+        steps={onboardingSteps("profile")}
       >
         {email ? (
           <p className="mb-4 text-sm text-fg-muted">
@@ -64,9 +72,20 @@ function OnboardingPage() {
       </AuthLayout>
     );
   }
-  if (session?.has_workspace && !created) return <Navigate to={afterAuthPath(true)} />;
+  if (session?.has_workspace && !created && !entering) return <Navigate to={afterAuthPath(true)} />;
+
+  if (entering) {
+    return (
+      <AuthLaunchScreen
+        phase={launchReady ? "ready" : "workspace"}
+        workspaceName={createdName ?? session?.memberships[0]?.workspace_name}
+        ready={launchReady}
+      />
+    );
+  }
 
   const profileDone = Boolean(session?.profile?.full_name);
+  const stepKey = created ? "ready" : profileDone ? "workspace" : "profile";
   const heading = created
     ? he.onboardingReadyTitle
     : profileDone
@@ -78,13 +97,19 @@ function OnboardingPage() {
       title={he.onboardingTitle}
       kicker={he.onboardingKicker}
       heading={heading}
-      description={created ? he.onboardingReadyBody : undefined}
+      description={
+        created ? he.onboardingReadyBody : profileDone ? he.onboardingWorkspaceLead : undefined
+      }
+      steps={onboardingSteps(stepKey)}
       footer={accountFooter}
+      showTrust={false}
     >
       <OnboardingForm
         email={email}
         profileDone={profileDone}
         created={created}
+        workspaceName={createdName}
+        isBeta={createdIsBeta || Boolean(session?.memberships[0]?.is_beta)}
         loading={submitting}
         error={error}
         onSaveProfile={async (fullName) => {
@@ -99,14 +124,20 @@ function OnboardingPage() {
             setSubmitting(false);
           }
         }}
-        onCreateWorkspace={async ({ name, timezone, vatPercent }) => {
+        onCreateWorkspace={async ({ name, businessType }) => {
           setSubmitting(true);
           setError(null);
           try {
-            const ws = await api.createWorkspace({ name });
+            const ws = await api.createWorkspace({ name, business_type: businessType });
+            setCreatedName(ws.name ?? name);
+            setCreatedIsBeta(Boolean(ws.is_beta));
             setCreated(true);
             try {
-              await api.patchWorkspace(ws.id, { timezone, vat_percent: vatPercent });
+              await api.patchWorkspace(ws.id, {
+                timezone: "Asia/Jerusalem",
+                vat_percent: 18,
+                business_type: businessType,
+              });
             } catch {
               // Workspace exists; timezone/VAT defaults still apply.
             }
@@ -117,7 +148,17 @@ function OnboardingPage() {
             setSubmitting(false);
           }
         }}
-        onEnter={() => void navigate({ to: afterAuthPath(true) })}
+        onEnter={() => {
+          setEntering(true);
+          setLaunchReady(false);
+          void (async () => {
+            await authLaunchSequence({
+              onWorkspace: () => setLaunchReady(false),
+              onReady: () => setLaunchReady(true),
+            });
+            await navigate({ to: afterAuthPath(true) });
+          })();
+        }}
       />
     </AuthLayout>
   );

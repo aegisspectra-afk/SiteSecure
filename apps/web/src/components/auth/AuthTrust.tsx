@@ -1,20 +1,39 @@
-import { Lock } from "lucide-react";
+import { BookText, KeyRound, Lock } from "lucide-react";
+import { useState } from "react";
 import { he } from "../../i18n/he";
 
+const ITEMS = [
+  { id: "lock", icon: Lock, label: he.authTrustAccess, tip: he.authTrustAccessTip },
+  { id: "key", icon: KeyRound, label: he.authTrustRbacShort, tip: he.authTrustRbacTip },
+  { id: "audit", icon: BookText, label: he.authTrustAuditShort, tip: he.authTrustAuditTip },
+] as const;
+
 export function AuthTrust() {
+  const [openId, setOpenId] = useState<string | null>(null);
+
   return (
-    <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-2 text-xs text-fg-muted">
-        <Lock className="size-3.5 shrink-0 text-action" aria-hidden />
-        <span>{he.authTrustLead}</span>
-      </p>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1" dir="ltr">
-        {[he.authTrustAuth, he.authTrustRbac, he.authTrustAudit].map((item) => (
-          <li key={item} className="public-mono text-[10px] tracking-[0.12em] text-fg-muted">
-            {item}
+    <ul className="auth-trust" aria-label={he.authTrustQuiet}>
+      {ITEMS.map((item) => {
+        const Icon = item.icon;
+        const open = openId === item.id;
+        return (
+          <li key={item.id}>
+            <button
+              type="button"
+              className={open ? "auth-trust-item is-open" : "auth-trust-item"}
+              aria-describedby={`auth-trust-tip-${item.id}`}
+              onClick={() => setOpenId((current) => (current === item.id ? null : item.id))}
+              onBlur={() => setOpenId((current) => (current === item.id ? null : current))}
+            >
+              <Icon className="auth-trust-icon" aria-hidden strokeWidth={1.75} />
+              <span>{item.label}</span>
+              <span id={`auth-trust-tip-${item.id}`} role="tooltip" className="auth-trust-tip">
+                {item.tip}
+              </span>
+            </button>
           </li>
-        ))}
-      </ul>
-    </div>
+        );
+      })}
+    </ul>
   );
 }

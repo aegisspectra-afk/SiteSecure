@@ -115,23 +115,19 @@ export function QuoteDocument({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const sourceMeta: string[] = [];
+  // Import provenance (external quote # / "מקור:") stays internal — never on the customer doc.
   let lead = "";
-  if (quote.summary) {
-    if (isSourceMeta(quote.summary)) sourceMeta.push(quote.summary.trim());
-    else lead = quote.summary.trim();
-  }
-  if (quote.key_points) {
-    if (isSourceMeta(quote.key_points)) sourceMeta.push(quote.key_points.trim());
-    else if (!lead) lead = quote.key_points.trim();
-    else if (quote.key_points.trim() !== lead) sourceMeta.push(quote.key_points.trim());
+  if (quote.summary && !isSourceMeta(quote.summary)) lead = quote.summary.trim();
+  if (quote.key_points && !isSourceMeta(quote.key_points)) {
+    const kp = quote.key_points.trim();
+    if (!lead) lead = kp;
+    else if (kp !== lead) lead = `${lead}\n${kp}`;
   }
   const whoLine = [quote.customer?.display_name, siteName || siteAddress].filter(Boolean).join(" · ");
   const metaBits = [
     issued,
     until ? `${he.quoteValidUntil} ${until}` : null,
     quote.version ? he.quotesVersion(quote.version) : null,
-    ...sourceMeta,
   ].filter(Boolean);
   const digitallyApproved = Boolean(quote.approved_at && quote.approved_name);
 

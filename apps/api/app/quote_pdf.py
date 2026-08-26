@@ -119,18 +119,14 @@ def _is_source_meta(text: str) -> bool:
     return bool(_SOURCE_META_RE.search(t) or _SOURCE_NUM_RE.search(t))
 
 
-def _split_intro(document: dict) -> tuple[str, str, list[str]]:
-    """Primary title + demoted source/meta lines (external quote refs, etc.)."""
+def _split_intro(document: dict) -> tuple[str, str]:
+    """Primary title + customer lead. Import provenance is dropped, not shown."""
     title = _txt(document.get("title"))
     summary = _txt(document.get("summary"))
     key_points = _txt(document.get("key_points"))
-    meta_bits: list[str] = []
 
     def take(raw: str) -> str | None:
-        if not raw:
-            return None
-        if _is_source_meta(raw):
-            meta_bits.append(raw)
+        if not raw or _is_source_meta(raw):
             return None
         return raw
 
@@ -138,13 +134,10 @@ def _split_intro(document: dict) -> tuple[str, str, list[str]]:
     kp_kept = take(key_points)
     lead = summary_kept or ""
     if kp_kept and kp_kept != lead:
-        if lead:
-            meta_bits.append(kp_kept)
-        else:
-            lead = kp_kept
+        lead = f"{lead}\n{kp_kept}".strip() if lead else kp_kept
     if lead and title and lead == title:
         lead = ""
-    return title, lead, meta_bits
+    return title, lead
 
 
 def _scrub_internal(document: dict) -> dict:
@@ -329,7 +322,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     currency = _txt(document.get("currency")) or "ILS"
     status = _txt(document.get("status"))
     status_label = _status_he(status)
-    title, lead, source_meta = _split_intro(document)
+    title, lead = _split_intro(document)
     customer_name = _txt(customer.get("display_name"))
     site_name = _txt(site.get("name") or document.get("project_name"))
     raw_addr = site.get("address")
@@ -382,7 +375,6 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     issued = _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
     until = _date_he(document.get("valid_until"))
     meta = [m for m in (issued, f"בתוקף עד {until}" if until else "", f"גרסה {_ltr(version)}") if m]
-    meta.extend(source_meta)
     if meta:
         pdf.set_text_color(*MUTED)
         _font(pdf, size=8.5)

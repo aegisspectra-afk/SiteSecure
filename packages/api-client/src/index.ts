@@ -16,6 +16,39 @@ export class ApiClientError extends Error {
 }
 
 export const API_UNAVAILABLE_HE = "לא ניתן להתחבר לשרת. Onboarding דורש FastAPI זמין.";
+export const ROUTE_NOT_FOUND_HE = "הנתיב לא נמצא בשרת (ייתכן שגרסת ה-API ישנה).";
+
+/** Map FastAPI/Site Secure error JSON (or Starlette `{detail}`) into ApiClientError fields. */
+export function apiErrorFromBody(
+  status: number,
+  body: unknown,
+): { code: string; message: string; details: Record<string, unknown> } {
+  const obj = (body && typeof body === "object" ? body : {}) as ApiErrorBody & {
+    detail?: unknown;
+  };
+  if (obj.error?.code || obj.error?.message) {
+    return {
+      code: obj.error?.code ?? "BUSINESS_RULE",
+      message: obj.error?.message ?? API_UNAVAILABLE_HE,
+      details: obj.error?.details ?? {},
+    };
+  }
+  // Unmatched routes / HTTPException from Starlette: {"detail":"Not Found"}
+  if (typeof obj.detail === "string" && obj.detail.trim()) {
+    if (status === 404) {
+      return { code: "NOT_FOUND", message: ROUTE_NOT_FOUND_HE, details: { detail: obj.detail } };
+    }
+    return {
+      code: status === 401 ? "UNAUTHENTICATED" : "BUSINESS_RULE",
+      message: obj.detail,
+      details: { detail: obj.detail },
+    };
+  }
+  if (status === 404 || status === 405) {
+    return { code: "API_UNAVAILABLE", message: API_UNAVAILABLE_HE, details: {} };
+  }
+  return { code: "BUSINESS_RULE", message: API_UNAVAILABLE_HE, details: {} };
+}
 
 export async function parseApiResponse<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
@@ -34,13 +67,8 @@ export async function parseApiResponse<T>(res: Response): Promise<T> {
     throw new ApiClientError(res.status, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
   }
   if (!res.ok) {
-    const err = json as ApiErrorBody;
-    throw new ApiClientError(
-      res.status,
-      err.error?.code ?? "BUSINESS_RULE",
-      err.error?.message ?? API_UNAVAILABLE_HE,
-      err.error?.details ?? {},
-    );
+    const mapped = apiErrorFromBody(res.status, json);
+    throw new ApiClientError(res.status, mapped.code, mapped.message, mapped.details);
   }
   return json as T;
 }
@@ -863,16 +891,16 @@ export function createApiClient(opts: {
       throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
     }
     if (!res.ok) {
-      let code = "BUSINESS_RULE";
-      let message = API_UNAVAILABLE_HE;
+      let mapped = apiErrorFromBody(res.status, null);
       try {
-        const err = (await res.json()) as ApiErrorBody;
-        code = err.error?.code ?? code;
-        message = err.error?.message ?? message;
+        mapped = apiErrorFromBody(res.status, await res.json());
       } catch {
-        /* binary error body */
+        /* binary / empty / HTML error body */
+        if (res.status === 404 || res.status === 405) {
+          mapped = { code: "API_UNAVAILABLE", message: API_UNAVAILABLE_HE, details: {} };
+        }
       }
-      throw new ApiClientError(res.status, code, message);
+      throw new ApiClientError(res.status, mapped.code, mapped.message, mapped.details);
     }
     const disposition = res.headers.get("Content-Disposition") || "";
     const match = /filename\*?=(?:UTF-8''|")?([^\";]+)"?/i.exec(disposition);

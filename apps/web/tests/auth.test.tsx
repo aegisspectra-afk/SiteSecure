@@ -107,6 +107,18 @@ describe("parseApiResponse", () => {
     });
   });
 
+  it("maps FastAPI unmatched-route detail JSON to NOT_FOUND, not API_UNAVAILABLE", async () => {
+    const res = new Response(JSON.stringify({ detail: "Not Found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+    await expect(parseApiResponse(res)).rejects.toMatchObject({
+      status: 404,
+      code: "NOT_FOUND",
+      message: expect.stringMatching(/נתיב|לא נמצא/),
+    });
+  });
+
   it("does not call a relative /api URL when the API origin is missing", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const client = createApiClient({ baseUrl: "", getAccessToken: async () => "token" });

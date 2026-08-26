@@ -475,7 +475,11 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
                 row = table.row()
                 if show_discount:
                     disc = item.get("discount")
-                    disc_s = _qty(disc) if float(disc or 0) else "—"
+                    dtype = str(item.get("discount_type") or "amount").lower()
+                    if float(disc or 0):
+                        disc_s = f"{_qty(disc)}%" if dtype in {"percent", "%"} else _money_cell(disc, currency)
+                    else:
+                        disc_s = "—"
                     row.cell(_money_cell(item.get("line_net"), currency))
                     row.cell(disc_s)
                     row.cell(_money_cell(item.get("unit_price"), currency))

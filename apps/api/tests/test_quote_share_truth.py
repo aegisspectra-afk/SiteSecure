@@ -1,6 +1,8 @@
-"""Share link must not mark a quote as sent."""
+"""Share link must not mark a quote as sent; draft mint is allowed in current API."""
 
 from __future__ import annotations
+
+import inspect
 
 from app.routers import quotes as quotes_router
 
@@ -13,3 +15,10 @@ def test_shareable_states_exclude_draft():
 def test_share_quote_docstring_forbids_auto_sent():
     doc = (quotes_router.share_quote.__doc__ or "").lower()
     assert "must not mark" in doc or "לא" in (quotes_router.share_quote.__doc__ or "")
+
+
+def test_share_quote_source_allows_draft_branch():
+    """Regression: staging once rejected draft with RESOURCE_STATE unless status in {sent, viewed}."""
+    src = inspect.getsource(quotes_router.share_quote)
+    assert 'status == "draft"' in src
+    assert 'status not in {"sent", "viewed"}' not in src

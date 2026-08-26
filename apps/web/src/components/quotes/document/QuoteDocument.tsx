@@ -10,7 +10,13 @@ function headerDiscountLabel(quote: PublicQuote): string | null {
   return formatMoney(value, quote.currency || "ILS");
 }
 
-function moneyOrIncluded(amount: number | null | undefined, currency: string) {
+function formatLineDiscount(item: PublicQuote["items"][number], currency: string): string {
+  const value = Number(item.discount || 0);
+  if (value <= 0) return "";
+  const dtype = (item.discount_type || "amount").toLowerCase();
+  if (dtype === "percent" || dtype === "%") return `${value}%`;
+  return formatMoney(value, currency);
+}
   if (amount == null || Math.abs(Number(amount)) < 0.005) return he.quoteDocIncluded;
   return formatMoney(amount, currency);
 }
@@ -355,7 +361,7 @@ function LineRow({
       <td className="ltr-meta">{isNote ? "" : moneyOrIncluded(item.unit_price, currency)}</td>
       {showDiscount ? (
         <td className="ltr-meta">
-          {isNote || !Number(item.discount || 0) ? "" : formatMoney(item.discount, currency)}
+          {isNote || !Number(item.discount || 0) ? "" : formatLineDiscount(item, currency)}
         </td>
       ) : null}
       <td className="ltr-meta">{isNote ? "" : moneyOrIncluded(item.line_net, currency)}</td>

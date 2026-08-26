@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import pricing
@@ -17,6 +18,7 @@ from ..deps import UserClient, current_user, load_authz_context, service_client,
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
+from ..quote_pdf import render_quote_pdf
 from ..quote_snapshot import catalog_line_snapshot, public_payload, version_snapshot
 from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
@@ -24,6 +26,9 @@ from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or
 from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["quotes"])
+
+SHAREABLE_STATES = frozenset({"sent", "viewed", "approved"})
+# Draft may mint a secure link without marking the quote as sent.
 
 QUOTE_SELECT = (
     "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,"
@@ -51,7 +56,8 @@ SECTION_SELECT = (
     "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
 )
 PRODUCT_SELECT = (
-    "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active"
+    "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
+    "manufacturer,model,attributes"
 )
 COST_FIELDS = ("cost_total", "margin_amount", "margin_percent")
 ITEM_COST_FIELDS = ("cost",)
@@ -107,6 +113,8 @@ class QuoteItemIn(BaseModel):
     product_id: str | None = None
     item_type: str = "free"
     description: str = ""
+    sku: str | None = None
+    name: str | None = None
     qty: float = Field(default=1, ge=0)
     unit_price: float | None = Field(default=None, ge=0)
     cost: float | None = Field(default=None, ge=0)
@@ -122,6 +130,7 @@ class QuoteItemIn(BaseModel):
 class QuoteItemPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     description: str | None = None
+    sku: str | None = None
     qty: float | None = Field(default=None, ge=0)
     unit_price: float | None = Field(default=None, ge=0)
     cost: float | None = Field(default=None, ge=0)
@@ -379,6 +388,19 @@ def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: Q
             cost = float(product.get("cost") or 0)
         if item_type == "free":
             item_type = "labor" if product.get("kind") == "service" or product.get("is_labor") else "catalog"
+    else:
+        # Free / manual line — allow optional SKU + display name from request body
+        if body.sku is not None:
+            sku = body.sku.strip() or None
+        if body.name is not None:
+            name = body.name.strip() or None
+        elif description:
+            name = description
+    # Catalog-linked lines: allow override SKU from body when explicitly provided
+    if body.product_id and body.sku is not None:
+        sku = body.sku.strip() or None
+    if body.product_id and body.name is not None:
+        name = body.name.strip() or None
     if unit_price is None:
         unit_price = 0
     if cost is None:
@@ -470,7 +492,7 @@ def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items:
 
 def _public_url(token: str) -> str:
     base = get_settings().web_public_url.rstrip("/")
-    return f"{base}/public/quotes/{token}"
+    return f"{base}/q/{token}"
 
 
 def _revoke_public_access(svc: ServiceClient, workspace_id: UUID, quote_id: UUID) -> None:
@@ -515,10 +537,22 @@ def _related(client: UserClient, workspace_id: UUID, quote: dict) -> tuple[dict,
         "customers",
         quote.get("customer_id"),
         workspace_id,
-        "id,display_name,email,phone",
+        "id,display_name,email,phone,billing_address",
     )
     site = _maybe_row(client, "sites", quote.get("site_id"), workspace_id, "id,name,address")
     return workspace, customer, site
+
+
+def _access_expires_at(quote: dict) -> str | None:
+    """Optional mint TTL = valid_until end-of-day UTC when present."""
+    raw = str(quote.get("valid_until") or "").strip()
+    if not raw:
+        return None
+    try:
+        until = date.fromisoformat(raw[:10])
+    except ValueError:
+        return None
+    return datetime.combine(until, time(23, 59, 59), tzinfo=UTC).isoformat()
 
 
 def _mint_access(svc: ServiceClient, quote: dict, token: str) -> None:
@@ -530,9 +564,129 @@ def _mint_access(svc: ServiceClient, quote: dict, token: str) -> None:
                 "quote_id": quote["id"],
                 "version": quote.get("version") or 1,
                 "token_hash": hash_public_token(token),
-                "expires_at": None,
+                "expires_at": _access_expires_at(quote),
             },
         )
+    )
+
+
+def _upsert_version_snapshot(
+    client: UserClient,
+    user: dict,
+    workspace_id: UUID,
+    quote: dict,
+    items: list[dict],
+    *,
+    snapshot_status: str,
+) -> None:
+    """Freeze (or refresh) the customer-facing snapshot for the current quote version."""
+    quote_id = UUID(str(quote["id"]))
+    version = int(quote.get("version") or 1)
+    workspace, customer, site = _related(client, workspace_id, quote)
+    settings = _load_quote_settings(client, workspace_id)
+    branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
+    sections = _load_sections(client, workspace_id, quote_id)
+    snapshot = version_snapshot(
+        quote,
+        items,
+        workspace=workspace,
+        customer=customer,
+        site=site,
+        status=snapshot_status,
+        sections=sections,
+        branding=branding,
+    )
+    existing = as_list(
+        client.get(
+            "quote_versions",
+            params={
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "version": f"eq.{version}",
+                "select": "id",
+            },
+        )
+    )
+    if existing:
+        acked_or_403(
+            client.patch(
+                "quote_versions",
+                {"snapshot": snapshot},
+                params={
+                    "id": f"eq.{existing[0]['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                },
+                prefer="return=minimal",
+            )
+        )
+        return
+    created_or_403(
+        client.post(
+            "quote_versions",
+            {
+                "workspace_id": str(workspace_id),
+                "quote_id": str(quote_id),
+                "version": version,
+                "snapshot": snapshot,
+                "created_by": actor_id(user),
+            },
+        )
+    )
+
+
+def _prepare_share_link(
+    client: UserClient,
+    svc: ServiceClient,
+    user: dict,
+    workspace_id: UUID,
+    existing: dict,
+    *,
+    require_complete: bool,
+) -> tuple[dict, list[dict], str]:
+    """Validate (optional), upsert snapshot, mint token. Never changes quote status."""
+    quote_id = UUID(str(existing["id"]))
+    items = _load_items(client, workspace_id, quote_id)
+    existing, items = _persist_totals(client, workspace_id, existing, items)
+    workspace, _customer, _site = _related(client, workspace_id, existing)
+    settings = _load_quote_settings(client, workspace_id)
+    if require_complete:
+        gaps = validate_for_send(existing, items, workspace, settings)
+        if gaps:
+            raise ApiError(400, "QUOTE_INCOMPLETE", MESSAGES["QUOTE_INCOMPLETE"], {"gaps": gaps})
+        soft = advisory_checks(existing, items, workspace, settings)
+        _ = soft
+    status = str(existing.get("status") or "draft")
+    _upsert_version_snapshot(
+        client,
+        user,
+        workspace_id,
+        existing,
+        items,
+        snapshot_status=status if status != "draft" else "draft",
+    )
+    token = new_public_token()
+    _mint_access(svc, existing, token)
+    return existing, items, token
+
+
+def _document_payload(
+    client: UserClient,
+    workspace_id: UUID,
+    quote: dict,
+    items: list[dict],
+) -> dict:
+    workspace, customer, site = _related(client, workspace_id, quote)
+    sections = _load_sections(client, workspace_id, UUID(quote["id"]))
+    settings = _load_quote_settings(client, workspace_id)
+    branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
+    return public_payload(
+        quote,
+        items,
+        workspace=workspace,
+        customer=customer,
+        site=site,
+        sections=sections,
+        branding=branding,
     )
 
 
@@ -655,7 +809,10 @@ def patch_quote(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(existing))
-    patch = body.model_dump(exclude_none=True)
+    # Allow explicit nulls for FK clears (customer/site/lead replacement).
+    clearable = {"customer_id", "site_id", "lead_id", "template_id"}
+    raw = body.model_dump(exclude_unset=True)
+    patch = {k: v for k, v in raw.items() if v is not None or k in clearable}
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
     if any(k in patch for k in ("total_gross", "subtotal_net", "vat_amount", "cost_total")):
@@ -910,48 +1067,41 @@ def send_quote(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.send", resource=_ref(existing))
+    row, items, token = _transition_to_sent(client, svc, user, workspace_id, existing)
+    out = _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
+    out["public_url"] = _public_url(token)
+    out["public_token"] = token
+    return out
+
+
+def _transition_to_sent(
+    client: UserClient,
+    svc: ServiceClient,
+    user: dict,
+    workspace_id: UUID,
+    existing: dict,
+) -> tuple[dict, list[dict], str]:
+    """Validate, snapshot, mark sent, mint public token. Caller must authorize quotes.send."""
+    quote_id = UUID(str(existing["id"]))
     items = _load_items(client, workspace_id, quote_id)
     existing, items = _persist_totals(client, workspace_id, existing, items)
-    workspace, customer, site = _related(client, workspace_id, existing)
+    workspace, _customer, _site = _related(client, workspace_id, existing)
     settings = _load_quote_settings(client, workspace_id)
     gaps = validate_for_send(existing, items, workspace, settings)
     if gaps:
         raise ApiError(400, "QUOTE_INCOMPLETE", MESSAGES["QUOTE_INCOMPLETE"], {"gaps": gaps})
-    # Low margin without override is warning only — never silent invent; managers can override
     soft = advisory_checks(existing, items, workspace, settings)
-    margin_criticalish = [g for g in soft if g.get("code") == "margin_below_minimum"]
-    if margin_criticalish and not existing.get("margin_override_at"):
-        # Still allow send (Phase 2: warning), but surface in response metadata via validation
-        pass
+    _ = soft  # advisory only — never blocks send
     now = datetime.now(UTC).isoformat()
     version = int(existing.get("version") or 1)
-    already = as_list(
-        client.get(
-            "quote_versions",
-            params={
-                "quote_id": f"eq.{quote_id}",
-                "workspace_id": f"eq.{workspace_id}",
-                "version": f"eq.{version}",
-                "select": "id",
-            },
-        )
+    _upsert_version_snapshot(
+        client,
+        user,
+        workspace_id,
+        existing,
+        items,
+        snapshot_status="sent",
     )
-    if not already:
-        snapshot = version_snapshot(
-            existing, items, workspace=workspace, customer=customer, site=site, status="sent"
-        )
-        created_or_403(
-            client.post(
-                "quote_versions",
-                {
-                    "workspace_id": str(workspace_id),
-                    "quote_id": str(quote_id),
-                    "version": version,
-                    "snapshot": snapshot,
-                    "created_by": actor_id(user),
-                },
-            )
-        )
     row = patched_or_403(
         client.patch(
             "quotes",
@@ -977,10 +1127,7 @@ def send_quote(
         entity_id=str(quote_id),
         metadata={"version": version},
     )
-    out = _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
-    out["public_url"] = _public_url(token)
-    out["public_token"] = token
-    return out
+    return row, items, token
 
 
 @router.post("/quotes/{quote_id}/revise")
@@ -1054,14 +1201,101 @@ def share_quote(
     user: Annotated[dict, Depends(current_user)],
     svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
+    """Mint (or re-mint) a secure customer link.
+
+    Creating a link must NOT mark the quote as sent. Sent/locked is an explicit
+    `/send` action (or customer first-open promotion on the public route).
+    """
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
+    # Capability check only — reminting a link on sent/viewed/approved must not hit
+    # QUOTE_SENDABLE (draft-only). Draft still validates completeness below.
     require(ctx, "quotes.send")
-    if existing.get("status") not in {"sent", "viewed"}:
-        raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": existing.get("status")})
-    token = new_public_token()
-    _mint_access(svc, existing, token)
-    return {"public_url": _public_url(token), "public_token": token}
+    status = existing.get("status")
+    if status == "draft":
+        require(ctx, "quotes.send", resource=_ref(existing))
+        existing, _items, token = _prepare_share_link(
+            client,
+            svc,
+            user,
+            workspace_id,
+            existing,
+            require_complete=True,
+        )
+        event_type = "share_link_created"
+    elif status in SHAREABLE_STATES:
+        existing, _items, token = _prepare_share_link(
+            client,
+            svc,
+            user,
+            workspace_id,
+            existing,
+            require_complete=False,
+        )
+        event_type = "shared"
+    else:
+        raise ApiError(
+            403,
+            "RESOURCE_STATE",
+            "לא ניתן ליצור קישור במצב הנוכחי של ההצעה",
+            {"state": status},
+        )
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        event_type,
+        actor_id(user),
+        {"version": existing.get("version") or 1},
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.share_link",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"version": existing.get("version") or 1, "event": event_type},
+    )
+    return {
+        "public_url": _public_url(token),
+        "public_token": token,
+        "status": existing.get("status"),
+        "link_created": True,
+        # Always false — kept for older clients that checked this flag.
+        "auto_sent": False,
+    }
+
+
+@router.post("/quotes/{quote_id}/revoke-link")
+def revoke_quote_link(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    # Capability only — revoke is used on sent/viewed/approved links; QUOTE_SENDABLE is draft-only.
+    require(ctx, "quotes.send")
+    _revoke_public_access(svc, workspace_id, quote_id)
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "link_revoked",
+        actor_id(user),
+        {"version": existing.get("version") or 1},
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.revoke_link",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"version": existing.get("version") or 1},
+    )
+    return {"ok": True}
 
 
 @router.delete("/quotes/{quote_id}")
@@ -1186,9 +1420,9 @@ def preview_quote(
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
 ) -> dict:
+    """Back-compat alias of /document — same customer-facing payload."""
     ctx = _ctx(client, user, workspace_id)
     row = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.view", resource=_ref(row))
     items = _load_items(client, workspace_id, quote_id)
-    workspace, customer, site = _related(client, workspace_id, row)
-    return public_payload(row, items, workspace=workspace, customer=customer, site=site)
+    return _document_payload(client, workspace_id, row, items)

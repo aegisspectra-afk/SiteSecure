@@ -162,6 +162,8 @@ def test_quote_approved_cannot_be_deleted():
         resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state="sent"),
     )
     assert d.allowed is False
+    # Capability-only send (no resource) stays allowed — used by share remint / revoke-link.
+    assert authorize(ctx=_ctx("sales"), action="quotes.send").allowed is True
 
 
 def test_quote_revise_from_sent():

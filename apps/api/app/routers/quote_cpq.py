@@ -16,7 +16,6 @@ from ..authz.types import ResourceRef
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
-from ..quote_snapshot import public_payload
 from ..quote_validation import critical_gaps_only
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
 from .quotes import (
@@ -24,13 +23,13 @@ from .quotes import (
     QuoteItemIn,
     _can_view_cost,
     _ctx,
+    _document_payload,
     _insert_line,
     _load_items,
     _load_quote,
     _persist_totals,
     _record_event,
     _ref,
-    _related,
     _with_validation,
 )
 
@@ -694,10 +693,9 @@ def compare_versions(
     if to_ver == int(existing.get("version") or 1) and right is None:
         # Live draft vs last issued — synthesize right from live public shape
         items = _load_items(client, workspace_id, quote_id)
-        workspace, customer, site = _related(client, workspace_id, existing)
         right = {
             "version": to_ver,
-            "snapshot": {"public": public_payload(existing, items, workspace=workspace, customer=customer, site=site)},
+            "snapshot": {"public": _document_payload(client, workspace_id, existing, items)},
         }
     if not left or not right:
         raise ApiError(404, "NOT_FOUND", "לא נמצאה גרסה להשוואה")
@@ -768,6 +766,43 @@ def list_events(
     return {"items": rows}
 
 
+class QuoteEventIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    event_type: str = Field(min_length=2, max_length=64)
+    metadata: dict = Field(default_factory=dict)
+
+
+ALLOWLISTED_CLIENT_EVENTS = frozenset(
+    {"preview_opened", "pdf_generated", "whatsapp_share_initiated", "share_link_copied"}
+)
+
+
+@router.post("/quotes/{quote_id}/events")
+def create_quote_event(
+    workspace_id: UUID,
+    quote_id: UUID,
+    body: QuoteEventIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.view", resource=_ref(existing))
+    event_type = body.event_type.strip()
+    if event_type not in ALLOWLISTED_CLIENT_EVENTS:
+        raise ApiError(400, "VALIDATION_ERROR", "סוג אירוע לא מורשה")
+    meta = body.metadata if isinstance(body.metadata, dict) else {}
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        event_type,
+        actor_id(user),
+        {**meta, "version": existing.get("version") or 1},
+    )
+    return {"ok": True, "event_type": event_type}
+
+
 @router.get("/quotes/{quote_id}/document")
 def quote_document(
     workspace_id: UUID,
@@ -780,18 +815,35 @@ def quote_document(
     row = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.view", resource=_ref(row))
     items = _load_items(client, workspace_id, quote_id)
-    sections = _load_sections(client, workspace_id, quote_id)
-    workspace, customer, site = _related(client, workspace_id, row)
-    settings = _load_settings(client, workspace_id)
-    payload = public_payload(row, items, workspace=workspace, customer=customer, site=site)
-    payload["sections"] = [
-        {"id": s["id"], "name": s.get("name"), "sort_order": s.get("sort_order")} for s in sections
-    ]
-    branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
-    payload["company"] = {
-        **(payload.get("company") or {}),
-        "logo_url": branding.get("logo_url"),
-        "brand_name": branding.get("name") or workspace.get("name"),
-    }
-    payload["pdf_ready"] = True
-    return payload
+    return _document_payload(client, workspace_id, row, items)
+
+
+@router.get("/quotes/{quote_id}/pdf")
+def quote_pdf(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    inline: bool = False,
+):
+    """Binary PDF from the same canonical document payload as preview/customer view."""
+    from ..pdf_response import pdf_response
+    from ..quote_pdf import render_quote_pdf
+
+    ctx = _ctx(client, user, workspace_id)
+    row = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.view", resource=_ref(row))
+    items = _load_items(client, workspace_id, quote_id)
+    document = _document_payload(client, workspace_id, row, items)
+    for banned in ("cost_total", "margin_amount", "margin_percent", "internal_notes", "cost"):
+        document.pop(banned, None)
+    pdf_bytes, filename = render_quote_pdf(document)
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "pdf_generated",
+        actor_id(user),
+        {"version": row.get("version") or 1, "filename": filename},
+    )
+    return pdf_response(pdf_bytes, filename, inline=inline)

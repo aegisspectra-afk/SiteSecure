@@ -326,6 +326,8 @@ export type QuoteItemIn = {
   product_id?: string;
   item_type?: string;
   description?: string;
+  sku?: string | null;
+  name?: string | null;
   qty?: number;
   unit_price?: number;
   cost?: number;
@@ -336,6 +338,49 @@ export type QuoteItemIn = {
   package_instance_id?: string | null;
   package_id?: string | null;
   package_name?: string | null;
+};
+
+export type CatalogAttributeField = {
+  key: string;
+  label_he: string;
+  type: "text" | "bool" | string;
+};
+
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  unit: string;
+  kind: string;
+  list_price: number;
+  selling_price?: number;
+  cost?: number;
+  vat_eligible?: boolean;
+  tax?: boolean;
+  active?: boolean;
+  is_active?: boolean;
+  item_type?: string;
+  category_id?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  attributes?: Record<string, unknown>;
+  category_key?: string | null;
+  category_name?: string | null;
+  category_path?: string | null;
+  attribute_schema?: CatalogAttributeField[];
+};
+
+export type CatalogCategory = {
+  id: string;
+  key: string;
+  name_he: string;
+  sort_order?: number;
+  parent_id?: string | null;
+  parent_key?: string | null;
+  path?: string | null;
+  attribute_schema?: CatalogAttributeField[];
+  children?: CatalogCategory[];
 };
 
 export type QuotePackage = {
@@ -372,31 +417,6 @@ export type QuoteEvent = {
   actor_id?: string | null;
   metadata?: Record<string, unknown>;
   created_at: string;
-};
-
-export type CatalogProduct = {
-  id: string;
-  name: string;
-  sku: string;
-  description?: string;
-  unit: string;
-  kind: string;
-  list_price: number;
-  selling_price?: number;
-  cost?: number;
-  vat_eligible?: boolean;
-  tax?: boolean;
-  active?: boolean;
-  is_active?: boolean;
-  item_type?: string;
-  category_id?: string | null;
-};
-
-export type CatalogCategory = {
-  id: string;
-  key: string;
-  name_he: string;
-  sort_order?: number;
 };
 
 export type QuoteTemplate = {
@@ -574,8 +594,8 @@ export type PublicQuote = {
   version: number;
   status: string;
   superseded: boolean;
-  can_approve: boolean;
-  can_reject: boolean;
+  can_approve?: boolean;
+  can_reject?: boolean;
   title?: string | null;
   summary?: string | null;
   key_points?: string | null;
@@ -593,15 +613,42 @@ export type PublicQuote = {
   subtotal_net: number;
   vat_amount: number;
   total_gross: number;
-  company: { name?: string | null; logo_url?: string | null; brand_name?: string | null };
-  customer: { display_name?: string | null; email?: string | null; phone?: string | null } | null;
+  company: {
+    name?: string | null;
+    legal_name?: string | null;
+    logo_url?: string | null;
+    brand_name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: unknown;
+    website?: string | null;
+  };
+  customer: {
+    display_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: Record<string, unknown>;
+    address_line?: string | null;
+  } | null;
   site: { name?: string | null; address?: Record<string, unknown> } | null;
   items: QuoteItemOut[];
   sections?: Array<{ id: string; name?: string | null; sort_order?: number }>;
+  signature?: {
+    mode?: string;
+    required?: boolean;
+    title?: string;
+    consent_he?: string;
+    consent_text?: string;
+    fields?: string[];
+  };
+  pdf_ready?: boolean;
   issued_at?: string | null;
   sent_at?: string | null;
+  viewed_at?: string | null;
   approved_at?: string | null;
+  approved_name?: string | null;
   rejected_at?: string | null;
+  signature_captured?: boolean;
 };
 
 export type QuoteListCounts = {
@@ -787,7 +834,9 @@ export function createApiClient(opts: {
     }
     const token = await opts.getAccessToken();
     const headers = new Headers(init.headers);
-    headers.set("Content-Type", "application/json");
+    if (!(init.body instanceof FormData)) {
+      headers.set("Content-Type", "application/json");
+    }
     if (token) headers.set("Authorization", `Bearer ${token}`);
     const url = sameOriginProxy ? path : `${baseUrl}${path}`;
     let res: Response;
@@ -797,6 +846,48 @@ export function createApiClient(opts: {
       throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
     }
     return parseApiResponse<T>(res);
+  }
+
+  async function requestBlob(path: string, init: RequestInit = {}): Promise<{ blob: Blob; filename: string }> {
+    if (!baseUrl && !sameOriginProxy) {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+    }
+    const token = await opts.getAccessToken();
+    const headers = new Headers(init.headers);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const url = sameOriginProxy ? path : `${baseUrl}${path}`;
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, headers });
+    } catch {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+    }
+    if (!res.ok) {
+      let code = "BUSINESS_RULE";
+      let message = API_UNAVAILABLE_HE;
+      try {
+        const err = (await res.json()) as ApiErrorBody;
+        code = err.error?.code ?? code;
+        message = err.error?.message ?? message;
+      } catch {
+        /* binary error body */
+      }
+      throw new ApiClientError(res.status, code, message);
+    }
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename\*?=(?:UTF-8''|")?([^\";]+)"?/i.exec(disposition);
+    const filename = decodeURIComponent((match?.[1] || "SITE-SECURE-QUOTE.pdf").replace(/"/g, ""));
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 5) {
+      throw new ApiClientError(500, "PDF_INVALID", "קובץ ה-PDF שהתקבל אינו תקין");
+    }
+    const magic = new TextDecoder("latin1").decode(buffer.slice(0, 4));
+    if (magic !== "%PDF") {
+      throw new ApiClientError(500, "PDF_INVALID", "קובץ ה-PDF שהתקבל אינו תקין");
+    }
+    // Always re-wrap with application/pdf so Windows/Chrome treat it as a PDF.
+    const blob = new Blob([buffer], { type: "application/pdf" });
+    return { blob, filename: filename.toLowerCase().endsWith(".pdf") ? filename : `${filename}.pdf` };
   }
 
   return {
@@ -883,9 +974,32 @@ export function createApiClient(opts: {
       );
     },
     shareQuote: (workspaceId: string, quoteId: string) =>
-      request<{ public_url: string; public_token: string }>(
-        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/share`,
-        { method: "POST" },
+      request<{
+        public_url: string;
+        public_token: string;
+        status?: string;
+        link_created?: boolean;
+        auto_sent?: boolean;
+      }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/share`, { method: "POST" }),
+    downloadQuotePdf: (workspaceId: string, quoteId: string) =>
+      requestBlob(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/pdf`),
+    downloadPublicQuotePdf: (token: string) =>
+      requestBlob(`/api/v1/public/quotes/${encodeURIComponent(token)}/pdf`),
+    revokeQuoteLink: (workspaceId: string, quoteId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/revoke-link`, {
+        method: "POST",
+      }),
+    recordQuoteEvent: (
+      workspaceId: string,
+      quoteId: string,
+      body: {
+        event_type: "preview_opened" | "pdf_generated" | "whatsapp_share_initiated" | "share_link_copied";
+        metadata?: Record<string, unknown>;
+      },
+    ) =>
+      request<{ ok: true; event_type: string }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/events`,
+        { method: "POST", body: JSON.stringify(body) },
       ),
     createQuoteSection: (
       workspaceId: string,
@@ -1385,6 +1499,9 @@ export function createApiClient(opts: {
         unit?: string;
         category_id?: string;
         is_active?: boolean;
+        manufacturer?: string | null;
+        model?: string | null;
+        attributes?: Record<string, unknown>;
       },
     ) =>
       request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products`, {
@@ -1404,6 +1521,9 @@ export function createApiClient(opts: {
         unit?: string;
         category_id?: string | null;
         is_active?: boolean;
+        manufacturer?: string | null;
+        model?: string | null;
+        attributes?: Record<string, unknown>;
       },
     ) =>
       request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products/${productId}`, {
@@ -1416,12 +1536,20 @@ export function createApiClient(opts: {
       request<{ items: QuoteTemplate[] }>(`/api/v1/workspaces/${workspaceId}/catalog/templates`),
     getPublicQuote: (token: string) =>
       request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}`),
-    approvePublicQuote: (token: string, body: { name?: string } = {}) =>
+    approvePublicQuote: (
+      token: string,
+      body: {
+        name?: string;
+        user_agent?: string;
+        terms_accepted?: boolean;
+        signature_data_url?: string;
+      } = {},
+    ) =>
       request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}/approve`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    rejectPublicQuote: (token: string, body: { reason?: string } = {}) =>
+    rejectPublicQuote: (token: string, body: { reason?: string; user_agent?: string } = {}) =>
       request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}/reject`, {
         method: "POST",
         body: JSON.stringify(body),

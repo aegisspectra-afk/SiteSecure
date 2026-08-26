@@ -31,6 +31,7 @@ import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as QTokenRouteImport } from "./routes/q/$token"
 import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
 import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
 import { Route as AppJobsJobIdRouteImport } from "./routes/app/jobs/$jobId"
@@ -163,6 +164,11 @@ const LegalIndexRoute = LegalIndexRouteImport.update({
 const LegalSlugRoute = LegalSlugRouteImport.update({
   id: "/legal/$slug",
   path: "/legal/$slug",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QTokenRoute = QTokenRouteImport.update({
+  id: "/q/$token",
+  path: "/q/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
@@ -301,6 +307,7 @@ export interface FileRoutesByFullPath {
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/q/$token": typeof QTokenRoute
   "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/q/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
@@ -488,6 +498,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/q/$token"
     | "/admin"
     | "/app"
     | "/legal"
@@ -535,6 +546,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/dev/ui"
     | "/legal/$slug"
+    | "/q/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
@@ -575,6 +587,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   DevUiRoute: typeof DevUiRoute
   LegalSlugRoute: typeof LegalSlugRoute
+  QTokenRoute: typeof QTokenRoute
   LegalIndexRoute: typeof LegalIndexRoute
   PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
 }
@@ -733,6 +746,13 @@ declare module "@tanstack/react-router" {
       path: "/legal/$slug"
       fullPath: "/legal/$slug"
       preLoaderRoute: typeof LegalSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/q/$token": {
+      id: "/q/$token"
+      path: "/q/$token"
+      fullPath: "/q/$token"
+      preLoaderRoute: typeof QTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/app/customers/": {
@@ -1004,6 +1024,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   DevUiRoute: DevUiRoute,
   LegalSlugRoute: LegalSlugRoute,
+  QTokenRoute: QTokenRoute,
   LegalIndexRoute: LegalIndexRoute,
   PublicQuotesTokenRoute: PublicQuotesTokenRoute,
 }

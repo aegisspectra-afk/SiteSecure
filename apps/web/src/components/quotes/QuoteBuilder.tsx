@@ -1,4 +1,4 @@
-import { Button, Input, Select, Status, Textarea } from "@site-secure/ui";
+import { Button, Input, Select, Textarea } from "@site-secure/ui";
 import { ApiClientError, type QuoteGap, type QuoteOut } from "@site-secure/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -12,8 +12,10 @@ import {
   headerFromQuote,
   headerPatch,
   headersEqual,
+  quotePrimaryCtaKind,
   type QuoteHeaderDraft,
 } from "../../lib/quote-builder";
+import { MoreHorizontal } from "lucide-react";
 import {
   canSendWithGaps,
   completenessScore,
@@ -23,7 +25,8 @@ import {
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
 import type { SystemBuilderLine } from "../../lib/system-builder";
-import { quoteStatusLabel, quoteStatusTone, formatMoney } from "../../lib/quotes";
+import { quoteStatusLabel, formatMoney } from "../../lib/quotes";
+import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
 import { resolveQuoteContext } from "../../lib/workflow-context";
 import { LeadRequirementsCard } from "./cpq/LeadRequirementsCard";
@@ -34,9 +37,22 @@ import { QuoteValidationPanel } from "./cpq/QuoteValidationPanel";
 import { RevisionComparePanel } from "./cpq/RevisionComparePanel";
 import { SystemBuilderDrawer } from "./cpq/SystemBuilderDrawer";
 import { QuoteContextCard } from "./quote-creation/QuoteContextCard";
-import { SendQuoteConfirm } from "./SendQuoteConfirm";
+import { CustomerSelector } from "./quote-creation/CustomerSelector";
+import { QuoteShareDialog } from "./QuoteShareDialog";
+import { SendQuoteConfirm, type SendChannel } from "./SendQuoteConfirm";
+import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
+import { QuoteReadinessCard } from "./cpq/QuoteReadinessCard";
+import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
 import { addressLine } from "../modules/ModuleKit";
+import { resolveQuoteRecipientPhone } from "../../lib/quote-recipient-phone";
+import {
+  closeSharePlaceholder,
+  openSharePlaceholderTab,
+  resolveWhatsAppOpen,
+} from "../../lib/quote-whatsapp-share";
+import { liveQuoteToPublicDocument } from "../../lib/quote-live-document";
+import { buildQuoteReadiness } from "../../lib/quote-readiness";
 
 const HISTORY_LIMIT = 40;
 
@@ -82,6 +98,7 @@ export function QuoteBuilder({
   const canEdit =
     live.status === "draft" && (live.id ? can(roleKey, "quotes.edit", features) : canCreate);
   const canSend = can(roleKey, "quotes.send", features);
+  const canDelete = can(roleKey, "quotes.delete", features);
   const canViewCost = can(roleKey, "quotes.view_cost", features);
   const canOverridePrice = can(roleKey, "quotes.override_price", features);
   const canCrm = can(roleKey, "crm.view", features);
@@ -104,16 +121,20 @@ export function QuoteBuilder({
   const [formError, setFormError] = useState<string | null>(null);
   const [gaps, setGaps] = useState<QuoteGap[]>(quote.validation?.gaps ?? []);
   const [publicUrl, setPublicUrl] = useState(quote.public_url ?? "");
-  const [copied, setCopied] = useState(false);
   const [justSent, setJustSent] = useState(false);
+  const [shareOutcome, setShareOutcome] = useState<null | {
+    linkCreated: boolean;
+    whatsappOpened?: boolean;
+    pdfDownloaded?: boolean;
+    popupBlocked?: boolean;
+  }>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [projectDialog, setProjectDialog] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [projectToast, setProjectToast] = useState(false);
   const [catalogQ, setCatalogQ] = useState("");
-  const [customerQ, setCustomerQ] = useState("");
   const [customerLabel, setCustomerLabel] = useState(quote.customer_name ?? "");
-  const [newCustomer, setNewCustomer] = useState({ display_name: "", email: "" });
+  const [newCustomer, setNewCustomer] = useState({ display_name: "", email: "", phone: "" });
   const [newSite, setNewSite] = useState({ name: "", address: "" });
   const [templatesReady, setTemplatesReady] = useState(Boolean(quote.template_id));
   const [systemBuilderOpen, setSystemBuilderOpen] = useState(false);
@@ -121,11 +142,26 @@ export function QuoteBuilder({
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const [revokedToast, setRevokedToast] = useState(false);
+  const [busyAction, setBusyAction] = useState<null | "pdf" | "share" | "whatsapp" | "print">(null);
+  const [whatsappPrompt, setWhatsappPrompt] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [replacingCustomer, setReplacingCustomer] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<"quote" | "profit" | "checks" | "history">("quote");
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [livePreviewOpen, setLivePreviewOpen] = useState(false);
+  const [quickCatalogQ, setQuickCatalogQ] = useState("");
+  const [savedAt, setSavedAt] = useState<number | null>(quote.id ? Date.now() : null);
+  const [siteMismatchPending, setSiteMismatchPending] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const actionLock = useRef(false);
   const skipHistory = useRef(false);
   const createGate = useRef<Promise<QuoteOut> | null>(null);
   const debouncedCatalogQ = useDebouncedValue(catalogQ, 350);
-  const debouncedCustomerQ = useDebouncedValue(customerQ, 350);
 
   useEffect(() => {
     if (!quote.id) return;
@@ -153,16 +189,24 @@ export function QuoteBuilder({
   }
 
   function applyRow(row: QuoteOut) {
+    const customerChanged = row.customer_id !== liveRef.current.customer_id;
+    const siteChanged = row.site_id !== liveRef.current.site_id;
     const merged: QuoteOut = {
       ...row,
-      customer_name: row.customer_name ?? liveRef.current.customer_name,
-      site_name: row.site_name ?? liveRef.current.site_name,
+      customer_name: customerChanged
+        ? row.customer_name
+        : (row.customer_name ?? liveRef.current.customer_name),
+      site_name: siteChanged ? row.site_name : (row.site_name ?? liveRef.current.site_name),
     };
     liveRef.current = merged;
     setLive(merged);
     setGaps(merged.validation?.gaps ?? []);
     if (merged.public_url) setPublicUrl(merged.public_url);
-    if (merged.customer_name) setCustomerLabel(merged.customer_name);
+    if (customerChanged) {
+      setCustomerLabel(merged.customer_name ?? "");
+    } else if (merged.customer_name) {
+      setCustomerLabel(merged.customer_name);
+    }
     queryClient.setQueryData(["quote", workspaceId, merged.id], merged);
     touchQuoteList();
   }
@@ -208,6 +252,12 @@ export function QuoteBuilder({
     enabled: canCatalog && debouncedCatalogQ.trim().length >= 1,
     queryFn: () => api.listCatalogProducts(workspaceId, { q: debouncedCatalogQ.trim(), limit: 20 }),
   });
+  const debouncedQuickCatalogQ = useDebouncedValue(quickCatalogQ, 280);
+  const quickCatalogQuery = useQuery({
+    queryKey: ["cpq-catalog-quick", workspaceId, debouncedQuickCatalogQ],
+    enabled: canCatalog && quickAddOpen && debouncedQuickCatalogQ.trim().length >= 1,
+    queryFn: () => api.listCatalogProducts(workspaceId, { q: debouncedQuickCatalogQ.trim(), limit: 12 }),
+  });
   const systemCatalogQuery = useQuery({
     queryKey: ["cpq-catalog-system", workspaceId],
     enabled: canCatalog && systemCatalogReady,
@@ -215,15 +265,16 @@ export function QuoteBuilder({
     staleTime: 60_000,
   });
   const requestSystemCatalog = useCallback(() => setSystemCatalogReady(true), []);
-  const customersQuery = useQuery({
-    queryKey: ["cpq-customers", workspaceId, debouncedCustomerQ],
-    enabled: canCrm && !draft.customer_id && debouncedCustomerQ.trim().length >= 1,
-    queryFn: () => api.listCustomers(workspaceId, { q: debouncedCustomerQ.trim(), limit: 20 }),
-  });
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
-    enabled: canCrm && Boolean(draft.customer_id) && !customerLabel,
+    enabled: canCrm && Boolean(draft.customer_id),
     queryFn: () => api.getCustomer(workspaceId, draft.customer_id),
+    staleTime: 60_000,
+  });
+  const customerContactsQuery = useQuery({
+    queryKey: ["customer-contacts", workspaceId, draft.customer_id],
+    enabled: canCrm && Boolean(draft.customer_id),
+    queryFn: () => api.listCustomerContacts(workspaceId, draft.customer_id),
     staleTime: 60_000,
   });
   const sitesQuery = useQuery({
@@ -314,7 +365,10 @@ export function QuoteBuilder({
   const save = useMutation({
     mutationFn: () => persistHeader({ skipRoute: skipRouteRef.current }),
     onMutate: () => setSaveState("saving"),
-    onSuccess: () => setSaveState("saved"),
+    onSuccess: () => {
+      setSaveState("saved");
+      setSavedAt(Date.now());
+    },
     onError: (err) => {
       setSaveState("error");
       setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
@@ -352,7 +406,15 @@ export function QuoteBuilder({
       body,
     }: {
       itemId: string;
-      body: { qty?: number; unit_price?: number; discount?: number; description?: string; sort_order?: number };
+      body: {
+        qty?: number;
+        unit_price?: number;
+        discount?: number;
+        description?: string;
+        sku?: string | null;
+        sort_order?: number;
+        section_id?: string | null;
+      };
     }) => {
       const current = await createOnce();
       const row = await api.patchQuoteItem(workspaceId, current.id, itemId, body);
@@ -385,8 +447,10 @@ export function QuoteBuilder({
     },
     onSuccess: (row) => {
       applyRow(row);
+      setShareOutcome(null);
       setJustSent(true);
       setConfirmSend(false);
+      if (row.public_url) setPublicUrl(row.public_url);
     },
     onError: (err) => {
       if (err instanceof ApiClientError && err.code === "QUOTE_INCOMPLETE") {
@@ -480,14 +544,22 @@ export function QuoteBuilder({
       setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
     },
   });
-  const share = useMutation({
-    mutationFn: () => api.shareQuote(workspaceId, live.id),
-    onSuccess: async (row) => {
-      setPublicUrl(row.public_url);
-      await navigator.clipboard.writeText(row.public_url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+  const revokeLink = useMutation({
+    mutationFn: () => api.revokeQuoteLink(workspaceId, live.id),
+    onSuccess: () => {
+      setPublicUrl("");
+      setFormError(null);
+      setRevokedToast(true);
+      window.setTimeout(() => setRevokedToast(false), 2500);
     },
+    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
+  });
+  const cancelQuote = useMutation({
+    mutationFn: () => api.deleteQuote(workspaceId, live.id),
+    onSuccess: () => {
+      void navigate({ to: "/app/quotes" });
+    },
+    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
   const createProject = useMutation({
     mutationFn: () => api.createProjectFromQuote(workspaceId, { source_quote_id: live.id }),
@@ -530,12 +602,23 @@ export function QuoteBuilder({
     mergeQuoteGaps(serverGaps, softGaps),
     items.filter((item) => item.item_type !== "note").length,
   );
+  const pricedCount = items.filter((item) => item.item_type !== "note" && Number(item.unit_price) > 0).length;
   const canSendNow = Boolean(live.id) && canSend && live.status === "draft" && canSendWithGaps(liveGaps);
   const completeness = completenessScore(liveGaps);
   const missingCompleteness = completeness.total - completeness.done;
+  const readiness = buildQuoteReadiness(liveGaps, {
+    pricedCount,
+    hasSite: Boolean(draft.site_id || live.site_name),
+    labels: {
+      customer: he.cpqReadinessCustomer,
+      site: he.cpqReadinessSite,
+      items: he.cpqReadinessItems,
+      payment: he.cpqReadinessPayment,
+      valid: he.cpqReadinessValid,
+    },
+  });
   const companyName = workspaceName ?? "";
   const selectedName = customerLabel || customerQuery.data?.display_name || live.customer_name || "";
-  const customerResults = customersQuery.data?.items ?? [];
   const catalogResults = catalogQuery.data?.items ?? [];
   const selectedSite = sitesQuery.data?.items.find((row) => row.id === draft.site_id);
   const selectedSiteAddress = selectedSite ? addressLine(selectedSite.address) : "";
@@ -545,10 +628,226 @@ export function QuoteBuilder({
       : draft.customer_id
         ? he.workflowCustomerBusiness
         : null;
-  const pricedCount = items.filter((item) => item.item_type !== "note" && Number(item.unit_price) > 0).length;
-  const customerPhone =
-    (customerQuery.data?.phone || "").replace(/\D/g, "") ||
-    (linkedLead?.phone || "").replace(/\D/g, "");
+  const primaryContactPhone =
+    customerContactsQuery.data?.find((c) => c.is_primary)?.phone ||
+    customerContactsQuery.data?.find((c) => c.phone)?.phone ||
+    null;
+  const customerPhone = resolveQuoteRecipientPhone({
+    customerPhone: customerQuery.data?.phone,
+    contactPhone: primaryContactPhone,
+    leadPhone: linkedLead?.phone,
+  });
+  const customerEmail =
+    (customerQuery.data?.email || "").trim() ||
+    (customerContactsQuery.data?.find((c) => c.is_primary)?.email || "").trim() ||
+    (customerContactsQuery.data?.find((c) => c.email)?.email || "").trim();
+  const statusDisplayLabel =
+    live.status === "draft" && canSendNow ? he.quoteDocReadyToSend : quoteStatusLabel(live.status);
+  const primaryCta = quotePrimaryCtaKind(live.status);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (event: MouseEvent) => {
+      if (!moreMenuRef.current?.contains(event.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreOpen]);
+
+  function applyCustomerSelection(next: { id: string; name: string }, opts?: { clearSite?: boolean }) {
+    const clearSite = opts?.clearSite ?? true;
+    updateDraft({ customer_id: next.id, site_id: clearSite ? "" : draft.site_id });
+    setCustomerLabel(next.name);
+    setReplacingCustomer(false);
+    setSiteMismatchPending(null);
+  }
+
+  function pickCustomer(next: { id: string; name: string }) {
+    if (draft.site_id && draft.customer_id && draft.customer_id !== next.id) {
+      setSiteMismatchPending(next);
+      return;
+    }
+    applyCustomerSelection(next, { clearSite: true });
+  }
+
+  async function ensureSecureLink(): Promise<string> {
+    if (!live.id) throw new Error("missing quote");
+    if (publicUrl) return publicUrl;
+    const shared = await api.shareQuote(workspaceId, live.id);
+    setPublicUrl(shared.public_url);
+    // Never treat share-link minting as "sent". Status stays whatever the server returned.
+    if (shared.status && shared.status !== live.status) {
+      setLive((prev) => ({ ...prev, status: shared.status || prev.status }));
+      void queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
+      void queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
+    }
+    return shared.public_url;
+  }
+
+  async function downloadPdf() {
+    if (!live.id || actionLock.current) return;
+    actionLock.current = true;
+    setBusyAction("pdf");
+    setFormError(null);
+    try {
+      const { blob, filename } = await api.downloadQuotePdf(workspaceId, live.id);
+      // Open via blob: tab (Chrome-safe) + save to Downloads.
+      downloadAndOpenPdf(blob, filename);
+    } catch (err) {
+      console.error("quote pdf download failed", err);
+      setFormError(err instanceof ApiClientError ? err.message : he.quotePdfFailed);
+    } finally {
+      setBusyAction(null);
+      actionLock.current = false;
+      setMoreOpen(false);
+    }
+  }
+
+  async function printDocumentPdf() {
+    if (!live.id || actionLock.current) return;
+    actionLock.current = true;
+    setBusyAction("print");
+    setFormError(null);
+    try {
+      const { blob } = await api.downloadQuotePdf(workspaceId, live.id);
+      openPdfBlob(blob);
+    } catch (err) {
+      console.error("quote pdf print failed", err);
+      setFormError(err instanceof ApiClientError ? err.message : he.quotePdfFailed);
+    } finally {
+      setBusyAction(null);
+      actionLock.current = false;
+      setMoreOpen(false);
+    }
+  }
+
+  async function openMailtoShare() {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setBusyAction("share");
+    setFormError(null);
+    setShareOutcome(null);
+    try {
+      const url = await ensureSecureLink();
+      const subject = encodeURIComponent(`הצעת מחיר ${live.number || ""}`.trim());
+      const body = encodeURIComponent(he.quoteWhatsAppMessage(selectedName, url));
+      const to = customerEmail ? encodeURIComponent(customerEmail) : "";
+      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+      setShareOutcome({ linkCreated: true });
+    } catch (err) {
+      console.error("quote mailto share failed", err);
+      setFormError(err instanceof ApiClientError ? err.message : he.quoteShareFailed);
+    } finally {
+      setBusyAction(null);
+      actionLock.current = false;
+      setMoreOpen(false);
+    }
+  }
+
+  async function openWhatsApp(forcePicker = false) {
+    if (actionLock.current) return;
+    if (!forcePicker && !customerPhone) {
+      setWhatsappPrompt(true);
+      return;
+    }
+    actionLock.current = true;
+    setBusyAction("whatsapp");
+    setFormError(null);
+    setWhatsappPrompt(false);
+    setShareOutcome(null);
+    // Preserve the user gesture — async share/PDF would otherwise get popup-blocked.
+    const placeholder = openSharePlaceholderTab();
+    let pdfDownloaded = false;
+    try {
+      const url = await ensureSecureLink();
+      if (live.id) {
+        try {
+          const { blob, filename } = await api.downloadQuotePdf(workspaceId, live.id);
+          // Download only — opening a PDF tab would compete with the WhatsApp gesture tab.
+          downloadBlob(blob, filename);
+          pdfDownloaded = true;
+          void api.recordQuoteEvent(workspaceId, live.id, { event_type: "pdf_generated" }).catch(() => undefined);
+        } catch (pdfErr) {
+          console.error("quote whatsapp pdf download failed", pdfErr);
+          // Link + WhatsApp can still proceed; PDF is optional attach.
+        }
+      }
+      const result = resolveWhatsAppOpen(
+        {
+          customerName: selectedName,
+          publicUrl: url,
+          phoneDigits: customerPhone,
+          forcePicker,
+        },
+        placeholder,
+      );
+      if (!result.ok) {
+        if (result.reason === "no_phone") {
+          setWhatsappPrompt(true);
+          setShareOutcome({ linkCreated: true, pdfDownloaded });
+          return;
+        }
+        setFormError(he.quoteWhatsAppPopupBlocked);
+        setShareOutcome({ linkCreated: true, pdfDownloaded, popupBlocked: true });
+        setShareOpen(true);
+        return;
+      }
+      if (live.id) {
+        void api
+          .recordQuoteEvent(workspaceId, live.id, {
+            event_type: "whatsapp_share_initiated",
+            metadata: { phone: result.phoneUsed },
+          })
+          .catch(() => undefined);
+        void queryClient.invalidateQueries({ queryKey: ["quote-events", workspaceId, live.id] });
+      }
+      setShareOutcome({
+        linkCreated: true,
+        whatsappOpened: true,
+        pdfDownloaded,
+      });
+    } catch (err) {
+      closeSharePlaceholder(placeholder);
+      console.error("quote whatsapp failed", err);
+      setFormError(err instanceof ApiClientError ? err.message : he.quoteShareFailed);
+    } finally {
+      setBusyAction(null);
+      actionLock.current = false;
+      setMoreOpen(false);
+    }
+  }
+
+  async function openShareDialog() {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setBusyAction("share");
+    setFormError(null);
+    setShareOutcome(null);
+    try {
+      await ensureSecureLink();
+      setShareOutcome({ linkCreated: true });
+      setShareOpen(true);
+    } catch (err) {
+      console.error("quote share failed", err);
+      setFormError(err instanceof ApiClientError ? err.message : he.quoteShareFailed);
+    } finally {
+      setBusyAction(null);
+      actionLock.current = false;
+      setMoreOpen(false);
+    }
+  }
+
+  async function copySecureLink() {
+    // Prefer share dialog so clipboard focus failures never look like share failures.
+    await openShareDialog();
+  }
 
   async function reorderItem(itemId: string, direction: "up" | "down") {
     const plan = neighborSortOrders(items, itemId, direction);
@@ -570,10 +869,38 @@ export function QuoteBuilder({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
       const meta = event.metaKey || event.ctrlKey;
+
+      if (meta && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (canEdit) setQuickAddOpen(true);
+        return;
+      }
       if (meta && event.key === "/") {
         event.preventDefault();
-        document.getElementById("catalog-search")?.focus();
+        setQuickAddOpen(true);
+        return;
+      }
+      if (!meta && !typing && event.key.toLowerCase() === "n" && canEdit) {
+        event.preventDefault();
+        setQuickAddOpen(true);
+        return;
+      }
+      if (!meta && !typing && event.key === "/" && canEdit) {
+        event.preventDefault();
+        setQuickAddOpen(true);
+        return;
+      }
+      if (event.key === "Escape" && quickAddOpen) {
+        event.preventDefault();
+        setQuickAddOpen(false);
         return;
       }
       if (!meta) return;
@@ -614,25 +941,32 @@ export function QuoteBuilder({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canEdit, dirty, history, historyIndex, save, items, addItem]);
+  }, [canEdit, dirty, history, historyIndex, save, items, addItem, quickAddOpen]);
 
-  async function openWhatsApp() {
-    try {
-      let url = publicUrl;
-      if (!url && live.id) {
-        const shared = await api.shareQuote(workspaceId, live.id);
-        url = shared.public_url;
-        setPublicUrl(url);
-      }
-      const text = encodeURIComponent(
-        [`הצעת מחיר ${live.number || ""}`.trim(), url].filter(Boolean).join("\n"),
-      );
-      const phone = customerPhone.startsWith("0")
-        ? `972${customerPhone.slice(1)}`
-        : customerPhone;
-      window.open(phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
+  function handleQuickAddAction(id: QuickAddActionId) {
+    if (id === "free") {
+      addItem.mutate({ item_type: "free", description: "", qty: 1, unit_price: 0 });
+      return;
+    }
+    if (id === "section") {
+      addSection.mutate();
+      return;
+    }
+    if (id === "system") {
+      setSystemBuilderOpen(true);
+      return;
+    }
+    if (id === "catalog") {
+      window.setTimeout(() => document.getElementById("catalog-search")?.focus(), 40);
+      return;
+    }
+    if (id === "template") {
+      setTemplatesReady(true);
+      window.setTimeout(() => document.getElementById("template_id")?.focus(), 40);
+      return;
+    }
+    if (id === "package") {
+      saveAsPackage.mutate();
     }
   }
 
@@ -654,12 +988,20 @@ export function QuoteBuilder({
 
   const saveLabel =
     saveState === "saving"
-      ? he.quoteSaving
+      ? he.cpqSaving
       : saveState === "error"
         ? he.quoteSaveError
         : !live.id
           ? he.quoteUnsaved
-          : he.cpqSavedJustNow;
+          : dirty
+            ? he.cpqUnsavedChanges
+            : savedAt
+              ? he.cpqSavedAgo(Math.max(0, Math.round((Date.now() - savedAt) / 1000)))
+              : he.cpqSavedJustNow;
+
+  function scrollToZone(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   async function goCustomerView() {
     skipRouteRef.current = true;
@@ -674,31 +1016,127 @@ export function QuoteBuilder({
   }
 
   function focusValidation() {
-    document.getElementById("cpq-validation")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    setWorkspaceTab("checks");
+    window.setTimeout(() => {
+      document.getElementById("cpq-validation")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
   }
 
+  async function startSendFlow() {
+    if (!canSendNow) {
+      focusValidation();
+      setFormError(he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)));
+      return;
+    }
+    skipRouteRef.current = true;
+    try {
+      if (canEdit) await save.mutateAsync();
+      setConfirmSend(true);
+    } catch (err) {
+      setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
+    } finally {
+      skipRouteRef.current = false;
+    }
+  }
+
+  function runPrimaryCta() {
+    if (primaryCta === "send") {
+      void startSendFlow();
+      return;
+    }
+    if (primaryCta === "show_link") {
+      void openShareDialog();
+      return;
+    }
+    if (primaryCta === "show_activity") {
+      setWorkspaceTab("history");
+      window.setTimeout(() => {
+        document.getElementById("cpq-summary-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 40);
+      return;
+    }
+    if (primaryCta === "revise" && canCreate) {
+      revise.mutate();
+    }
+  }
+
+  const primaryCtaLabel =
+    primaryCta === "send"
+      ? he.quoteSend
+      : primaryCta === "show_link"
+        ? he.cpqShowLink
+        : primaryCta === "show_activity"
+          ? he.cpqShowActivity
+          : primaryCta === "approved"
+            ? he.cpqApprovedCta
+            : primaryCta === "revise"
+              ? he.quoteRevise
+              : primaryCta === "cancelled"
+                ? he.cpqCancelledCta
+                : null;
+  const primaryCtaDisabled =
+    primaryCta === "approved" ||
+    primaryCta === "cancelled" ||
+    (primaryCta === "send" && !canSendNow) ||
+    (primaryCta === "revise" && !canCreate) ||
+    (primaryCta === "show_link" && !live.id) ||
+    (primaryCta === "send" && !canSend);
+
+  const subtitleParts = [selectedName, draft.title || live.title].filter(Boolean);
+  const customerPhoneDisplay = customerQuery.data?.phone || primaryContactPhone || linkedLead?.phone || "";
+  const liveDocument = liveQuoteToPublicDocument(
+    {
+      ...live,
+      title: draft.title || live.title,
+      project_name: draft.project_name || live.project_name,
+      project_address: draft.project_address || live.project_address,
+      summary: draft.summary || live.summary,
+      key_points: draft.key_points || live.key_points,
+      payment_terms: draft.payment_terms || live.payment_terms,
+      warranty: draft.warranty || live.warranty,
+      general_terms: draft.general_terms || live.general_terms,
+      customer_notes: draft.customer_notes || live.customer_notes,
+      valid_until: draft.valid_until || live.valid_until,
+    },
+    {
+      companyName,
+      customerName: selectedName,
+      customerPhone: customerPhoneDisplay,
+      customerEmail,
+      siteName: selectedSite?.name || live.site_name,
+      siteAddress: selectedSiteAddress || draft.project_address,
+    },
+  );
+
   return (
-    <div className="quote-builder cpq-builder grid gap-4 pb-28 lg:pb-0 xl:grid-cols-[minmax(0,1fr)_19rem]">
-      <header className="cpq-builder-header sticky top-0 z-10 xl:col-span-2">
+    <div className={`quote-builder cpq-builder cpq-workspace grid gap-4 pb-28 lg:pb-0 ${livePreviewOpen ? "xl:grid-cols-[minmax(0,1fr)_20rem_minmax(18rem,24rem)]" : "xl:grid-cols-[minmax(0,1fr)_20rem]"}`}>
+      <header className={`cpq-builder-header sticky top-0 z-10 ${livePreviewOpen ? "xl:col-span-3" : "xl:col-span-2"}`}>
         <nav className="cpq-breadcrumb" aria-label="breadcrumb">
           <Link to="/app/quotes" className="cpq-breadcrumb-link">
             {he.cpqBreadcrumbQuotes}
           </Link>
-          <span className="cpq-breadcrumb-sep" aria-hidden>
-            /
-          </span>
-          <span className="cpq-breadcrumb-current">{live.number || he.quoteBuilderTitle}</span>
+          {live.number ? (
+            <>
+              <span className="cpq-breadcrumb-sep" aria-hidden>
+                /
+              </span>
+              <span className="cpq-breadcrumb-current ltr-meta">{live.number}</span>
+            </>
+          ) : null}
         </nav>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">
-                {live.number ? `${he.quoteDetailTitle} #${live.number}` : he.quoteBuilderTitle}
-              </h1>
-              <Status label={quoteStatusLabel(live.status)} tone={quoteStatusTone(live.status)} />
-            </div>
-            <p className="text-xs text-fg-subtle" aria-live="polite">
-              {live.id && live.version ? `${he.quotesVersion(live.version)} · ` : ""}
+            <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">
+              {he.cpqHeaderTitle(live.number || "")}
+            </h1>
+            <p className="truncate text-sm text-fg-muted">
+              {live.id
+                ? he.cpqHeaderMeta(statusDisplayLabel, live.version ?? 1)
+                : statusDisplayLabel}
+              {subtitleParts.length ? ` · ${subtitleParts.join(" · ")}` : ""}
+            </p>
+            <p className="cpq-save-state text-xs text-fg-subtle" aria-live="polite">
+              <span className={`cpq-save-dot is-${saveState === "error" ? "error" : dirty ? "dirty" : saveState}`} />
               {saveLabel}
             </p>
           </div>
@@ -722,109 +1160,257 @@ export function QuoteBuilder({
                 {he.cpqCustomerView}
               </Button>
             ) : null}
-            {live.status === "draft" && canSend ? (
+            {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
               <Button
-                disabled={!canSendNow}
-                title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
-                onClick={async () => {
-                  if (!canSendNow) {
-                    focusValidation();
-                    return;
-                  }
-                  skipRouteRef.current = true;
-                  try {
-                    await save.mutateAsync();
-                    setConfirmSend(true);
-                  } catch (err) {
-                    setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
-                  } finally {
-                    skipRouteRef.current = false;
-                  }
-                }}
+                variant={primaryCta === "approved" || primaryCta === "cancelled" ? "secondary" : undefined}
+                disabled={primaryCtaDisabled}
+                title={
+                  primaryCta === "send" && !canSendNow
+                    ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                    : undefined
+                }
+                loading={primaryCta === "revise" ? revise.isPending : false}
+                onClick={() => runPrimaryCta()}
               >
-                {he.quoteSaveAndSend}
+                {primaryCtaLabel}
               </Button>
             ) : null}
-            <div className="relative">
-              <Button variant="ghost" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}>
-                {he.cpqMoreActions}
+            <div className="relative" ref={moreMenuRef}>
+              <Button
+                variant="ghost"
+                onClick={() => setMoreOpen((v) => !v)}
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
+                aria-label={he.cpqMoreActionsAria}
+                title={he.cpqMoreActions}
+              >
+                <MoreHorizontal className="size-5" aria-hidden />
               </Button>
               {moreOpen ? (
-                <div className="cpq-overflow-menu" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={historyIndex <= 0}
-                    onClick={() => {
-                      undo();
-                      setMoreOpen(false);
-                    }}
-                  >
-                    {he.quoteUndo}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={historyIndex >= history.length - 1}
-                    onClick={() => {
-                      redo();
-                      setMoreOpen(false);
-                    }}
-                  >
-                    {he.quoteRedo}
-                  </button>
-                  {live.id ? (
+                <div className="cpq-overflow-menu cpq-overflow-menu-wide" role="menu">
+                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
+                    <p className="cpq-overflow-label">{he.cpqMenuDocument}</p>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => {
-                        void goCustomerView();
+                        setLivePreviewOpen((v) => !v);
                         setMoreOpen(false);
                       }}
                     >
-                      {he.cpqDownloadDocument}
+                      {livePreviewOpen ? he.cpqLivePreviewHide : he.quotePreviewPrimary}
                     </button>
+                    {live.id ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={busyAction === "pdf"}
+                        onClick={() => void downloadPdf()}
+                      >
+                        {busyAction === "pdf" ? he.quotePdfPreparing : he.quotePdfDownload}
+                      </button>
+                    ) : null}
+                    {live.id ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={busyAction === "print"}
+                        onClick={() => void printDocumentPdf()}
+                      >
+                        {busyAction === "print" ? he.quotePdfPreparing : he.quotePrintAction}
+                      </button>
+                    ) : null}
+                  </div>
+                  {live.id && canSend ? (
+                    <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuShare}>
+                      <p className="cpq-overflow-label">{he.cpqMenuShare}</p>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={busyAction === "share"}
+                        onClick={() => void openMailtoShare()}
+                      >
+                        {he.quoteMailtoShare}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMoreOpen(false);
+                          void openShareDialog();
+                        }}
+                      >
+                        {he.cpqCopyCustomerLink}
+                      </button>
+                      {(live.status === "sent" || live.status === "viewed" || live.status === "approved") ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          disabled={revokeLink.isPending}
+                          onClick={() => {
+                            revokeLink.mutate();
+                            setMoreOpen(false);
+                          }}
+                        >
+                          {he.quoteRevokeLink}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
-                  {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
+                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuVersions}>
+                    <p className="cpq-overflow-label">{he.cpqMenuVersions}</p>
+                    {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          revise.mutate();
+                          setMoreOpen(false);
+                        }}
+                      >
+                        {he.quoteRevise}
+                      </button>
+                    ) : null}
+                    {live.id ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setWorkspaceTab("history");
+                          setMoreOpen(false);
+                        }}
+                      >
+                        {he.cpqVersionHistory}
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuActions}>
+                    <p className="cpq-overflow-label">{he.cpqMenuActions}</p>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setQuickAddOpen(true);
+                          setMoreOpen(false);
+                        }}
+                      >
+                        + {he.cpqAddCommand}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       role="menuitem"
+                      disabled={historyIndex <= 0}
                       onClick={() => {
-                        revise.mutate();
+                        undo();
                         setMoreOpen(false);
                       }}
                     >
-                      {he.quoteRevise}
+                      {he.quoteUndo}
                     </button>
-                  ) : null}
-                  {(live.status === "sent" || live.status === "viewed") && canSend ? (
                     <button
                       type="button"
                       role="menuitem"
+                      disabled={historyIndex >= history.length - 1}
                       onClick={() => {
-                        share.mutate();
+                        redo();
                         setMoreOpen(false);
                       }}
                     >
-                      {copied ? he.quoteCopyLink : he.cpqCopySecureLink}
+                      {he.quoteRedo}
                     </button>
-                  ) : null}
-                  {live.id ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        void openWhatsApp();
-                        setMoreOpen(false);
-                      }}
-                    >
-                      {he.quoteWhatsApp}
-                    </button>
-                  ) : null}
+                    {live.id &&
+                    canDelete &&
+                    live.status !== "cancelled" &&
+                    live.status !== "superseded" ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="is-danger"
+                        disabled={cancelQuote.isPending}
+                        onClick={() => {
+                          setMoreOpen(false);
+                          if (!window.confirm(he.cpqCancelQuoteConfirm)) return;
+                          cancelQuote.mutate();
+                        }}
+                      >
+                        {he.cpqCancelQuote}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div className="cpq-workflow" role="navigation" aria-label="workflow">
+          <button type="button" className="cpq-workflow-step" onClick={() => scrollToZone("cpq-zone-details")}>
+            {he.cpqWorkflowDetails}
+          </button>
+          <button type="button" className="cpq-workflow-step" onClick={() => scrollToZone("quote-items")}>
+            {he.cpqWorkflowContent}
+          </button>
+          <button type="button" className="cpq-workflow-step" onClick={() => { setWorkspaceTab("quote"); scrollToZone("cpq-summary-anchor"); }}>
+            {he.cpqWorkflowPricing}
+          </button>
+          <button type="button" className="cpq-workflow-step" onClick={() => focusValidation()}>
+            {he.cpqWorkflowChecks}
+          </button>
+          <button
+            type="button"
+            className="cpq-workflow-step"
+            onClick={() => {
+              if (canSendNow) setConfirmSend(true);
+              else focusValidation();
+            }}
+          >
+            {he.cpqWorkflowSend}
+          </button>
+        </div>
+
+        <div className="cpq-workspace-tabs" role="tablist" aria-label="workspace tabs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceTab === "quote"}
+            className={`cpq-workspace-tab${workspaceTab === "quote" ? " is-active" : ""}`}
+            onClick={() => setWorkspaceTab("quote")}
+          >
+            {he.cpqTabQuote}
+          </button>
+          {canViewCost ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workspaceTab === "profit"}
+              className={`cpq-workspace-tab${workspaceTab === "profit" ? " is-active" : ""}`}
+              onClick={() => setWorkspaceTab("profit")}
+            >
+              {he.cpqTabProfit}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceTab === "checks"}
+            className={`cpq-workspace-tab${workspaceTab === "checks" ? " is-active" : ""}`}
+            onClick={() => setWorkspaceTab("checks")}
+          >
+            {he.cpqTabChecks}
+          </button>
+          {live.id ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workspaceTab === "history"}
+              className={`cpq-workspace-tab${workspaceTab === "history" ? " is-active" : ""}`}
+              onClick={() => setWorkspaceTab("history")}
+            >
+              {he.cpqTabHistory}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -832,21 +1418,101 @@ export function QuoteBuilder({
         open={confirmSend}
         onClose={() => setConfirmSend(false)}
         onConfirm={() => send.mutate()}
+        onChannel={(channel: SendChannel) => {
+          setConfirmSend(false);
+          if (channel === "whatsapp") void openWhatsApp();
+          else if (channel === "link") void openShareDialog();
+          else if (channel === "email") void openMailtoShare();
+          else send.mutate();
+        }}
         pending={send.isPending}
         customer={selectedName}
         number={live.number}
         amount={live.total_gross}
         currency={currency}
+        gaps={liveGaps}
+        canSend={canSendNow}
       />
 
       <div className="flex flex-col gap-5">
         {live.status !== "draft" ? <p className="text-sm text-fg-muted">{he.quoteLocked}</p> : null}
         {formError ? <p className="text-sm text-danger">{formError}</p> : null}
+        {busyAction ? (
+          <p className="text-sm text-fg-muted" aria-live="polite">
+            {busyAction === "pdf" || busyAction === "print"
+              ? he.quotePdfPreparing
+              : busyAction === "whatsapp"
+                ? he.quoteWhatsAppOpening
+                : he.quoteShareCreating}
+          </p>
+        ) : null}
+        {whatsappPrompt ? (
+          <section className="ops-card flex flex-col gap-3 p-4">
+            <p className="text-sm font-semibold">{he.quoteWhatsAppNoPhoneTitle}</p>
+            <p className="text-sm text-fg-muted">{he.quoteWhatsAppNoPhoneBody}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setWhatsappPrompt(false)}>
+                {he.quoteDocApproveConfirmBack}
+              </Button>
+              {draft.customer_id ? (
+                <Link
+                  to="/app/customers/$customerId"
+                  params={{ customerId: draft.customer_id }}
+                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-border bg-bg px-4 text-sm font-medium text-fg hover:bg-bg-subtle"
+                >
+                  {he.quoteWhatsAppUpdateCustomer}
+                </Link>
+              ) : null}
+              <Button
+                onClick={() => {
+                  setWhatsappPrompt(false);
+                  void openWhatsApp(true);
+                }}
+              >
+                {he.quoteWhatsAppOpenPicker}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+        {siteMismatchPending ? (
+          <section className="ops-card flex flex-col gap-3 p-4">
+            <p className="text-sm font-semibold">{he.quoteCustomerPickerTitle}</p>
+            <p className="text-sm text-fg-muted">{he.quoteCustomerSiteMismatch}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setSiteMismatchPending(null)}>
+                {he.cancel}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (siteMismatchPending) applyCustomerSelection(siteMismatchPending, { clearSite: true });
+                }}
+              >
+                {he.quoteCustomerSiteMismatchConfirm}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+        {revokedToast ? <p className="text-sm text-success">{he.quoteRevokeLinkDone}</p> : null}
+        {shareOutcome ? (
+          <section className="ops-card flex flex-col gap-2 p-4" aria-live="polite">
+            <p className="text-sm font-medium">{he.quoteShareOutcomeTitle}</p>
+            <ul className="space-y-1 text-sm">
+              {shareOutcome.linkCreated ? <li className="text-success">✓ {he.quoteShareOutcomeLink}</li> : null}
+              {shareOutcome.pdfDownloaded ? <li className="text-success">✓ {he.quoteShareOutcomePdf}</li> : null}
+              {shareOutcome.whatsappOpened ? (
+                <li className="text-success">✓ {he.quoteShareOutcomeWhatsApp}</li>
+              ) : null}
+              {shareOutcome.popupBlocked ? <li className="text-danger">⚠ {he.quoteWhatsAppPopupBlocked}</li> : null}
+            </ul>
+            <p className="text-xs text-fg-muted">{he.quoteShareOutcomeNotSent}</p>
+          </section>
+        ) : null}
         {justSent && publicUrl ? (
           <section className="ops-card flex items-center gap-4 p-4">
             <LottieAnimation name="sentEmail" size={48} />
             <div className="min-w-0">
               <p className="text-sm font-medium">{he.quoteSentTitle}</p>
+              <p className="text-xs text-fg-muted">{he.quoteSentLockedHint}</p>
               <a className="break-all text-sm text-action" href={publicUrl} target="_blank" rel="noreferrer">
                 {publicUrl}
               </a>
@@ -854,65 +1520,87 @@ export function QuoteBuilder({
           </section>
         ) : null}
 
-        <section className="cpq-zone-context ops-card flex flex-col gap-3 p-4">
+        <section id="cpq-zone-details" className="cpq-zone-context flex flex-col gap-4">
           <p id="quote-company" tabIndex={-1} className="sr-only">
             {companyName || he.quotePublicCompany}
           </p>
 
           {canCrm ? (
-            draft.customer_id && selectedName ? (
+            draft.customer_id && selectedName && !replacingCustomer ? (
               <QuoteContextCard
                 customerName={selectedName}
                 customerKind={customerKind}
+                customerPhone={customerPhoneDisplay}
                 siteName={selectedSite?.name || live.site_name}
                 siteAddress={selectedSiteAddress}
                 canChange={canEdit}
                 onChange={() => {
-                  updateDraft({ customer_id: "", site_id: "" });
-                  setCustomerLabel("");
-                  setCustomerQ("");
+                  setReplacingCustomer(true);
                 }}
                 canCreateSite={canEdit && canSitesCreate && !draft.site_id}
                 onCreateSite={() => {
                   setProjectDetailsOpen(true);
                   window.setTimeout(() => document.getElementById("new-site-name")?.focus(), 50);
                 }}
+                siteSlot={
+                  canSites ? (
+                    <Select
+                      id="site_id"
+                      label={he.quoteSite}
+                      value={draft.site_id}
+                      disabled={!canEdit || !draft.customer_id}
+                      onChange={(ev) => {
+                        const site = sitesQuery.data?.items.find((row) => row.id === ev.target.value);
+                        const address = site?.address as { line?: string; formatted?: string } | undefined;
+                        updateDraft({
+                          site_id: ev.target.value,
+                          project_name: site?.name || draft.project_name,
+                          project_address: address?.line || address?.formatted || draft.project_address,
+                        });
+                      }}
+                    >
+                      <option value="">{he.quoteSitePlaceholder}</option>
+                      {(sitesQuery.data?.items ?? []).map((row) => (
+                        <option key={row.id} value={row.id}>
+                          {row.name}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : undefined
+                }
               />
             ) : (
               <div className="flex flex-col gap-3">
-                <QuoteContextCard unassigned />
-                <div className="flex flex-col gap-2">
-                  <Input
-                    id="customer_id"
-                    label={he.quoteCustomer}
-                    hint={he.quoteCustomerNone}
-                    value={customerQ}
-                    disabled={!canEdit}
-                    onChange={(ev) => setCustomerQ(ev.target.value)}
-                    autoComplete="off"
-                  />
-                  {customerResults.map((row) => (
-                    <button
-                      key={row.id}
-                      type="button"
-                      className="quote-flow-action"
-                      onClick={() => {
-                        updateDraft({ customer_id: row.id, site_id: "" });
-                        setCustomerLabel(row.display_name);
-                        setCustomerQ("");
-                      }}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-start text-sm font-medium">{row.display_name}</span>
-                    </button>
-                  ))}
-                </div>
+                {!draft.customer_id ? <QuoteContextCard unassigned /> : null}
+                {replacingCustomer ? (
+                  <p className="text-sm font-semibold text-fg">{he.quoteCustomerPickerTitle}</p>
+                ) : null}
+                <p className="text-xs text-fg-muted">{he.quoteCustomerPickerHint}</p>
+                <CustomerSelector
+                  onPick={(customer) => {
+                    pickCustomer({ id: customer.id, name: customer.name });
+                  }}
+                  onBack={() => {
+                    if (draft.customer_id) {
+                      setReplacingCustomer(false);
+                    }
+                  }}
+                  onCreateNew={
+                    canCrmCreate
+                      ? () => {
+                          window.setTimeout(() => document.getElementById("new-customer-name")?.focus(), 50);
+                        }
+                      : undefined
+                  }
+                />
               </div>
             )
           ) : null}
 
-          {canEdit && canCrmCreate && !draft.customer_id ? (
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          {canEdit && canCrmCreate && (!draft.customer_id || replacingCustomer) ? (
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
               <Input id="new-customer-name" label={he.quoteCustomerName} value={newCustomer.display_name} onChange={(ev) => setNewCustomer((p) => ({ ...p, display_name: ev.target.value }))} />
+              <Input id="new-customer-phone" label={he.quoteCustomerCreatePhone} value={newCustomer.phone} onChange={(ev) => setNewCustomer((p) => ({ ...p, phone: ev.target.value }))} />
               <Input id="new-customer-email" label={he.quoteCustomerEmail} value={newCustomer.email} onChange={(ev) => setNewCustomer((p) => ({ ...p, email: ev.target.value }))} />
               <Button
                 variant="secondary"
@@ -921,10 +1609,10 @@ export function QuoteBuilder({
                   const created = await api.createCustomer(workspaceId, {
                     display_name: newCustomer.display_name.trim(),
                     email: newCustomer.email.trim() || undefined,
+                    phone: newCustomer.phone.trim() || undefined,
                   });
-                  setNewCustomer({ display_name: "", email: "" });
-                  setCustomerLabel(created.display_name);
-                  updateDraft({ customer_id: created.id, site_id: "" });
+                  setNewCustomer({ display_name: "", email: "", phone: "" });
+                  pickCustomer({ id: created.id, name: created.display_name });
                 }}
               >
                 {he.quoteCustomerCreate}
@@ -960,29 +1648,6 @@ export function QuoteBuilder({
             <Input id="title" label={he.quoteTitle} value={draft.title} disabled={!canEdit} onChange={(ev) => updateDraft({ title: ev.target.value })} />
             <Input id="valid_until" label={he.quoteValidUntil} type="date" value={draft.valid_until} disabled={!canEdit} onChange={(ev) => updateDraft({ valid_until: ev.target.value })} />
           </div>
-
-          <Select
-            id="site_id"
-            label={he.quoteSite}
-            value={draft.site_id}
-            disabled={!canEdit || !draft.customer_id || !canSites}
-            onChange={(ev) => {
-              const site = sitesQuery.data?.items.find((row) => row.id === ev.target.value);
-              const address = site?.address as { line?: string; formatted?: string } | undefined;
-              updateDraft({
-                site_id: ev.target.value,
-                project_name: site?.name || draft.project_name,
-                project_address: address?.line || address?.formatted || draft.project_address,
-              });
-            }}
-          >
-            <option value="">{he.quoteSitePlaceholder}</option>
-            {(sitesQuery.data?.items ?? []).map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </Select>
 
           <Input id="project_name" label={he.quoteProjectName} value={draft.project_name} disabled={!canEdit} onChange={(ev) => updateDraft({ project_name: ev.target.value })} />
 
@@ -1141,6 +1806,7 @@ export function QuoteBuilder({
           debouncedCatalogQ={debouncedCatalogQ}
           addPending={addItem.isPending}
           onOpenSystemBuilder={canEdit && canCatalog ? () => setSystemBuilderOpen(true) : undefined}
+          onOpenQuickAdd={canEdit ? () => setQuickAddOpen(true) : undefined}
           onAddSection={canEdit ? () => addSection.mutate() : undefined}
           onRenameSection={(sectionId, name) => patchSection.mutate({ sectionId, body: { name } })}
           onToggleSection={(sectionId, collapsed) => patchSection.mutate({ sectionId, body: { collapsed } })}
@@ -1153,38 +1819,78 @@ export function QuoteBuilder({
         />
       </div>
 
-      <aside className="flex h-fit flex-col gap-3 xl:sticky xl:top-28">
-        <QuoteSummaryAside
-          currency={currency}
-          vatPercent={vatPercent}
-          subtotalNet={live.subtotal_net}
-          vatAmount={live.vat_amount}
-          totalGross={live.total_gross}
-          discountAmount={live.quote_discount_amount}
-          canViewCost={canViewCost}
-          costTotal={live.cost_total}
-          marginAmount={live.margin_amount}
-          marginPercent={live.margin_percent}
-          marginStatus={live.margin_status}
-          marginTarget={live.margin_target}
-          marginMinimum={live.margin_minimum}
-          canOverrideMargin={canOverridePrice}
-          hasMarginOverride={Boolean(live.margin_override_at)}
-          onOverrideMargin={() => marginOverride.mutate()}
-          pricedCount={pricedCount}
-        />
-        <div id="cpq-validation">
-          <QuoteValidationPanel gaps={liveGaps} pricedCount={pricedCount} />
-        </div>
-        {live.id && (live.version ?? 1) > 1 ? (
-          <RevisionComparePanel
-            workspaceId={workspaceId}
-            quoteId={live.id}
-            currentVersion={live.version ?? 1}
+      <aside id="cpq-summary-anchor" className="cpq-workspace-aside flex h-fit flex-col gap-3 xl:sticky xl:top-28">
+        {workspaceTab === "quote" ? <QuoteReadinessCard readiness={readiness} onFix={() => setWorkspaceTab("checks")} /> : null}
+        {workspaceTab === "quote" || workspaceTab === "profit" ? (
+          <QuoteSummaryAside
+            currency={currency}
+            vatPercent={vatPercent}
+            subtotalNet={live.subtotal_net}
+            vatAmount={live.vat_amount}
+            totalGross={live.total_gross}
+            discountAmount={live.quote_discount_amount}
+            canViewCost={canViewCost}
+            costTotal={live.cost_total}
+            marginAmount={live.margin_amount}
+            marginPercent={live.margin_percent}
+            marginStatus={live.margin_status}
+            marginTarget={live.margin_target}
+            marginMinimum={live.margin_minimum}
+            canOverrideMargin={canOverridePrice}
+            hasMarginOverride={Boolean(live.margin_override_at)}
+            onOverrideMargin={() => marginOverride.mutate()}
+            pricedCount={pricedCount}
+            compact={workspaceTab === "quote"}
+            showProfitability={workspaceTab === "profit"}
+            totalsOnly={workspaceTab === "profit"}
           />
         ) : null}
-        {live.id ? <QuoteAuditStrip workspaceId={workspaceId} quoteId={live.id} /> : null}
+
+        {workspaceTab === "quote" || workspaceTab === "checks" ? (
+          <div id="cpq-validation">
+            <QuoteValidationPanel gaps={liveGaps} pricedCount={pricedCount} compact={workspaceTab === "quote"} />
+          </div>
+        ) : null}
+
+        {workspaceTab === "quote" && live.status === "draft" && canSend ? (
+          <Button
+            disabled={!canSendNow}
+            title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
+            onClick={() => void startSendFlow()}
+          >
+            {he.quoteSend}
+          </Button>
+        ) : null}
+
+        {workspaceTab === "history" && live.id ? (
+          <>
+            {(live.version ?? 1) > 1 ? (
+              <RevisionComparePanel
+                workspaceId={workspaceId}
+                quoteId={live.id}
+                currentVersion={live.version ?? 1}
+              />
+            ) : (
+              <p className="text-sm text-fg-muted">{he.quotesVersion(live.version ?? 1)}</p>
+            )}
+            <QuoteAuditStrip workspaceId={workspaceId} quoteId={live.id} />
+          </>
+        ) : null}
       </aside>
+
+      {livePreviewOpen ? (
+        <aside className="cpq-live-preview-pane xl:sticky xl:top-28" aria-label={he.cpqLivePreview}>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold tracking-wide text-fg-muted">{he.cpqLivePreview}</p>
+            <Button variant="ghost" onClick={() => setLivePreviewOpen(false)}>
+              {he.cpqLivePreviewHide}
+            </Button>
+          </div>
+          <div className="origin-top scale-[0.72] sm:scale-[0.8]">
+            <QuoteDocument quote={liveDocument} showStatus={false} />
+          </div>
+        </aside>
+      ) : null}
 
       <footer className="quote-builder-actions lg:hidden" aria-label={he.cpqMobileActions}>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
@@ -1208,31 +1914,21 @@ export function QuoteBuilder({
           >
             {he.cpqCustomerView}
           </Button>
-          {live.status === "draft" && canSend ? (
+          {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
             <Button
-              disabled={!canSendNow}
-              title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
-              onClick={async () => {
-                if (!canSendNow) {
-                  focusValidation();
-                  setFormError(he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)));
-                  return;
-                }
-                skipRouteRef.current = true;
-                try {
-                  await save.mutateAsync();
-                  setConfirmSend(true);
-                } catch (err) {
-                  setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
-                } finally {
-                  skipRouteRef.current = false;
-                }
-              }}
+              variant={primaryCta === "approved" || primaryCta === "cancelled" ? "secondary" : undefined}
+              disabled={primaryCtaDisabled}
+              title={
+                primaryCta === "send" && !canSendNow
+                  ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                  : undefined
+              }
+              loading={primaryCta === "revise" ? revise.isPending : false}
+              onClick={() => runPrimaryCta()}
             >
-              {he.quoteSaveAndSend}
+              {primaryCtaLabel}
             </Button>
           ) : null}
-          {live.status === "approved" ? <Status label={he.quoteApprovedState} tone="success" /> : null}
           {live.status === "approved" && linkedProject && canViewProjects ? (
             <Button
               variant="secondary"
@@ -1254,6 +1950,43 @@ export function QuoteBuilder({
           {projectToast ? <p className="w-full text-xs text-success sm:w-auto">{he.projectCreatedToast}</p> : null}
         </div>
       </footer>
+
+      <QuoteQuickAdd
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        onAction={handleQuickAddAction}
+        catalogResults={(quickCatalogQuery.data?.items ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          selling_price: p.selling_price ?? p.list_price,
+          category_path: p.category_path,
+          manufacturer: p.manufacturer,
+        }))}
+        catalogLoading={quickCatalogQuery.isFetching}
+        onCatalogQuery={setQuickCatalogQ}
+        onPickCatalog={(productId) => {
+          const product = quickCatalogQuery.data?.items.find((p) => p.id === productId);
+          addItem.mutate({
+            product_id: productId,
+            item_type: product?.item_type || "catalog",
+            qty: 1,
+          });
+        }}
+        canCatalog={canCatalog}
+        canSystem={canEdit && canCatalog}
+      />
+
+      <QuoteShareDialog
+        open={shareOpen}
+        url={publicUrl}
+        customerName={selectedName || undefined}
+        onClose={() => setShareOpen(false)}
+        onWhatsApp={() => {
+          setShareOpen(false);
+          void openWhatsApp();
+        }}
+      />
 
       <ProjectFromQuoteDialog
         open={projectDialog}

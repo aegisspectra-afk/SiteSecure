@@ -14,45 +14,81 @@ import {
 export function QuoteValidationPanel({
   gaps,
   pricedCount,
+  compact = false,
 }: {
   gaps: QuoteGap[];
   pricedCount: number;
+  compact?: boolean;
 }) {
+  const [showDetails, setShowDetails] = useState(!compact);
   const visible = filterEmptyQuoteMarginGaps(gaps, pricedCount);
   const { completeness, technical, financial } = groupGapsByDomain(visible);
-  const { critical } = partitionGaps(visible);
+  const { critical, warning } = partitionGaps(visible);
   const score = completenessScore(visible);
   const ready = critical.length === 0 && score.done === score.total;
 
+  const domainStatus = (domainGaps: QuoteGap[]) => {
+    if (!domainGaps.length) return "ok" as const;
+    if (domainGaps.some((g) => gapSeverity(g) === "critical")) return "critical" as const;
+    if (domainGaps.some((g) => gapSeverity(g) === "warning")) return "warning" as const;
+    return "info" as const;
+  };
+
   return (
-    <section className="ops-card flex flex-col gap-3 p-4">
+    <section className="cpq-checks-card flex flex-col gap-3 p-4" id={compact ? undefined : "cpq-validation-panel"}>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{he.quoteSectionChecks}</p>
-        <p className="text-xs text-fg-muted">
-          {ready ? he.cpqQuoteReadyToSend : he.cpqCompletenessScore(score.done, score.total)}
-        </p>
+        <p className="text-xs font-semibold tracking-wide text-fg-muted">{he.cpqChecksBeforeSend}</p>
+        <span className="cpq-internal-badge">{he.cpqInternalBadge}</span>
       </div>
 
       {ready ? (
         <p className="text-sm font-medium text-success">{he.quoteChecksOk}</p>
+      ) : (
+        <ul className="cpq-checks-overview">
+          <CheckRow label={he.cpqCheckCustomer} status={domainStatus(completeness.filter((g) => g.field === "customer" || g.field === "customer_id"))} />
+          <CheckRow label={he.cpqCheckQuote} status={domainStatus(completeness.filter((g) => g.field !== "customer" && g.field !== "customer_id" && g.field !== "items"))} />
+          <CheckRow label={he.cpqCheckItems} status={domainStatus([...completeness.filter((g) => g.field === "items"), ...technical])} />
+          {warning.length ? (
+            <li className="cpq-check-row is-warning">
+              <span aria-hidden>🟡</span>
+              <span>{he.cpqCheckWarnings(warning.length)}</span>
+            </li>
+          ) : null}
+        </ul>
+      )}
+
+      {compact && !ready ? (
+        <Button variant="ghost" onClick={() => setShowDetails((v) => !v)}>
+          {showDetails ? he.cpqHideChecks : he.cpqShowChecks}
+        </Button>
       ) : null}
 
-      <DomainGroup
-        title={he.cpqValidationCompleteness}
-        gaps={completeness}
-        defaultOpen={completeness.length > 0}
-      />
-      <DomainGroup
-        title={he.cpqValidationTechnical}
-        gaps={technical}
-        defaultOpen={technical.some((g) => gapSeverity(g) === "critical")}
-      />
-      <DomainGroup
-        title={he.cpqValidationFinancial}
-        gaps={financial}
-        defaultOpen={financial.length > 0 && pricedCount > 0}
-      />
+      {(!compact || showDetails) && !ready ? (
+        <>
+          <DomainGroup title={he.cpqValidationCompleteness} gaps={completeness} defaultOpen={completeness.length > 0} />
+          <DomainGroup
+            title={he.cpqValidationTechnical}
+            gaps={technical}
+            defaultOpen={technical.some((g) => gapSeverity(g) === "critical")}
+          />
+          <DomainGroup
+            title={he.cpqValidationFinancial}
+            gaps={financial}
+            defaultOpen={financial.length > 0 && pricedCount > 0}
+          />
+        </>
+      ) : null}
     </section>
+  );
+}
+
+function CheckRow({ label, status }: { label: string; status: "ok" | "critical" | "warning" | "info" }) {
+  const icon = status === "ok" ? "🟢" : status === "critical" ? "🔴" : status === "warning" ? "🟡" : "🔵";
+  return (
+    <li className={`cpq-check-row is-${status}`}>
+      <span aria-hidden>{icon}</span>
+      <span>{label}</span>
+    </li>
   );
 }
 

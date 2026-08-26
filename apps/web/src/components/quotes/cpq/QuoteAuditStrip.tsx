@@ -54,6 +54,9 @@ export function QuoteAuditStrip({
 function eventLabel(type: string) {
   const map: Record<string, string> = {
     sent: he.cpqEventSent,
+    share_link_created: he.cpqEventShareLink,
+    whatsapp_share_initiated: he.cpqEventWhatsApp,
+    shared: he.cpqEventShared,
     revised: he.cpqEventRevised,
     item_added: he.cpqEventItemAdded,
     item_updated: he.cpqEventItemUpdated,
@@ -63,6 +66,7 @@ function eventLabel(type: string) {
     template_applied: he.cpqEventTemplateApplied,
     package_applied: he.cpqEventPackageApplied,
     template_saved: he.cpqEventTemplateSaved,
+    signed: he.cpqEventSigned,
     approved: he.cpqEventApproved,
     rejected: he.cpqEventRejected,
     viewed: he.cpqEventViewed,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..deps import service_client
@@ -25,6 +25,21 @@ class PublicDecisionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, max_length=200)
     reason: str | None = Field(default=None, max_length=2000)
+    user_agent: str | None = Field(default=None, max_length=500)
+    terms_accepted: bool | None = None
+    signature_data_url: str | None = Field(default=None, max_length=400_000)
+
+
+def _client_meta(request: Request, body: PublicDecisionIn) -> dict:
+    ua = (body.user_agent or "").strip() or (request.headers.get("user-agent") or "")[:500]
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    ip = forwarded or (request.client.host if request.client else None)
+    meta: dict = {}
+    if ua:
+        meta["user_agent"] = ua
+    if ip:
+        meta["ip"] = ip
+    return meta
 
 
 def _as_date(value: object) -> date | None:
@@ -167,24 +182,45 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     live_version = int(quote.get("version") or 1)
     access_version = int(access.get("version") or 1)
     superseded = live_version != access_version
-    if mark_viewed and not superseded and quote.get("status") == "sent":
+    if mark_viewed and not superseded:
+        status = quote.get("status")
         now = datetime.now(UTC).isoformat()
-        res = svc.patch(
-            "quotes",
-            {"status": "viewed", "viewed_at": now},
-            params={
-                "id": f"eq.{quote['id']}",
-                "workspace_id": f"eq.{quote['workspace_id']}",
-                "status": "eq.sent",
-            },
-        )
-        rows = as_list(res) if res.status_code == 200 else []
-        if rows:
-            quote = rows[0]
-            _event(svc, quote, "viewed", {"version": access_version})
-            _audit(svc, quote, "quotes.view_public", {"version": access_version, "source": "public"})
-        else:
-            quote = _load_quote(svc, access)
+        if status == "draft":
+            # First customer open of a shared draft proves delivery — promote to sent.
+            res = svc.patch(
+                "quotes",
+                {"status": "sent", "sent_at": now},
+                params={
+                    "id": f"eq.{quote['id']}",
+                    "workspace_id": f"eq.{quote['workspace_id']}",
+                    "status": "eq.draft",
+                },
+            )
+            rows = as_list(res) if res.status_code == 200 else []
+            if rows:
+                quote = rows[0]
+                _event(svc, quote, "sent", {"version": access_version, "source": "public_first_open"})
+                _audit(svc, quote, "quotes.send_public", {"version": access_version, "source": "public_first_open"})
+            else:
+                quote = _load_quote(svc, access)
+            status = quote.get("status")
+        if status == "sent":
+            res = svc.patch(
+                "quotes",
+                {"status": "viewed", "viewed_at": now},
+                params={
+                    "id": f"eq.{quote['id']}",
+                    "workspace_id": f"eq.{quote['workspace_id']}",
+                    "status": "eq.sent",
+                },
+            )
+            rows = as_list(res) if res.status_code == 200 else []
+            if rows:
+                quote = rows[0]
+                _event(svc, quote, "viewed", {"version": access_version})
+                _audit(svc, quote, "quotes.view_public", {"version": access_version, "source": "public"})
+            else:
+                quote = _load_quote(svc, access)
     can_decide = (not superseded) and quote.get("status") in DECISION_STATES
     public["status"] = "superseded" if superseded else quote.get("status")
     public["superseded"] = superseded
@@ -193,6 +229,7 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     public["viewed_at"] = quote.get("viewed_at")
     public["approved_at"] = quote.get("approved_at")
     public["rejected_at"] = quote.get("rejected_at")
+    public["approved_name"] = quote.get("approved_name")
     return public
 
 
@@ -204,10 +241,27 @@ def get_public_quote(
     return _assemble(svc, token, mark_viewed=True)
 
 
+@router.get("/{token}/pdf")
+def get_public_quote_pdf(
+    token: str,
+    svc: Annotated[ServiceClient, Depends(service_client)],
+    inline: bool = False,
+):
+    from ..pdf_response import pdf_response
+    from ..quote_pdf import render_quote_pdf
+
+    public = _assemble(svc, token, mark_viewed=False)
+    for banned in ("cost_total", "margin_amount", "margin_percent", "internal_notes", "cost"):
+        public.pop(banned, None)
+    pdf_bytes, filename = render_quote_pdf(public)
+    return pdf_response(pdf_bytes, filename, inline=inline)
+
+
 @router.post("/{token}/approve")
 def approve_public_quote(
     token: str,
     body: PublicDecisionIn,
+    request: Request,
     svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     access = _load_access(svc, token)
@@ -216,8 +270,17 @@ def approve_public_quote(
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": "superseded"})
     if quote.get("status") not in DECISION_STATES:
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": quote.get("status")})
-    now = datetime.now(UTC).isoformat()
+    if not body.terms_accepted:
+        raise ApiError(400, "VALIDATION_ERROR", "יש לאשר את תנאי ההצעה לפני החתימה")
     name = (body.name or "").strip() or None
+    if not name:
+        raise ApiError(400, "VALIDATION_ERROR", "יש להזין שם מלא לאישור")
+    signature = (body.signature_data_url or "").strip() or None
+    if not signature or not signature.startswith("data:image/"):
+        raise ApiError(400, "VALIDATION_ERROR", "יש לחתום דיגיטלית על ההצעה")
+    if len(signature) > 350_000:
+        raise ApiError(400, "VALIDATION_ERROR", "קובץ החתימה גדול מדי")
+    now = datetime.now(UTC).isoformat()
     patched = svc.patch(
         "quotes",
         {"status": "approved", "approved_at": now, "approved_name": name},
@@ -232,14 +295,30 @@ def approve_public_quote(
     if not rows:
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": quote.get("status")})
     quote = rows[0]
-    _event(svc, quote, "approved", {"version": access["version"], "name": name})
-    _audit(svc, quote, "quotes.approve", {"version": access["version"], "source": "public"})
+    client_meta = _client_meta(request, body)
+    event_meta = {
+        "version": access["version"],
+        "name": name,
+        "terms_accepted": True,
+        "has_signature": True,
+        **client_meta,
+    }
+    _event(svc, quote, "signed", {**event_meta, "signature_bytes": len(signature)})
+    _event(svc, quote, "approved", event_meta)
+    _audit(
+        svc,
+        quote,
+        "quotes.approve",
+        {"version": access["version"], "source": "public", "has_signature": True, **client_meta},
+    )
     public = _public_from_version(_load_version(svc, access))
     public["status"] = "approved"
     public["superseded"] = False
     public["can_approve"] = False
     public["can_reject"] = False
     public["approved_at"] = quote.get("approved_at")
+    public["approved_name"] = quote.get("approved_name")
+    public["signature_captured"] = True
     return public
 
 
@@ -247,6 +326,7 @@ def approve_public_quote(
 def reject_public_quote(
     token: str,
     body: PublicDecisionIn,
+    request: Request,
     svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     access = _load_access(svc, token)
@@ -271,8 +351,9 @@ def reject_public_quote(
     if not rows:
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": quote.get("status")})
     quote = rows[0]
-    _event(svc, quote, "rejected", {"version": access["version"], "reason": reason})
-    _audit(svc, quote, "quotes.reject", {"version": access["version"], "source": "public"})
+    event_meta = {"version": access["version"], "reason": reason, **_client_meta(request, body)}
+    _event(svc, quote, "rejected", event_meta)
+    _audit(svc, quote, "quotes.reject", {"version": access["version"], "source": "public", **_client_meta(request, body)})
     public = _public_from_version(_load_version(svc, access))
     public["status"] = "rejected"
     public["superseded"] = False

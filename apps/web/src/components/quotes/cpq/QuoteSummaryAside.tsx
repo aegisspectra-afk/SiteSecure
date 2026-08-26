@@ -20,6 +20,9 @@ export function QuoteSummaryAside({
   hasMarginOverride,
   onOverrideMargin,
   pricedCount = 0,
+  compact = false,
+  showProfitability = true,
+  totalsOnly = false,
 }: {
   currency: string;
   vatPercent: number;
@@ -38,27 +41,50 @@ export function QuoteSummaryAside({
   hasMarginOverride?: boolean;
   onOverrideMargin?: () => void;
   pricedCount?: number;
+  /** Totals only — hide profitability block */
+  compact?: boolean;
+  showProfitability?: boolean;
+  /** Profitability panel without customer totals */
+  totalsOnly?: boolean;
 }) {
   const hasLines = pricedCount > 0;
-  const effectiveStatus = hasLines ? marginStatus : null;
+  const costMissing = hasLines && canViewCost && !(Number(costTotal) > 0);
+  const effectiveStatus = hasLines && !costMissing ? marginStatus : null;
+  const showTotals = !totalsOnly;
 
   return (
     <>
-      <section className="ops-card cpq-summary-card flex flex-col gap-3 p-4">
-        <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{he.cpqQuoteSummary}</p>
+      {showTotals ? (
+      <section className="cpq-summary-card flex flex-col gap-3 p-4">
+        <p className="text-xs font-semibold tracking-wide text-fg-muted">{he.cpqQuoteSummary}</p>
         <PriceLine label={he.quoteSubtotalBeforeVat} value={formatMoney(subtotalNet, currency)} />
         {discountAmount != null && discountAmount > 0 ? (
           <PriceLine label={he.cpqQuoteDiscount} value={`−${formatMoney(discountAmount, currency)}`} />
         ) : null}
         <PriceLine label={he.quoteTaxHint(vatPercent)} value={formatMoney(vatAmount, currency)} />
-        <PriceLine label={he.quoteTotalDue} value={formatMoney(totalGross, currency)} strong />
+        <div className="cpq-summary-total">
+          <span className="text-sm text-fg-muted">{he.quoteTotalDue}</span>
+          <div className="text-end">
+            <p className="text-2xl font-semibold tracking-tight text-fg">{formatMoney(totalGross, currency)}</p>
+            <p className="text-xs text-fg-muted">{he.cpqTotalIncludesVat}</p>
+          </div>
+        </div>
       </section>
+      ) : null}
 
-      {canViewCost ? (
-        <section className="ops-card cpq-profit-card flex flex-col gap-2.5 p-4">
-          <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{he.cpqProfitability}</p>
+      {(!compact || totalsOnly) && showProfitability && canViewCost ? (
+        <section className="cpq-profit-card flex flex-col gap-2.5 p-4" aria-label={he.cpqProfitability}>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold tracking-wide text-fg-muted">{he.cpqProfitability}</p>
+            <span className="cpq-internal-badge">{he.cpqInternalBadge}</span>
+          </div>
           {!hasLines ? (
             <p className="text-sm text-fg-muted">{he.cpqMarginUnavailable}</p>
+          ) : costMissing ? (
+            <div className="cpq-cost-missing">
+              <p className="text-sm font-medium text-fg">{he.cpqCostMissingTitle}</p>
+              <p className="mt-1 text-xs text-fg-muted">{he.cpqCostMissingBody}</p>
+            </div>
           ) : (
             <>
               <PriceLine label={he.cpqRevenue} value={formatMoney(subtotalNet, currency)} />

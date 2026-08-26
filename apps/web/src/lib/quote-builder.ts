@@ -76,9 +76,10 @@ export function headerPatch(draft: QuoteHeaderDraft): QuotePatchBody {
     discount_value = Number.isFinite(fallback) ? fallback : 0;
   }
   return {
-    customer_id: draft.customer_id || undefined,
-    site_id: draft.site_id || undefined,
-    lead_id: draft.lead_id || undefined,
+    // null clears FKs on PATCH (replacement / unassign); undefined would omit and keep old values
+    customer_id: draft.customer_id ? draft.customer_id : null,
+    site_id: draft.site_id ? draft.site_id : null,
+    lead_id: draft.lead_id ? draft.lead_id : null,
     title: draft.title.trim() || undefined,
     valid_until: draft.valid_until || undefined,
     project_name: draft.project_name.trim() || undefined,
@@ -154,4 +155,35 @@ export function goToQuoteField(field: string) {
   if (!node) return;
   node.scrollIntoView({ behavior: "smooth", block: "center" });
   if (node instanceof HTMLElement) node.focus();
+}
+
+/** Status-aware primary CTA for the Quote Builder header. */
+export type QuotePrimaryCtaKind =
+  | "send"
+  | "show_link"
+  | "show_activity"
+  | "approved"
+  | "revise"
+  | "cancelled"
+  | "none";
+
+export function quotePrimaryCtaKind(status: string): QuotePrimaryCtaKind {
+  switch (status) {
+    case "draft":
+      return "send";
+    case "sent":
+      return "show_link";
+    case "viewed":
+      return "show_activity";
+    case "approved":
+      return "approved";
+    case "expired":
+    case "superseded":
+    case "rejected":
+      return "revise";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "none";
+  }
 }

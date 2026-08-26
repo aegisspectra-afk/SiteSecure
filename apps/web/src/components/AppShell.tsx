@@ -85,6 +85,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    function onSidebarCollapse(event: Event) {
+      const detail = (event as CustomEvent<{ collapsed?: boolean }>).detail;
+      if (typeof detail?.collapsed !== "boolean") return;
+      setCollapsed(detail.collapsed);
+      try {
+        localStorage.setItem(COLLAPSE_KEY, detail.collapsed ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("site-secure:sidebar-collapse", onSidebarCollapse);
+    return () => window.removeEventListener("site-secure:sidebar-collapse", onSidebarCollapse);
+  }, []);
+
+  useEffect(() => {
+    const onQuoteWorkspace = /^\/app\/quotes\/[^/]+/.test(pathname);
+    if (!onQuoteWorkspace) return;
+    setCollapsed(true);
+  }, [pathname]);
+
+  useEffect(() => {
     setMoreOpen(false);
     setWorkOpen(false);
     setCommandOpen(false);

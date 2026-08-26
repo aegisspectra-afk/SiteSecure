@@ -409,13 +409,14 @@ describe("customer-facing quote document", () => {
         }}
       />,
     );
-    expect(screen.getByText("אגיס מערכות בע״מ")).toBeInTheDocument();
-    expect(screen.getByText(/Q-00009/)).toBeInTheDocument();
+    expect(screen.getAllByText("אגיס מערכות בע״מ").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Q-00009/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("רומן קופן")).toBeInTheDocument();
     expect(screen.getByText("אתר הרצליה")).toBeInTheDocument();
     expect(screen.getByText(he.quoteDiscount)).toBeInTheDocument();
-    expect(screen.getByText(he.quoteWarranty)).toBeInTheDocument();
+    expect(screen.getByText(he.quoteDocWarranty)).toBeInTheDocument();
     expect(screen.getByText("גישה מהחניה")).toBeInTheDocument();
+    expect(document.getElementById("quote-document-print-root")).toBeTruthy();
     expect(screen.queryByText(he.quoteCost)).not.toBeInTheDocument();
     expect(screen.queryByText(he.quoteMargin)).not.toBeInTheDocument();
     expect(screen.queryByText(he.quoteInternalNotes)).not.toBeInTheDocument();

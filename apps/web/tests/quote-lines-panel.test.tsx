@@ -29,7 +29,7 @@ describe("QuoteLinesPanel", () => {
         catalogLoading={false}
         debouncedCatalogQ=""
         onAdd={() => undefined}
-        onPatch={() => undefined}
+        onPersistLine={async () => undefined}
         onDelete={() => undefined}
         onReorder={() => undefined}
       />,

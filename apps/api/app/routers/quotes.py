@@ -119,7 +119,7 @@ class QuoteItemIn(BaseModel):
     unit_price: float | None = Field(default=None, ge=0)
     cost: float | None = Field(default=None, ge=0)
     discount: float = Field(default=0, ge=0)
-    discount_type: str = "amount"
+    discount_type: str = "percent"
     sort_order: int = 0
     section_id: str | None = None
     package_instance_id: str | None = None

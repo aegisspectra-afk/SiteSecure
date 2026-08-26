@@ -410,6 +410,7 @@ export function QuoteBuilder({
         qty?: number;
         unit_price?: number;
         discount?: number;
+        discount_type?: string;
         description?: string;
         sku?: string | null;
         sort_order?: number;
@@ -421,7 +422,28 @@ export function QuoteBuilder({
       applyRow(row);
       return row;
     },
+    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
+
+  const persistQuoteLine = useCallback(
+    async (
+      itemId: string,
+      body: {
+        qty?: number;
+        unit_price?: number;
+        discount?: number;
+        discount_type?: string;
+        description?: string;
+        sku?: string | null;
+      },
+    ) => {
+      const current = await createOnce();
+      const row = await api.patchQuoteItem(workspaceId, current.id, itemId, body);
+      applyRow(row);
+      return row;
+    },
+    [api, workspaceId],
+  );
   const deleteItem = useMutation({
     mutationFn: async (itemId: string) => {
       const current = await createOnce();
@@ -1813,7 +1835,7 @@ export function QuoteBuilder({
           onDuplicateSection={(sectionId) => duplicateSection.mutate(sectionId)}
           onDeleteSection={(sectionId) => deleteSection.mutate(sectionId)}
           onAdd={(body) => addItem.mutate(body)}
-          onPatch={(itemId, body) => patchItem.mutate({ itemId, body })}
+          onPersistLine={persistQuoteLine}
           onDelete={(itemId) => deleteItem.mutate(itemId)}
           onReorder={(itemId, direction) => void reorderItem(itemId, direction)}
         />

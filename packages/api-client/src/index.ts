@@ -668,6 +668,19 @@ export type PublicQuote = {
     consent_he?: string;
     consent_text?: string;
     fields?: string[];
+    captured?: {
+      signer_name?: string;
+      signed_at?: string;
+      quote_id?: string;
+      quote_version?: number;
+      document_id?: string;
+      storage_bucket?: string;
+      storage_path?: string;
+      mime_type?: string;
+      byte_size?: number;
+      checksum?: string;
+      image_data_url?: string;
+    };
   };
   pdf_ready?: boolean;
   issued_at?: string | null;

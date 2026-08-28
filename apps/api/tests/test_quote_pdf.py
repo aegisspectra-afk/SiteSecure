@@ -120,3 +120,92 @@ def test_pdf_digital_approval_block():
     doc["approved_name"] = "שנידי הלר"
     pdf_bytes, _ = render_quote_pdf(doc)
     assert len(pdf_bytes) > 2000
+
+
+def _pdf_plain_text(pdf_bytes: bytes) -> str:
+    import pymupdf
+
+    doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        return "\n".join(page.get_text("text") for page in doc)
+    finally:
+        doc.close()
+
+
+def test_pdf_includes_customer_company_and_contact_details():
+    """Regression: multi_cell without set_x dropped customer/title off-page."""
+    doc = _doc()
+    doc["title"] = "מערכת מצלמות לבית"
+    doc["customer"] = {
+        "display_name": "שנידי הלר",
+        "phone": "0585378423",
+        "email": "customer@example.com",
+        "address_line": "רחוב הרצל 1, תל אביב",
+    }
+    doc["company"] = {"name": "אגיס מערכות בע״מ", "brand_name": "אגיס מערכות בע״מ"}
+    pdf_bytes, _ = render_quote_pdf(doc)
+    text = _pdf_plain_text(pdf_bytes)
+    assert "שנידי הלר" in text
+    assert "אגיס מערכות" in text
+    assert "0585378423" in text or "058" in text
+    assert "customer@example.com" in text
+    assert "הרצל" in text or "תל אביב" in text
+    assert "מערכת מצלמות לבית" in text
+
+
+def test_pdf_customer_partial_details_still_renders_name():
+    doc = _doc()
+    doc["customer"] = {"display_name": "לקוח חלקי", "phone": None, "email": None}
+    doc.pop("site", None)
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "לקוח חלקי" in text
+    assert "טלפון:" not in text
+    assert "אימייל:" not in text
+
+
+def test_pdf_company_without_customer_contact_still_renders_brand():
+    doc = _doc()
+    doc["customer"] = {"display_name": "חברת אלפא בע״מ"}
+    doc["company"] = {"name": "אגיס מערכות", "brand_name": "אגיס מערכות", "legal_name": "אגיס מערכות בע״מ"}
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "אגיס מערכות" in text
+    assert "חברת אלפא" in text
+
+
+def test_pdf_customer_without_address_omits_blank_address_line():
+    doc = _doc()
+    doc["customer"] = {"display_name": "בלי כתובת", "phone": "0501111111", "email": "x@y.com"}
+    doc["site"] = {"name": None, "address": None}
+    doc["project_address"] = None
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "בלי כתובת" in text
+    assert "0501111111" in text or "050" in text
+    assert "x@y.com" in text
+
+
+def test_pdf_approved_document_survives_rerender_like_refresh():
+    """Approved payload (as after GET /document or public PDF) keeps customer + approval."""
+    doc = _doc()
+    doc["status"] = "approved"
+    doc["approved_at"] = "2026-08-27T12:00:00+00:00"
+    doc["approved_name"] = "מאשר בדיקה"
+    doc["customer"] = {"display_name": "איליה קרנר", "phone": "0532757750", "email": "ilya@example.com"}
+    doc["signature"] = {
+        "mode": "signature_pad_v1",
+        "captured": {
+            "signer_name": "מאשר בדיקה",
+            "signed_at": "2026-08-27T12:00:00+00:00",
+            "image_data_url": (
+                "data:image/png;base64,"
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+            ),
+        },
+    }
+    first = render_quote_pdf(doc)[0]
+    second = render_quote_pdf(doc)[0]
+    for pdf_bytes in (first, second):
+        text = _pdf_plain_text(pdf_bytes)
+        assert "איליה קרנר" in text
+        assert "מאשר בדיקה" in text
+        assert "מאושר" in text or "אושרה" in text
+        assert len(pdf_bytes) > 2000

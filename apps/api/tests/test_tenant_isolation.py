@@ -418,7 +418,8 @@ def test_owner_usage_meters_are_catalog_seats(settings, two_tenants):
     assert body["plan_key"] == "solo"
     assert body["active_members"] >= 1
     keys = {row["key"] for row in body["meters"]}
-    assert keys == {"seats_operator", "seats_field"}
+    # Catalog meters: seat buckets + storage entitlement (see workspace_meters / test_limits).
+    assert keys == {"seats_operator", "seats_field", "storage_gb"}
     office = next(row for row in body["meters"] if row["key"] == "seats_operator")
     assert office["current"] >= 1
     assert office["limit"] == 1
@@ -426,7 +427,10 @@ def test_owner_usage_meters_are_catalog_seats(settings, two_tenants):
     assert all(row["kind"] in {"member", "invite"} for row in office["occupants"])
     field = next(row for row in body["meters"] if row["key"] == "seats_field")
     assert field["current"] == len(field["occupants"])
-    assert "storage" not in keys
+    storage = next(row for row in body["meters"] if row["key"] == "storage_gb")
+    assert storage["unit"] == "bytes"
+    assert storage["current"] >= 0
+    assert isinstance(storage["limit"], int)
 
 
 def test_self_role_change_denied(settings, two_tenants):

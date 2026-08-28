@@ -6,6 +6,10 @@ apps/api/.env
 apps/web/.env
 apps/mobile/.env
 
+# Live verification tokens / artifacts (never commit)
+apps/api/scripts/.tmp_import_token
+apps/api/scripts/_verify_out/
+
 # Dependencies
 node_modules/
 .venv/

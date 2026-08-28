@@ -149,19 +149,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarAccount {...account} collapsed={collapsed} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-border bg-bg-1 px-4 py-3 lg:px-6">
+        <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-fg lg:text-base">
-              {membership?.workspace_name ?? he.brand}
-            </p>
-            <p className="mt-0.5 text-xs text-fg-muted">
-              {workspaceActive ? he.workspaceActive : he.workspaceInactive}
-            </p>
+            <p className="ops-topbar-kicker">{he.opsPlatform}</p>
+            <p className="ops-topbar-title">{membership?.workspace_name ?? he.brand}</p>
+            <p className="ops-topbar-meta">{workspaceActive ? he.workspaceActive : he.workspaceInactive}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               type="button"
-              className="inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] border border-border bg-bg-1 px-3 text-sm text-fg-muted hover:bg-bg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] border border-border bg-bg-1 px-3 text-sm text-fg-muted transition-colors duration-200 hover:bg-bg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               onClick={() => setCommandOpen(true)}
               aria-label={he.commandOpenSearch}
             >

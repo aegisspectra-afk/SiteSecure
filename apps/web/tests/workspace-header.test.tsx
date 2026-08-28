@@ -67,6 +67,8 @@ describe("workspace header helpers", () => {
       { width: 1100, height: 700 },
       { rtl: false },
     );
+    expect(ltr.left).toBeGreaterThanOrEqual(8);
+    expect(ltr.left + ltr.width).toBeLessThanOrEqual(1100);
     const below = placeAccountPopover(
       { top: 12, left: 8, right: 188, bottom: 48, width: 180 },
       { width: 390, height: 700 },

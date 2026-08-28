@@ -6,6 +6,7 @@ export of the same public payload: hierarchy, lines, totals, terms, approval.
 
 from __future__ import annotations
 
+import base64
 import re
 from io import BytesIO
 from pathlib import Path
@@ -43,6 +44,24 @@ _SOURCE_NUM_RE = re.compile(r"מס[׳'`]?\s*\d+")
 
 def _txt(value: object) -> str:
     return str(value or "").strip()
+
+
+_SIG_DATA_URL_RE = re.compile(
+    r"^data:image/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=\s]+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _signature_image_bytes(signature: dict) -> bytes | None:
+    captured = signature.get("captured") if isinstance(signature.get("captured"), dict) else {}
+    data_url = _txt(captured.get("image_data_url"))
+    match = _SIG_DATA_URL_RE.match(data_url)
+    if not match:
+        return None
+    try:
+        return base64.b64decode(re.sub(r"\s+", "", match.group(2)), validate=False)
+    except Exception:
+        return None
 
 
 def _ltr(value: object) -> str:
@@ -356,41 +375,48 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         pdf.cell(pdf.epw, 4, text=legal, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     # ── Hero identity (single title stack) ───────────────────────
+    # Always reset X before multi_cell — fpdf leaves cursor at the right edge
+    # after the previous cell, which would push customer/title off-page.
     pdf.ln(2)
     pdf.set_text_color(*INK)
-    _font(pdf, size=18, bold=True)
-    pdf.multi_cell(pdf.epw, 8, text=f"הצעת מחיר {_ltr(f'#{number}')}", align="R")
+    _right_text(pdf, f"הצעת מחיר {_ltr(f'#{number}')}", size=18, bold=True, h=8)
     if title:
         pdf.set_text_color(*INK)
-        _font(pdf, size=13, bold=True)
-        pdf.multi_cell(pdf.epw, 6.5, text=title, align="R")
+        _right_text(pdf, title, size=13, bold=True, h=6.5)
 
     # Customer · site on one subdued line
     who_bits = [b for b in (customer_name, site_name or site_addr) if b]
     if who_bits:
         pdf.set_text_color(*MUTED)
-        _font(pdf, size=10)
-        pdf.multi_cell(pdf.epw, 5.5, text=" · ".join(who_bits), align="R")
+        _right_text(pdf, " · ".join(who_bits), size=10, h=5.5)
 
     issued = _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
     until = _date_he(document.get("valid_until"))
     meta = [m for m in (issued, f"בתוקף עד {until}" if until else "", f"גרסה {_ltr(version)}") if m]
     if meta:
         pdf.set_text_color(*MUTED)
-        _font(pdf, size=8.5)
-        pdf.multi_cell(pdf.epw, 4.5, text=" · ".join(meta), align="R")
+        _right_text(pdf, " · ".join(meta), size=8.5, h=4.5)
 
     if lead:
         pdf.ln(0.5)
         pdf.set_text_color(*MUTED)
         _right_text(pdf, lead, size=9, h=4.5)
 
-    # Contact strip (phone only — keep quiet)
+    # Customer contact strip — name is in who_bits; phone/email/address here
     phone = _txt(customer.get("phone"))
+    email = _txt(customer.get("email"))
+    address = _txt(customer.get("address_line") or (site_addr if site_addr not in who_bits else ""))
+    who_line = " · ".join(who_bits)
+    contact_bits: list[str] = []
     if phone:
+        contact_bits.append(f"טלפון: {_ltr(phone)}")
+    if email:
+        contact_bits.append(f"אימייל: {_ltr(email)}")
+    if address and address not in who_line:
+        contact_bits.append(address)
+    if contact_bits:
         pdf.set_text_color(*MUTED)
-        _font(pdf, size=8.5)
-        pdf.multi_cell(pdf.epw, 4.5, text=f"טלפון: {_ltr(phone)}", align="R")
+        _right_text(pdf, " · ".join(contact_bits), size=8.5, h=4.5)
 
     pdf.ln(1)
     pdf.set_draw_color(*ACCENT)
@@ -592,11 +618,13 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     _ensure_space(pdf, 32)
     signature = document.get("signature") if isinstance(document.get("signature"), dict) else {}
     if is_approved:
+        ink = _signature_image_bytes(signature)
+        box_h = 52 if ink else 28
         y0 = pdf.get_y()
         pdf.set_fill_color(*SUCCESS_SOFT)
         pdf.set_draw_color(*SUCCESS)
         pdf.set_line_width(0.45)
-        pdf.rect(pdf.l_margin, y0, pdf.epw, 28, style="FD")
+        pdf.rect(pdf.l_margin, y0, pdf.epw, box_h, style="FD")
         pdf.set_xy(pdf.l_margin + 3, y0 + 3)
         pdf.set_text_color(*SUCCESS)
         _font(pdf, size=11, bold=True)
@@ -615,7 +643,15 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
         )
-        pdf.set_y(y0 + 30)
+        if ink:
+            try:
+                img_w = 42.0
+                img_x = pdf.l_margin + 4
+                img_y = y0 + 20
+                pdf.image(BytesIO(ink), x=img_x, y=img_y, w=img_w)
+            except Exception:
+                pass
+        pdf.set_y(y0 + box_h + 2)
     else:
         _section_label(pdf, _txt(signature.get("title")) or "אישור ההצעה")
         pdf.set_text_color(*MUTED)

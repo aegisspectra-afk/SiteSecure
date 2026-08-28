@@ -33,6 +33,8 @@ function DashboardPage() {
       features={features}
       variant={variant}
       workspaceStatus={membership?.workspace_status}
+      workspaceName={membership?.workspace_name ?? null}
+      displayName={session?.profile?.full_name?.trim() || session?.email || null}
       api={api}
     />
   );
@@ -44,6 +46,8 @@ function DashboardBody({
   features,
   variant,
   workspaceStatus,
+  workspaceName,
+  displayName,
   api,
 }: {
   workspaceId: string | undefined;
@@ -51,6 +55,8 @@ function DashboardBody({
   features: string[];
   variant: "ops" | "sales" | "observe" | "today";
   workspaceStatus?: string;
+  workspaceName?: string | null;
+  displayName?: string | null;
   api: ReturnType<typeof useSession>["api"];
 }) {
   const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
@@ -109,6 +115,8 @@ function DashboardBody({
         roleKey={roleKey}
         features={features}
         securitySignals={security.data?.signals ?? []}
+        displayName={displayName}
+        workspaceName={workspaceName}
       />
     );
   }
@@ -123,6 +131,8 @@ function DashboardBody({
       securitySignals={security.data?.signals ?? []}
       leadAttention={leadAttention}
       leadAttentionItems={leadAttentionItems}
+      displayName={displayName}
+      workspaceName={workspaceName}
     />
   );
 }

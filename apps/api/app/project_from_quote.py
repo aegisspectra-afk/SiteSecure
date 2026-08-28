@@ -78,10 +78,17 @@ def plan_project_from_quote(
         )
 
     site_id = quote.get("site_id")
+    if not site_id:
+        raise ApiError(
+            409,
+            "RESOURCE_STATE",
+            "להצעת המחיר אין אתר משויך, ולכן לא ניתן ליצור פרויקט התקנה.",
+        )
+
     return ProjectFromQuotePlan(
         name=project_name_from_quote(quote),
         customer_id=str(customer_id),
-        site_id=str(site_id) if site_id else None,
+        site_id=str(site_id),
         source_quote_id=str(quote["id"]),
         status="planned",
     )

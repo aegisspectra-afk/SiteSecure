@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import type { QuoteListCounts, QuoteOut } from "@site-secure/api-client";
 import {
   Button,
@@ -149,6 +148,7 @@ export function QuotesWorkspace({
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
+          <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.cpqWorkspaceKicker}</p>
           <h1 className="text-2xl font-semibold leading-tight text-fg">{he.quotesTitle}</h1>
           <p className="text-sm text-fg-muted">{he.quotesLead}</p>
           {hasQuotes ? (

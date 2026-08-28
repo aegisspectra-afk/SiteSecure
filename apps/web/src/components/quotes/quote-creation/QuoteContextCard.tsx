@@ -14,6 +14,7 @@ export function QuoteContextCard({
   onCreateSite,
   canCreateSite,
   siteSlot,
+  siteFileLink,
 }: {
   customerName?: string | null;
   customerKind?: string | null;
@@ -26,12 +27,13 @@ export function QuoteContextCard({
   onCreateSite?: () => void;
   canCreateSite?: boolean;
   siteSlot?: ReactNode;
+  siteFileLink?: ReactNode;
 }) {
   if (unassigned) {
     return (
       <div id="customer_id" tabIndex={-1} className="quote-context-card is-empty">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">{he.quoteCustomer}</p>
+          <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.cpqContextCustomerKicker}</p>
           <p className="mt-1 text-sm font-medium text-fg">{he.workflowUnassignedCustomer}</p>
           <p className="mt-0.5 text-xs text-fg-muted">{he.workflowUnassignedCustomerHint}</p>
         </div>
@@ -50,8 +52,8 @@ export function QuoteContextCard({
               <Building2 className="size-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-medium text-fg-muted">{he.quoteCustomer}</p>
-              <p className="truncate text-sm font-semibold text-fg">{customerName}</p>
+              <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.cpqContextCustomerKicker}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-fg">{customerName}</p>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
                 {customerKind ? <span>{customerKind}</span> : null}
                 {customerPhone ? <span className="ltr-meta">{customerPhone}</span> : null}
@@ -72,7 +74,9 @@ export function QuoteContextCard({
             <MapPin className="size-4" strokeWidth={1.75} />
           </span>
           <div className="min-w-0 flex-1 space-y-2">
-            {siteSlot ? null : <p className="text-xs font-medium text-fg-muted">{he.quoteSite}</p>}
+            {siteSlot ? null : (
+              <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.cpqContextSiteKicker}</p>
+            )}
             {siteSlot ? (
               siteSlot
             ) : siteName ? (
@@ -83,7 +87,8 @@ export function QuoteContextCard({
             ) : (
               <p className="text-sm text-fg-muted">{he.quoteSiteNone}</p>
             )}
-            {!siteName && canCreateSite && onCreateSite ? (
+            {siteFileLink ? <div className="pt-0.5">{siteFileLink}</div> : null}
+            {!siteName && !siteSlot && canCreateSite && onCreateSite ? (
               <button type="button" className="text-xs font-medium text-action hover:underline" onClick={onCreateSite}>
                 {he.workflowCreateSiteOptional}
               </button>

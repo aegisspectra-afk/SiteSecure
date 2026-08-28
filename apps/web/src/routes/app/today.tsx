@@ -1,6 +1,6 @@
 import { Button, ErrorState } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate, createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { TodayHome } from "../../components/dashboard/TodayHome";
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/app/today")({
 
 function TodayPage() {
   const { session, api } = useSession();
+  const navigate = useNavigate();
   const membership = session?.memberships[0];
   const variant = homeVariant(membership?.role_key);
   const workspaceId = membership?.workspace_id;
@@ -30,13 +31,6 @@ function TodayPage() {
 
   const start = useMutation({
     mutationFn: (jobId: string) => api.startJob(workspaceId!, jobId),
-    onSettled: () => {
-      setBusyId(null);
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
-    },
-  });
-  const complete = useMutation({
-    mutationFn: (jobId: string) => api.completeJob(workspaceId!, jobId),
     onSettled: () => {
       setBusyId(null);
       void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
@@ -69,8 +63,8 @@ function TodayPage() {
         start.mutate(id);
       }}
       onComplete={(id) => {
-        setBusyId(id);
-        complete.mutate(id);
+        // Field Job owns completion notes / checklist — do not silent-complete from Today.
+        void navigate({ to: "/app/jobs/$jobId", params: { jobId: id } });
       }}
     />
   );

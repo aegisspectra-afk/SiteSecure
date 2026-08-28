@@ -62,6 +62,20 @@ export function LeadProfile({
     },
   });
 
+  const lead = leadQuery.data;
+  const quotes = quotesQuery.data ?? [];
+  const approvedQuote = quotes.find((q) => q.status === "approved");
+  const primaryPreview = lead ? leadPrimaryAction(lead.status) : null;
+
+  const linkedProjectQuery = useQuery({
+    queryKey: ["lead-project", workspaceId, approvedQuote?.id],
+    enabled: Boolean(primaryPreview === "open_project" && approvedQuote?.id),
+    queryFn: async () => {
+      const res = await api.listProjects(workspaceId, { source_quote_id: approvedQuote!.id, limit: 1 });
+      return res.items[0] ?? null;
+    },
+  });
+
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, leadQuery.data?.customer_id],
     enabled: Boolean(leadQuery.data?.customer_id),
@@ -83,9 +97,7 @@ export function LeadProfile({
     void queryClient.invalidateQueries({ queryKey: ["directory-leads", workspaceId] });
   };
 
-  const lead = leadQuery.data;
   const visits = visitsQuery.data?.items ?? [];
-  const quotes = quotesQuery.data ?? [];
   const activity = useMemo(
     () => (lead ? buildLeadActivity({ lead, visits, quotes }) : []),
     [lead, visits, quotes],
@@ -93,8 +105,7 @@ export function LeadProfile({
 
   const primary = lead ? leadPrimaryAction(lead.status) : null;
   const siteAddress = siteQuery.data ? addressLine(siteQuery.data.address) : null;
-  const approvedQuote = quotes.find((q) => q.status === "approved");
-
+  const linkedProject = linkedProjectQuery.data ?? null;
   const linkCustomer = useMutation({
     mutationFn: async () => {
       if (!lead) return;
@@ -204,13 +215,23 @@ export function LeadProfile({
             </Link>
           ) : null}
           {(primary === "open_quote" || primary === "open_project") && quotes[0] ? (
-            <Link
-              to="/app/quotes/$quoteId"
-              params={{ quoteId: (approvedQuote ?? quotes[0]).id }}
-              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
-            >
-              {primary === "open_project" ? he.leadsOpenProject : he.leadsOpenQuote}
-            </Link>
+            primary === "open_project" && linkedProject ? (
+              <Link
+                to="/app/projects/$projectId"
+                params={{ projectId: linkedProject.id }}
+                className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
+              >
+                {he.leadsOpenProject}
+              </Link>
+            ) : (
+              <Link
+                to="/app/quotes/$quoteId"
+                params={{ quoteId: (approvedQuote ?? quotes[0]).id }}
+                className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
+              >
+                {primary === "open_project" ? he.leadsOpenProject : he.leadsOpenQuote}
+              </Link>
+            )
           ) : null}
         </div>
       </header>

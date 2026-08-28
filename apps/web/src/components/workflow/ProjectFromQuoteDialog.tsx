@@ -52,23 +52,29 @@ export function ProjectFromQuoteDialog({
       <div className="flex flex-col gap-2.5">
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {mode === "create" ? (
-          <button
-            type="button"
-            className="quote-flow-action is-recommended"
-            data-autofocus
-            disabled={creating}
-            onClick={onCreate}
-          >
-            <span className="quote-flow-action-icon" aria-hidden>
-              <Briefcase className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="min-w-0 flex-1 text-start">
-              <span className="block text-sm font-semibold text-fg">
-                {creating ? he.workflowCreatingProject : he.workflowCreateProject}
+          siteId ? (
+            <button
+              type="button"
+              className="quote-flow-action is-recommended"
+              data-autofocus
+              disabled={creating}
+              onClick={onCreate}
+            >
+              <span className="quote-flow-action-icon" aria-hidden>
+                <Briefcase className="size-4" strokeWidth={1.75} />
               </span>
-              <span className="mt-0.5 block text-xs text-fg-muted">{he.workflowCreateProjectHint}</span>
-            </span>
-          </button>
+              <span className="min-w-0 flex-1 text-start">
+                <span className="block text-sm font-semibold text-fg">
+                  {creating ? he.workflowCreatingProject : he.workflowCreateProject}
+                </span>
+                <span className="mt-0.5 block text-xs text-fg-muted">{he.workflowCreateProjectHint}</span>
+              </span>
+            </button>
+          ) : (
+            <p className="rounded-[var(--radius-control)] border border-border px-3 py-3 text-sm text-fg-muted">
+              {he.workflowProjectNeedsSite}
+            </p>
+          )
         ) : (
           <button type="button" className="quote-flow-action is-recommended" data-autofocus onClick={openProject}>
             <span className="quote-flow-action-icon" aria-hidden>

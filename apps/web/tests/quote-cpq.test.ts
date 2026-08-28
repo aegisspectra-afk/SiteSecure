@@ -8,6 +8,7 @@ import {
   leadRequirementRows,
   mergeQuoteGaps,
   neighborSortOrders,
+  quoteScopeBreakdown,
   softQuoteAdvisories,
 } from "../src/lib/quote-cpq";
 import { buildCctvRecommendation, defaultCctvInputFromLead } from "../src/lib/system-builder";
@@ -60,6 +61,40 @@ describe("quote-cpq helpers", () => {
       ]),
     ).toBe(true);
     expect(canSendWithGaps([{ field: "title", code: "title", message: "חסר", severity: "critical" }])).toBe(false);
+  });
+
+  it("sums presentation scope from line types without inventing totals", () => {
+    const scope = quoteScopeBreakdown([
+      {
+        id: "a",
+        quote_id: "q1",
+        description: "CAM",
+        qty: 2,
+        unit_price: 100,
+        line_net: 200,
+        item_type: "catalog",
+      },
+      {
+        id: "b",
+        quote_id: "q1",
+        description: "Install",
+        qty: 1,
+        unit_price: 500,
+        line_net: 500,
+        item_type: "labor",
+      },
+      {
+        id: "c",
+        quote_id: "q1",
+        description: "Note",
+        qty: 1,
+        unit_price: 0,
+        line_net: 0,
+        item_type: "note",
+      },
+    ]);
+    expect(scope.equipment).toBe(200);
+    expect(scope.labor).toBe(500);
   });
 
   it("groups gaps and hides empty-quote margin noise", () => {

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..deps import service_client
 from ..errors import ApiError, MESSAGES
+from ..quote_signature import freeze_approval_on_version, store_quote_signature_document
 from ..quote_tokens import hash_public_token
 from ..rest import as_list
 from ..supabase_service import ServiceClient
@@ -230,6 +231,11 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     public["approved_at"] = quote.get("approved_at")
     public["rejected_at"] = quote.get("rejected_at")
     public["approved_name"] = quote.get("approved_name")
+    signature = public.get("signature") if isinstance(public.get("signature"), dict) else {}
+    captured = signature.get("captured") if isinstance(signature.get("captured"), dict) else None
+    public["signature_captured"] = bool(captured) or bool(
+        quote.get("approved_at") and quote.get("approved_name")
+    )
     return public
 
 
@@ -281,6 +287,15 @@ def approve_public_quote(
     if len(signature) > 350_000:
         raise ApiError(400, "VALIDATION_ERROR", "קובץ החתימה גדול מדי")
     now = datetime.now(UTC).isoformat()
+    # Store signature artifact first so we never approve without a durable ink capture.
+    captured = store_quote_signature_document(
+        svc,
+        quote=quote,
+        version=int(access["version"]),
+        signer_name=name,
+        signed_at=now,
+        signature_data_url=signature,
+    )
     patched = svc.patch(
         "quotes",
         {"status": "approved", "approved_at": now, "approved_name": name},
@@ -295,21 +310,39 @@ def approve_public_quote(
     if not rows:
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": quote.get("status")})
     quote = rows[0]
+    freeze_approval_on_version(
+        svc,
+        workspace_id=str(quote["workspace_id"]),
+        quote_id=str(quote["id"]),
+        version=int(access["version"]),
+        approved_at=str(quote.get("approved_at") or now),
+        approved_name=name,
+        captured=captured,
+    )
     client_meta = _client_meta(request, body)
     event_meta = {
         "version": access["version"],
         "name": name,
         "terms_accepted": True,
         "has_signature": True,
+        "signature_document_id": captured.get("document_id"),
+        "signature_storage_path": captured.get("storage_path"),
+        "signature_checksum": captured.get("checksum"),
         **client_meta,
     }
-    _event(svc, quote, "signed", {**event_meta, "signature_bytes": len(signature)})
+    _event(svc, quote, "signed", {**event_meta, "signature_bytes": captured.get("byte_size")})
     _event(svc, quote, "approved", event_meta)
     _audit(
         svc,
         quote,
         "quotes.approve",
-        {"version": access["version"], "source": "public", "has_signature": True, **client_meta},
+        {
+            "version": access["version"],
+            "source": "public",
+            "has_signature": True,
+            "signature_document_id": captured.get("document_id"),
+            **client_meta,
+        },
     )
     public = _public_from_version(_load_version(svc, access))
     public["status"] = "approved"

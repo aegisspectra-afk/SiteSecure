@@ -9,7 +9,7 @@ import { SendQuoteConfirm } from "../../../components/quotes/SendQuoteConfirm";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
-import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../../lib/download-blob";
+import { downloadAndOpenPdf, downloadBlob } from "../../../lib/download-blob";
 import { resolveQuoteRecipientPhone } from "../../../lib/quote-recipient-phone";
 import {
   closeSharePlaceholder,
@@ -44,7 +44,7 @@ function QuotePreviewBody() {
   const [shareOpen, setShareOpen] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
   const [whatsappPrompt, setWhatsappPrompt] = useState(false);
-  const [busy, setBusy] = useState<null | "pdf" | "print" | "share" | "whatsapp">(null);
+  const [busy, setBusy] = useState<null | "pdf" | "share" | "whatsapp">(null);
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
   const lock = useRef(false);
@@ -120,23 +120,6 @@ function QuotePreviewBody() {
       downloadAndOpenPdf(blob, filename);
     } catch (err) {
       console.error("preview pdf download failed", err);
-      setFormError(err instanceof ApiClientError ? err.message : he.quotePdfFailed);
-    } finally {
-      setBusy(null);
-      lock.current = false;
-    }
-  }
-
-  async function onPrint() {
-    if (!workspaceId || lock.current) return;
-    lock.current = true;
-    setBusy("print");
-    setFormError(null);
-    try {
-      const { blob } = await api.downloadQuotePdf(workspaceId, quoteId);
-      openPdfBlob(blob);
-    } catch (err) {
-      console.error("preview pdf print failed", err);
       setFormError(err instanceof ApiClientError ? err.message : he.quotePdfFailed);
     } finally {
       setBusy(null);

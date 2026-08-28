@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import httpx
+
 from .config import Settings
-from .errors import ApiError
-from .http_supabase import supabase_request
+from .errors import ApiError, MESSAGES
+from .http_supabase import DEFAULT_TIMEOUT, supabase_request
 
 
 class ServiceClient:
@@ -13,6 +15,7 @@ class ServiceClient:
         if not key:
             raise ApiError(503, "API_UNAVAILABLE", "שירות הגישה הציבורית אינו זמין")
         self._settings = settings
+        self._key = key
         self._headers = {
             "apikey": key,
             "Authorization": f"Bearer {key}",
@@ -23,6 +26,10 @@ class ServiceClient:
     @property
     def rest(self) -> str:
         return f"{self._settings.supabase_url}/rest/v1"
+
+    @property
+    def storage(self) -> str:
+        return f"{self._settings.supabase_url}/storage/v1"
 
     def get(self, path: str, params: dict | None = None):
         return supabase_request(
@@ -52,3 +59,20 @@ class ServiceClient:
             params=params,
             json=json,
         )
+
+    def storage_upload_bytes(self, bucket: str, path: str, data: bytes, content_type: str) -> None:
+        """Upload a private object with the service role (bypasses Storage RLS)."""
+        headers = {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": content_type,
+            "x-upsert": "true",
+        }
+        url = f"{self.storage}/object/{bucket}/{path.lstrip('/')}"
+        try:
+            with httpx.Client(timeout=max(DEFAULT_TIMEOUT, 30.0)) as client:
+                response = client.post(url, headers=headers, content=data)
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"]) from exc
+        if response.status_code not in {200, 201}:
+            raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשמור את החתימה")

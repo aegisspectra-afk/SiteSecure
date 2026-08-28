@@ -52,7 +52,7 @@ export function AttentionList({
   );
   if (!framed) return <div className="mt-2">{body}</div>;
   return (
-    <section className="ops-card p-5" aria-labelledby="attention-heading">
+    <section className="ops-panel p-5" aria-labelledby="attention-heading">
       {body}
     </section>
   );

@@ -17,6 +17,8 @@ function formatLineDiscount(item: PublicQuote["items"][number], currency: string
   if (dtype === "percent" || dtype === "%") return `${value}%`;
   return formatMoney(value, currency);
 }
+
+function moneyOrIncluded(amount: number | null | undefined, currency: string) {
   if (amount == null || Math.abs(Number(amount)) < 0.005) return he.quoteDocIncluded;
   return formatMoney(amount, currency);
 }
@@ -129,7 +131,8 @@ export function QuoteDocument({
     if (!lead) lead = kp;
     else if (kp !== lead) lead = `${lead}\n${kp}`;
   }
-  const whoLine = [quote.customer?.display_name, siteName || siteAddress].filter(Boolean).join(" · ");
+  const whoCustomer = quote.customer?.display_name?.trim() || "";
+  const whoSite = (siteName || siteAddress || "").trim();
   const metaBits = [
     issued,
     until ? `${he.quoteValidUntil} ${until}` : null,
@@ -168,7 +171,13 @@ export function QuoteDocument({
       <section className="quote-doc-hero">
         <p className="quote-doc-hero-kicker ltr-meta">{he.quoteDocHeroQuote(quote.number)}</p>
         {quote.title ? <h1 className="quote-doc-title">{quote.title}</h1> : null}
-        {whoLine ? <p className="quote-doc-hero-who">{whoLine}</p> : null}
+        {whoCustomer || whoSite ? (
+          <p className="quote-doc-hero-who">
+            {whoCustomer ? <span>{whoCustomer}</span> : null}
+            {whoCustomer && whoSite ? <span> · </span> : null}
+            {whoSite ? <span>{whoSite}</span> : null}
+          </p>
+        ) : null}
         {metaBits.length ? <p className="quote-doc-hero-meta">{metaBits.join(" · ")}</p> : null}
         {lead ? <p className="quote-doc-summary">{lead}</p> : null}
       </section>
@@ -294,6 +303,13 @@ export function QuoteDocument({
             <p className="quote-doc-consent">
               {he.quoteDocApprovedAt}: {formatDay(quote.approved_at)} · {he.quoteDocDigitalSignOk}
             </p>
+            {signature?.captured?.image_data_url ? (
+              <img
+                className="quote-doc-signature-ink"
+                src={signature.captured.image_data_url}
+                alt={he.quoteDocSignSignature}
+              />
+            ) : null}
           </section>
         ) : (
           <section className="quote-doc-signature">

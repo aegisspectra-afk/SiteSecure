@@ -43,8 +43,6 @@ export function SignaturePad({
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
-    // Intentionally only on mount — parent width is stable enough for mobile portal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function point(event: ReactPointerEvent<HTMLCanvasElement>) {

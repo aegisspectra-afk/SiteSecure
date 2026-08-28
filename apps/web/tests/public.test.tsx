@@ -63,17 +63,21 @@ describe("public website", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pub.heroLine1);
     expect(screen.getAllByRole("link", { name: pub.login }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: pub.joinPilot }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: pub.seeProduct })).toHaveAttribute("href", "#site-file");
+    expect(screen.getAllByRole("link", { name: pub.seeProduct })[0]).toHaveAttribute("href", "#site-file");
     expect(document.getElementById("pain")).toBeTruthy();
     expect(document.getElementById("site-file")).toBeTruthy();
     expect(document.getElementById("twin")).toBeTruthy();
     expect(document.getElementById("operations")).toBeTruthy();
     expect(document.getElementById("field")).toBeTruthy();
+    expect(document.getElementById("intelligence")).toBeTruthy();
     expect(document.getElementById("security")).toBeTruthy();
+    expect(document.getElementById("numbers")).toBeTruthy();
     expect(document.getElementById("pilot")).toBeTruthy();
     expect(screen.getAllByText(pub.previewBadge).length).toBeGreaterThan(0);
     expect(screen.getByText(pub.siteFileIntent)).toBeInTheDocument();
-    expect(screen.getByText(pub.securityTitle)).toBeInTheDocument();
+    expect(screen.getByText(pub.securityTitleA)).toBeInTheDocument();
+    expect(screen.getByText(pub.intelIntent)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: pub.securityCta })).toHaveAttribute("href", "/legal/security");
     expect(screen.getByRole("link", { name: legal.pages.privacy.title })).toHaveAttribute(
       "href",
       "/legal/privacy",
@@ -90,12 +94,12 @@ describe("public website", () => {
     expect(guestEntryPath()).toBe("/login");
   });
 
-  it("names the signed-in account instead of an anonymous continue CTA", () => {
+  it("keeps signed-in workspace actions without showing email in the primary nav", () => {
     sessionStub.user = { email: "ilya@example.com" };
     sessionStub.session = { has_workspace: false, email: "ilya@example.com" };
     sessionStub.error = null;
     render(<PublicHome />);
-    expect(screen.getAllByText("ilya@example.com").length).toBeGreaterThan(0);
+    expect(screen.queryByText("ilya@example.com")).not.toBeInTheDocument();
     expect(screen.queryByText(new RegExp(pub.signedInAs))).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: pub.continueOnboarding }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: pub.signOut }).length).toBeGreaterThan(0);

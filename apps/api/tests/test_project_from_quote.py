@@ -141,3 +141,21 @@ def test_quote_without_customer_fails():
     except ApiError as exc:
         assert exc.status_code == 409
         assert "לקוח" in exc.message
+
+
+def test_quote_without_site_fails():
+    try:
+        plan_project_from_quote(
+            quote={
+                "id": "q1",
+                "workspace_id": "w1",
+                "status": "approved",
+                "customer_id": "c1",
+                "site_id": None,
+            },
+            workspace_id="w1",
+        )
+        raise AssertionError("expected ApiError")
+    except ApiError as exc:
+        assert exc.status_code == 409
+        assert "אתר" in exc.message

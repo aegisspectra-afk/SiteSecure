@@ -38,7 +38,7 @@ describe("QuoteLineRow", () => {
 
     fireEvent.blur(desc);
     await waitFor(() => expect(onPersist).toHaveBeenCalledTimes(1));
-    expect(onPersist.mock.calls[0]?.[1]).toEqual({ description: "NVR חדש" });
+    expect(onPersist).toHaveBeenCalledWith("i1", { description: "NVR חדש" });
   });
 
   it("allows clearing numeric field before typing a new value", () => {

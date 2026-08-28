@@ -210,34 +210,34 @@ describe("dark color system", () => {
   const dark = css.slice(css.indexOf(".dark {"), css.indexOf(".auth-root"));
   const theme = css.slice(css.indexOf("@theme {"), css.indexOf(":root {"));
 
-  it("keeps light brand primary and uses navy layers in dark, not black or full white ink", () => {
+  it("keeps light brand primary and uses graphite layers in dark, not black or full white ink", () => {
     expect(theme).toContain("--color-action: #0b6bcb");
-    expect(dark).toContain("--color-bg-0: #0b1220");
-    expect(dark).toContain("--color-bg-nav: #0f172a");
-    expect(dark).toContain("--color-bg-1: #111c2e");
-    expect(dark).toContain("--color-bg-2: #16243a");
-    expect(dark).toContain("--color-bg: #0d192b");
-    expect(dark).toContain("--color-border: #243550");
-    expect(dark).toContain("--color-fg: #f1f5f9");
-    expect(dark).toContain("--color-fg-muted: #a9b8cc");
-    expect(dark).toContain("--color-fg-subtle: #71839a");
-    expect(dark).toContain("--color-action: #2f80ed");
+    expect(dark).toContain("--color-bg-0: #0b0d10");
+    expect(dark).toContain("--color-bg-nav: #11151a");
+    expect(dark).toContain("--color-bg-1: #171c22");
+    expect(dark).toContain("--color-bg-2: #1c2229");
+    expect(dark).toContain("--color-bg: #11151a");
+    expect(dark).toContain("--color-border: #29313a");
+    expect(dark).toContain("--color-fg: #f4f7fa");
+    expect(dark).toContain("--color-fg-muted: #929ba6");
+    expect(dark).toContain("--color-fg-subtle: #6b7380");
+    expect(dark).toContain("--color-action: #0b6bcb");
     expect(dark).not.toMatch(/--color-bg-0:\s*#000/);
     expect(dark).not.toMatch(/--color-fg:\s*#fff(?:fff)?\b/i);
     expect(dark).not.toMatch(/--color-bg-0:\s*#111827/);
-    const layers = ["#0b1220", "#0f172a", "#111c2e", "#16243a", "#0d192b"];
+    const layers = ["#0b0d10", "#11151a", "#171c22", "#1c2229"];
     expect(new Set(layers).size).toBe(layers.length);
   });
 
   it("keeps functional color on status tokens, not as a canvas fill", () => {
-    expect(dark).toContain("--color-success: #22c55e");
-    expect(dark).toContain("--color-warning: #f59e0b");
-    expect(dark).toContain("--color-danger: #ef4444");
-    expect(dark).toContain("--color-info: #38bdf8");
+    expect(dark).toContain("--color-success: #3dbe8c");
+    expect(dark).toContain("--color-warning: #d69a2d");
+    expect(dark).toContain("--color-danger: #f97066");
+    expect(dark).toContain("--color-info: #4d9adc");
     expect(dark).toContain("--color-analytics: #8b7cf6");
     expect(dark).toContain("--color-tech: #22d3ee");
-    expect(dark).not.toMatch(/--color-bg-0:\s*#22c55e/);
-    expect(dark).not.toMatch(/--color-bg-1:\s*#2f80ed/);
+    expect(dark).not.toMatch(/--color-bg-0:\s*#3dbe8c/);
+    expect(dark).not.toMatch(/--color-bg-1:\s*#0b6bcb/);
   });
 
   it("maps chrome to nav and popovers to elevated surfaces", () => {

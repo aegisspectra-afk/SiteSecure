@@ -224,3 +224,21 @@ export function neighborSortOrders(
     swap_order: current.sort_order ?? index * 10,
   };
 }
+
+/** Presentation-only scope sums from priced lines (does not replace server totals). */
+export function quoteScopeBreakdown(items: QuoteItemOut[]): {
+  equipment: number;
+  labor: number;
+} {
+  let equipment = 0;
+  let labor = 0;
+  for (const item of items) {
+    if (item.item_type === "note") continue;
+    const net = Number(item.line_net);
+    const fallback = Number(item.qty) * Number(item.unit_price);
+    const amount = Number.isFinite(net) ? net : Number.isFinite(fallback) ? fallback : 0;
+    if (item.item_type === "labor") labor += amount;
+    else equipment += amount;
+  }
+  return { equipment, labor };
+}

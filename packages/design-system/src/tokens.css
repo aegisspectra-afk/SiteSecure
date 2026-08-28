@@ -5,12 +5,12 @@
   --color-action-fg: #ffffff;
   --color-fg: #0f172a;
   --color-fg-muted: #475569;
-  --color-border: #e2e8f0;
+  --color-border: #d8dee8;
   --color-bg: #ffffff;
-  --color-bg-subtle: #f8fafc;
-  --color-bg-0: #f1f5f9;
+  --color-bg-subtle: #f4f6f9;
+  --color-bg-0: #eef1f5;
   --color-bg-1: #ffffff;
-  --color-bg-2: #ffffff;
+  --color-bg-2: #f8fafc;
   --color-danger: #b42318;
   --color-danger-fg: #ffffff;
   --color-warning: #b54708;
@@ -19,7 +19,7 @@
   --color-analytics: #6d5ae8;
   --color-tech: #0e7490;
   --color-focus: #0b6bcb;
-  --color-bg-nav: #ffffff;
+  --color-bg-nav: #f8fafc;
   --color-fg-subtle: #64748b;
   --color-scrim: rgb(15 23 42 / 40%);
   --color-primary-50: #f0f7fd;
@@ -45,10 +45,11 @@
   --color-auth-accent: #0b6bcb;
   --color-auth-accent-soft: #4d9adc;
   --color-auth-glow: rgb(11 107 203 / 22%);
-  --color-public-bg: #05080d;
-  --color-public-surface: #0a1018;
-  --color-public-elevated: #0f1722;
-  --color-public-border: #1b2533;
+  --color-public-bg: #0b0d10;
+  --color-public-surface: #11151a;
+  --color-public-elevated: #171c22;
+  --color-public-card: #1c2229;
+  --color-public-border: #29313a;
 
   --font-sans: "Heebo", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-latin: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -57,7 +58,7 @@
   --radius-control: 6px;
   --radius-panel: 8px;
 
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 6%);
+  --shadow-card: 0 1px 0 rgb(15 23 42 / 4%);
   --shadow-popover: 0 8px 24px rgb(15 23 42 / 10%);
 
   /* Base 4px so Tailwind p-1=4, p-2=8, p-3=12, p-4=16, p-6=24, p-8=32, p-12=48, p-16=64 */
@@ -76,37 +77,37 @@
   --space-64: 64px;
 }
 
-/* Product dark: navy / steel / slate layers. Not black, not neon. */
+/* Product dark: graphite layers aligned with SITE SECURE public DNA. Not neon. */
 .dark {
   color-scheme: dark;
-  --color-action: #2f80ed;
-  --color-action-hover: #4a93f5;
-  --color-action-active: #1e6fe0;
-  --color-action-fg: #f1f5f9;
-  --color-fg: #f1f5f9;
-  --color-fg-muted: #a9b8cc;
-  --color-fg-subtle: #71839a;
-  --color-border: #243550;
-  --color-bg: #0d192b;
-  --color-bg-subtle: #16243a;
-  --color-bg-0: #0b1220;
-  --color-bg-nav: #0f172a;
-  --color-bg-1: #111c2e;
-  --color-bg-2: #16243a;
-  --color-danger: #ef4444;
-  --color-danger-fg: #f1f5f9;
-  --color-warning: #f59e0b;
-  --color-success: #22c55e;
-  --color-info: #38bdf8;
+  --color-action: #0b6bcb;
+  --color-action-hover: #1c7dd9;
+  --color-action-active: #095aa9;
+  --color-action-fg: #ffffff;
+  --color-fg: #f4f7fa;
+  --color-fg-muted: #929ba6;
+  --color-fg-subtle: #6b7380;
+  --color-border: #29313a;
+  --color-bg: #11151a;
+  --color-bg-subtle: #171c22;
+  --color-bg-0: #0b0d10;
+  --color-bg-nav: #11151a;
+  --color-bg-1: #171c22;
+  --color-bg-2: #1c2229;
+  --color-danger: #f97066;
+  --color-danger-fg: #0b0d10;
+  --color-warning: #d69a2d;
+  --color-success: #3dbe8c;
+  --color-info: #4d9adc;
   --color-analytics: #8b7cf6;
   --color-tech: #22d3ee;
-  --color-focus: #2f80ed;
-  --color-scrim: rgb(11 18 32 / 72%);
+  --color-focus: #4d9adc;
+  --color-scrim: rgb(11 13 16 / 72%);
   --color-auth-panel: #0d131d;
   --color-auth-panel-fg: #e8eef6;
   --color-auth-panel-muted: #8b9bb0;
-  --shadow-card: 0 1px 2px rgb(8 15 28 / 28%);
-  --shadow-popover: 0 12px 32px rgb(8 15 28 / 42%);
+  --shadow-card: none;
+  --shadow-popover: 0 12px 32px rgb(0 0 0 / 42%);
 }
 
 /* Auth-only dark console. Does not convert the rest of the product to dark mode. */
@@ -132,15 +133,15 @@
   --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
 }
 
-/* Public marketing origin. Darker, more neutral than the auth console. */
+/* Public marketing origin. Layered dark surfaces — premium, calm, technical. */
 .public-root {
   color-scheme: dark;
   --color-action: #0b6bcb;
   --color-action-hover: #1c7dd9;
   --color-action-active: #095aa9;
   --color-action-fg: #ffffff;
-  --color-fg: #e8eef6;
-  --color-fg-muted: #8b9bb0;
+  --color-fg: #f4f7fa;
+  --color-fg-muted: #929ba6;
   --color-border: var(--color-public-border);
   --color-bg: var(--color-public-surface);
   --color-bg-subtle: var(--color-public-elevated);

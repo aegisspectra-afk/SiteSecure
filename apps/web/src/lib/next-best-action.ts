@@ -22,6 +22,10 @@ export type NextAction = {
   label: string;
 };
 
+/**
+ * Operational decision engine: live work beats onboarding setup.
+ * Invite/team setup only surfaces when there is nothing operational to do.
+ */
 export function nextBestAction(opts: {
   setup: { complete: boolean; steps: SetupStep[] };
   summary: DashboardSummary | null;
@@ -33,17 +37,6 @@ export function nextBestAction(opts: {
   canCreateProject?: boolean;
   leadAttention?: LeadOut | null;
 }): NextAction | null {
-  const current = opts.setup.steps.find((step) => step.current);
-  if (!opts.setup.complete && current?.href && opts.canInvite) {
-    return {
-      id: "setup-invite",
-      title: he.nextActionInvite,
-      body: he.nextActionInviteBody,
-      href: current.href,
-      label: he.inviteUser,
-    };
-  }
-
   if (opts.leadAttention) {
     const lead = opts.leadAttention;
     const name = lead.contact_name || leadDisplayTitle(lead);
@@ -53,17 +46,6 @@ export function nextBestAction(opts: {
       body: `${leadRequirementsSummary(lead)} · ${he.leadNextActionVisitBody}`,
       href: `/app/leads/${lead.id}` as NextActionHref,
       label: he.leadNextActionOpenLead,
-    };
-  }
-
-  const conversion = quoteConversion(opts.summary);
-  if (opts.canCreateQuote && conversion.total === 0) {
-    return {
-      id: "first-quote",
-      title: he.uxStartFirstQuote,
-      body: he.nextActionFirstQuoteBody,
-      href: "/app/quotes/new",
-      label: he.nextActionCreateQuote,
     };
   }
 
@@ -101,6 +83,28 @@ export function nextBestAction(opts: {
       ),
       href: "/app/quotes",
       label: he.kpiViewQuotes,
+    };
+  }
+
+  const conversion = quoteConversion(opts.summary);
+  if (opts.canCreateQuote && conversion.total === 0) {
+    return {
+      id: "first-quote",
+      title: he.uxStartFirstQuote,
+      body: he.nextActionFirstQuoteBody,
+      href: "/app/quotes/new",
+      label: he.nextActionCreateQuote,
+    };
+  }
+
+  const current = opts.setup.steps.find((step) => step.current);
+  if (!opts.setup.complete && current?.href && opts.canInvite) {
+    return {
+      id: "setup-invite",
+      title: he.nextActionInvite,
+      body: he.nextActionInviteBody,
+      href: current.href,
+      label: he.inviteUser,
     };
   }
 

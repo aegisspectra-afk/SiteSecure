@@ -1,10 +1,38 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, type Plugin } from "vitest/config";
 import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
 import { requireProductionApiUrl } from "./src/lib/public-api-url";
+
+const srcDir = path.resolve(__dirname, "src");
+const sessionModule = path.resolve(srcDir, "lib/session.tsx");
+const reactPkg = path.resolve(__dirname, "../../node_modules/react");
+const reactDomPkg = path.resolve(__dirname, "../../node_modules/react-dom");
+
+/**
+ * OneDrive / non-ASCII workspace paths can make Vite serve the same file as both
+ * `/src/...` and `/@fs/C:/...`, which duplicates React context modules (SessionProvider).
+ */
+function singleInstanceLocalModules(): Plugin {
+  return {
+    name: "single-instance-local-modules",
+    enforce: "pre",
+    resolveId(id) {
+      const normalized = id.replace(/\\/g, "/");
+      if (
+        normalized === sessionModule.replace(/\\/g, "/") ||
+        normalized.endsWith("/lib/session.tsx") ||
+        normalized.endsWith("/lib/session") ||
+        /(^|\/)lib\/session(\.tsx)?$/.test(normalized)
+      ) {
+        return sessionModule;
+      }
+      return null;
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, "../..");
@@ -27,10 +55,13 @@ export default defineConfig(({ mode }) => {
     define: hosted
       ? { "import.meta.env.VITE_API_URL": JSON.stringify(env.VITE_API_URL || "") }
       : undefined,
-    plugins: [tanstackRouter({ quoteStyle: "double" }), react(), tailwindcss()],
+    plugins: [singleInstanceLocalModules(), tanstackRouter({ quoteStyle: "double" }), react(), tailwindcss()],
     resolve: {
+      dedupe: ["react", "react-dom"],
       alias: {
-        "@": path.resolve(__dirname, "src"),
+        "@": srcDir,
+        react: reactPkg,
+        "react-dom": reactDomPkg,
       },
     },
     server: {

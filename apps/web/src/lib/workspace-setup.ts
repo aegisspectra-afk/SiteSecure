@@ -21,7 +21,10 @@ export function workspaceSetup(opts: {
 }): { steps: SetupStep[]; complete: boolean; done: number; total: number; percent: number } {
   const steps: SetupStep[] = [{ id: "workspace", label: he.setupWorkspace, done: true, current: false }];
   if (can(opts.roleKey, "users.invite", opts.features) || can(opts.roleKey, "users.view", opts.features)) {
-    const invited = (opts.memberCount ?? 1) > 1;
+    // Unknown memberCount must not pretend the workspace is solo (false invite priority).
+    // Pending invites count as progress on the invite step.
+    const invited =
+      opts.memberCount == null || opts.memberCount > 1 || (opts.pendingInvites ?? 0) > 0;
     steps.push({
       id: "invite",
       label: he.setupInvite,

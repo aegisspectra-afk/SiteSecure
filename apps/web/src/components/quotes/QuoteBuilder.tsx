@@ -22,6 +22,7 @@ import {
   filterEmptyQuoteMarginGaps,
   mergeQuoteGaps,
   neighborSortOrders,
+  quoteScopeBreakdown,
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
 import type { SystemBuilderLine } from "../../lib/system-builder";
@@ -142,7 +143,9 @@ export function QuoteBuilder({
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [morePlacement, setMorePlacement] = useState<"down" | "up">("down");
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMoreRef = useRef<HTMLDivElement>(null);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [revokedToast, setRevokedToast] = useState(false);
   const [busyAction, setBusyAction] = useState<null | "pdf" | "share" | "whatsapp" | "print">(null);
@@ -436,11 +439,10 @@ export function QuoteBuilder({
         description?: string;
         sku?: string | null;
       },
-    ) => {
+    ): Promise<void> => {
       const current = await createOnce();
       const row = await api.patchQuoteItem(workspaceId, current.id, itemId, body);
       applyRow(row);
-      return row;
     },
     [api, workspaceId],
   );
@@ -625,6 +627,7 @@ export function QuoteBuilder({
     items.filter((item) => item.item_type !== "note").length,
   );
   const pricedCount = items.filter((item) => item.item_type !== "note" && Number(item.unit_price) > 0).length;
+  const scopeBreakdown = useMemo(() => quoteScopeBreakdown(items), [items]);
   const canSendNow = Boolean(live.id) && canSend && live.status === "draft" && canSendWithGaps(liveGaps);
   const completeness = completenessScore(liveGaps);
   const missingCompleteness = completeness.total - completeness.done;
@@ -670,7 +673,9 @@ export function QuoteBuilder({
   useEffect(() => {
     if (!moreOpen) return;
     const onDoc = (event: MouseEvent) => {
-      if (!moreMenuRef.current?.contains(event.target as Node)) setMoreOpen(false);
+      const target = event.target as Node;
+      if (moreMenuRef.current?.contains(target) || mobileMoreRef.current?.contains(target)) return;
+      setMoreOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMoreOpen(false);
@@ -864,11 +869,6 @@ export function QuoteBuilder({
       actionLock.current = false;
       setMoreOpen(false);
     }
-  }
-
-  async function copySecureLink() {
-    // Prefer share dialog so clipboard focus failures never look like share failures.
-    await openShareDialog();
   }
 
   async function reorderItem(itemId: string, direction: "up" | "down") {
@@ -1130,8 +1130,168 @@ export function QuoteBuilder({
     },
   );
 
+  const moreMenuPanel = (placement: "down" | "up") =>
+    moreOpen && morePlacement === placement ? (
+      <div
+        className={`cpq-overflow-menu cpq-overflow-menu-wide${placement === "up" ? " is-up" : ""}`}
+        role="menu"
+      >
+        <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
+          <p className="cpq-overflow-label">{he.cpqMenuDocument}</p>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setLivePreviewOpen((v) => !v);
+              setMoreOpen(false);
+            }}
+          >
+            {livePreviewOpen ? he.cpqLivePreviewHide : he.quotePreviewPrimary}
+          </button>
+          {live.id ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busyAction === "pdf"}
+              onClick={() => void downloadPdf()}
+            >
+              {busyAction === "pdf" ? he.quotePdfPreparing : he.quotePdfDownload}
+            </button>
+          ) : null}
+          {live.id ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busyAction === "print"}
+              onClick={() => void printDocumentPdf()}
+            >
+              {busyAction === "print" ? he.quotePdfPreparing : he.quotePrintAction}
+            </button>
+          ) : null}
+        </div>
+        {live.id && canSend ? (
+          <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuShare}>
+            <p className="cpq-overflow-label">{he.cpqMenuShare}</p>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busyAction === "share"}
+              onClick={() => void openMailtoShare()}
+            >
+              {he.quoteMailtoShare}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMoreOpen(false);
+                void openShareDialog();
+              }}
+            >
+              {he.cpqCopyCustomerLink}
+            </button>
+            {(live.status === "sent" || live.status === "viewed" || live.status === "approved") ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={revokeLink.isPending}
+                onClick={() => {
+                  revokeLink.mutate();
+                  setMoreOpen(false);
+                }}
+              >
+                {he.quoteRevokeLink}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuVersions}>
+          <p className="cpq-overflow-label">{he.cpqMenuVersions}</p>
+          {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                revise.mutate();
+                setMoreOpen(false);
+              }}
+            >
+              {he.quoteRevise}
+            </button>
+          ) : null}
+          {live.id ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setWorkspaceTab("history");
+                setMoreOpen(false);
+              }}
+            >
+              {he.cpqVersionHistory}
+            </button>
+          ) : null}
+        </div>
+        <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuActions}>
+          <p className="cpq-overflow-label">{he.cpqMenuActions}</p>
+          {canEdit ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setQuickAddOpen(true);
+                setMoreOpen(false);
+              }}
+            >
+              + {he.cpqAddCommand}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={historyIndex <= 0}
+            onClick={() => {
+              undo();
+              setMoreOpen(false);
+            }}
+          >
+            {he.quoteUndo}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={historyIndex >= history.length - 1}
+            onClick={() => {
+              redo();
+              setMoreOpen(false);
+            }}
+          >
+            {he.quoteRedo}
+          </button>
+          {live.id &&
+          canDelete &&
+          live.status !== "cancelled" &&
+          live.status !== "superseded" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="is-danger"
+              disabled={cancelQuote.isPending}
+              onClick={() => {
+                setMoreOpen(false);
+                if (!window.confirm(he.cpqCancelQuoteConfirm)) return;
+                cancelQuote.mutate();
+              }}
+            >
+              {he.cpqCancelQuote}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    ) : null;
+
   return (
-    <div className={`quote-builder cpq-builder cpq-workspace grid gap-4 pb-28 lg:pb-0 ${livePreviewOpen ? "xl:grid-cols-[minmax(0,1fr)_20rem_minmax(18rem,24rem)]" : "xl:grid-cols-[minmax(0,1fr)_20rem]"}`}>
+    <div className={`quote-builder cpq-builder cpq-workspace grid gap-4 ${livePreviewOpen ? "xl:grid-cols-[minmax(0,1fr)_20rem_minmax(18rem,24rem)]" : "xl:grid-cols-[minmax(0,1fr)_20rem]"}`}>
       <header className={`cpq-builder-header sticky top-0 z-10 ${livePreviewOpen ? "xl:col-span-3" : "xl:col-span-2"}`}>
         <nav className="cpq-breadcrumb" aria-label="breadcrumb">
           <Link to="/app/quotes" className="cpq-breadcrumb-link">
@@ -1148,6 +1308,7 @@ export function QuoteBuilder({
         </nav>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
+            <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.cpqWorkspaceKicker}</p>
             <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">
               {he.cpqHeaderTitle(live.number || "")}
             </h1>
@@ -1157,6 +1318,17 @@ export function QuoteBuilder({
                 : statusDisplayLabel}
               {subtitleParts.length ? ` · ${subtitleParts.join(" · ")}` : ""}
             </p>
+            {selectedName || draft.site_id || live.site_name ? (
+              <p className="cpq-context-strip text-xs text-fg-muted">
+                <span className="public-mono tracking-[0.08em] text-fg-subtle">{he.cpqContextCustomerKicker}</span>
+                <span className="mx-1.5 text-fg">{selectedName || "—"}</span>
+                <span className="text-fg-subtle" aria-hidden>
+                  →
+                </span>
+                <span className="public-mono ms-1.5 tracking-[0.08em] text-fg-subtle">{he.cpqContextSiteKicker}</span>
+                <span className="ms-1.5 text-fg">{selectedSite?.name || live.site_name || he.quoteSiteNone}</span>
+              </p>
+            ) : null}
             <p className="cpq-save-state text-xs text-fg-subtle" aria-live="polite">
               <span className={`cpq-save-dot is-${saveState === "error" ? "error" : dirty ? "dirty" : saveState}`} />
               {saveLabel}
@@ -1200,169 +1372,18 @@ export function QuoteBuilder({
             <div className="relative" ref={moreMenuRef}>
               <Button
                 variant="ghost"
-                onClick={() => setMoreOpen((v) => !v)}
-                aria-expanded={moreOpen}
+                onClick={() => {
+                  setMorePlacement("down");
+                  setMoreOpen((v) => !(v && morePlacement === "down"));
+                }}
+                aria-expanded={moreOpen && morePlacement === "down"}
                 aria-haspopup="menu"
                 aria-label={he.cpqMoreActionsAria}
                 title={he.cpqMoreActions}
               >
                 <MoreHorizontal className="size-5" aria-hidden />
               </Button>
-              {moreOpen ? (
-                <div className="cpq-overflow-menu cpq-overflow-menu-wide" role="menu">
-                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
-                    <p className="cpq-overflow-label">{he.cpqMenuDocument}</p>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setLivePreviewOpen((v) => !v);
-                        setMoreOpen(false);
-                      }}
-                    >
-                      {livePreviewOpen ? he.cpqLivePreviewHide : he.quotePreviewPrimary}
-                    </button>
-                    {live.id ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={busyAction === "pdf"}
-                        onClick={() => void downloadPdf()}
-                      >
-                        {busyAction === "pdf" ? he.quotePdfPreparing : he.quotePdfDownload}
-                      </button>
-                    ) : null}
-                    {live.id ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={busyAction === "print"}
-                        onClick={() => void printDocumentPdf()}
-                      >
-                        {busyAction === "print" ? he.quotePdfPreparing : he.quotePrintAction}
-                      </button>
-                    ) : null}
-                  </div>
-                  {live.id && canSend ? (
-                    <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuShare}>
-                      <p className="cpq-overflow-label">{he.cpqMenuShare}</p>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={busyAction === "share"}
-                        onClick={() => void openMailtoShare()}
-                      >
-                        {he.quoteMailtoShare}
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setMoreOpen(false);
-                          void openShareDialog();
-                        }}
-                      >
-                        {he.cpqCopyCustomerLink}
-                      </button>
-                      {(live.status === "sent" || live.status === "viewed" || live.status === "approved") ? (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          disabled={revokeLink.isPending}
-                          onClick={() => {
-                            revokeLink.mutate();
-                            setMoreOpen(false);
-                          }}
-                        >
-                          {he.quoteRevokeLink}
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuVersions}>
-                    <p className="cpq-overflow-label">{he.cpqMenuVersions}</p>
-                    {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          revise.mutate();
-                          setMoreOpen(false);
-                        }}
-                      >
-                        {he.quoteRevise}
-                      </button>
-                    ) : null}
-                    {live.id ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setWorkspaceTab("history");
-                          setMoreOpen(false);
-                        }}
-                      >
-                        {he.cpqVersionHistory}
-                      </button>
-                    ) : null}
-                  </div>
-                  <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuActions}>
-                    <p className="cpq-overflow-label">{he.cpqMenuActions}</p>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setQuickAddOpen(true);
-                          setMoreOpen(false);
-                        }}
-                      >
-                        + {he.cpqAddCommand}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      role="menuitem"
-                      disabled={historyIndex <= 0}
-                      onClick={() => {
-                        undo();
-                        setMoreOpen(false);
-                      }}
-                    >
-                      {he.quoteUndo}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      disabled={historyIndex >= history.length - 1}
-                      onClick={() => {
-                        redo();
-                        setMoreOpen(false);
-                      }}
-                    >
-                      {he.quoteRedo}
-                    </button>
-                    {live.id &&
-                    canDelete &&
-                    live.status !== "cancelled" &&
-                    live.status !== "superseded" ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="is-danger"
-                        disabled={cancelQuote.isPending}
-                        onClick={() => {
-                          setMoreOpen(false);
-                          if (!window.confirm(he.cpqCancelQuoteConfirm)) return;
-                          cancelQuote.mutate();
-                        }}
-                      >
-                        {he.cpqCancelQuote}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+              {moreMenuPanel("down")}
             </div>
           </div>
         </div>
@@ -1564,6 +1585,17 @@ export function QuoteBuilder({
                   setProjectDetailsOpen(true);
                   window.setTimeout(() => document.getElementById("new-site-name")?.focus(), 50);
                 }}
+                siteFileLink={
+                  draft.site_id && canSites ? (
+                    <Link
+                      to="/app/sites/$siteId"
+                      params={{ siteId: draft.site_id }}
+                      className="text-xs font-medium text-action hover:underline"
+                    >
+                      {he.cpqOpenSiteFile}
+                    </Link>
+                  ) : null
+                }
                 siteSlot={
                   canSites ? (
                     <Select
@@ -1862,6 +1894,8 @@ export function QuoteBuilder({
             hasMarginOverride={Boolean(live.margin_override_at)}
             onOverrideMargin={() => marginOverride.mutate()}
             pricedCount={pricedCount}
+            equipmentTotal={scopeBreakdown.equipment}
+            laborTotal={scopeBreakdown.labor}
             compact={workspaceTab === "quote"}
             showProfitability={workspaceTab === "profit"}
             totalsOnly={workspaceTab === "profit"}
@@ -1876,11 +1910,12 @@ export function QuoteBuilder({
 
         {workspaceTab === "quote" && live.status === "draft" && canSend ? (
           <Button
+            className="cpq-summary-send"
             disabled={!canSendNow}
             title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
             onClick={() => void startSendFlow()}
           >
-            {he.quoteSend}
+            {he.cpqSendForApproval}
           </Button>
         ) : null}
 
@@ -1915,61 +1950,80 @@ export function QuoteBuilder({
       ) : null}
 
       <footer className="quote-builder-actions lg:hidden" aria-label={he.cpqMobileActions}>
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
-          <p className="cpq-mobile-total me-auto text-base font-semibold tracking-tight">
-            {formatMoney(live.total_gross, currency)}
-          </p>
-          {canEdit ? (
+        <div className="mx-auto flex max-w-6xl flex-col gap-2">
+          <div className="cpq-mobile-actions-row">
+            <p className="cpq-mobile-total text-base font-semibold tracking-tight">
+              {formatMoney(live.total_gross, currency)}
+            </p>
+            <div className="relative" ref={mobileMoreRef}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setMorePlacement("up");
+                  setMoreOpen((v) => !(v && morePlacement === "up"));
+                }}
+                aria-expanded={moreOpen && morePlacement === "up"}
+                aria-haspopup="menu"
+                aria-label={he.cpqMoreActionsAria}
+                title={he.cpqMoreActions}
+              >
+                <MoreHorizontal className="size-5" aria-hidden />
+              </Button>
+              {moreMenuPanel("up")}
+            </div>
+          </div>
+          <div className="cpq-mobile-actions-row">
+            {canEdit ? (
+              <Button
+                loading={save.isPending}
+                disabled={!live.id && !draftHasContent(draft)}
+                onClick={() => save.mutate()}
+              >
+                {he.save}
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
-              loading={save.isPending}
               disabled={!live.id && !draftHasContent(draft)}
-              onClick={() => save.mutate()}
+              onClick={() => void goCustomerView()}
             >
-              {he.save}
+              {he.quotePreviewPrimary}
             </Button>
-          ) : null}
-          <Button
-            variant="secondary"
-            disabled={!live.id && !draftHasContent(draft)}
-            onClick={() => void goCustomerView()}
-          >
-            {he.cpqCustomerView}
-          </Button>
-          {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
-            <Button
-              variant={primaryCta === "approved" || primaryCta === "cancelled" ? "secondary" : undefined}
-              disabled={primaryCtaDisabled}
-              title={
-                primaryCta === "send" && !canSendNow
-                  ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
-                  : undefined
-              }
-              loading={primaryCta === "revise" ? revise.isPending : false}
-              onClick={() => runPrimaryCta()}
-            >
-              {primaryCtaLabel}
-            </Button>
-          ) : null}
-          {live.status === "approved" && linkedProject && canViewProjects ? (
-            <Button
-              variant="secondary"
-              onClick={() => void navigate({ to: "/app/projects/$projectId", params: { projectId: linkedProject.id } })}
-            >
-              {he.workflowOpenProjectArrow}
-            </Button>
-          ) : null}
-          {live.status === "approved" && !linkedProject && canCreateProject ? (
-            <Button
-              onClick={() => {
-                setProjectError(null);
-                setProjectDialog(true);
-              }}
-            >
-              {he.workflowCreateProject}
-            </Button>
-          ) : null}
-          {projectToast ? <p className="w-full text-xs text-success sm:w-auto">{he.projectCreatedToast}</p> : null}
+            {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
+              <Button
+                variant="secondary"
+                disabled={primaryCtaDisabled}
+                title={
+                  primaryCta === "send" && !canSendNow
+                    ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                    : undefined
+                }
+                loading={primaryCta === "revise" ? revise.isPending : false}
+                onClick={() => runPrimaryCta()}
+              >
+                {primaryCtaLabel}
+              </Button>
+            ) : null}
+            {live.status === "approved" && linkedProject && canViewProjects ? (
+              <Button
+                variant="secondary"
+                onClick={() => void navigate({ to: "/app/projects/$projectId", params: { projectId: linkedProject.id } })}
+              >
+                {he.workflowOpenProjectArrow}
+              </Button>
+            ) : null}
+            {live.status === "approved" && !linkedProject && canCreateProject ? (
+              <Button
+                onClick={() => {
+                  setProjectError(null);
+                  setProjectDialog(true);
+                }}
+              >
+                {he.workflowCreateProject}
+              </Button>
+            ) : null}
+          </div>
+          {projectToast ? <p className="w-full text-xs text-success">{he.projectCreatedToast}</p> : null}
         </div>
       </footer>
 

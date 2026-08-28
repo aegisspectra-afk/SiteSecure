@@ -139,10 +139,11 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
+    expect(screen.getByText(he.activeWorkEmpty)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
     expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.quotePipelineTitle })).toBeInTheDocument();
-    expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
@@ -441,7 +442,7 @@ describe("OpsDashboard", () => {
     );
     expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
     expect(screen.getByText("J-00005")).toBeInTheDocument();
-    expect(screen.getByText("DEMO Site A")).toBeInTheDocument();
+    expect(screen.getAllByText("DEMO Site A").length).toBeGreaterThan(0);
     expect(screen.getByText("בביצוע")).toBeInTheDocument();
     expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
   });
@@ -479,7 +480,9 @@ describe("TodayHome", () => {
       },
     };
     render(<TodayHome data={data} onStart={vi.fn()} onComplete={vi.fn()} busyId={null} />);
+    expect(screen.getByText(he.fieldOpsKicker)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.startJob })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.todayOpenJob })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "פתח עבודה" })).not.toBeInTheDocument();
   });
 
@@ -549,8 +552,15 @@ describe("workspaceSetup", () => {
       memberCount: 1,
       pendingInvites: 1,
     });
-    expect(pending.complete).toBe(false);
-    expect(pending.percent).toBe(50);
+    expect(pending.complete).toBe(true);
+    expect(pending.percent).toBe(100);
+
+    const unknownMembers = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings"],
+      memberCount: null,
+    });
+    expect(unknownMembers.complete).toBe(true);
 
     const sales = workspaceSetup({ roleKey: "sales", features: ["crm"], memberCount: 1 });
     expect(sales.complete).toBe(true);
@@ -571,7 +581,7 @@ describe("workspaceSetup", () => {
 });
 
 describe("nextBestAction", () => {
-  it("picks invite while setup is incomplete, then the first quote", () => {
+  it("prioritizes live commercial work over invite setup", () => {
     const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 1 });
     expect(
       nextBestAction({
@@ -583,7 +593,7 @@ describe("nextBestAction", () => {
         canInvite: true,
         canViewQuotes: true,
       })?.id,
-    ).toBe("setup-invite");
+    ).toBe("first-quote");
 
     const staffed = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 2 });
     expect(
@@ -604,6 +614,7 @@ describe("nextBestAction", () => {
       memberCount: 1,
       pendingInvites: 1,
     });
+    expect(invited.complete).toBe(true);
     expect(
       nextBestAction({
         setup: invited,
@@ -613,6 +624,19 @@ describe("nextBestAction", () => {
         canCreateQuote: true,
         canInvite: true,
         canViewQuotes: true,
+      })?.id,
+    ).toBe("first-quote");
+
+    const noQuoteYet = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
+    expect(
+      nextBestAction({
+        setup: noQuoteYet,
+        summary: emptySummary,
+        attention: [],
+        usage: null,
+        canCreateQuote: false,
+        canInvite: true,
+        canViewQuotes: false,
       })?.id,
     ).toBe("setup-invite");
   });
@@ -632,8 +656,8 @@ describe("nextBestAction", () => {
     ).toBe("first-quote");
   });
 
-  it("prioritizes approved quotes pending project creation", () => {
-    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes", "projects"], memberCount: 2 });
+  it("prioritizes approved quotes pending project creation even while invite is open", () => {
+    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes", "projects"], memberCount: 1 });
     const action = nextBestAction({
       setup,
       summary: { ...emptySummary, quotes_approved: 2, quotes_open: 0 },

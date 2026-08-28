@@ -12,7 +12,7 @@ export function CommandStatus({
   const count = attentionCount(attention);
 
   return (
-    <section className={`ops-card ${count ? "p-5" : "px-5 py-4"}`} aria-labelledby="command-heading">
+    <section className={`ops-panel ${count ? "p-5" : "px-5 py-4"}`} aria-labelledby="command-heading">
       <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.commandKicker}</p>
       <h2 id="command-heading" className="mt-1 text-base font-semibold text-fg">
         {he.commandTitle}

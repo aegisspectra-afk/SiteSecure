@@ -25,6 +25,8 @@ export type QuoteHeaderDraft = {
 export const QUOTE_FIELD_IDS: Record<string, string> = {
   customer: "customer_id",
   customer_id: "customer_id",
+  site: "site_id",
+  site_id: "site_id",
   title: "title",
   valid_until: "valid_until",
   payment_terms: "payment_terms",

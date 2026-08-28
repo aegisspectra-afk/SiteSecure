@@ -6,17 +6,18 @@ import { he } from "../../../i18n/he";
 import { catalogListPrice, isPriceOverride } from "../../../lib/quote-cpq";
 import {
   lineDraftFromItem,
-  lineDraftToPatch,
+  lineDraftToPatchForFields,
   mergeDraftFromItem,
+  patchFieldsFromPatch,
   previewLineNet,
+  QUOTE_LINE_FIELDS,
   type QuoteLineDraft,
+  type QuoteLineField,
   type QuoteLinePatch,
 } from "../../../lib/quote-line-edit";
 import { formatMoney } from "../../../lib/quotes";
 
 const PERSIST_DEBOUNCE_MS = 450;
-
-type FieldKey = keyof QuoteLineDraft;
 
 export const QuoteLineRow = memo(function QuoteLineRow({
   item,
@@ -40,18 +41,29 @@ export const QuoteLineRow = memo(function QuoteLineRow({
   const [draft, setDraft] = useState<QuoteLineDraft>(() => lineDraftFromItem(item));
   const [savedFlash, setSavedFlash] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
-  const focused = useRef(new Set<FieldKey>());
+  const focused = useRef(new Set<QuoteLineField>());
+  const dirty = useRef(new Set<QuoteLineField>());
   const draftRef = useRef(draft);
   const itemRef = useRef(item);
   const persistTimer = useRef<number | null>(null);
   const persistInFlight = useRef(false);
   const persistQueued = useRef(false);
+  const persistGen = useRef(0);
+  const mountedItemId = useRef(item.id);
 
   draftRef.current = draft;
   itemRef.current = item;
 
   useEffect(() => {
-    setDraft((prev) => mergeDraftFromItem(prev, item, focused.current));
+    if (item.id !== mountedItemId.current) {
+      mountedItemId.current = item.id;
+      dirty.current.clear();
+      focused.current.clear();
+      setDraft(lineDraftFromItem(item));
+      return;
+    }
+    const protectedFields = new Set<QuoteLineField>([...dirty.current, ...focused.current]);
+    setDraft((prev) => mergeDraftFromItem(prev, item, protectedFields));
   }, [
     item.id,
     item.description,
@@ -60,37 +72,71 @@ export const QuoteLineRow = memo(function QuoteLineRow({
     item.unit_price,
     item.discount,
     item.discount_type,
-    item.line_net,
   ]);
 
-  const flushPersist = useCallback(async () => {
-    if (persistTimer.current != null) {
-      window.clearTimeout(persistTimer.current);
-      persistTimer.current = null;
-    }
-    if (focused.current.size > 0) return;
-    const patch = lineDraftToPatch(draftRef.current, itemRef.current);
-    if (!patch) return;
-    if (persistInFlight.current) {
-      persistQueued.current = true;
-      return;
-    }
-    persistInFlight.current = true;
-    setPersistError(null);
-    try {
-      await onPersist(itemRef.current.id, patch);
-      setSavedFlash(true);
-      window.setTimeout(() => setSavedFlash(false), 1200);
-    } catch (err) {
-      setPersistError(err instanceof Error ? err.message : he.quotesError);
-    } finally {
-      persistInFlight.current = false;
-      if (persistQueued.current) {
-        persistQueued.current = false;
-        void flushPersist();
+  const resolvePersistFields = useCallback((blurredField?: QuoteLineField): QuoteLineField[] => {
+    return QUOTE_LINE_FIELDS.filter((field) => {
+      if (!dirty.current.has(field)) return false;
+      if (field === blurredField) return true;
+      return !focused.current.has(field);
+    });
+  }, []);
+
+  const flushPersist = useCallback(
+    async (blurredField?: QuoteLineField) => {
+      if (persistTimer.current != null) {
+        window.clearTimeout(persistTimer.current);
+        persistTimer.current = null;
       }
-    }
-  }, [onPersist]);
+
+      const fieldsToSave = resolvePersistFields(blurredField);
+      if (!fieldsToSave.length) return;
+
+      const patch = lineDraftToPatchForFields(
+        draftRef.current,
+        itemRef.current,
+        new Set(fieldsToSave),
+      );
+      if (!patch) {
+        for (const field of fieldsToSave) dirty.current.delete(field);
+        return;
+      }
+
+      if (persistInFlight.current) {
+        persistQueued.current = true;
+        return;
+      }
+
+      const gen = ++persistGen.current;
+      const draftSnapshot = { ...draftRef.current };
+      const savedFields = patchFieldsFromPatch(patch);
+
+      persistInFlight.current = true;
+      setPersistError(null);
+      try {
+        await onPersist(itemRef.current.id, patch);
+        if (gen !== persistGen.current) return;
+        for (const field of savedFields) {
+          if (draftRef.current[field] === draftSnapshot[field]) {
+            dirty.current.delete(field);
+          }
+        }
+        setSavedFlash(true);
+        window.setTimeout(() => setSavedFlash(false), 1200);
+      } catch (err) {
+        if (gen === persistGen.current) {
+          setPersistError(err instanceof Error ? err.message : he.quotesError);
+        }
+      } finally {
+        persistInFlight.current = false;
+        if (persistQueued.current) {
+          persistQueued.current = false;
+          void flushPersist();
+        }
+      }
+    },
+    [onPersist, resolvePersistFields],
+  );
 
   const schedulePersist = useCallback(() => {
     if (persistTimer.current != null) window.clearTimeout(persistTimer.current);
@@ -106,20 +152,19 @@ export const QuoteLineRow = memo(function QuoteLineRow({
     };
   }, []);
 
-  function updateField(field: FieldKey, value: string) {
+  function updateField(field: QuoteLineField, value: string) {
+    dirty.current.add(field);
     setDraft((prev) => ({ ...prev, [field]: value }));
     schedulePersist();
   }
 
-  function handleFocus(field: FieldKey) {
+  function handleFocus(field: QuoteLineField) {
     focused.current.add(field);
   }
 
-  function handleBlur(field: FieldKey) {
+  function handleBlur(field: QuoteLineField) {
     focused.current.delete(field);
-    if (focused.current.size === 0) {
-      void flushPersist();
-    }
+    void flushPersist(field);
   }
 
   const override = isPriceOverride(item);

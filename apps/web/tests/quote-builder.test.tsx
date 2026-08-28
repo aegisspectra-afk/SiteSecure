@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -155,19 +155,20 @@ describe("CPQ builder", () => {
 
   it("shows go-to-field when the quote is not sendable", async () => {
     renderBuilder(quote());
-    expect(screen.getByText(he.cpqChecksBeforeSend)).toBeInTheDocument();
-    expect(screen.getByText(he.cpqCheckCustomer)).toBeInTheDocument();
-    await act(async () => {
-      screen.getByRole("button", { name: he.cpqShowChecks }).click();
-    });
-    expect(screen.getByText(/שלמות/)).toBeInTheDocument();
-    expect(screen.getAllByText("בחרו לקוח.").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: he.quoteGoToField }).length).toBeGreaterThan(0);
+    expect(screen.getByText(he.cpqReadinessTitle)).toBeInTheDocument();
+    const readiness = screen.getByRole("region", { name: he.cpqReadinessTitle });
+    expect(within(readiness).getByRole("button", { name: new RegExp(he.cpqReadinessCustomer) })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.cpqCustomerView }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: he.quoteApplyTemplate })).toBeDisabled();
     expect(screen.getByRole("heading", { name: he.cpqHeaderTitle("Q-00001") })).toBeInTheDocument();
     expect(screen.getByText(he.cpqEmptyTitle)).toBeInTheDocument();
-    expect(screen.getByText(he.cpqReadinessTitle)).toBeInTheDocument();
+
+    const submitButtons = screen.getAllByRole("button", { name: he.cpqSendForApproval });
+    expect(submitButtons.length).toBeGreaterThanOrEqual(2);
+    submitButtons.forEach((button) => expect(button).toBeEnabled());
+
+    fireEvent.click(submitButtons[0]);
+    expect(within(readiness).getByRole("alert")).toHaveTextContent(he.cpqSendBlockedHint(2));
   });
 
   it("opens an unsaved quote locally without creating a draft", async () => {
@@ -199,7 +200,7 @@ describe("CPQ builder", () => {
     renderBuilder(quote({ status: "sent", customer_id: "c1", number: "Q-00012", version: 2 }));
     expect(screen.getByRole("heading", { name: he.cpqHeaderTitle("Q-00012") })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.cpqShowLink }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: he.quoteSend })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: he.cpqSendForApproval })).not.toBeInTheDocument();
   });
 
   it("shows approved CTA when quote is approved", () => {

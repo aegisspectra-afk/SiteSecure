@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyLineDiscount,
   coerceDraftNumber,
+  dirtyLineFields,
   lineDraftFromItem,
   lineDraftToPatch,
+  lineDraftToPatchForFields,
   previewLineNet,
 } from "../src/lib/quote-line-edit";
 
@@ -61,5 +63,25 @@ describe("quote-line-edit", () => {
 
   it("returns null patch when nothing changed", () => {
     expect(lineDraftToPatch(lineDraftFromItem(baseItem), baseItem)).toBeNull();
+  });
+
+  it("builds partial patch for selected fields only", () => {
+    const draft = {
+      ...lineDraftFromItem(baseItem),
+      description: "NVR חדש",
+      sku: "DS-7616",
+    };
+    expect(lineDraftToPatchForFields(draft, baseItem, new Set(["description"]))).toEqual({
+      description: "NVR חדש",
+    });
+  });
+
+  it("tracks dirty fields independently", () => {
+    const draft = {
+      ...lineDraftFromItem(baseItem),
+      description: "NVR חדש",
+      qty: "5",
+    };
+    expect([...dirtyLineFields(draft, baseItem)]).toEqual(["description", "qty"]);
   });
 });

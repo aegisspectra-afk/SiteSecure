@@ -74,3 +74,72 @@ export function buildQuoteReadiness(
     canSend: critical.length === 0,
   };
 }
+
+export type UnifiedReadinessItem = {
+  id: string;
+  label: string;
+  status: "ok" | "warning" | "critical";
+  message?: string;
+  field: string;
+};
+
+const CHECK_FIELD: Record<string, string> = {
+  customer: "customer_id",
+  site: "site_id",
+  items: "items",
+  payment: "payment_terms",
+  valid: "valid_until",
+};
+
+const CORE_GAP_FIELDS = new Set([
+  "customer",
+  "customer_id",
+  "site_id",
+  "items",
+  "payment_terms",
+  "valid_until",
+  "title",
+]);
+
+export function buildUnifiedReadinessItems(
+  readiness: QuoteReadiness,
+  gaps: QuoteGap[],
+  pricedCount: number,
+): UnifiedReadinessItem[] {
+  const items: UnifiedReadinessItem[] = readiness.checks.map((check) => ({
+    id: check.id,
+    label: check.label,
+    status: check.ok ? "ok" : check.warning ? "warning" : "critical",
+    field: CHECK_FIELD[check.id] ?? check.id,
+  }));
+
+  const visible = filterEmptyQuoteMarginGaps(gaps, pricedCount);
+  const seen = new Set(items.map((item) => item.id));
+
+  for (const gap of visible) {
+    const field = gap.field || "items";
+    const code = gap.code || field;
+    if (CORE_GAP_FIELDS.has(field) && items.some((item) => item.field === field || item.id === code)) {
+      const match = items.find((item) => item.id === code || item.field === field);
+      if (match && match.status === "ok") {
+        const severity = gapSeverity(gap);
+        match.status = severity === "critical" ? "critical" : severity === "warning" ? "warning" : match.status;
+        match.message = gap.message;
+      }
+      continue;
+    }
+    const id = `${field}-${code}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const severity = gapSeverity(gap);
+    items.push({
+      id,
+      label: gap.message,
+      status: severity === "critical" ? "critical" : severity === "warning" ? "warning" : "ok",
+      field,
+      message: gap.message,
+    });
+  }
+
+  return items;
+}

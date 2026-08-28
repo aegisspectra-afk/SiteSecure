@@ -2,6 +2,8 @@ import "@testing-library/jest-dom/vitest";
 
 HTMLCanvasElement.prototype.getContext = () => null;
 
+Element.prototype.scrollIntoView = () => {};
+
 HTMLDialogElement.prototype.showModal = function showModal() {
   this.setAttribute("open", "");
 };

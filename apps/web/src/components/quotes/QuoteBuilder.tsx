@@ -34,7 +34,6 @@ import { LeadRequirementsCard } from "./cpq/LeadRequirementsCard";
 import { QuoteAuditStrip } from "./cpq/QuoteAuditStrip";
 import { QuoteLinesPanel } from "./cpq/QuoteLinesPanel";
 import { QuoteSummaryAside } from "./cpq/QuoteSummaryAside";
-import { QuoteValidationPanel } from "./cpq/QuoteValidationPanel";
 import { RevisionComparePanel } from "./cpq/RevisionComparePanel";
 import { SystemBuilderDrawer } from "./cpq/SystemBuilderDrawer";
 import { QuoteContextCard } from "./quote-creation/QuoteContextCard";
@@ -42,7 +41,6 @@ import { CustomerSelector } from "./quote-creation/CustomerSelector";
 import { QuoteShareDialog } from "./QuoteShareDialog";
 import { SendQuoteConfirm, type SendChannel } from "./SendQuoteConfirm";
 import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
-import { QuoteReadinessCard } from "./cpq/QuoteReadinessCard";
 import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
 import { addressLine } from "../modules/ModuleKit";
@@ -53,7 +51,12 @@ import {
   resolveWhatsAppOpen,
 } from "../../lib/quote-whatsapp-share";
 import { liveQuoteToPublicDocument } from "../../lib/quote-live-document";
-import { buildQuoteReadiness } from "../../lib/quote-readiness";
+import { buildQuoteReadiness, buildUnifiedReadinessItems } from "../../lib/quote-readiness";
+import { QuoteContextBar } from "./workspace/QuoteContextBar";
+import { QuoteHeader } from "./workspace/QuoteHeader";
+import { QuoteSidebar } from "./workspace/QuoteSidebar";
+import { UnifiedReadiness } from "./workspace/UnifiedReadiness";
+import type { QuoteWorkspaceStep } from "./workspace/types";
 
 const HISTORY_LIMIT = 40;
 
@@ -153,6 +156,9 @@ export function QuoteBuilder({
   const [shareOpen, setShareOpen] = useState(false);
   const [replacingCustomer, setReplacingCustomer] = useState(false);
   const [workspaceTab, setWorkspaceTab] = useState<"quote" | "profit" | "checks" | "history">("quote");
+  const [activeStep, setActiveStep] = useState<QuoteWorkspaceStep>("items");
+  const [detailsExpanded, setDetailsExpanded] = useState(() => !quote.customer_id);
+  const [readinessHighlight, setReadinessHighlight] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [quickCatalogQ, setQuickCatalogQ] = useState("");
@@ -631,17 +637,25 @@ export function QuoteBuilder({
   const canSendNow = Boolean(live.id) && canSend && live.status === "draft" && canSendWithGaps(liveGaps);
   const completeness = completenessScore(liveGaps);
   const missingCompleteness = completeness.total - completeness.done;
-  const readiness = buildQuoteReadiness(liveGaps, {
-    pricedCount,
-    hasSite: Boolean(draft.site_id || live.site_name),
-    labels: {
-      customer: he.cpqReadinessCustomer,
-      site: he.cpqReadinessSite,
-      items: he.cpqReadinessItems,
-      payment: he.cpqReadinessPayment,
-      valid: he.cpqReadinessValid,
-    },
-  });
+  const readiness = useMemo(
+    () =>
+      buildQuoteReadiness(liveGaps, {
+        pricedCount,
+        hasSite: Boolean(draft.site_id || live.site_name),
+        labels: {
+          customer: he.cpqReadinessCustomer,
+          site: he.cpqReadinessSite,
+          items: he.cpqReadinessItems,
+          payment: he.cpqReadinessPayment,
+          valid: he.cpqReadinessValid,
+        },
+      }),
+    [liveGaps, pricedCount, draft.site_id, live.site_name],
+  );
+  const readinessItems = useMemo(
+    () => buildUnifiedReadinessItems(readiness, liveGaps, pricedCount),
+    [readiness, liveGaps, pricedCount],
+  );
   const companyName = workspaceName ?? "";
   const selectedName = customerLabel || customerQuery.data?.display_name || live.customer_name || "";
   const catalogResults = catalogQuery.data?.items ?? [];
@@ -1025,6 +1039,25 @@ export function QuoteBuilder({
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function goToStep(step: QuoteWorkspaceStep) {
+    setActiveStep(step);
+    if (step === "details") {
+      setDetailsExpanded(true);
+      scrollToZone("cpq-zone-details");
+      return;
+    }
+    if (step === "items") {
+      scrollToZone("quote-items");
+      return;
+    }
+    if (step === "pricing") {
+      setWorkspaceTab("quote");
+      scrollToZone("cpq-summary-anchor");
+      return;
+    }
+    focusValidation();
+  }
+
   async function goCustomerView() {
     skipRouteRef.current = true;
     try {
@@ -1037,7 +1070,30 @@ export function QuoteBuilder({
     }
   }
 
+  function focusReadinessField(field: string) {
+    const detailFields = new Set([
+      "customer_id",
+      "customer",
+      "site_id",
+      "site",
+      "lead_id",
+      "title",
+      "valid_until",
+      "payment_terms",
+      "template_id",
+      "project_name",
+    ]);
+    if (detailFields.has(field)) setDetailsExpanded(true);
+    if (field === "items") {
+      setActiveStep("items");
+      scrollToZone("quote-items");
+      return;
+    }
+    goToQuoteField(field);
+  }
+
   function focusValidation() {
+    setActiveStep("review");
     setWorkspaceTab("checks");
     window.setTimeout(() => {
       document.getElementById("cpq-validation")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -1046,6 +1102,7 @@ export function QuoteBuilder({
 
   async function startSendFlow() {
     if (!canSendNow) {
+      setReadinessHighlight(true);
       focusValidation();
       setFormError(he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)));
       return;
@@ -1053,6 +1110,7 @@ export function QuoteBuilder({
     skipRouteRef.current = true;
     try {
       if (canEdit) await save.mutateAsync();
+      setReadinessHighlight(false);
       setConfirmSend(true);
     } catch (err) {
       setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
@@ -1084,7 +1142,7 @@ export function QuoteBuilder({
 
   const primaryCtaLabel =
     primaryCta === "send"
-      ? he.quoteSend
+      ? he.cpqSendForApproval
       : primaryCta === "show_link"
         ? he.cpqShowLink
         : primaryCta === "show_activity"
@@ -1099,12 +1157,10 @@ export function QuoteBuilder({
   const primaryCtaDisabled =
     primaryCta === "approved" ||
     primaryCta === "cancelled" ||
-    (primaryCta === "send" && !canSendNow) ||
     (primaryCta === "revise" && !canCreate) ||
     (primaryCta === "show_link" && !live.id) ||
     (primaryCta === "send" && !canSend);
 
-  const subtitleParts = [selectedName, draft.title || live.title].filter(Boolean);
   const customerPhoneDisplay = customerQuery.data?.phone || primaryContactPhone || linkedLead?.phone || "";
   const liveDocument = liveQuoteToPublicDocument(
     {
@@ -1207,6 +1263,20 @@ export function QuoteBuilder({
         ) : null}
         <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuVersions}>
           <p className="cpq-overflow-label">{he.cpqMenuVersions}</p>
+          {canViewCost ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setWorkspaceTab("profit");
+                setActiveStep("pricing");
+                setMoreOpen(false);
+                scrollToZone("cpq-summary-anchor");
+              }}
+            >
+              {he.cpqTabProfit}
+            </button>
+          ) : null}
           {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
             <button
               type="button"
@@ -1291,171 +1361,50 @@ export function QuoteBuilder({
     ) : null;
 
   return (
-    <div className={`quote-builder cpq-builder cpq-workspace grid gap-4 ${livePreviewOpen ? "xl:grid-cols-[minmax(0,1fr)_20rem_minmax(18rem,24rem)]" : "xl:grid-cols-[minmax(0,1fr)_20rem]"}`}>
-      <header className={`cpq-builder-header sticky top-0 z-10 ${livePreviewOpen ? "xl:col-span-3" : "xl:col-span-2"}`}>
-        <nav className="cpq-breadcrumb" aria-label="breadcrumb">
-          <Link to="/app/quotes" className="cpq-breadcrumb-link">
-            {he.cpqBreadcrumbQuotes}
-          </Link>
-          {live.number ? (
-            <>
-              <span className="cpq-breadcrumb-sep" aria-hidden>
-                /
-              </span>
-              <span className="cpq-breadcrumb-current ltr-meta">{live.number}</span>
-            </>
-          ) : null}
-        </nav>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.cpqWorkspaceKicker}</p>
-            <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">
-              {he.cpqHeaderTitle(live.number || "")}
-            </h1>
-            <p className="truncate text-sm text-fg-muted">
-              {live.id
-                ? he.cpqHeaderMeta(statusDisplayLabel, live.version ?? 1)
-                : statusDisplayLabel}
-              {subtitleParts.length ? ` · ${subtitleParts.join(" · ")}` : ""}
-            </p>
-            {selectedName || draft.site_id || live.site_name ? (
-              <p className="cpq-context-strip text-xs text-fg-muted">
-                <span className="public-mono tracking-[0.08em] text-fg-subtle">{he.cpqContextCustomerKicker}</span>
-                <span className="mx-1.5 text-fg">{selectedName || "—"}</span>
-                <span className="text-fg-subtle" aria-hidden>
-                  →
-                </span>
-                <span className="public-mono ms-1.5 tracking-[0.08em] text-fg-subtle">{he.cpqContextSiteKicker}</span>
-                <span className="ms-1.5 text-fg">{selectedSite?.name || live.site_name || he.quoteSiteNone}</span>
-              </p>
-            ) : null}
-            <p className="cpq-save-state text-xs text-fg-subtle" aria-live="polite">
-              <span className={`cpq-save-dot is-${saveState === "error" ? "error" : dirty ? "dirty" : saveState}`} />
-              {saveLabel}
-            </p>
-          </div>
-          <div className="cpq-header-actions hidden flex-wrap items-center gap-2 lg:flex">
-            {canEdit ? (
-              <Button
-                variant="secondary"
-                loading={save.isPending}
-                disabled={!live.id && !draftHasContent(draft)}
-                onClick={() => save.mutate()}
-              >
-                {he.save}
-              </Button>
-            ) : null}
-            {live.id || canEdit ? (
-              <Button
-                variant="secondary"
-                disabled={!live.id && !draftHasContent(draft)}
-                onClick={() => void goCustomerView()}
-              >
-                {he.cpqCustomerView}
-              </Button>
-            ) : null}
-            {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
-              <Button
-                variant={primaryCta === "approved" || primaryCta === "cancelled" ? "secondary" : undefined}
-                disabled={primaryCtaDisabled}
-                title={
-                  primaryCta === "send" && !canSendNow
-                    ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
-                    : undefined
-                }
-                loading={primaryCta === "revise" ? revise.isPending : false}
-                onClick={() => runPrimaryCta()}
-              >
-                {primaryCtaLabel}
-              </Button>
-            ) : null}
-            <div className="relative" ref={moreMenuRef}>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setMorePlacement("down");
-                  setMoreOpen((v) => !(v && morePlacement === "down"));
-                }}
-                aria-expanded={moreOpen && morePlacement === "down"}
-                aria-haspopup="menu"
-                aria-label={he.cpqMoreActionsAria}
-                title={he.cpqMoreActions}
-              >
-                <MoreHorizontal className="size-5" aria-hidden />
-              </Button>
-              {moreMenuPanel("down")}
-            </div>
-          </div>
-        </div>
-
-        <div className="cpq-workflow" role="navigation" aria-label="workflow">
-          <button type="button" className="cpq-workflow-step" onClick={() => scrollToZone("cpq-zone-details")}>
-            {he.cpqWorkflowDetails}
-          </button>
-          <button type="button" className="cpq-workflow-step" onClick={() => scrollToZone("quote-items")}>
-            {he.cpqWorkflowContent}
-          </button>
-          <button type="button" className="cpq-workflow-step" onClick={() => { setWorkspaceTab("quote"); scrollToZone("cpq-summary-anchor"); }}>
-            {he.cpqWorkflowPricing}
-          </button>
-          <button type="button" className="cpq-workflow-step" onClick={() => focusValidation()}>
-            {he.cpqWorkflowChecks}
-          </button>
-          <button
-            type="button"
-            className="cpq-workflow-step"
-            onClick={() => {
-              if (canSendNow) setConfirmSend(true);
-              else focusValidation();
-            }}
-          >
-            {he.cpqWorkflowSend}
-          </button>
-        </div>
-
-        <div className="cpq-workspace-tabs" role="tablist" aria-label="workspace tabs">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={workspaceTab === "quote"}
-            className={`cpq-workspace-tab${workspaceTab === "quote" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("quote")}
-          >
-            {he.cpqTabQuote}
-          </button>
-          {canViewCost ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={workspaceTab === "profit"}
-              className={`cpq-workspace-tab${workspaceTab === "profit" ? " is-active" : ""}`}
-              onClick={() => setWorkspaceTab("profit")}
-            >
-              {he.cpqTabProfit}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={workspaceTab === "checks"}
-            className={`cpq-workspace-tab${workspaceTab === "checks" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("checks")}
-          >
-            {he.cpqTabChecks}
-          </button>
-          {live.id ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={workspaceTab === "history"}
-              className={`cpq-workspace-tab${workspaceTab === "history" ? " is-active" : ""}`}
-              onClick={() => setWorkspaceTab("history")}
-            >
-              {he.cpqTabHistory}
-            </button>
-          ) : null}
-        </div>
-      </header>
+    <div
+      className={`quote-builder cpq-builder cpq-workspace cpq-workspace-v2 grid gap-4 ${livePreviewOpen ? "has-live-preview lg:grid-cols-[minmax(0,1.85fr)_minmax(16rem,22rem)_minmax(18rem,24rem)]" : "lg:grid-cols-[minmax(0,1.85fr)_minmax(16rem,22rem)]"}`}
+    >
+      <QuoteHeader
+        className={livePreviewOpen ? "lg:col-span-3" : "lg:col-span-2"}
+        quoteNumber={live.number}
+        statusLabel={statusDisplayLabel}
+        version={live.version ?? undefined}
+        customerName={selectedName || undefined}
+        siteName={selectedSite?.name || live.site_name || undefined}
+        saveState={saveState}
+        saveLabel={saveLabel}
+        dirty={dirty}
+        activeStep={activeStep}
+        onStepSelect={goToStep}
+        canEdit={canEdit}
+        savePending={save.isPending}
+        saveDisabled={!live.id && !draftHasContent(draft)}
+        onSave={() => save.mutate()}
+        previewDisabled={!live.id && !draftHasContent(draft)}
+        onPreview={() => void goCustomerView()}
+        primaryCtaLabel={primaryCtaLabel && (primaryCta !== "send" || canSend) ? primaryCtaLabel : null}
+        primaryCtaDisabled={primaryCtaDisabled}
+        primaryCtaLoading={primaryCta === "revise" ? revise.isPending : false}
+        primaryCtaVariant={
+          primaryCta === "send"
+            ? "ghost"
+            : primaryCta === "approved" || primaryCta === "cancelled"
+              ? "secondary"
+              : undefined
+        }
+        onPrimaryCta={() => runPrimaryCta()}
+        primaryCtaTitle={
+          primaryCta === "send" && !canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined
+        }
+        moreOpen={moreOpen}
+        morePlacement={morePlacement}
+        onMoreToggle={() => {
+          setMorePlacement("down");
+          setMoreOpen((v) => !(v && morePlacement === "down"));
+        }}
+        moreMenuRef={moreMenuRef}
+        moreMenu={moreMenuPanel("down")}
+      />
 
       <SendQuoteConfirm
         open={confirmSend}
@@ -1477,7 +1426,7 @@ export function QuoteBuilder({
         canSend={canSendNow}
       />
 
-      <div className="flex flex-col gap-5">
+      <div className="cpq-workspace-main flex min-w-0 flex-col gap-5">
         {live.status !== "draft" ? <p className="text-sm text-fg-muted">{he.quoteLocked}</p> : null}
         {formError ? <p className="text-sm text-danger">{formError}</p> : null}
         {busyAction ? (
@@ -1563,6 +1512,19 @@ export function QuoteBuilder({
           </section>
         ) : null}
 
+        <QuoteContextBar
+          expanded={detailsExpanded || replacingCustomer || !draft.customer_id}
+          onToggle={() => setDetailsExpanded((v) => !v)}
+          customerName={selectedName || null}
+          customerKind={customerKind}
+          customerPhone={customerPhoneDisplay || null}
+          siteName={selectedSite?.name || live.site_name}
+          siteAddress={selectedSiteAddress || null}
+          validUntil={draft.valid_until || null}
+          projectName={draft.project_name || live.project_name || null}
+          canChangeCustomer={canEdit && Boolean(draft.customer_id)}
+          onChangeCustomer={() => setReplacingCustomer(true)}
+        >
         <section id="cpq-zone-details" className="cpq-zone-context flex flex-col gap-4">
           <p id="quote-company" tabIndex={-1} className="sr-only">
             {companyName || he.quotePublicCompany}
@@ -1846,6 +1808,7 @@ export function QuoteBuilder({
             </div>
           ) : null}
         </section>
+        </QuoteContextBar>
 
         <QuoteLinesPanel
           items={items}
@@ -1873,52 +1836,7 @@ export function QuoteBuilder({
         />
       </div>
 
-      <aside id="cpq-summary-anchor" className="cpq-workspace-aside flex h-fit flex-col gap-3 xl:sticky xl:top-28">
-        {workspaceTab === "quote" ? <QuoteReadinessCard readiness={readiness} onFix={() => setWorkspaceTab("checks")} /> : null}
-        {workspaceTab === "quote" || workspaceTab === "profit" ? (
-          <QuoteSummaryAside
-            currency={currency}
-            vatPercent={vatPercent}
-            subtotalNet={live.subtotal_net}
-            vatAmount={live.vat_amount}
-            totalGross={live.total_gross}
-            discountAmount={live.quote_discount_amount}
-            canViewCost={canViewCost}
-            costTotal={live.cost_total}
-            marginAmount={live.margin_amount}
-            marginPercent={live.margin_percent}
-            marginStatus={live.margin_status}
-            marginTarget={live.margin_target}
-            marginMinimum={live.margin_minimum}
-            canOverrideMargin={canOverridePrice}
-            hasMarginOverride={Boolean(live.margin_override_at)}
-            onOverrideMargin={() => marginOverride.mutate()}
-            pricedCount={pricedCount}
-            equipmentTotal={scopeBreakdown.equipment}
-            laborTotal={scopeBreakdown.labor}
-            compact={workspaceTab === "quote"}
-            showProfitability={workspaceTab === "profit"}
-            totalsOnly={workspaceTab === "profit"}
-          />
-        ) : null}
-
-        {workspaceTab === "quote" || workspaceTab === "checks" ? (
-          <div id="cpq-validation">
-            <QuoteValidationPanel gaps={liveGaps} pricedCount={pricedCount} compact={workspaceTab === "quote"} />
-          </div>
-        ) : null}
-
-        {workspaceTab === "quote" && live.status === "draft" && canSend ? (
-          <Button
-            className="cpq-summary-send"
-            disabled={!canSendNow}
-            title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
-            onClick={() => void startSendFlow()}
-          >
-            {he.cpqSendForApproval}
-          </Button>
-        ) : null}
-
+      <QuoteSidebar className="flex h-fit flex-col gap-3">
         {workspaceTab === "history" && live.id ? (
           <>
             {(live.version ?? 1) > 1 ? (
@@ -1932,8 +1850,63 @@ export function QuoteBuilder({
             )}
             <QuoteAuditStrip workspaceId={workspaceId} quoteId={live.id} />
           </>
-        ) : null}
-      </aside>
+        ) : (
+          <>
+            {workspaceTab === "quote" || workspaceTab === "profit" || workspaceTab === "checks" ? (
+              <QuoteSummaryAside
+                currency={currency}
+                vatPercent={vatPercent}
+                subtotalNet={live.subtotal_net}
+                vatAmount={live.vat_amount}
+                totalGross={live.total_gross}
+                discountAmount={live.quote_discount_amount}
+                canViewCost={canViewCost}
+                costTotal={live.cost_total}
+                marginAmount={live.margin_amount}
+                marginPercent={live.margin_percent}
+                marginStatus={live.margin_status}
+                marginTarget={live.margin_target}
+                marginMinimum={live.margin_minimum}
+                canOverrideMargin={canOverridePrice}
+                hasMarginOverride={Boolean(live.margin_override_at)}
+                onOverrideMargin={() => marginOverride.mutate()}
+                pricedCount={pricedCount}
+                equipmentTotal={scopeBreakdown.equipment}
+                laborTotal={scopeBreakdown.labor}
+                compact={workspaceTab !== "profit"}
+                showProfitability={workspaceTab === "profit"}
+                totalsOnly={workspaceTab === "profit"}
+              />
+            ) : null}
+
+            {workspaceTab !== "profit" ? (
+              <div id="cpq-validation">
+                <UnifiedReadiness
+                  percent={readiness.percent}
+                  items={readinessItems}
+                  canSend={canSendNow}
+                  highlightIssues={readinessHighlight}
+                  showDetails={workspaceTab === "checks"}
+                  onSelectItem={(item) => focusReadinessField(item.field)}
+                />
+              </div>
+            ) : null}
+
+            {workspaceTab !== "profit" && live.status === "draft" && canSend ? (
+              <div className="cpq-submit-block">
+                <Button
+                  className="cpq-submit-primary"
+                  title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
+                  onClick={() => void startSendFlow()}
+                >
+                  {he.cpqSendForApproval}
+                </Button>
+                <p className="cpq-submit-hint">{he.cpqSubmitReviewHint}</p>
+              </div>
+            ) : null}
+          </>
+        )}
+      </QuoteSidebar>
 
       {livePreviewOpen ? (
         <aside className="cpq-live-preview-pane xl:sticky xl:top-28" aria-label={he.cpqLivePreview}>

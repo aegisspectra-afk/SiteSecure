@@ -9,6 +9,16 @@ export type QuoteLineDraft = {
   discount: string;
 };
 
+export type QuoteLineField = keyof QuoteLineDraft;
+
+export const QUOTE_LINE_FIELDS: QuoteLineField[] = [
+  "description",
+  "sku",
+  "qty",
+  "unit_price",
+  "discount",
+];
+
 export type QuoteLinePatch = {
   description?: string;
   sku?: string | null;
@@ -103,14 +113,58 @@ export function lineDraftToPatch(draft: QuoteLineDraft, item: QuoteItemOut): Quo
   return Object.keys(patch).length ? patch : null;
 }
 
+/** Build a patch only for the requested editable fields (used for per-field autosave). */
+export function lineDraftToPatchForFields(
+  draft: QuoteLineDraft,
+  item: QuoteItemOut,
+  fields: ReadonlySet<QuoteLineField>,
+): QuoteLinePatch | null {
+  const full = lineDraftToPatch(draft, item);
+  if (!full) return null;
+  const patch: QuoteLinePatch = {};
+  if (fields.has("description") && full.description !== undefined) patch.description = full.description;
+  if (fields.has("sku") && full.sku !== undefined) patch.sku = full.sku;
+  if (fields.has("qty") && full.qty !== undefined) patch.qty = full.qty;
+  if (fields.has("unit_price") && full.unit_price !== undefined) patch.unit_price = full.unit_price;
+  if (fields.has("discount") && full.discount !== undefined) {
+    patch.discount = full.discount;
+    patch.discount_type = full.discount_type;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
+/** Fields whose local draft differs from the last server snapshot. */
+export function dirtyLineFields(draft: QuoteLineDraft, item: QuoteItemOut): Set<QuoteLineField> {
+  const dirty = new Set<QuoteLineField>();
+  for (const field of QUOTE_LINE_FIELDS) {
+    const single = lineDraftToPatchForFields(draft, item, new Set([field]));
+    if (single) dirty.add(field);
+  }
+  return dirty;
+}
+
+export function patchFieldsFromPatch(patch: QuoteLinePatch): QuoteLineField[] {
+  const fields: QuoteLineField[] = [];
+  if (patch.description !== undefined) fields.push("description");
+  if (patch.sku !== undefined) fields.push("sku");
+  if (patch.qty !== undefined) fields.push("qty");
+  if (patch.unit_price !== undefined) fields.push("unit_price");
+  if (patch.discount !== undefined || patch.discount_type !== undefined) fields.push("discount");
+  return fields;
+}
+
+/**
+ * Merge server item into local draft while preserving fields the user is editing
+ * (focused and/or dirty with unsaved local changes).
+ */
 export function mergeDraftFromItem(
   prev: QuoteLineDraft,
   item: QuoteItemOut,
-  focused: ReadonlySet<keyof QuoteLineDraft>,
+  protectedFields: ReadonlySet<QuoteLineField>,
 ): QuoteLineDraft {
   const next = lineDraftFromItem(item);
   const merged = { ...next };
-  for (const field of focused) {
+  for (const field of protectedFields) {
     merged[field] = prev[field];
   }
   return merged;

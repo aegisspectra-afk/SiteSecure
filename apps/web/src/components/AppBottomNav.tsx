@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { he } from "../i18n/he";
 import { isNavSelected, type BottomNavEntry } from "../lib/app-nav";
 import { NavIcon } from "./NavIcon";
@@ -23,9 +25,15 @@ export function AppBottomNav({
   onMore?: () => void;
   onWork?: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (items.length === 0) return null;
 
-  return (
+  const nav = (
     <nav className="ops-bottom-nav" aria-label={he.navMobile}>
       {items.map((item) => {
         if (item.kind === "more") {
@@ -75,4 +83,7 @@ export function AppBottomNav({
       })}
     </nav>
   );
+
+  if (!mounted || typeof document === "undefined") return null;
+  return createPortal(nav, document.body);
 }

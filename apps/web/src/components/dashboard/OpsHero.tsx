@@ -35,8 +35,8 @@ export function OpsDashHero({
           {greeting}
           {name ? `, ${name}` : ""}
         </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-fg sm:text-3xl">{he.dashboardTitle}</h1>
-        <p className="mt-2 text-sm text-fg-muted">{he.dashboardLead}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-fg sm:text-3xl">{he.dashboardTitleShort}</h1>
+        <p className="mt-2 text-sm text-fg-muted">{he.dashboardLeadShort}</p>
         <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-subtle">
           <span className="ltr-meta" dir="ltr">
             {formatOpsDate()}

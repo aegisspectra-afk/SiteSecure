@@ -3,7 +3,16 @@ import { he } from "../../i18n/he";
 import { formatMoney } from "../../lib/quotes";
 import { quoteConversion } from "../../lib/ux-metrics";
 
-/** Executive KPI strip — values only. Stage counts live in Quote Pipeline. */
+const STATUS_KEYS = ["draft", "sent", "viewed", "approved"] as const;
+
+function countFor(summary: DashboardSummary, status: (typeof STATUS_KEYS)[number]): number {
+  if (status === "draft") return summary.quotes_draft;
+  if (status === "sent") return summary.quotes_sent;
+  if (status === "viewed") return summary.quotes_viewed;
+  return summary.quotes_approved;
+}
+
+/** Executive KPI strip with compact pipeline status badges. */
 export function BusinessSnapshot({ summary }: { summary: DashboardSummary }) {
   const conversion = quoteConversion(summary);
   const cells = [
@@ -16,6 +25,10 @@ export function BusinessSnapshot({ summary }: { summary: DashboardSummary }) {
       value: he.uxPercent(conversion.percent),
     });
   }
+  cells.push({
+    label: he.snapshotQuoteVolume,
+    value: String(conversion.total),
+  });
 
   return (
     <section className="ops-card ops-snapshot" aria-labelledby="business-snapshot-heading">
@@ -25,7 +38,7 @@ export function BusinessSnapshot({ summary }: { summary: DashboardSummary }) {
           {he.businessTitle}
         </h2>
       </div>
-      <dl className={`ops-snapshot-grid${cells.length <= 3 ? " is-compact" : ""}`}>
+      <dl className="ops-snapshot-grid is-compact">
         {cells.map((cell) => (
           <div key={cell.label} className="ops-snapshot-cell">
             <dt className="text-xs text-fg-muted">{cell.label}</dt>
@@ -33,6 +46,13 @@ export function BusinessSnapshot({ summary }: { summary: DashboardSummary }) {
           </div>
         ))}
       </dl>
+      <div className="ops-snapshot-status" aria-label={he.quotePipelineTitle}>
+        {STATUS_KEYS.map((status) => (
+          <span key={status} className="ops-snapshot-badge">
+            {he.quotePipelineStages[status]}: {countFor(summary, status)}
+          </span>
+        ))}
+      </div>
     </section>
   );
 }

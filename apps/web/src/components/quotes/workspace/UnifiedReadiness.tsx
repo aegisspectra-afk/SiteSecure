@@ -33,7 +33,7 @@ export function UnifiedReadiness({
       </div>
 
       <div
-        className="cpq-readiness-progress"
+        className={`cpq-readiness-progress is-${percent >= 100 ? "complete" : percent >= 50 ? "partial" : "low"}`}
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}

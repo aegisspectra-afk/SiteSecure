@@ -12,6 +12,51 @@ function labelFor(key: string, fallback: string): string {
   return fallback;
 }
 
+function formatUpdatedAt(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+export function SecurityStatusBar({
+  signals,
+  updatedAt,
+}: {
+  signals: SecuritySignal[];
+  updatedAt?: string | null;
+}) {
+  const rows = DASHBOARD_KEYS.map((key) => {
+    const signal = signals.find((row) => row.key === key);
+    return signal && signal.status !== "not_built" ? { key, signal } : null;
+  }).filter((row): row is { key: (typeof DASHBOARD_KEYS)[number]; signal: SecuritySignal } => Boolean(row));
+  if (!rows.length) return null;
+  const allHealthy = rows.every(({ signal }) => signal.status === "healthy");
+  const time = formatUpdatedAt(updatedAt);
+
+  return (
+    <Link
+      to="/app/settings/security"
+      className="ops-security-bar"
+      aria-label={allHealthy ? he.securityBarHealthy : he.securityBarAttention}
+    >
+      <span
+        className={`size-2 shrink-0 rounded-full ${allHealthy ? "bg-success" : "bg-warning"}`}
+        aria-hidden
+      />
+      <span className="text-sm font-medium text-fg">
+        {allHealthy ? he.securityBarHealthy : he.securityBarAttention}
+      </span>
+      {time ? <span className="text-sm text-fg-muted">{he.securityBarUpdated(time)}</span> : null}
+      <span className="ms-auto text-sm font-medium text-action">{he.securityCenterLink}</span>
+      <span className="sr-only">
+        {rows.map(({ key, signal }) => `${labelFor(key, signal.label_he)}: ${signal.status}`).join(", ")}
+      </span>
+    </Link>
+  );
+}
+
+/** Full security card — used outside the dashboard when detail is needed. */
 export function SecurityStatus({ signals }: { signals: SecuritySignal[] }) {
   const rows = DASHBOARD_KEYS.map((key) => {
     const signal = signals.find((row) => row.key === key);

@@ -769,6 +769,7 @@ export type WorkspaceUsageMeter = {
   unit: string;
   at_limit: boolean;
   occupants?: UsageOccupant[];
+  detail_he?: string | null;
 };
 
 export type WorkspaceUsage = {

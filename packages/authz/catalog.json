@@ -26,21 +26,39 @@
       "key": "solo",
       "label_he": "Solo",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings"],
-      "limits": { "seats_operator": 1, "seats_field": 3, "storage_gb": 15 },
+      "limits": {
+        "seats_operator": 1,
+        "seats_field": 3,
+        "storage_gb": 15,
+        "quota_quotes": 50,
+        "quota_clients": 30
+      },
       "assignable_roles": ["technician", "founding_technician", "viewer"]
     },
     {
       "key": "business",
       "label_he": "Business",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "reports", "automation", "team", "audit", "api"],
-      "limits": { "seats_operator": 15, "seats_field": 40, "storage_gb": 100 },
+      "limits": {
+        "seats_operator": 15,
+        "seats_field": 40,
+        "storage_gb": 100,
+        "quota_quotes": 200,
+        "quota_clients": 150
+      },
       "assignable_roles": ["administrator", "manager", "sales", "technician", "founding_technician", "viewer"]
     },
     {
       "key": "enterprise",
       "label_he": "Enterprise",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "reports", "automation", "team", "audit", "api", "ai", "branches"],
-      "limits": { "seats_operator": 0, "seats_field": 0, "storage_gb": 0 },
+      "limits": {
+        "seats_operator": 0,
+        "seats_field": 0,
+        "storage_gb": 0,
+        "quota_quotes": 0,
+        "quota_clients": 0
+      },
       "assignable_roles": ["administrator", "manager", "sales", "technician", "founding_technician", "viewer"]
     }
   ],

@@ -59,6 +59,32 @@ def test_seat_meters_read_catalog_not_hardcoded_fives():
     combined = {row["key"]: row for row in workspace_meters(plan_key="solo", occupied_roles=["owner"], used_bytes=1024)}
     assert combined["storage_gb"]["current"] == 1024
     assert combined["seats_operator"]["limit"] == 1
+    assert combined["quota_quotes"]["current"] == 0
+    assert combined["quota_quotes"]["limit"] == 50
+    assert combined["quota_clients"]["current"] == 0
+    assert combined["quota_clients"]["limit"] == 30
+
+
+def test_quota_meters_unlimited_on_enterprise():
+    from app.authz.catalog import load_catalog
+    from app.authz.usage import workspace_meters
+
+    load_catalog.cache_clear()
+    meters = {row["key"]: row for row in workspace_meters(plan_key="enterprise", quotes_count=500, customers_count=300)}
+    assert meters["quota_quotes"]["unlimited"] is True
+    assert meters["quota_quotes"]["at_limit"] is False
+    assert meters["quota_clients"]["unlimited"] is True
+    assert meters["quota_clients"]["at_limit"] is False
+
+
+def test_quota_meters_at_limit():
+    from app.authz.catalog import load_catalog
+    from app.authz.usage import workspace_meters
+
+    load_catalog.cache_clear()
+    meters = {row["key"]: row for row in workspace_meters(plan_key="solo", quotes_count=50, customers_count=30)}
+    assert meters["quota_quotes"]["at_limit"] is True
+    assert meters["quota_clients"]["at_limit"] is True
 
 
 def test_enterprise_storage_unlimited():

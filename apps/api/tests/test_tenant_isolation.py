@@ -419,7 +419,7 @@ def test_owner_usage_meters_are_catalog_seats(settings, two_tenants):
     assert body["active_members"] >= 1
     keys = {row["key"] for row in body["meters"]}
     # Catalog meters: seat buckets + storage entitlement (see workspace_meters / test_limits).
-    assert keys == {"seats_operator", "seats_field", "storage_gb"}
+    assert keys == {"seats_operator", "seats_field", "storage_gb", "quota_quotes", "quota_clients"}
     office = next(row for row in body["meters"] if row["key"] == "seats_operator")
     assert office["current"] >= 1
     assert office["limit"] == 1

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
+from ..http_supabase import supabase_request
 from ..supabase_user import UserClient
 from .catalog import load_catalog
 from .limits import is_unlimited, plan_limit_value, seat_limit_key
@@ -13,6 +14,8 @@ METER_LABELS = {
     "seats_operator": "משתמשים במשרד",
     "seats_field": "משתמשים בשטח",
     "storage_gb": "אחסון",
+    "quota_quotes": "הצעות מחיר",
+    "quota_clients": "לקוחות",
 }
 
 BYTES_PER_GB = 1024**3
@@ -259,6 +262,173 @@ def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:
         return 0
 
 
+def _count_rows(client: UserClient, table: str, workspace_id: str, *, filters: dict[str, str] | None = None) -> int:
+    params: dict[str, str] = {
+        "workspace_id": f"eq.{workspace_id}",
+        "select": "id",
+        "limit": "1",
+    }
+    if filters:
+        params.update(filters)
+    headers = {
+        **client._headers,
+        "Content-Type": "application/json",
+        "Prefer": "count=exact",
+    }
+    res = supabase_request("GET", f"{client.rest}/{table.lstrip('/')}", headers=headers, params=params)
+    if res.status_code not in {200, 206}:
+        return 0
+    content_range = res.headers.get("content-range") or ""
+    if "/" in content_range:
+        total = content_range.rsplit("/", 1)[-1]
+        if total != "*":
+            try:
+                return max(0, int(total))
+            except ValueError:
+                pass
+    rows = res.json() or []
+    return len(rows)
+
+
+def fetch_quotes_count(client: UserClient, workspace_id: str) -> int:
+    """Count non-deleted quotes in the workspace."""
+    return _count_rows(client, "quotes", workspace_id, filters={"deleted_at": "is.null"})
+
+
+def fetch_customers_count(client: UserClient, workspace_id: str) -> int:
+    """Count non-deleted customers in the workspace."""
+    return _count_rows(client, "customers", workspace_id, filters={"deleted_at": "is.null"})
+
+
+def _quote_status_breakdown(client: UserClient, workspace_id: str) -> dict[str, int]:
+    res = client.get(
+        "quotes",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "deleted_at": "is.null",
+            "select": "status",
+        },
+    )
+    if res.status_code != 200:
+        return {}
+    counts: dict[str, int] = {}
+    for row in res.json() or []:
+        status = str(row.get("status") or "").strip()
+        if not status:
+            continue
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+_QUOTE_STATUS_LABELS = {
+    "draft": "טיוטה",
+    "sent": "נשלח",
+    "viewed": "נצפה",
+    "approved": "אושר",
+    "rejected": "נדחה",
+    "expired": "פג תוקף",
+    "cancelled": "בוטל",
+}
+
+
+def _quote_detail_he(counts: dict[str, int]) -> str | None:
+    if not counts:
+        return None
+    order = ("draft", "sent", "viewed", "approved", "rejected", "expired", "cancelled")
+    parts = [
+        f"{_QUOTE_STATUS_LABELS[key]}: {counts[key]}"
+        for key in order
+        if counts.get(key)
+    ]
+    return " · ".join(parts) if parts else None
+
+
+def _customers_detail_he(client: UserClient, workspace_id: str, total: int) -> str | None:
+    if total <= 0:
+        return None
+    headers = {
+        **client._headers,
+        "Content-Type": "application/json",
+        "Prefer": "count=exact",
+    }
+    count_res = supabase_request(
+        "GET",
+        f"{client.rest}/customers",
+        headers=headers,
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "deleted_at": "is.null",
+            "status": "eq.active",
+            "select": "id",
+            "limit": "1",
+        },
+    )
+    if count_res.status_code not in {200, 206}:
+        return f"פעילים: {total}"
+    active = total
+    content_range = count_res.headers.get("content-range") or ""
+    if "/" in content_range:
+        total_text = content_range.rsplit("/", 1)[-1]
+        if total_text != "*":
+            try:
+                active = int(total_text)
+            except ValueError:
+                pass
+    return f"פעילים: {active}"
+
+
+def fetch_quotes_detail_he(client: UserClient, workspace_id: str) -> str | None:
+    return _quote_detail_he(_quote_status_breakdown(client, workspace_id))
+
+
+def fetch_customers_detail_he(client: UserClient, workspace_id: str, total: int) -> str | None:
+    return _customers_detail_he(client, workspace_id, total)
+
+
+def quota_meter(
+    *,
+    plan_key: str,
+    limit_key: str,
+    current: int,
+    unit: str,
+    detail_he: str | None = None,
+) -> dict[str, Any]:
+    limit = plan_limit_value(plan_key, limit_key)
+    unlimited = is_unlimited(limit)
+    current_value = max(0, int(current or 0))
+    return {
+        "key": limit_key,
+        "label_he": METER_LABELS[limit_key],
+        "current": current_value,
+        "limit": limit,
+        "unlimited": unlimited,
+        "unit": unit,
+        "at_limit": (not unlimited) and current_value >= limit,
+        "occupants": [],
+        "detail_he": detail_he,
+    }
+
+
+def quotes_meter(*, plan_key: str, current: int, detail_he: str | None = None) -> dict[str, Any]:
+    return quota_meter(
+        plan_key=plan_key,
+        limit_key="quota_quotes",
+        current=current,
+        unit="quotes",
+        detail_he=detail_he,
+    )
+
+
+def customers_meter(*, plan_key: str, current: int, detail_he: str | None = None) -> dict[str, Any]:
+    return quota_meter(
+        plan_key=plan_key,
+        limit_key="quota_clients",
+        current=current,
+        unit="customers",
+        detail_he=detail_he,
+    )
+
+
 def storage_meter(*, plan_key: str, used_bytes: int) -> dict[str, Any]:
     limit_gb = plan_limit_value(plan_key, "storage_gb")
     unlimited = is_unlimited(limit_gb)
@@ -282,7 +452,17 @@ def workspace_meters(
     occupants: Iterable[SeatOccupant] | None = None,
     occupied_roles: Iterable[str] | None = None,
     used_bytes: int = 0,
+    quotes_count: int = 0,
+    customers_count: int = 0,
+    quotes_detail_he: str | None = None,
+    customers_detail_he: str | None = None,
 ) -> list[dict[str, Any]]:
     meters = seat_meters(plan_key=plan_key, occupants=occupants, occupied_roles=occupied_roles)
     meters.append(storage_meter(plan_key=plan_key, used_bytes=used_bytes))
+    meters.append(
+        quotes_meter(plan_key=plan_key, current=quotes_count, detail_he=quotes_detail_he)
+    )
+    meters.append(
+        customers_meter(plan_key=plan_key, current=customers_count, detail_he=customers_detail_he)
+    )
     return meters

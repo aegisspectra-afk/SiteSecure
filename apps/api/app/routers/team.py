@@ -9,7 +9,15 @@ from pydantic import BaseModel, Field
 from ..audit import write_audit
 from ..authz.catalog import load_catalog
 from ..authz.engine import authorize
-from ..authz.usage import fetch_occupancy, fetch_storage_used_bytes, workspace_meters
+from ..authz.usage import (
+    fetch_customers_count,
+    fetch_customers_detail_he,
+    fetch_occupancy,
+    fetch_quotes_count,
+    fetch_quotes_detail_he,
+    fetch_storage_used_bytes,
+    workspace_meters,
+)
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import MESSAGES, ApiError
 
@@ -76,6 +84,7 @@ class UsageMeterOut(BaseModel):
     unit: str
     at_limit: bool
     occupants: list[UsageOccupantOut] = Field(default_factory=list)
+    detail_he: str | None = None
 
 
 class WorkspaceUsageOut(BaseModel):
@@ -162,13 +171,20 @@ def workspace_usage(
     if not view.allowed and not billing.allowed:
         _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
     occupancy = fetch_occupancy(client, str(workspace_id))
-    used_bytes = fetch_storage_used_bytes(client, str(workspace_id))
+    workspace_key = str(workspace_id)
+    used_bytes = fetch_storage_used_bytes(client, workspace_key)
+    quotes_count = fetch_quotes_count(client, workspace_key)
+    customers_count = fetch_customers_count(client, workspace_key)
     meters = [
         UsageMeterOut(**row)
         for row in workspace_meters(
             plan_key=ctx.plan_key,
             occupants=occupancy.occupants,
             used_bytes=used_bytes,
+            quotes_count=quotes_count,
+            customers_count=customers_count,
+            quotes_detail_he=fetch_quotes_detail_he(client, workspace_key),
+            customers_detail_he=fetch_customers_detail_he(client, workspace_key, customers_count),
         )
     ]
     return WorkspaceUsageOut(

@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarExternal collapsed={collapsed} />
         <SidebarAccount {...account} collapsed={collapsed} />
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="ops-content flex min-w-0 flex-1 flex-col">
         <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
             <p className="ops-topbar-kicker">{he.opsPlatform}</p>

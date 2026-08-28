@@ -12,17 +12,16 @@ export function CommandStatus({
   const count = attentionCount(attention);
 
   return (
-    <section className={`ops-panel ${count ? "p-5" : "px-5 py-4"}`} aria-labelledby="command-heading">
+    <section
+      className={`ops-panel ops-panel-priority ${count ? "p-5" : "px-5 py-4"}`}
+      aria-labelledby="command-heading"
+    >
       <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.commandKicker}</p>
       <h2 id="command-heading" className="mt-1 text-base font-semibold text-fg">
-        {he.commandTitle}
+        {count ? he.commandTitleCount(count) : he.commandTitle}
       </h2>
-      <p className="mt-3 text-sm font-medium text-fg">{count ? he.commandAttention(count) : he.commandQuiet}</p>
-      {count ? (
-        <AttentionList groups={attention} framed={false} />
-      ) : (
-        <p className="mt-1 text-sm text-fg-muted">{he.commandQuietBody}</p>
-      )}
+      {count ? null : <p className="mt-3 text-sm text-fg-muted">{he.commandQuietBody}</p>}
+      {count ? <AttentionList groups={attention} framed={false} /> : null}
     </section>
   );
 }

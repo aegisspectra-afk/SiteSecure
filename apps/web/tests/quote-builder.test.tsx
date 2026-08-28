@@ -148,6 +148,15 @@ describe("quote builder helpers", () => {
   });
 });
 
+function openQuoteOverflowMenu() {
+  const mobileMenu = screen.queryByRole("button", { name: he.cpqHeaderMenuAria });
+  if (mobileMenu) {
+    fireEvent.click(mobileMenu);
+    return;
+  }
+  fireEvent.click(screen.getByRole("button", { name: he.cpqMoreActionsAria }));
+}
+
 describe("CPQ builder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -235,8 +244,9 @@ describe("CPQ builder", () => {
     api.listProjects.mockResolvedValue({ items: [] });
     renderBuilder(quote({ status: "approved", customer_id: "c1", title: "מצלמות", number: "1042" }));
     await waitFor(() => expect(api.listProjects).toHaveBeenCalled());
-    expect(screen.getByRole("button", { name: he.workflowCreateProject })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: he.workflowOpenProjectArrow })).not.toBeInTheDocument();
+    openQuoteOverflowMenu();
+    expect(screen.getByRole("menuitem", { name: he.workflowCreateProject })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: he.workflowOpenProjectArrow })).not.toBeInTheDocument();
   });
 
   it("shows open project CTA when linked project exists", async () => {
@@ -254,8 +264,10 @@ describe("CPQ builder", () => {
       ],
     });
     renderBuilder(quote({ status: "approved", customer_id: "c1", number: "1042" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: he.workflowOpenProjectArrow })).toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
+    await waitFor(() => expect(api.listProjects).toHaveBeenCalled());
+    openQuoteOverflowMenu();
+    expect(screen.getByRole("menuitem", { name: he.workflowOpenProjectArrow })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: he.workflowCreateProject })).not.toBeInTheDocument();
   });
 
   it("does not show create project on draft quotes", () => {

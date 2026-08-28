@@ -6,9 +6,19 @@ import { RequirePermission } from "../../../components/settings/RequirePermissio
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
 import { assignableInviteRoles, seatBucket } from "@site-secure/authz";
+import type { WorkspaceUsageMeter } from "@site-secure/api-client";
 import { planLabel, roleLabel } from "../../../lib/app-nav";
 import { can } from "../../../lib/can";
 import { useSession } from "../../../lib/session";
+import { formatStorageBytes } from "../../../lib/ux-metrics";
+
+function formatMeterUsage(row: WorkspaceUsageMeter): string {
+  if (row.unlimited) return he.usersUsageUnlimited;
+  if (row.unit === "bytes") {
+    return `${formatStorageBytes(row.current)} / ${formatStorageBytes(row.limit)}`;
+  }
+  return `${row.current} / ${row.limit}`;
+}
 
 export const Route = createFileRoute("/app/settings/users")({
   component: UsersPage,
@@ -117,7 +127,7 @@ function UsersBody() {
           <div key={row.key} className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
             <dt className="text-xs font-medium text-fg-muted">{row.label_he}</dt>
             <dd className="mt-1 text-sm font-semibold text-fg">
-              {row.unlimited ? he.usersUsageUnlimited : `${row.current} / ${row.limit}`}
+              {formatMeterUsage(row)}
             </dd>
           </div>
         ))}

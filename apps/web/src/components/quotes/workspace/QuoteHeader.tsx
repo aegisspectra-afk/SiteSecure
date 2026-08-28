@@ -1,6 +1,6 @@
 import { Button } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontal } from "lucide-react";
+import { Menu, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { he } from "../../../i18n/he";
 import { QuoteStepper } from "./QuoteStepper";
@@ -34,6 +34,10 @@ export function QuoteHeader({
   onMoreToggle,
   moreMenuRef,
   moreMenu,
+  mobileMenuOpen,
+  onMobileMenuToggle,
+  mobileMenuRef,
+  mobileMenu,
   className,
 }: {
   quoteNumber?: string | null;
@@ -63,6 +67,10 @@ export function QuoteHeader({
   onMoreToggle: () => void;
   moreMenuRef: React.RefObject<HTMLDivElement | null>;
   moreMenu: ReactNode;
+  mobileMenuOpen: boolean;
+  onMobileMenuToggle: () => void;
+  mobileMenuRef: React.RefObject<HTMLDivElement | null>;
+  mobileMenu: ReactNode;
   className?: string;
 }) {
   const metaParts = [
@@ -78,7 +86,7 @@ export function QuoteHeader({
       <div className="cpq-header-row">
         <div className="cpq-header-start">
           <h1 className="sr-only">{he.cpqHeaderTitle(quoteNumber || "")}</h1>
-          <nav className="cpq-breadcrumb" aria-label="breadcrumb">
+          <nav className="cpq-breadcrumb cpq-breadcrumb-desktop" aria-label="breadcrumb">
             <Link to="/app/quotes" className="cpq-breadcrumb-link">
               {he.cpqBreadcrumbQuotes}
             </Link>
@@ -91,7 +99,15 @@ export function QuoteHeader({
               </>
             ) : null}
           </nav>
-          <p className="cpq-header-meta" title={metaParts.join(" · ")}>
+          <Link to="/app/quotes" className="cpq-header-back" aria-label={he.cpqBreadcrumbQuotes}>
+            ←
+          </Link>
+          <div className="cpq-header-mobile-identity">
+            {quoteNumber ? <span className="cpq-header-mobile-number ltr-meta">{quoteNumber}</span> : null}
+            <span className="cpq-header-status-pill">{statusLabel}</span>
+            {version ? <span className="cpq-header-version-pill ltr-meta">v{version}</span> : null}
+          </div>
+          <p className="cpq-header-meta cpq-header-meta-desktop" title={metaParts.join(" · ")}>
             {metaParts.join(" · ")}
           </p>
           <p className="cpq-save-state cpq-save-state-inline" aria-live="polite">
@@ -100,9 +116,11 @@ export function QuoteHeader({
           </p>
         </div>
 
-        <QuoteStepper active={activeStep} onSelect={onStepSelect} />
+        <div className="cpq-stepper-desktop">
+          <QuoteStepper active={activeStep} onSelect={onStepSelect} />
+        </div>
 
-        <div className="cpq-header-actions">
+        <div className="cpq-header-actions cpq-header-actions-desktop">
           {canEdit ? (
             <Button variant="secondary" loading={savePending} disabled={saveDisabled} onClick={onSave}>
               {he.save}
@@ -136,7 +154,24 @@ export function QuoteHeader({
             {moreOpen && morePlacement === "down" ? moreMenu : null}
           </div>
         </div>
+
+        <div className="cpq-header-actions cpq-header-actions-mobile">
+          <div className="relative" ref={mobileMenuRef}>
+            <Button
+              variant="ghost"
+              onClick={onMobileMenuToggle}
+              aria-expanded={mobileMenuOpen}
+              aria-haspopup="menu"
+              aria-label={he.cpqHeaderMenuAria}
+            >
+              <Menu className="size-5" aria-hidden />
+            </Button>
+            {mobileMenuOpen ? mobileMenu : null}
+          </div>
+        </div>
       </div>
+
+      <QuoteStepper variant="icons" className="cpq-stepper-mobile-bar" active={activeStep} onSelect={onStepSelect} />
     </header>
   );
 }

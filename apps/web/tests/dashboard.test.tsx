@@ -135,15 +135,14 @@ describe("module destinations", () => {
 describe("OpsDashboard", () => {
   it("empty state has no fake create CTAs or KPI copy", () => {
     render(<OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} />);
-    expect(screen.getByRole("heading", { name: he.dashboardTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.dashboardTitleShort })).toBeInTheDocument();
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.activeWorkEmpty)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.activeWorkTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
     expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.quotePipelineTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
+    expect(screen.getByText(he.gettingStartedTitle)).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
@@ -172,14 +171,12 @@ describe("OpsDashboard", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.securityStatusTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.securityLabelAuth)).toBeInTheDocument();
-    expect(screen.getByText(he.securityLabelRbac)).toBeInTheDocument();
-    expect(screen.getByText(he.securityLabelTenant)).toBeInTheDocument();
-    expect(screen.getByText(he.securityAllHealthy)).toBeInTheDocument();
-    expect(screen.queryByText("Sessions")).not.toBeInTheDocument();
-    expect(screen.queryByText("RLS")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.securityCenterLink })).toHaveAttribute("href", "/app/settings/security");
+    expect(screen.getByText(he.securityBarHealthy)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.securityStatusTitle })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: new RegExp(he.securityCenterLink) })).toHaveAttribute(
+      "href",
+      "/app/settings/security",
+    );
   });
 
   it("owner empty state offers live quote creation first", () => {
@@ -253,30 +250,64 @@ describe("OpsDashboard", () => {
                 },
               ],
             },
+            {
+              key: "storage_gb",
+              label_he: "אחסון",
+              current: 0,
+              limit: 16106127360,
+              unlimited: false,
+              unit: "bytes",
+              at_limit: false,
+              occupants: [],
+            },
+            {
+              key: "quota_quotes",
+              label_he: "הצעות מחיר",
+              current: 12,
+              limit: 50,
+              unlimited: false,
+              unit: "quotes",
+              at_limit: false,
+              occupants: [],
+              detail_he: "טיוטה: 5 · נשלח: 4 · אושר: 2 · נדחה: 1",
+            },
+            {
+              key: "quota_clients",
+              label_he: "לקוחות",
+              current: 8,
+              limit: 30,
+              unlimited: false,
+              unit: "customers",
+              at_limit: false,
+              occupants: [],
+              detail_he: "פעילים: 8",
+            },
           ],
         }}
       />,
     );
     expect(screen.getByRole("heading", { name: he.usageTitle })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /משתמשים בשטח: 33 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /משתמשים בשטח: 33 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByText(/0 GB \/ 15 GB · 15 GB פנוי/)).toBeInTheDocument();
+    expect(screen.getByText(he.quotesRemaining(38))).toBeInTheDocument();
+    expect(screen.getByText(he.clientsRemaining(22))).toBeInTheDocument();
+    expect(screen.getByText(he.usageOfficeSeatTaken("Ilya Kerner"))).toBeInTheDocument();
     expect(screen.getByText("1 / 1")).toBeInTheDocument();
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
-    expect(screen.getByText(he.usageActiveMembersHint)).toBeInTheDocument();
+    expect(screen.getByText(`${he.usageActiveMembers}:`)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.usageManageUsers })).toHaveAttribute("href", "/app/settings/users");
-    expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
-    expect(screen.getAllByText(/shimdurac@gmail.com/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.usageOccupantPending).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: /משתמשים בשטח/ }));
+    fireEvent.click(screen.getByRole("button", { name: "משתמשים בשטח" }));
     expect(screen.getByText(he.usageWho)).toBeInTheDocument();
-    expect(screen.getAllByText(/shimdurac@gmail.com/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(he.usageOccupantPending).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: /משתמשים במשרד/ }));
+    expect(screen.getByText(/shimdurac@gmail.com/)).toBeInTheDocument();
+    expect(screen.getByText(he.usageOccupantPending)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "משתמשים במשרד" }));
     expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
     expect(screen.getByText(he.usageOccupantActive)).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /חברים פעילים/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Storage/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("לקוחות")).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /הצעות מחיר: 24 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /לקוחות: 27 אחוז/ })).toBeInTheDocument();
   });
 
   it("renders circular UX metrics from real setup, seats, and quotes", () => {
@@ -339,8 +370,8 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.uxRingsTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toHaveLength(1);
-    expect(screen.getAllByRole("img", { name: /משתמשים בשטח: 0 אחוז/ })).toHaveLength(1);
+    expect(screen.getByRole("progressbar", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /משתמשים בשטח: 0 אחוז/ })).toBeInTheDocument();
     expect(screen.getByText(he.setupPendingLabel)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.inviteUser })).toHaveAttribute("href", "/app/settings/users");
     expect(screen.getByText(he.uxSeatFull)).toBeInTheDocument();
@@ -364,7 +395,7 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
-    expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
+    expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
     expect(screen.getAllByText(he.uxStartFirstQuote).length).toBeGreaterThan(0);
   });
 

@@ -1,4 +1,3 @@
-import { EmptyState } from "@site-secure/ui";
 import type { DashboardResponse, LeadOut, SecuritySignal, WorkspaceUsage } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
@@ -12,12 +11,12 @@ import { ActivityList } from "./ActivityList";
 import { BusinessSnapshot } from "./BusinessSnapshot";
 import { CommandStatus } from "./CommandStatus";
 import { DashboardFreshness } from "./DashboardFreshness";
+import { DashboardKpiRow } from "./DashboardKpiRow";
 import { LeadsAttention } from "./LeadsAttention";
 import { NextBestAction } from "./NextBestAction";
-import { OpsDashHero, OperationsHealth, SiteOpsPanel } from "./OpsHero";
-import { QuotePipeline } from "./QuotePipeline";
+import { OpsDashHero, SiteOpsPanel } from "./OpsHero";
 import { RecentQuotes } from "./RecentQuotes";
-import { SecurityStatus } from "./SecurityStatus";
+import { SecurityStatusBar } from "./SecurityStatus";
 import { UsageSnapshot } from "./UsageSnapshot";
 
 export function OpsDashboard({
@@ -58,7 +57,6 @@ export function OpsDashboard({
   const showQuotes = Boolean(summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const showSeats = Boolean(usage) && (can(roleKey, "users.view", features) || can(roleKey, "users.invite", features));
   const showBusiness = showQuotes && Boolean(summary) && hasQuoteRecords(summary);
-  const showPipeline = showQuotes && Boolean(summary);
   const action = nextBestAction({
     setup,
     summary: showQuotes ? summary : null,
@@ -75,7 +73,9 @@ export function OpsDashboard({
       ? { percent: setup.percent, done: setup.steps.filter((step) => step.done).length, total: setup.total }
       : null;
   const attentionTotal = attentionCount(data.attention);
-  const siteNames = data.today.items.map((item) => item.site_name).filter((name): name is string => Boolean(name));
+  const siteNames = [...new Set(data.today.items.map((item) => item.site_name).filter((name): name is string => Boolean(name)))];
+  const showNextAction = Boolean(action) && attentionTotal === 0;
+  const todayItems = data.today.items;
 
   return (
     <div className="ops-dashboard flex flex-col gap-6">
@@ -103,39 +103,40 @@ export function OpsDashboard({
       />
 
       {summary ? (
-        <OperationsHealth
-          jobsOpen={summary.jobs_open}
-          jobsOverdue={summary.jobs_overdue}
+        <DashboardKpiRow
           quotesOpen={showQuotes ? summary.quotes_open : 0}
+          jobsOverdue={summary.jobs_overdue}
           attentionCount={attentionTotal}
         />
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <CommandStatus attention={data.attention} />
-        {action ? <NextBestAction action={action} setupProgress={setupProgress} /> : null}
-      </div>
+      <CommandStatus attention={data.attention} />
+
+      {showNextAction && action ? <NextBestAction action={action} setupProgress={setupProgress} /> : null}
 
       <LeadsAttention items={leadAttentionItems} />
 
-      <ActiveWork items={data.today.items} />
+      {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
 
-      {can(roleKey, "sites.view", features) ? <SiteOpsPanel siteNames={siteNames} /> : null}
-
-      {showBusiness && summary ? <BusinessSnapshot summary={summary} /> : null}
-      {showPipeline && summary ? <QuotePipeline summary={summary} /> : null}
+      {can(roleKey, "sites.view", features) && siteNames.length > 0 ? (
+        <SiteOpsPanel siteNames={siteNames} />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} /> : null}
+        {showBusiness && summary ? <BusinessSnapshot summary={summary} /> : null}
         {usage && showSeats ? (
           <UsageSnapshot usage={usage} canManageTeam={Boolean(invite) || can(roleKey, "users.view", features)} />
         ) : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ActivityList items={data.activity} />
-        {securitySignals.length ? <SecurityStatus signals={securitySignals} /> : null}
+        {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} /> : null}
+        <ActivityList items={data.activity} canCreateQuote={Boolean(quoteCta)} />
       </div>
+
+      {securitySignals.length ? (
+        <SecurityStatusBar signals={securitySignals} updatedAt={data.generated_at} />
+      ) : null}
       <DashboardFreshness generatedAt={data.generated_at} />
     </div>
   );
@@ -166,10 +167,9 @@ export function ObserveDashboard({
     <div className="ops-dashboard flex flex-col gap-6">
       <OpsDashHero displayName={displayName} workspaceName={workspaceName} />
       {data.summary ? (
-        <OperationsHealth
-          jobsOpen={data.summary.jobs_open}
-          jobsOverdue={data.summary.jobs_overdue}
+        <DashboardKpiRow
           quotesOpen={showQuotes ? data.summary.quotes_open : 0}
+          jobsOverdue={data.summary.jobs_overdue}
           attentionCount={attentionTotal}
         />
       ) : null}
@@ -177,18 +177,18 @@ export function ObserveDashboard({
       {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
         <BusinessSnapshot summary={data.summary} />
       ) : null}
-      {showQuotes && data.summary ? <QuotePipeline summary={data.summary} /> : null}
       {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
-      <ActiveWork items={data.today.items} />
+      {data.today.items.length > 0 ? <ActiveWork items={data.today.items} /> : null}
       {empty ? (
         <div className="ops-panel p-5">
-          <EmptyState title={he.dashboardEmptyTitle} description={he.viewerEmptyBody} />
+          <p className="text-sm font-medium text-fg">{he.dashboardEmptyTitle}</p>
+          <p className="mt-1 text-sm text-fg-muted">{he.viewerEmptyBody}</p>
         </div>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ActivityList items={data.activity} />
-        {securitySignals.length ? <SecurityStatus signals={securitySignals} /> : null}
-      </div>
+      <ActivityList items={data.activity} />
+      {securitySignals.length ? (
+        <SecurityStatusBar signals={securitySignals} updatedAt={data.generated_at} />
+      ) : null}
       <DashboardFreshness generatedAt={data.generated_at} />
     </div>
   );

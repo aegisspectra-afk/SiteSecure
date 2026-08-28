@@ -22,6 +22,9 @@ export function RingMetric({
   onActivate,
   expanded,
   controlsId,
+  centerLabel,
+  overLimit = false,
+  displayPercent,
 }: {
   percent: number | null;
   label: string;
@@ -35,6 +38,9 @@ export function RingMetric({
   onActivate?: () => void;
   expanded?: boolean;
   controlsId?: string;
+  centerLabel?: string;
+  overLimit?: boolean;
+  displayPercent?: number;
 }) {
   const dim = SIZE[size];
   const stroke = STROKE[size];
@@ -42,9 +48,10 @@ export function RingMetric({
   const circumference = 2 * Math.PI * radius;
   const clamped = percent == null ? 0 : Math.max(0, Math.min(100, percent));
   const offset = circumference - (clamped / 100) * circumference;
-  const center = percent == null ? "—" : he.uxPercent(clamped);
+  const center = centerLabel ?? (percent == null ? "—" : he.uxPercent(clamped));
+  const ariaPercent = displayPercent ?? (percent == null ? null : clamped);
   const aria =
-    percent == null ? `${label}: ${he.uxMetricEmpty}` : `${label}: ${clamped} אחוז. ${hint}`;
+    ariaPercent == null ? `${label}: ${he.uxMetricEmpty}` : `${label}: ${ariaPercent} אחוז. ${hint}`;
 
   const title = onActivate ? (
     <span className="text-sm font-medium text-fg">{label}</span>
@@ -61,9 +68,9 @@ export function RingMetric({
       <div className={`ops-ring ops-ring--${size}`} role="img" aria-label={aria}>
         <svg viewBox={`0 0 ${dim} ${dim}`} width={dim} height={dim} aria-hidden>
           <circle className="ops-ring-track" cx={dim / 2} cy={dim / 2} r={radius} strokeWidth={stroke} />
-          {percent != null && clamped > 0 ? (
+          {percent != null && (clamped > 0 || overLimit) ? (
             <circle
-              className={`ops-ring-value ops-ring-value--${tone}`}
+              className={`ops-ring-value ops-ring-value--${tone}${overLimit ? " is-over-limit" : ""}`}
               cx={dim / 2}
               cy={dim / 2}
               r={radius}
@@ -84,7 +91,7 @@ export function RingMetric({
     </>
   );
 
-  const className = `ops-ring-metric${size === "primary" ? " is-primary" : ""}`;
+  const className = `ops-ring-metric${size === "primary" ? " is-primary" : ""}${overLimit ? " is-over-limit" : ""}`;
   if (onActivate) {
     return (
       <button

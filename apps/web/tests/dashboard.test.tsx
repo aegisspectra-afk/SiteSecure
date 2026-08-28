@@ -287,27 +287,27 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.usageTitle })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /משתמשים בשטח: 33 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים בשטח: 33 אחוז/ })).toBeInTheDocument();
     expect(screen.getByText(/0 GB \/ 15 GB · 15 GB פנוי/)).toBeInTheDocument();
     expect(screen.getByText(he.quotesRemaining(38))).toBeInTheDocument();
     expect(screen.getByText(he.clientsRemaining(22))).toBeInTheDocument();
     expect(screen.getByText(he.usageOfficeSeatTaken("Ilya Kerner"))).toBeInTheDocument();
     expect(screen.getByText("1 / 1")).toBeInTheDocument();
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
-    expect(screen.getByText(`${he.usageActiveMembers}:`)).toBeInTheDocument();
+    expect(screen.getByText(he.usageActivitySummary(1, 1))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.usageManageUsers })).toHaveAttribute("href", "/app/settings/users");
-    fireEvent.click(screen.getByRole("button", { name: "משתמשים בשטח" }));
+    fireEvent.click(screen.getByRole("button", { name: /משתמשים בשטח/ }));
     expect(screen.getByText(he.usageWho)).toBeInTheDocument();
     expect(screen.getByText(/shimdurac@gmail.com/)).toBeInTheDocument();
     expect(screen.getByText(he.usageOccupantPending)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "משתמשים במשרד" }));
+    fireEvent.click(screen.getByRole("button", { name: /משתמשים במשרד/ }));
     expect(screen.getByText("Ilya Kerner")).toBeInTheDocument();
     expect(screen.getByText(he.usageOccupantActive)).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /חברים פעילים/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Storage/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /הצעות מחיר: 24 אחוז/ })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /לקוחות: 27 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /הצעות מחיר: 24 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /לקוחות: 27 אחוז/ })).toBeInTheDocument();
   });
 
   it("renders circular UX metrics from real setup, seats, and quotes", () => {
@@ -370,8 +370,8 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.uxRingsTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: /משתמשים בשטח: 0 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /משתמשים בשטח: 0 אחוז/ })).toBeInTheDocument();
     expect(screen.getByText(he.setupPendingLabel)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.inviteUser })).toHaveAttribute("href", "/app/settings/users");
     expect(screen.getByText(he.uxSeatFull)).toBeInTheDocument();

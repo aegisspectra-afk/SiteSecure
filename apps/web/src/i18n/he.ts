@@ -1478,7 +1478,19 @@ export const he = {
   setupWorkspace: "סביבת העבודה נוצרה",
   setupInvite: "הזמנת חבר צוות",
   usageTitle: "שימוש במכסה",
+  usageSubtitle: "סטטוס השימוש במערכת",
   usageKicker: "USAGE",
+  usageAtLimit: "הגעתם למכסה",
+  usageOverLimit: "חריגה מהמכסה",
+  usageActivitySummary: (active: number, pending: number) => {
+    const parts = [
+      active === 1 ? "חבר פעיל אחד" : `${active} חברים פעילים`,
+    ];
+    if (pending > 0) {
+      parts.push(pending === 1 ? "הזמנה ממתינה אחת" : `${pending} הזמנות ממתינות`);
+    }
+    return `פעילות: ${parts.join(" · ")}`;
+  },
   usageActiveMembers: "חברים פעילים",
   usageActiveMembersHint: "חברים עם חברות פעילה, בלי הזמנות ממתינות",
   usageWho: "מי משתמש במכסה?",

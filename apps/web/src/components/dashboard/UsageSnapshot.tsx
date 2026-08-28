@@ -1,7 +1,6 @@
 import { useId, useState } from "react";
 import type { UsageOccupant, WorkspaceUsage, WorkspaceUsageMeter } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
-import { cn } from "@site-secure/ui";
 import { he } from "../../i18n/he";
 import { roleLabel } from "../../lib/app-nav";
 import {
@@ -9,6 +8,7 @@ import {
   meterTone,
   meterUtilization,
 } from "../../lib/ux-metrics";
+import { RingMetric, type RingTone } from "./RingMetric";
 
 function occupantStatus(row: UsageOccupant): string {
   return row.status === "pending" ? he.usageOccupantPending : he.usageOccupantActive;
@@ -17,7 +17,7 @@ function occupantStatus(row: UsageOccupant): string {
 function OccupantTable({ meter }: { meter: WorkspaceUsageMeter }) {
   const occupants = meter.occupants ?? [];
   return (
-    <div className="mt-2 overflow-x-auto rounded-[var(--radius-panel)] border border-border">
+    <div className="mt-3 w-full overflow-x-auto rounded-[var(--radius-panel)] border border-border">
       <p className="border-b border-border px-3 py-2 text-start text-xs font-medium text-fg">
         {he.usageWho}
       </p>
@@ -52,6 +52,36 @@ function OccupantTable({ meter }: { meter: WorkspaceUsageMeter }) {
   );
 }
 
+function ringToneFor(meter: WorkspaceUsageMeter): RingTone {
+  if (meter.key === "seats_operator") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "action";
+  }
+  if (meter.key === "seats_field") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "tech";
+  }
+  if (meter.key === "storage_gb") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "analytics";
+  }
+  if (meter.key === "quota_quotes") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "action";
+  }
+  if (meter.key === "quota_clients") {
+    const tone = meterTone(meter);
+    return tone === "warning" || tone === "danger" ? tone : "tech";
+  }
+  return meterTone(meter);
+}
+
+function meterTip(meter: WorkspaceUsageMeter): string | undefined {
+  if (meter.key === "seats_operator") return he.uxSeatOfficeTip;
+  if (meter.key === "seats_field") return he.uxSeatFieldTip;
+  return undefined;
+}
+
 function storageMeterHint(meter: WorkspaceUsageMeter): string {
   const used = formatStorageBytes(meter.current);
   if (meter.unlimited || meter.limit <= 0) {
@@ -78,10 +108,11 @@ function seatStatusLabel(meter: WorkspaceUsageMeter): string | undefined {
 
 function quotaStatusLabel(meter: WorkspaceUsageMeter): string | undefined {
   if (meter.unlimited || meter.limit <= 0) return undefined;
+  if (meter.current > meter.limit) return he.usageOverLimit;
   if (meter.at_limit) {
     if (meter.key === "quota_quotes") return he.quotesAtLimit;
     if (meter.key === "quota_clients") return he.clientsAtLimit;
-    return he.uxSeatFull;
+    return he.usageAtLimit;
   }
   const remaining = Math.max(0, meter.limit - meter.current);
   if (meter.key === "quota_quotes") return he.quotesRemaining(remaining);
@@ -95,90 +126,36 @@ function meterHint(meter: WorkspaceUsageMeter): string {
   return `${meter.current} / ${meter.limit}`;
 }
 
-function meterSubtitle(meter: WorkspaceUsageMeter): string | undefined {
+function meterNext(meter: WorkspaceUsageMeter): string | undefined {
   if (meter.unit === "bytes") {
     if (meter.at_limit) return he.uxStorageFull;
     return undefined;
   }
-  return seatStatusLabel(meter) ?? quotaStatusLabel(meter) ?? meter.detail_he ?? undefined;
+  return seatStatusLabel(meter) ?? quotaStatusLabel(meter);
 }
 
-function barToneClass(meter: WorkspaceUsageMeter): string {
-  const tone = meterTone(meter);
-  if (tone === "danger") return "is-danger";
-  if (tone === "warning") return "is-warning";
-  if (meter.key === "seats_field") return "is-tech";
-  if (meter.key === "storage_gb") return "is-analytics";
-  if (meter.key === "quota_clients") return "is-tech";
-  return "is-action";
+function meterDetail(meter: WorkspaceUsageMeter): string | undefined {
+  return meter.detail_he ?? undefined;
 }
 
-function UsageProgressRow({
-  meter,
-  expanded,
-  onToggle,
-  controlsId,
-}: {
-  meter: WorkspaceUsageMeter;
-  expanded: boolean;
-  onToggle?: () => void;
-  controlsId?: string;
-}) {
-  const percent = meterUtilization(meter);
-  const subtitle = meterSubtitle(meter);
-  const expandable = (meter.occupants?.length ?? 0) > 0 && meter.unit === "seats";
-  const displayPercent = percent ?? (meter.unit === "bytes" && meter.limit > 0 ? 0 : null);
-  const ariaLabel =
-    displayPercent == null
-      ? `${meter.label_he}: ${meterHint(meter)}`
-      : `${meter.label_he}: ${displayPercent} אחוז. ${meterHint(meter)}`;
-
-  return (
-    <div className="ops-usage-row">
-      <div className="flex items-start justify-between gap-3">
-        {expandable ? (
-          <button
-            type="button"
-            className="min-w-0 flex-1 text-start"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            aria-controls={controlsId}
-          >
-            <span className="text-sm font-medium text-fg">{meter.label_he}</span>
-          </button>
-        ) : (
-          <span className="text-sm font-medium text-fg">{meter.label_he}</span>
-        )}
-        <span className="shrink-0 text-xs text-fg-muted tabular-nums">{meterHint(meter)}</span>
-      </div>
-      {displayPercent != null ? (
-        <div
-          className="ops-usage-bar mt-2"
-          role="progressbar"
-          aria-valuenow={displayPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={ariaLabel}
-        >
-          <span
-            className={cn("ops-usage-bar-fill", barToneClass(meter))}
-            style={{ width: `${Math.max(0, Math.min(100, displayPercent))}%` }}
-          />
-        </div>
-      ) : (
-        <p className="mt-2 text-xs text-fg-muted">{meterHint(meter)}</p>
-      )}
-      {subtitle ? <p className="mt-1.5 text-xs text-fg-muted">{subtitle}</p> : null}
-      {expanded && expandable ? (
-        <div id={controlsId}>
-          <OccupantTable meter={meter} />
-        </div>
-      ) : null}
-    </div>
-  );
+function meterRingPercent(meter: WorkspaceUsageMeter): {
+  arc: number | null;
+  center: string | undefined;
+  overLimit: boolean;
+} {
+  if (meter.unlimited || meter.limit <= 0) {
+    return { arc: null, center: undefined, overLimit: false };
+  }
+  const raw = Math.round((meter.current / meter.limit) * 100);
+  const overLimit = raw > 100;
+  return {
+    arc: Math.min(100, raw),
+    center: he.uxPercent(raw),
+    overLimit,
+  };
 }
 
-const METER_ORDER = ["seats_operator", "seats_field", "storage_gb", "quota_quotes", "quota_clients"];
+const RING_ORDER = ["seats_operator", "seats_field", "storage_gb", "quota_quotes", "quota_clients"];
 
 export function UsageSnapshot({
   usage,
@@ -187,9 +164,11 @@ export function UsageSnapshot({
   usage: WorkspaceUsage;
   canManageTeam?: boolean;
 }) {
-  const ordered = METER_ORDER.map((key) => usage.meters.find((meter) => meter.key === key)).filter(
+  const ordered = RING_ORDER.map((key) => usage.meters.find((meter) => meter.key === key)).filter(
     (meter): meter is WorkspaceUsageMeter => Boolean(meter),
   );
+  const ringMeters = ordered.filter((meter) => meterUtilization(meter) != null || meter.unit === "bytes");
+  const unlimitedOnly = ordered.filter((meter) => meter.unlimited || (meter.limit <= 0 && meter.unit !== "bytes"));
   const [openKey, setOpenKey] = useState<string | null>(null);
   const panelId = useId();
 
@@ -199,33 +178,73 @@ export function UsageSnapshot({
       <h2 id="usage-heading" className="mt-1 text-base font-semibold text-fg">
         {he.usageTitle}
       </h2>
-      {ordered.length ? (
-        <div className="ops-usage-list mt-5">
-          {ordered.map((meter) => {
+      <p className="mt-1 text-sm text-fg-muted">{he.usageSubtitle}</p>
+      {ringMeters.length ? (
+        <div className="ops-usage-rings mt-5">
+          {ringMeters.map((meter) => {
+            const { arc, center, overLimit } = meterRingPercent(meter);
+            const rawPercent =
+              meter.unlimited || meter.limit <= 0
+                ? null
+                : Math.round((meter.current / meter.limit) * 100);
+            const percent =
+              meter.unit === "bytes" && !meter.unlimited && meter.limit > 0
+                ? (meterUtilization(meter) ?? 0)
+                : arc;
             const open = openKey === meter.key;
             const expandable = (meter.occupants?.length ?? 0) > 0 && meter.unit === "seats";
+            const centerLabel =
+              meter.unit === "bytes" && percent != null ? he.uxPercent(percent) : center;
             return (
-              <UsageProgressRow
-                key={meter.key}
-                meter={meter}
-                expanded={open}
-                controlsId={expandable ? `${panelId}-${meter.key}` : undefined}
-                onToggle={
-                  expandable ? () => setOpenKey(open ? null : meter.key) : undefined
-                }
-              />
+              <div key={meter.key} className="flex min-w-0 flex-col items-center">
+                <RingMetric
+                  percent={percent}
+                  displayPercent={rawPercent ?? percent ?? undefined}
+                  centerLabel={centerLabel}
+                  overLimit={overLimit}
+                  label={meter.label_he}
+                  hint={meterHint(meter)}
+                  next={meterNext(meter)}
+                  tone={ringToneFor(meter)}
+                  onActivate={expandable ? () => setOpenKey(open ? null : meter.key) : undefined}
+                  expanded={open}
+                  controlsId={`${panelId}-${meter.key}`}
+                  tip={meterTip(meter)}
+                />
+                {open && expandable ? (
+                  <div id={`${panelId}-${meter.key}`} className="w-full">
+                    <OccupantTable meter={meter} />
+                  </div>
+                ) : meter.occupants && meter.occupants.length === 1 && meter.unit === "seats" ? (
+                  <p className="mt-2 text-center text-xs text-fg-muted">
+                    <span className="block">{meter.occupants[0].label}</span>
+                    {meter.occupants[0].status === "pending" ? (
+                      <span className="block">{he.usageOccupantPending}</span>
+                    ) : null}
+                  </p>
+                ) : meterDetail(meter) ? (
+                  <p className="mt-2 max-w-[10rem] text-center text-xs text-fg-muted">{meterDetail(meter)}</p>
+                ) : null}
+              </div>
             );
           })}
         </div>
       ) : null}
-      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-4 text-xs text-fg-muted">
-        <span>
-          {he.usageActiveMembers}: <strong className="text-fg">{usage.active_members}</strong>
-        </span>
-        <span>
-          {he.usagePendingInvites}: <strong className="text-fg">{usage.pending_invites}</strong>
-        </span>
-      </div>
+      {unlimitedOnly.length ? (
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          {unlimitedOnly.map((row) => (
+            <div key={row.key} className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
+              <dt className="text-xs font-medium text-fg-muted">{row.label_he}</dt>
+              <dd className="mt-1 text-sm font-semibold text-fg">
+                {row.unit === "bytes" ? he.usageStorageUnlimited : he.usersUsageUnlimited}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <p className="mt-5 border-t border-border pt-4 text-sm text-fg-muted">
+        {he.usageActivitySummary(usage.active_members, usage.pending_invites)}
+      </p>
       {canManageTeam ? (
         <Link
           to="/app/settings/users"

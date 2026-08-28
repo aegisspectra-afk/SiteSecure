@@ -1984,6 +1984,24 @@ button.ops-ring-metric {
   transition: stroke-dashoffset 400ms ease;
 }
 
+.ops-ring-value.is-over-limit {
+  animation: ops-ring-pulse 1.6s ease-in-out infinite;
+}
+
+.ops-ring-metric.is-over-limit .ops-ring-center {
+  color: var(--color-danger);
+}
+
+@keyframes ops-ring-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .ops-ring-value--action {
   stroke: var(--color-action);
 }

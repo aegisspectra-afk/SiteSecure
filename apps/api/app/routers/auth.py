@@ -100,14 +100,22 @@ def get_session(
             )
 
     profile = None
+    last_workspace_id = None
     if profile_row:
+        last_workspace_id = profile_row.get("last_workspace_id")
         profile = ProfileOut(
             id=profile_row["id"],
             full_name=profile_row.get("full_name") or "",
             phone=profile_row.get("phone"),
             locale=profile_row.get("locale") or "he",
-            last_workspace_id=profile_row.get("last_workspace_id"),
+            last_workspace_id=last_workspace_id,
         )
+
+    # Prefer last_workspace_id when present (invite accept sets it). Stable sort keeps
+    # created_at.desc among the rest — no workspace switcher required.
+    if last_workspace_id:
+        preferred = str(last_workspace_id)
+        memberships.sort(key=lambda m: 0 if m.workspace_id == preferred else 1)
 
     return SessionOut(
         user_id=user_id,

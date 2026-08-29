@@ -728,6 +728,27 @@ export type InviteOut = {
   token: string | null;
 };
 
+export type InvitePreviewStatus =
+  | "valid"
+  | "invalid"
+  | "expired"
+  | "already_accepted"
+  | "wrong_account";
+
+export type InvitePreview = {
+  status: InvitePreviewStatus;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  role_key: string | null;
+  email: string | null;
+  expires_at: string | null;
+};
+
+export type InviteAcceptResult = {
+  workspace_id: string;
+  status: "success";
+};
+
 export type AuditItem = {
   id: string;
   actor_user_id: string | null;
@@ -1613,6 +1634,15 @@ export function createApiClient(opts: {
       request<InviteOut>(`/api/v1/workspaces/${workspaceId}/invitations`, {
         method: "POST",
         body: JSON.stringify(body),
+      }),
+    peekInvitation: (token: string) => {
+      const params = new URLSearchParams({ token });
+      return request<InvitePreview>(`/api/v1/invitations/peek?${params.toString()}`);
+    },
+    acceptInvitation: (token: string) =>
+      request<InviteAcceptResult>("/api/v1/invitations/accept", {
+        method: "POST",
+        body: JSON.stringify({ token }),
       }),
     listAudit: (workspaceId: string) =>
       request<AuditItem[]>(`/api/v1/workspaces/${workspaceId}/audit`),

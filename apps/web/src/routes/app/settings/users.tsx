@@ -42,6 +42,8 @@ function UsersBody() {
   const [email, setEmail] = useState("");
   const [roleKey, setRoleKey] = useState("technician");
   const [formError, setFormError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const query = useQuery({
     queryKey: ["members", workspaceId],
@@ -60,10 +62,16 @@ function UsersBody() {
 
   const invite = useMutation({
     mutationFn: () => api.createInvitation(workspaceId!, { email: email.trim(), role_key: roleKey }),
-    onSuccess: () => {
+    onSuccess: (row) => {
       setEmail("");
       setRoleKey("technician");
       setFormError(null);
+      setCopied(false);
+      if (row.token) {
+        setInviteLink(`${window.location.origin}/invite/${row.token}`);
+      } else {
+        setInviteLink(null);
+      }
       void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
       void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
     },
@@ -175,6 +183,22 @@ function UsersBody() {
         <p className="text-sm text-danger" role="alert">
           {formError}
         </p>
+      ) : null}
+      {inviteLink ? (
+        <div className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
+          <p className="text-sm text-fg">{he.inviteLinkReady}</p>
+          <p className="mt-2 break-all text-xs text-fg-muted ltr-meta">{inviteLink}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-3 h-9"
+            onClick={() => {
+              void navigator.clipboard.writeText(inviteLink).then(() => setCopied(true));
+            }}
+          >
+            {copied ? he.inviteCopied : he.inviteCopyLink}
+          </Button>
+        </div>
       ) : null}
       {query.data.length === 0 ? (
         <EmptyState title={he.usersEmpty} />

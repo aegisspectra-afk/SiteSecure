@@ -5,17 +5,25 @@ import { LoginForm } from "../components/LoginForm";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
 import { authLaunchSequence } from "../lib/auth-launch";
-import { afterAuthPath } from "../lib/auth-routes";
+import { afterAuthPath, sanitizeNextPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
 
+type AuthNextSearch = { next?: string };
+
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): AuthNextSearch => {
+    const next = typeof search.next === "string" ? search.next : undefined;
+    return next ? { next } : {};
+  },
   component: LoginPage,
 });
 
 function LoginPage() {
   const { loading, user, session, error, refresh, signOut } = useSession();
   const navigate = useNavigate();
+  const { next: nextRaw } = Route.useSearch();
+  const next = sanitizeNextPath(nextRaw);
   const shell = {
     title: he.loginTitle,
     kicker: he.authWelcomeBack,
@@ -35,15 +43,16 @@ function LoginPage() {
     if (!ready || formError || submitting) return;
     setLaunching(true);
     void (async () => {
-      if (session!.has_workspace) {
+      const dest = afterAuthPath(session!.has_workspace, next);
+      if (session!.has_workspace && dest === "/app") {
         await authLaunchSequence({
           onWorkspace: () => setLaunchReady(false),
           onReady: () => setLaunchReady(true),
         });
       }
-      await navigate({ to: afterAuthPath(session!.has_workspace) });
+      await navigate({ to: dest });
     })();
-  }, [formError, navigate, ready, session, submitting]);
+  }, [formError, navigate, next, ready, session, submitting]);
 
   if (loading || launching || (user && session)) {
     return (
@@ -76,7 +85,11 @@ function LoginPage() {
         <AuthFooter
           prompt={he.noAccount}
           action={
-            <Link to="/register" className="font-medium text-action transition-colors hover:underline">
+            <Link
+              to="/register"
+              search={next ? { next } : {}}
+              className="font-medium text-action transition-colors hover:underline"
+            >
               {he.loginSecondaryRegister}
             </Link>
           }
@@ -99,13 +112,14 @@ function LoginPage() {
             return;
           }
           const hydrated = await refresh();
-          if (hydrated?.has_workspace) {
+          const dest = afterAuthPath(Boolean(hydrated?.has_workspace), next);
+          if (hydrated?.has_workspace && dest === "/app") {
             await authLaunchSequence({
               onWorkspace: () => setLaunchReady(false),
               onReady: () => setLaunchReady(true),
             });
           }
-          await navigate({ to: afterAuthPath(Boolean(hydrated?.has_workspace)) });
+          await navigate({ to: dest });
         }}
       />
     </AuthLayout>

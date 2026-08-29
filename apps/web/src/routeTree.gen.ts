@@ -29,6 +29,7 @@ import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
 import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
+import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
@@ -154,6 +155,11 @@ const AppTodayRoute = AppTodayRouteImport.update({
 const DevUiRoute = DevUiRouteImport.update({
   id: "/dev/ui",
   path: "/dev/ui",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: "/invite/$token",
+  path: "/invite/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
@@ -306,6 +312,7 @@ export interface FileRoutesByFullPath {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
@@ -352,6 +359,7 @@ export interface FileRoutesByTo {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/q/$token": typeof QTokenRoute
   "/admin": typeof AdminIndexRoute
@@ -401,6 +409,7 @@ export interface FileRoutesById {
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
+  "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
@@ -451,6 +460,7 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/invite/$token"
     | "/legal/$slug"
     | "/q/$token"
     | "/admin/"
@@ -497,6 +507,7 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/invite/$token"
     | "/legal/$slug"
     | "/q/$token"
     | "/admin"
@@ -545,6 +556,7 @@ export interface FileRouteTypes {
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
+    | "/invite/$token"
     | "/legal/$slug"
     | "/q/$token"
     | "/admin/"
@@ -586,6 +598,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   DevUiRoute: typeof DevUiRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
   LegalIndexRoute: typeof LegalIndexRoute
@@ -732,6 +745,13 @@ declare module "@tanstack/react-router" {
       path: "/dev/ui"
       fullPath: "/dev/ui"
       preLoaderRoute: typeof DevUiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/invite/$token": {
+      id: "/invite/$token"
+      path: "/invite/$token"
+      fullPath: "/invite/$token"
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/legal/": {
@@ -1023,6 +1043,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   DevUiRoute: DevUiRoute,
+  InviteTokenRoute: InviteTokenRoute,
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
   LegalIndexRoute: LegalIndexRoute,

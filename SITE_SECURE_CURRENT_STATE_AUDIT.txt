@@ -1,0 +1,1041 @@
+# SITE SECURE — CURRENT STATE AUDIT
+# Baseline Pass 2 — Master Blueprint Ready
+
+================================================================================
+## AUDIT METADATA
+================================================================================
+
+Generated: 2026-08-29 (Pass 2 enhancement of prior static audit)
+Commit SHA: a26be56b19ea71f920a54670040e4f4344fc4f8a
+Branch: feat/quote-cpq-phase-ab
+Scan duration: Not measured
+
+Files scanned (counts at generation time):
+- migrations: 41 (supabase/migrations/*.sql)
+- backend route files: 18 (apps/api/app/routers/*.py)
+- backend app Python modules: 50 (apps/api/app/**/*.py excl. __pycache__)
+- frontend route/page files: 47 (apps/web/src/routes/**/*.{ts,tsx})
+- components: 113 (apps/web/src/components/**/*.{ts,tsx})
+- services / lib: 44 (apps/web/src/lib/**/*.{ts,tsx})
+- frontend tests: 33 (apps/web/tests/**/*.{ts,tsx})
+- backend tests: 22 (apps/api/tests/**/*.py)
+- shared packages files: 27 (packages/**/*.{ts,tsx,json} excl. node_modules)
+
+Also inspected: packages/authz/catalog.json, packages/api-client, vercel.json, render.yaml,
+.env.example, README.md, Docs/SITE-SECURE-CONTEXT.md (legacy context only — not SoT).
+
+Audit scope:
+- CURRENT STATE of this monorepo only (apps/web, apps/api, packages/*, supabase/*).
+- Static code + migration + config inspection.
+- NO application code changes.
+- NO live production E2E (unless a prior pass noted spot-checks — treat runtime as NOT VERIFIED unless Evidence says otherwise).
+- Docs/SITE-SECURE-CONTEXT.md describes older Aegis-coupled V1 — NOT authoritative for this codebase.
+
+Method labels used below:
+- CURRENT STATE = what exists now
+- GAP = missing/partial vs expected completeness (see Master Gap Registry)
+- RISK = security/architecture concern
+- RECOMMENDATION = suggested next action (not implemented)
+- FUTURE STATE = deliberately excluded from claims of existence
+
+IMPORTANT NAMING (Consistency Lock)
+- Plans: Solo / Business / Enterprise ONLY (no Free/Pro plan keys in code).
+- Roles: owner, administrator, manager, sales, technician, founding_technician, viewer.
+- Tenant: workspaces (not "company" in V2 schema).
+- API branding: "SITE SECURE V2 API"; folder name SiteSecureV1 — same product tree.
+- apps/mobile: referenced in .env.example; 0 files in repo → MISSING.
+
+Confidence values (only): HIGH | MEDIUM | LOW
+- HIGH = direct evidence in code/DB/config
+- MEDIUM = schema + related code / multi-source; not E2E proven
+- LOW = inference without direct proof
+
+================================================================================
+## 1. Executive Summary (Technical — CURRENT STATE)
+================================================================================
+
+Confidence: HIGH for stack/modules listed with Evidence; MEDIUM for maturity judgments.
+
+### What the app is now
+Hebrew-first (RTL) SaaS for security-installation businesses: CRM + Quotes/CPQ + Site File +
+Projects + Field Jobs + Service. Stack: React/Vite web + FastAPI + Supabase (Auth/Postgres/Storage).
+
+### Who it serves
+Workspace roles above + platform admins (profiles.is_platform_admin).
+
+### Strong / Working (CURRENT STATE)
+- Auth email/password + session hydrate
+- Workspace multi-tenant + RBAC authorize() + RLS
+- Customers, contacts, leads
+- Sites dossier + systems + equipment records
+- Catalog + Quotes/CPQ + public approve/sign/PDF
+- Projects + field job detail lifecycle
+- Dashboard/Today API-backed (not mock)
+- Documents via signed Storage URLs
+- Seat-limited invite CREATE
+- Audit viewer when plan has audit
+- Platform admin /admin
+
+→ Gaps for partial/missing: See Master Gap Registry (G-001+)
+
+### Partially working / incomplete
+→ See G-002 soft quotas, G-003 service detail, G-004 calendar-as-tasks,
+  G-005 job assign UI, G-006 multi-workspace UX, G-007 sales dashboard, G-008–G-020 schema-ahead modules
+
+### Not finished / missing product
+→ See G-021 billing, G-022 inventory, G-023 finance, G-024 reports, G-025 notifications,
+  G-026 AI/LLM, G-027 mobile native
+
+================================================================================
+## MASTER GAP REGISTRY
+================================================================================
+
+Canonical gap list. Other sections MUST reference → See Gap G-XXX (do not restate conflicting status).
+
+Legend Status: WORKING | PARTIAL | UI_ONLY | BACKEND_ONLY | MOCK | MISSING | NOT_VERIFIED
+DB/API/UI: Y = present & used | P = partial | N = absent | S = schema only
+
+ID | Feature | Domain | DB | API | UI | Backend Enf. | Frontend Enf. | Plan | Status | Severity | Confidence | Evidence | Dependencies | Recommended Action | Section Ref
+---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---
+G-001 | Invite acceptance web flow | Team | Y | Y | Y | Seat re-check on accept (0039 RPC) + create-time check | peek/accept UI | assignable_roles | WORKING | — | HIGH | 0039_invite_accept_enforcement.sql; GET /invitations/peek; POST /invitations/accept; routes/invite/$token.tsx; live tests test_invite_accept_live.py | Auth, Seats | Maintain; no multi-workspace switcher | §4 §5 §6 §34
+G-002 | Quote/client/storage hard quotas | Plans | Y | meters Y | meters Y | NOT on create/upload | hints only | Solo/Biz limits | PARTIAL | HIGH | HIGH | usage.py meters; quotes.py/customers.py/documents.py no PLAN_LIMIT; limits.py only seats | Plans | Enforce or stop claiming hard limits | §7 §21 §36
+G-003 | Service call detail | Service | Y | Y patch | list only | authorize service.* | nav gated | service feature | PARTIAL | MEDIUM | HIGH | ops_modules.py service-calls; routes/app/service/index.tsx no $callId | Customers, Sites | Add detail route + assignment UX | §18
+G-004 | Calendar (grid) | Ops | tasks Y | tasks Y | tasks as "יומן" | calendar.* | calendar.view nav | — | MISSING (tasks PARTIAL substitute) | MEDIUM | HIGH | app-nav.ts /app/tasks label he.navCalendar | Tasks | Rename or build real calendar | §19
+G-005 | Job assignment UI | Jobs | assignments Y | assign Y | thin/missing | jobs.assign | little UI | — | PARTIAL | MEDIUM | HIGH | jobs.py POST assign; no rich assign screen in routes | Technicians | Build assign UI | §16 §17
+G-006 | Multi-workspace switcher | Workspace | multi membership Y | session lists Y | memberships[0] only | per workspace_id | hardcoded [0] | — | PARTIAL | MEDIUM | HIGH | AppShell.tsx / app/route.tsx memberships[0] | Session | Switcher or document single-WS product rule | §5
+G-007 | Sales dashboard variant | Dashboard | — | same API | SalesSnapshot unused | — | homeVariant sales→OpsDashboard | — | PARTIAL | LOW | HIGH | dashboard.tsx falls through to OpsDashboard; SalesSnapshot.tsx unused | Dashboard | Wire or delete | §9
+G-008 | Notifications product | Notifications | S | N | N | N | N | — | MISSING | MEDIUM | HIGH | 0021_notifications.sql; no router | — | Build or drop schema claims | §22
+G-009 | Inventory stock module | Inventory | N stock | N | N | feature gate only | feature hide | inventory Biz+ | MISSING | MEDIUM | HIGH | catalog.json inventory feature; no inventory router | Catalog | Build or remove feature | §20
+G-010 | Finance module | Finance | N | N | N | feature gate | — | finance Biz+ | MISSING | MEDIUM | HIGH | catalog permission_feature finance.* | — | Build or remove feature | §7
+G-011 | Reports module | Reports | N | N | N | feature gate | — | reports Biz+ | MISSING | LOW | HIGH | catalog reports.*; no reports UI | Dashboard KPIs only | Build or remove feature | §23
+G-012 | Billing / payments | Billing | subscriptions Y | no checkout | usage only | status gate in authorize | upgrade copy | all plans | MISSING (schema stub) | HIGH | HIGH | 0008 subscriptions; no Stripe in apps; workspace.billing unused commercially | Plans | Provider + plan change APIs | §25 §7
+G-013 | Trial product UX | Billing | enum trialing | create=active | N | status allowed | N | — | MISSING | LOW | HIGH | create_workspace inserts active; enum has trialing | Billing | Define trial policy | §7
+G-014 | AI / LLM | AI | feature ai | N | System Builder rules only | feature unused | copy not chat AI | enterprise ai | MISSING (rules ≠ AI) | LOW | HIGH | catalog ai; system-builder.ts; no OpenAI | Quotes | Clarify labeling / ship AI later | §29
+G-015 | Mobile native app | Mobile | — | env stubs | N | — | responsive web Y | — | MISSING | LOW | HIGH | .env.example Expo; apps/mobile 0 files | API | Build Expo or remove stubs | §30
+G-016 | CRM Tags | CRM | N | N | N | N | N | crm | MISSING | LOW | HIGH | no tag APIs/UI found | Customers | Defer | §10
+G-017 | CRM Activities entity | CRM | S | N | derived timeline | N | client-derived | — | PARTIAL | LOW | HIGH | customer_activities table; no FastAPI | Leads | API+UI or drop | §10
+G-018 | Site zones / timeline / readiness | Sites | S | N | N | RLS only | N | — | BACKEND_ONLY (schema) | LOW | HIGH | 0011 sites zones/timeline; 0020 readiness | Site File | Expose or document internal-only | §12
+G-019 | Service contracts | Service | S | N | N | RLS | N | — | BACKEND_ONLY | LOW | HIGH | 0018 service_contracts | Service | Productize or hide | §18
+G-020 | After-action reports / checklist templates | Jobs | S | N | N | N | N | — | BACKEND_ONLY | LOW | HIGH | 0017 area tables | Jobs | Productize or hide | §16
+G-021 | Entitlements vs feature overrides mismatch | Plans/RLS | overrides Y | entitlements ignore overrides | uses session features | auth_feature uses overrides; RPC does not | session from RPC | — | PARTIAL | HIGH | HIGH | 0028_entitlements_rpc.sql; 0008 auth_feature | authorize() | Align RPC with auth_feature | §6 §7 §36
+G-022 | Dual RBAC catalog drift risk | RBAC | SQL seed | catalog.json SoT for API | same package | engine loads JSON | can() uses JSON | — | PARTIAL (risk) | MEDIUM | HIGH | packages/authz/catalog.json; 0008_features_plans.sql | Deploy process | Single source CI check | §6 §35
+G-023 | Soft-delete / public quote service-role concentration | Security | — | ServiceClient paths | — | authorize then service role | — | — | WORKING with RISK | HIGH | HIGH | public_quotes.py; quotes.py; customers.py soft delete | Authz | Reduce surface / harden tests | §28 §36
+G-024 | Storage ACL coarser than document RBAC | Security/Docs | storage policies | docs authorize | embedded upload | membership path | documents.* | storage_gb soft | PARTIAL | MEDIUM | HIGH | 0023_storage.sql; documents.py | Tenancy | Tighten storage policies | §21 §36
+G-025 | Audit coverage incomplete | Audit | audit_logs Y | write_audit best-effort | /settings/audit | audit.view + feature | gated | audit Biz+ | PARTIAL | MEDIUM | HIGH | audit.py; team.py GET audit | Compliance | Expand events; fail-visible | §24
+G-026 | Knowledge / warranties depth | Ops | Y | Y | list-centric | perms | nav | — | PARTIAL | LOW | HIGH | routes knowledge/warranties index only | — | Detail pages if needed | §8
+G-027 | System Builder non-CCTV | Quotes | catalog | — | types disabled | — | UI disabled | quotes | PARTIAL | LOW | HIGH | SystemBuilderDrawer.tsx; system-builder.ts | Catalog | Enable or hide types | §14
+G-028 | Quote email / WhatsApp delivery | Quotes | — | status+token | mailto / wa.me | N provider | client links | — | PARTIAL | MEDIUM | HIGH | quote-whatsapp-share.ts; send endpoints | Public quote | Provider or honest UX copy | §14 §31
+G-029 | In-memory rate limit / unused idempotency_keys | API | idempotency_keys S | in-memory | — | weak multi-instance | — | — | PARTIAL | MEDIUM | MEDIUM | main.py rate limit; idempotency.py | Deploy scale | Redis/DB limiters | §26 §35
+G-030 | Platform admin email seed in migration | Security | 0036 | admin routes | /admin | is_platform_admin | route gate | — | WORKING with RISK | MEDIUM | HIGH | 0036_beta_feedback.sql | Ops | Rotate/remove hardcoded seed | §28 §36
+G-031 | Roles ACL editor | RBAC | role_permissions Y | catalog fixed | read-only matrix | grants fixed | roles.manage gated | team feature | PARTIAL | LOW | HIGH | settings/roles.tsx | RBAC | Keep catalog-driven or build editor | §6
+G-032 | Dead dashboard components | Dashboard | — | — | unused files | — | — | — | UI_ONLY dead | LOW | HIGH | SalesSnapshot, BusinessHealth, QuotePipeline, UxRings | — | Delete or wire | §9 §34
+G-033 | Docs drift (legacy V1 context) | Docs | — | — | — | — | — | — | PARTIAL | MEDIUM | HIGH | Docs/SITE-SECURE-CONTEXT.md vs apps/* | Onboarding eng | Mark legacy / update | §35
+G-034 | Public quote superseded handling | Quotes | versions Y | public API | banners | token version | — | — | WORKING | — | HIGH | public_quotes.py superseded flag | Quotes | Keep tests green | §14
+G-035 | Technician skills/availability | Technicians | role only | — | N | — | — | — | MISSING | LOW | HIGH | memberships role_key only | Jobs | Defer | §17
+
+WORKING core modules (not gaps — registered for matrix completeness):
+G-W01 Auth login/register/reset | Auth | Y | Y | Y | JWT validate | session | — | WORKING | — | HIGH | login/register routes; deps.py | — | Maintain | §4
+G-W02 Workspace create | Workspace | Y | Y | onboarding | create_workspace RPC | — | default solo | WORKING | — | HIGH | workspaces.py; 0004/0008 | Auth | Maintain | §5
+G-W03 RBAC authorize pipeline | RBAC | Y | Y | can() UX | authorize() | can() | features | WORKING | — | HIGH | engine.py | catalog | Maintain | §6
+G-W04 Customers CRM | CRM | Y | Y | Y | crm.* | nav | crm | WORKING | — | HIGH | customers.py; CustomerProfile | Workspace | Maintain | §11
+G-W05 Sites dossier | Sites | Y | Y | Y | sites.* | nav | — | WORKING | — | HIGH | sites.py; SiteDossier.tsx | Customers | Maintain | §12
+G-W06 Quotes CPQ | Quotes | Y | Y | Y | quotes.* | nav | quotes | WORKING | — | HIGH | quotes.py; quote_cpq.py; QuoteBuilder | Catalog, Customers, Sites | Maintain | §14
+G-W07 Public quote approve/sign | Quotes | Y | public | /q /public | token+hash | public pages | — | WORKING | — | HIGH | public_quotes.py; quote_tokens.py | Quotes | Maintain | §14
+G-W08 Projects + field jobs | Projects/Jobs | Y | Y | Y | projects/jobs.* | routes | projects | WORKING | — | HIGH | ops_modules/jobs; FieldJob | Quotes optional | Maintain | §15 §16
+G-W09 Documents upload | Documents | Y | Y | embedded | documents.* | — | meters | WORKING | — | HIGH | documents.py; 0023 | Entities | Maintain; see G-002 G-024 | §21
+G-W10 Dashboard/Today API | Dashboard | — | Y | Y | dashboard.view | home | — | WORKING | — | HIGH | dashboard.py; OpsDashboard; TodayHome | Authz | Maintain; see G-007 | §9
+
+================================================================================
+## 2. Technology Stack
+================================================================================
+
+Confidence: HIGH
+
+### Frontend
+React 19, TypeScript, Vite 6, TanStack Router/Query, Tailwind v4, Zod, Lucide, Lottie,
+Fontsource Heebo/Inter/JetBrains Mono, @site-secure/{ui,design-system,api-client,authz,types},
+Vitest. Hebrew via he.ts (not i18next).
+
+### Backend
+FastAPI (title SITE SECURE V2 API, version 0.7.0), Python >=3.12, Pydantic v2, httpx,
+fpdf2 + Hebrew fonts, uvicorn, Docker (deploy/Dockerfile.api).
+
+### Database / Auth / Storage
+Supabase Postgres + Auth + Storage; RLS FORCE; 41 migrations.
+
+### Hosting
+Web: Vercel (vercel.json). API: Render (render.yaml, Frankfurt). Staging URL in render.yaml:
+https://site-secure-umber.vercel.app — live prod status: NOT VERIFIED | Risk: MEDIUM | NEEDS VERIFICATION BEFORE PRODUCTION
+
+### Evidence
+- apps/web/package.json
+- apps/api/pyproject.toml, apps/api/app/main.py
+- vercel.json, render.yaml
+
+================================================================================
+## 3. Application Architecture
+================================================================================
+
+Confidence: HIGH (structure); MEDIUM (all edge cases)
+
+```
+Browser (Vite SPA)
+  → Supabase Auth (identity JWT)
+  → FastAPI Bearer JWT
+       → authorize(catalog.json)
+       → UserClient PostgREST (RLS as auth.uid())
+       → ServiceClient (privileged paths only)
+  → Supabase Storage signed URLs (upload/download)
+```
+
+Frontend: SessionProvider → api-client → /api/v1/*
+Backend: routers + authz engine + audit helpers
+DB: workspace_id tenancy + memberships + assignments scopes
+
+→ Architecture detail & build order: see ARCHITECTURE & DEPENDENCY MAP
+
+================================================================================
+## 4. Authentication
+================================================================================
+
+Confidence: HIGH (code paths) | Production Supabase Auth dashboard settings: NOT VERIFIED | Risk: HIGH | NEEDS VERIFICATION BEFORE PRODUCTION
+
+### CURRENT STATE
+| Flow | Route | Mechanism | Confidence |
+|------|-------|-----------|------------|
+| Login | /login | signInWithPassword | HIGH |
+| Signup | /register | signUp + emailRedirectTo | HIGH |
+| Verify email UI | /verify-email | resend signup | HIGH |
+| Forgot password | /forgot-password | resetPasswordForEmail | HIGH |
+| Reset password | /reset-password | updateUser password | HIGH |
+| Profile | onboarding + PATCH /me | profiles | HIGH |
+| Session | SessionProvider | onAuthStateChange → GET /auth/session | HIGH |
+| OAuth/magic/phone | — | NOT FOUND | HIGH (absence) |
+
+### Evidence
+- apps/web/src/routes/login.tsx, register.tsx, forgot-password.tsx, reset-password.tsx, verify-email.tsx
+- apps/web/src/lib/session.tsx, supabase.ts, remember-device.ts
+- apps/api/app/routers/auth.py — GET /auth/session, PATCH /me
+- apps/api/app/deps.py, supabase_user.py — JWT via /auth/v1/user; service role rejected as user bearer
+- supabase/migrations/0003_profiles.sql — handle_new_user
+
+### Gaps
+→ Invite accept web flow shipped (G-001 WORKING). Remaining auth gaps unrelated.
+
+### NOT VERIFIED
+- Confirm-email enabled in prod Supabase | Risk: HIGH | NEEDS VERIFICATION BEFORE PRODUCTION
+- Password policy beyond client min length | Risk: MEDIUM | NEEDS VERIFICATION BEFORE PRODUCTION
+- JWT expiry / refresh behavior in prod | Risk: MEDIUM | NEEDS VERIFICATION BEFORE BETA
+
+================================================================================
+## 5. Workspace / Organization
+================================================================================
+
+Confidence: HIGH
+
+### CURRENT STATE
+- Tenant = workspaces; membership = workspace_memberships (role_key, status)
+- Onboarding create_workspace → owner + subscription solo/active
+- Invitations hashed tokens; invitation_preview + accept_invitation SECURITY DEFINER RPCs
+- Accept re-checks seats/plan/subscription/role (migration 0039); peek API + /invite/$token UI
+- After accept, session prefers last_workspace_id as memberships[0] (no full workspace switcher)
+- UI active workspace = session.memberships[0] everywhere (G-006 still open)
+
+### Evidence
+- supabase/migrations/0004_workspaces.sql, 0006_memberships.sql, 0027_invitations_rpc.sql, 0039_invite_accept_enforcement.sql
+- apps/api/app/routers/workspaces.py (create+seat check; GET peek; POST accept)
+- apps/web/src/routes/invite/$token.tsx; apps/api/tests/test_invite_accept_live.py
+- apps/web/src/routes/app/route.tsx — activeWorkspaceId = memberships[0]
+
+### Gaps
+→ See Gap G-006, G-012 (G-001 resolved)
+
+### Tenant isolation Confidence: HIGH (code+RLS design); live cross-tenant E2E: NOT VERIFIED | Risk: HIGH | NEEDS VERIFICATION BEFORE PRODUCTION
+Evidence: auth helpers 0007; API load_authz_context; tests/test_tenant_isolation.py present (execution in this pass: NOT VERIFIED)
+
+================================================================================
+## 6. RBAC
+================================================================================
+
+Confidence: HIGH for catalog + engine; MEDIUM for every RLS policy vs every endpoint pairing
+
+### Roles (7) — CURRENT STATE grants from packages/authz/catalog.json
+| Role | Scope | Notes | Confidence |
+|------|-------|-------|------------|
+| owner | all | grants * | HIGH |
+| administrator | all | no workspace.billing/delete | HIGH |
+| manager | team | ops+CRM; no invite | HIGH |
+| sales | owned | quotes without cost/override | HIGH |
+| technician | assigned | field ops | HIGH |
+| founding_technician | assigned | extra CRM/quotes.edit; no quotes.create in grants | HIGH |
+| viewer | all | read views | HIGH |
+
+### Permissions
+~71 keys in catalog.json permissions[]; grants per role; permission_feature map for plan gating.
+
+### Enforcement layers
+| Layer | Role | Confidence |
+|-------|------|------------|
+| FastAPI authorize() | Security boundary | HIGH |
+| Frontend can() / RequirePermission | UX only | HIGH |
+| RLS membership/role/assigned | Defense in depth | HIGH (exists); completeness MEDIUM |
+
+### Evidence
+- packages/authz/catalog.json
+- apps/api/app/authz/engine.py — authorize() lines 21–61 (subscription, feature, grant, scope, state, business rules)
+- apps/api/app/authz/guard.py — require()
+- apps/web/src/lib/can.ts
+- supabase/migrations/0005_rbac.sql, 0008_features_plans.sql, 0007_auth_helpers.sql
+- apps/api/tests/test_authorize.py
+
+### Gaps
+→ See Gap G-021, G-022, G-031
+
+================================================================================
+## 7. Subscription Plans
+================================================================================
+
+Confidence: HIGH for keys/limits/features; HIGH that Free/Pro do not exist as plan keys
+
+### CURRENT STATE — Solo / Business / Enterprise (NOT Free/Pro)
+
+| Plan | Features (catalog) | Limits (0=unlimited) | Confidence |
+|------|--------------------|----------------------|------------|
+| solo (default) | core crm sales catalog quotes projects service settings | seats_op 1, seats_field 3, storage 15GB, quotes 50, clients 30 | HIGH |
+| business | + inventory finance reports automation team audit api | 15 / 40 / 100GB / 200 / 150 | HIGH |
+| enterprise | all + ai branches | all 0 unlimited | HIGH |
+
+### Enforcement map
+| Control | Backend | Frontend | Confidence |
+|---------|---------|----------|------------|
+| Seat caps | YES evaluate_seat_limit on invite create | YES | HIGH |
+| Assignable invite roles | YES | YES | HIGH |
+| Feature entitlements | YES permission_feature | YES can/nav | HIGH |
+| Subscription status | YES authorize | indirect | HIGH |
+| quota_quotes / quota_clients | NO on create | meters + copy | HIGH |
+| storage_gb | NO on upload | meters | HIGH |
+| Self-serve billing | NO | NO | HIGH (absence) |
+
+### Evidence
+- packages/authz/catalog.json plans[]
+- supabase/migrations/0008_features_plans.sql, 0031_plan_storage_limits.sql, 0038_plan_quota_limits.sql
+- apps/api/app/authz/limits.py — evaluate_seat_limit only seat buckets
+- apps/api/app/authz/usage.py — meters
+- Grep: no PLAN_LIMIT / quota checks in quotes.py, customers.py, documents.py
+
+### Gaps
+→ See Gap G-002, G-012, G-013, G-021
+
+================================================================================
+## 8. Sidebar / Navigation
+================================================================================
+
+Confidence: HIGH
+
+Source: apps/web/src/lib/app-nav.ts
+
+Desktop: dashboard|today, tasks ("יומן"), customers, leads, quotes, catalog, projects, sites,
+service, warranties, knowledge, users, roles, security, audit, settings — gated by permission+feature.
+
+Mobile bottom: בית · לקוחות · עבודה · משימות · עוד
+
+Not in nav: inventory, billing, reports, notifications, calendar grid, technicians directory.
+
+Gaps: → See G-004, G-009–G-012, G-025 area, G-035
+
+================================================================================
+## 9. Dashboard
+================================================================================
+
+Confidence: HIGH (API-backed); sales variant PARTIAL → G-007
+
+Data: GET /dashboard (+ usage, security, leads) — real API, not mock.
+Variants: ops → OpsDashboard; observe → ObserveDashboard; today → /app/today; sales → still OpsDashboard.
+
+Evidence: apps/web/src/routes/app/dashboard.tsx; apps/api/app/routers/dashboard.py;
+components/dashboard/OpsDashboard.tsx; SalesSnapshot.tsx unused import graph.
+
+NextBestAction = rules (lib/next-best-action.ts) — not LLM → G-014
+
+================================================================================
+## 10. CRM
+================================================================================
+
+Confidence: HIGH for customers/leads/contacts; HIGH absence of tags
+
+Leads, Customers, Contacts: WORKING (API+UI).
+Notes: fields on lead/customer; customer_notes table → G-017
+Activities: derived UI; table without API → G-017
+Tags: MISSING → G-016
+History: derived / site_timeline schema → G-018
+
+================================================================================
+## 11. Customers
+================================================================================
+
+Confidence: HIGH
+
+Routes: /app/customers, /app/customers/$customerId
+Tabs: overview sites quotes projects service warranties documents
+CRUD + contacts + soft-delete; billing_address is address data not payment billing.
+
+Evidence: customers.py; CustomerProfile / CustomerDirectory components.
+
+================================================================================
+## 12. Sites / Site File
+================================================================================
+
+Confidence: HIGH for dossier; HIGH schema-only zones/timeline
+
+SiteDossier tabs: overview equipment systems service documents history field
+Systems/equipment records WORKING; live CCTV/alarm monitoring MISSING (not a gap ID for "product intent" — absence HIGH confidence).
+
+→ Schema-only: G-018
+
+Evidence: 0011_sites.sql, 0012_systems.sql; sites.py; systems.py; SiteDossier.tsx
+
+================================================================================
+## 13. Security Systems / Equipment
+================================================================================
+
+Confidence: HIGH
+
+Exists as inventory/metadata: system_type (alarm,cctv,access,network,intercom,other);
+equipment_category (camera,pir,nvr,dvr,panel,reader,lock,switch,cable,sim,power,other).
+Does NOT stream video or monitor alarms.
+
+CPQ System Builder: CCTV rules only → G-027
+
+================================================================================
+## 14. Quotes / CPQ
+================================================================================
+
+Confidence: HIGH — strongest shipped module
+
+Builder, sections, items, templates, packages, VAT, margins, versions, events, PDF,
+send/share/revoke, revise, duplicate, public approve/reject/sign, project-from-quote.
+
+Statuses DB: draft sent viewed approved rejected expired cancelled; superseded via public versioning → G-034 WORKING.
+
+Gaps: → G-002 quotas, G-027 builder types, G-028 delivery channels
+
+Evidence: quotes.py, quote_cpq.py, public_quotes.py, QuoteBuilder.tsx, 0016_quotes.sql, 0034_cpq_phase2.sql
+
+================================================================================
+## 15. Projects
+================================================================================
+
+Confidence: HIGH
+
+Statuses: draft planned in_progress on_hold completed cancelled
+from-quote unique source_quote (0032). Start installation → job.
+
+Evidence: 0017_projects_jobs.sql; ops_modules.py projects; ProjectFromQuoteDialog
+
+================================================================================
+## 16. Jobs / Work Orders
+================================================================================
+
+Confidence: HIGH for detail lifecycle; PARTIAL assign/list → G-005, G-020
+
+Kinds/statuses in 0017; FieldJob start/complete/checklist/photos; /app/jobs/$jobId; no jobs list nav.
+
+================================================================================
+## 17. Technicians
+================================================================================
+
+Confidence: HIGH
+
+Role-based members only; no skills/availability module → G-035
+TodayHome for field roles.
+
+================================================================================
+## 18. Service Desk
+================================================================================
+
+Confidence: HIGH
+
+service_calls API list/create/patch; UI list → G-003
+service_contracts schema only → G-019
+
+================================================================================
+## 19. Calendar
+================================================================================
+
+Confidence: HIGH
+
+"/app/tasks" labeled calendar — task list only → G-004
+
+================================================================================
+## 20. Inventory
+================================================================================
+
+Confidence: HIGH (absence of stock module)
+
+Catalog products ≠ warehouse inventory. Feature flag inventory → G-009
+Site equipment ≠ stock movements.
+
+================================================================================
+## 21. Documents / Storage
+================================================================================
+
+Confidence: HIGH
+
+Upload intent → Storage → complete → signed URL.
+Limits metered not enforced → G-002
+Storage ACL coarse → G-024
+
+Evidence: documents.py; 0023_storage.sql; 0031/0037 migrations
+
+================================================================================
+## 22. Notifications
+================================================================================
+
+Confidence: HIGH (schema without product) → G-008
+
+================================================================================
+## 23. Reports / Analytics
+================================================================================
+
+Confidence: HIGH absence of reports module → G-011
+Dashboard KPIs are operational, not Reports product.
+
+================================================================================
+## 24. Audit Logs
+================================================================================
+
+Confidence: HIGH existence; MEDIUM completeness → G-025
+
+Evidence: 0022_audit.sql; apps/api/app/audit.py; team.py GET /audit; settings/audit.tsx
+Plan: audit feature (Business+)
+
+================================================================================
+## 25. Billing
+================================================================================
+
+Confidence: HIGH — commercial billing MISSING; subscription schema EXISTS → G-012 G-013
+
+Evidence: subscriptions table 0008; no Stripe/checkout in apps (only palette comment in quote_pdf.py);
+workspace.billing permission unused for payments.
+
+================================================================================
+## 26. API
+================================================================================
+
+Confidence: HIGH for router inventory
+
+Routers: health, auth, workspaces, feedback, admin, team, customers, sites, systems, search,
+jobs, ops_modules, quotes, quote_cpq, catalog, public_quotes, documents, dashboard.
+
+Auth: Bearer user JWT. Authz: authorize(). No product API keys for third parties.
+
+Gaps affecting API: G-008, G-009–G-012, G-029
+
+Evidence: apps/api/app/main.py include_router list
+
+================================================================================
+## 27. Database
+================================================================================
+
+Confidence: HIGH for migrations present; MEDIUM that deployed DB matches all 41 (ops apply status NOT VERIFIED | Risk: HIGH | NEEDS VERIFICATION BEFORE PRODUCTION)
+
+Major entities summarized in Pass 1; status tags:
+ACTIVE+API: profiles, workspaces, memberships, customers, contacts, sites, systems, equipment,
+documents, leads, catalog, quotes*, projects, jobs, service_calls, warranties, tasks, knowledge,
+audit_logs, invitations, subscriptions, feedback, feature_flags
+
+SCHEMA_ONLY / PARTIAL: notifications*, customer_notes/activities, site_zones/timeline/readiness,
+service_contracts, checklist_templates, after_action_reports, idempotency_keys
+
+→ Aligns with Gaps G-008, G-017–G-020, G-029
+
+================================================================================
+## 28. Security (CURRENT STATE posture)
+================================================================================
+
+Confidence: HIGH for observed controls; risks classified in §36
+
+Present: Supabase Auth JWT; roles from memberships; authorize()+RLS; CORS allowlist;
+rate limit in-process; public quote hashed tokens; filename sanitize; Vercel X-Frame/X-Content-Type;
+service role type checks.
+
+Gaps/Risks: → G-023, G-024, G-021, G-029, G-030, G-025
+
+Sessions management: Security Center marks not_built — CURRENT STATE.
+
+================================================================================
+## 29. Existing AI
+================================================================================
+
+Confidence: HIGH → G-014
+
+Enterprise feature "ai" unused. System Builder + NextBestAction are deterministic rules, not LLM.
+
+================================================================================
+## 30. Mobile / Responsive
+================================================================================
+
+Confidence: HIGH for responsive web; HIGH absence of native → G-015
+
+Breakpoint ~1024px bottom nav; field-oriented Today/FieldJob.
+
+Device QA matrix: NOT VERIFIED | Risk: MEDIUM | NEEDS VERIFICATION BEFORE BETA
+
+================================================================================
+## 31. Integrations
+================================================================================
+
+Confidence: HIGH
+
+| Integration | CURRENT STATE | Gap |
+|-------------|---------------|-----|
+| Supabase Auth email | Working | — |
+| Product email | mailto / status | G-028 |
+| WhatsApp | wa.me only | G-028 |
+| Google OAuth | Not in UI | — |
+| Maps | link-out only | — |
+| Payment | Missing | G-012 |
+| Accounting | Missing | — |
+| Storage | Supabase | G-024 |
+| Edge Functions | Not implemented | — |
+
+================================================================================
+## 32. Current User Flows (verified in code)
+================================================================================
+
+Confidence: HIGH for existence of code paths; E2E prod: NOT VERIFIED | Risk: HIGH | NEEDS VERIFICATION BEFORE BETA
+
+1. Auth → onboarding workspace → role home
+2. Lead → visit task → quote → send → public approve/sign → project → installation job → field complete
+3. Customer 360 → sites/quotes/service/docs
+4. Site file systems/equipment/docs
+5. Catalog → quote lines
+6. Service create (list)
+7. Tasks create/complete
+8. Team invite create + accept (seat re-check on accept) + role change + seat limit
+9. Audit (Business+)
+10. Platform admin orgs/flags/feedback
+
+Broken/partial in those flows: → G-005 assign, G-003 service detail
+
+================================================================================
+## 33. Feature Matrix
+================================================================================
+
+Feature | Status | Confidence | Gap
+--------|--------|------------|----
+Auth | WORKING | HIGH | —
+Workspace | WORKING | HIGH | G-006
+RBAC | WORKING | HIGH | G-021 G-022
+Plans seats/features | WORKING | HIGH | G-002 soft quotas
+Billing | MISSING | HIGH | G-012
+Dashboard | WORKING | HIGH | G-007
+CRM Customers/Leads | WORKING | HIGH | G-016 G-017
+Sites/Systems | WORKING | HIGH | G-018
+Quotes/CPQ/Public | WORKING | HIGH | G-027 G-028
+Projects/Jobs | WORKING | HIGH | G-005 G-020
+Service | PARTIAL | HIGH | G-003 G-019
+Calendar | MISSING (tasks) | HIGH | G-004
+Inventory/Finance/Reports | MISSING | HIGH | G-009 G-010 G-011
+Documents | WORKING | HIGH | G-002 G-024
+Notifications | MISSING | HIGH | G-008
+Audit | PARTIAL | HIGH | G-025
+AI | MISSING | HIGH | G-014
+Mobile native | MISSING | HIGH | G-015
+
+================================================================================
+## 34. Broken / Partial / Missing
+================================================================================
+
+Do not duplicate gap narratives — registry is SoT.
+
+Broken/partial UX: → G-003 G-004 G-005 G-006 G-007 G-026 G-032
+Mock/marketing only: public demo copy (not app data) — Confidence HIGH absence of dashboard mocks
+Missing modules: → G-008–G-015 G-022 docs
+Enforcement gaps: → G-002 G-021 G-024
+
+================================================================================
+## 35. Technical Debt
+================================================================================
+
+Mapped to gaps where applicable:
+1. Schema ahead of product → G-008 G-017–G-020
+2. Dual catalogs → G-022
+3. Entitlements vs overrides → G-021
+4. Soft quotas → G-002
+5. Service-role concentration → G-023 (RISK)
+6. In-memory limiters → G-029
+7. Docs drift → G-033
+8. Incomplete audit → G-025
+9. Storage ACL → G-024
+10. Naming V1/V2 / Solo vs Free-Pro language confusion (docs/process)
+11. Platform admin seed → G-030
+12. Mobile stubs → G-015
+
+================================================================================
+## 36. Security Risk Model
+================================================================================
+
+Classification note:
+- Observed vulnerability = proven broken control in code (none labeled Critical without exploit proof)
+- Potential risk = dangerous pattern if misused / buggy
+- Architectural concern = design weakness increasing blast radius
+
+Risk ID | Risk | Type | Current Severity | Confidence | Trigger Condition | Impact | Affected Area | Evidence | Recommended Verification
+--------|------|------|------------------|------------|-------------------|--------|---------------|----------|-------------------------
+R-001 | Service-role concentration after authorize | Potential risk / Architectural | HIGH | HIGH | Becomes CRITICAL if an authorization bug or missing require() allows unauthenticated or cross-tenant caller to hit ServiceClient paths (public_quotes, soft-delete, admin, signatures) | Full DB power via service role | Public quotes, soft-delete, admin | apps/api/app/routers/public_quotes.py; quotes.py; customers.py; admin.py; deps service_client | Live negative tests: unauth/cross-tenant on each ServiceClient route; code audit every service_client Depends
+R-002 | Soft plan quotas (quotes/clients/storage) | Observed control gap | HIGH | HIGH | Becomes worse if marketed as hard limits or if abuse fills storage/cost | Over-limit usage; billing honesty failure; noisy neighbor | Plans, Documents, Quotes, Customers | usage.py meters; no checks in quotes/customers/documents routers; limits.py seats-only | Attempt creates past quota in staging; confirm HTTP still 201
+R-003 | Storage ACL any member under workspace path | Architectural | MEDIUM | HIGH | Becomes HIGH if hostile technician member can read/write unrelated customer files via Storage path guessing | Cross-entity file exposure within tenant | Storage, Documents | 0023_storage.sql | Authz matrix: technician tries other customer paths
+R-004 | Document assigned-scope policy gaps | Potential risk | MEDIUM | MEDIUM | Becomes HIGH if assigned-scope user can read quote/project/warranty docs without site visibility intended by product | Excess document visibility | Documents RLS 0029 | 0029_documents_update.sql | RLS tests per role/scope
+R-005 | Invite accept without seat re-check | RESOLVED (Phase 0 Task 01) | — | HIGH | Was: stale invite accepted after seats full | Was: seat overage | Invitations | 0039 accept_invitation FOR UPDATE + plan_limits seat re-check; live test_invite_accept_seat_limit_blocks_stale_invite PASSED | Retest after plan-limit catalog changes
+R-006 | Entitlements RPC ignores feature overrides | Observed inconsistency | MEDIUM | HIGH | Becomes HIGH if ops rely on overrides to disable features but API session still grants them (or inverse via RLS) | Feature entitlement bypass / false lockout | Plans, authorize features, some RLS | 0028_entitlements_rpc.sql vs 0008 auth_feature | Set override off; call session + RLS feature check
+R-007 | Dual RBAC catalog drift | Architectural | MEDIUM | HIGH | Becomes HIGH if SQL role_permissions diverge from catalog.json used by API | UI/DB/API permission disagreement | RBAC | catalog.json; 0008 seed | Diff CI between catalog and DB seed
+R-008 | In-memory rate limit | Architectural | MEDIUM | MEDIUM | Becomes HIGH under multi-instance deploy or distributed abuse | Ineffective DoS protection | API main.py | main.py deque rate limit | Confirm instance count on Render; load test
+R-009 | Platform admin email seeded in migration | Operational risk | MEDIUM | HIGH | Becomes HIGH if that mailbox is compromised or unintended in prod | Platform-wide admin | Admin | 0036_beta_feedback.sql | Verify prod is_platform_admin rows
+R-010 | Incomplete / silent audit writes | Architectural | MEDIUM | HIGH | Becomes HIGH under incident response needing full trail | Missing forensic data | Audit | audit.py best-effort | Force audit failure; confirm swallowed
+R-011 | No API security headers (CSP/HSTS) | Architectural | LOW | HIGH | Becomes MEDIUM if API serves browsable content abused for clickjacking (less relevant for pure JSON API) | Limited for JSON API | API | main.py middleware | Decide header policy
+R-012 | Sessions management not built | Product gap | LOW | HIGH | Becomes MEDIUM if stolen refresh tokens cannot be revoked via product UI | Session hygiene | Security center | team.py not_built signal | Supabase session revoke ops runbook
+
+No CRITICAL severity assigned without demonstrated exploit in this static pass.
+
+================================================================================
+## 37. What SITE SECURE Can Actually Do Today
+================================================================================
+
+Confidence: HIGH for described capabilities (code); MEDIUM for polish/UX completeness
+
+A new owner today can: register/login; create Solo workspace; manage customers/leads/sites/systems/equipment;
+build/send/sign quotes; convert approved quote→project→installation job; run field complete with checklist/photos;
+create service calls (list); manage tasks; invite field seats; view usage meters; (Business+) view audit.
+
+Cannot today: self-serve pay/upgrade; hard-stop on soft quotas; warehouse inventory; in-app notifications;
+real AI; native mobile; true calendar scheduling board; multi-workspace switcher (→ G-006).
+Invitee self-serve accept UX + seat re-check on accept: WORKING (G-001).
+
+================================================================================
+## 38. Current State Summary
+================================================================================
+
+### Fully Working
+G-W01–G-W10 areas (Auth, Workspace, RBAC core, CRM, Sites, Quotes/Public, Projects/Jobs field, Documents, Dashboard/Today)
+
+### Partially Working
+→ G-002 G-003 G-004 G-005 G-006 G-007 G-021 G-025 G-026 G-027 G-028 G-031
+
+### UI Only / Mock / Dead
+→ G-032; marketing demo surfaces; upgrade copy without checkout (G-012)
+
+### Missing
+→ G-008–G-016 G-022 (as risk) G-035; live security monitoring
+
+### Critical Issues
+None proven Critical. Highest: R-001, R-002, G-012 (business), G-021
+
+### Recommended Next Steps (Effort × Impact)
+Action | Effort | Impact | Priority | Dependencies | Reason
+-------|--------|--------|----------|--------------|--------
+G-001 invite accept + seat re-check | DONE | — | — | Phase 0 Task 01 | WORKING per live tests + 0039 RPC
+Enforce or explicitly demote soft quotas (quotes/clients/storage) | S–M | HIGH | P0 | G-002, R-002 | Prevents false commercial/security assumptions
+Align my_workspace_entitlements with auth_feature overrides | S | HIGH | P0 | G-021, R-006 | Entitlement correctness
+Negative-test ServiceClient routes (unauth/cross-tenant) | S | HIGH | P0 | R-001, G-023 | Verify blast radius before beta
+Service call detail + basic assignment UX | M | HIGH | P1 | G-003, G-005 | Completes ops loop after quotes
+Rename calendar nav or ship real calendar | XS or L | MEDIUM | P1 | G-004 | Stops false expectation
+Multi-workspace product decision (switcher vs single-WS) | S | MEDIUM | P1 | G-006 | Prevents wrong-tenant UX bugs
+Wire or remove SalesSnapshot / dead dashboard files | XS | LOW | P2 | G-007 G-032 | Hygiene
+Hide or implement inventory/finance/reports/ai features | M–L | MEDIUM | P1 | G-009–G-011 G-014 | Stop feature-flag lies
+Billing provider + plan change APIs | XL | HIGH | P2 | G-012 G-013 | Monetization — after core enforcement honesty
+Notifications product or drop schema claims | L | MEDIUM | P2 | G-008 | Schema debt
+Tighten storage RLS vs document RBAC | M | MEDIUM | P1 | G-024 R-003 | Tenant file isolation
+Expand audit event coverage | M | MEDIUM | P2 | G-025 R-010 | Ops/compliance
+Docs: mark SITE-SECURE-CONTEXT legacy vs apps SoT | S | MEDIUM | P1 | G-033 | Engineer onboarding accuracy
+Native mobile decision | XL | MEDIUM | P3 | G-015 | After web beta stability
+
+================================================================================
+## ARCHITECTURE & DEPENDENCY MAP
+================================================================================
+
+Built from actual FK/API/UI dependencies (not aspirational).
+
+```
+Supabase Auth / profiles
+        ↓
+   workspaces + subscriptions + plan_features
+        ↓
+ workspace_memberships (RBAC role_key) + invitations
+        ↓
+   ┌────────────┬─────────────┬──────────────┐
+   customers    catalog       (settings/team/audit)
+   └────┬───────┴──────┬──────┴──────────────┘
+        ↓              ↓
+      sites ←——————— quotes (optional lead_id)
+        ↓              ↓
+   systems/equipment   quote_items/sections/packages
+   documents(poly)           ↓ public_access / PDF
+        ↓              ↓
+   projects ←———— from approved quote (unique)
+        ↓
+      jobs (+ checklist, assignments)
+        ↓
+   service_calls (also from customer/site; can link job)
+        ↓
+   warranties / tasks / knowledge (looser coupling)
+```
+
+### Module dependency cards
+
+Workspace
+- Depends on: Auth/profiles
+- Used by: all tenant modules
+- DB: workspaces, settings, counters, subscriptions
+- API: workspaces router
+- UI: onboarding, settings
+- Plan: subscription row
+- RBAC: membership required
+
+Users / RBAC / Plans
+- Depends on: Workspace, catalog.json
+- Used by: every authorize() call, nav
+- DB: memberships, roles, permissions, plan_*, invitations, assignments
+- API: team, workspaces invite, auth session entitlements
+- UI: users, roles (read-only), usage
+- Plan: features + seats
+- RBAC: self
+
+Customers
+- Depends on: Workspace
+- Used by: Sites, Quotes, Projects, Jobs, Service, Warranties, Documents
+- DB: customers, contacts (+ notes/activities schema)
+- API: customers.py
+- UI: customers/*
+- Plan: crm feature; quota_clients soft
+- RBAC: crm.*
+
+Leads
+- Depends on: Workspace; optional customer/site
+- Used by: Quotes, Tasks(visits)
+- DB: leads
+- API: ops_modules leads
+- UI: leads/*
+- Plan: —
+- RBAC: leads.*
+
+Sites
+- Depends on: Customers
+- Used by: Systems, Equipment, Quotes, Projects, Jobs, Service, Documents
+- DB: sites (+ zones/timeline/readiness schema)
+- API: sites.py
+- UI: sites/*, SiteDossier
+- Plan: —
+- RBAC: sites.*
+
+Systems / Equipment
+- Depends on: Sites
+- Used by: Site dossier, field context; CPQ builder reads catalog not equipment stock
+- DB: systems, equipment
+- API: systems.py
+- UI: SiteDossier tabs
+- Plan: —
+- RBAC: systems.*
+
+Catalog
+- Depends on: Workspace
+- Used by: Quotes/CPQ, System Builder
+- DB: categories, products, templates, packages
+- API: catalog.py, quote_cpq packages
+- UI: /app/catalog, QuoteBuilder
+- Plan: catalog feature
+- RBAC: catalog.*
+
+Quotes / CPQ / Public
+- Depends on: Customers (typical), Sites (optional), Leads (optional), Catalog
+- Used by: Projects (from-quote), Documents/PDF, Audit events
+- DB: quotes*, public_access
+- API: quotes, quote_cpq, public_quotes
+- UI: quotes/*, /q/$token
+- Plan: quotes feature; quota_quotes soft
+- RBAC: quotes.*
+
+Projects
+- Depends on: Customers; optional Site, Quote
+- Used by: Jobs
+- DB: projects
+- API: ops_modules projects
+- UI: projects/*
+- Plan: projects feature
+- RBAC: projects.*
+
+Jobs / Field
+- Depends on: Customers, Sites; optional Project, ServiceCall
+- Used by: Field UI, Documents photos, Assignments
+- DB: jobs, checklist items (+ AAR/templates schema)
+- API: jobs.py
+- UI: /app/jobs/$jobId, FieldJob, Today
+- Plan: —
+- RBAC: jobs.*
+
+Service
+- Depends on: Customers, Sites; optional Systems
+- Used by: optional Jobs link
+- DB: service_calls (+ contracts schema)
+- API: ops_modules service-calls
+- UI: /app/service (list)
+- Plan: service feature
+- RBAC: service.*
+
+Documents / Storage
+- Depends on: any entity_type parent + Workspace
+- Used by: Customer/Site/Job/Quote UIs
+- DB: documents; Storage buckets
+- API: documents.py
+- UI: embedded upload
+- Plan: storage_gb soft
+- RBAC: documents.*
+
+Dashboard / Today / Tasks
+- Depends on: aggregated modules via API
+- Used by: home IA
+- DB: none dedicated (reads others)
+- API: dashboard, tasks
+- UI: dashboard, today, tasks
+- Plan: —
+- RBAC: dashboard.view / calendar.*
+
+Audit / Security center / Admin
+- Depends on: Workspace; platform admin separate
+- Used by: ops compliance
+- DB: audit_logs; feedback; flags
+- API: team audit/security; admin/*
+- UI: settings/audit/security; /admin
+- Plan: audit feature for audit view
+- RBAC: audit.view / settings.* / is_platform_admin
+
+### Build-order implications (CURRENT STATE guidance, not roadmap fiction)
+Must exist first: Auth → Workspace → Memberships/RBAC/Plans → Customers → Sites
+Can parallel after Customers: Catalog, Leads
+Quotes need Customers (+Catalog); Public quote needs Quotes
+Projects need Customers (+ preferably approved Quote)
+Jobs need Sites+Customers (+Project)
+Service can parallel Projects after Sites
+Documents attach anytime after parents exist
+Inventory/Finance/Reports/Billing/Notifications/AI: not built — can wait without blocking core loop
+
+================================================================================
+## EXECUTIVE SUMMARY
+================================================================================
+
+(Non-technical; for leadership / blueprint kickoff)
+
+### What SITE SECURE does today
+It helps a security-installation company run sales and field work in Hebrew: manage customers and leads,
+keep a site file with installed systems/equipment, build professional quotes customers can approve online,
+turn wins into projects and installation jobs for technicians, and track basic service and team access.
+
+### What works
+Core revenue loop (lead/customer → quote → approve → project → job) is real software, not a mock.
+Permissions and workspaces exist. Dashboard numbers come from the API.
+
+### What is incomplete
+True calendar, deep service desk, technician scheduling board,
+hard plan quotas, billing/payments, inventory/finance/reports, notifications, and real AI.
+Team invite acceptance UX: complete (G-001 WORKING).
+
+### Top 10 gaps (by business/security importance)
+1. G-002 Soft quotas not enforced
+2. G-012 No billing/self-serve plans
+3. G-021 Entitlements vs overrides mismatch
+4. G-023 / R-001 Service-role concentration risk
+5. G-003 Service desk detail missing
+6. G-005 Job assignment UI thin
+7. G-004 Calendar is tasks only
+8. G-008 Notifications not shipped
+9. G-009–G-011 / G-014 Feature flags without products (inventory/finance/reports/ai)
+10. G-006 Multi-workspace switcher (memberships[0] only)
+
+### Ready for Beta (conditional)
+Internal/pilot beta of Solo core loop (CRM + Sites + Quotes/Public + Projects/Jobs + basic team)
+IF: ServiceClient negative tests pass, quotas policy decided, Supabase Auth settings verified.
+(Invite accept: fixed — G-001 WORKING.)
+
+### Not ready yet
+Public paid launch with plan honesty, multi-tenant abuse testing complete, billing, notifications,
+inventory/finance/reports promises, native mobile.
+
+### Five next steps
+1. P0: Invite accept + seat re-check
+2. P0: Quota policy (enforce or demote messaging) + entitlements/overrides align
+3. P0: Security negative tests on service-role paths
+4. P1: Service detail + job assign UX; calendar naming honesty
+5. P1/P2: Hide unimplemented plan features; then billing when monetization starts
+
+================================================================================
+## CONSISTENCY CHECK (Pass 2)
+================================================================================
+
+Checked and locked:
+- Plan names: Solo/Business/Enterprise consistently (Free/Pro called out as NON-EXISTENT)
+- Roles: seven roles match catalog.json
+- Quotes WORKING vs soft quota PARTIAL: consistent via G-002 (module works; limit soft)
+- Sales dashboard: PARTIAL G-007 (not Working)
+- Calendar: MISSING grid / tasks PARTIAL substitute G-004 (not Working calendar)
+- Inventory: MISSING module vs catalog products WORKING — distinguished
+- Billing: schema stub ≠ Working payments
+- Routes vs screens: /app/tasks is tasks; /app/service no detail; /app/jobs/$jobId detail only — consistent with gaps
+- Enforcement claims: seats YES; quotes/clients/storage NO — consistent Evidence
+- Gaps: single IDs in Master Gap Registry; sections reference G-XXX
+- Docs/SITE-SECURE-CONTEXT.md treated as legacy, not CURRENT STATE SoT
+
+No unresolved contradictory claims remaining after code re-check of seats vs quotas, sales variant, invite accept, entitlements RPC.
+
+================================================================================
+## AUDIT QUALITY CHECK
+================================================================================
+
+Total gap registry rows (issues): 35 (G-001–G-035)
+Working reference rows: 10 (G-W01–G-W10)
+Security risks modeled: 12 (R-001–R-012)
+
+High confidence (primary CURRENT STATE claims): majority of module status + Evidence-backed gaps (~80%+ of registry HIGH)
+Medium confidence: RLS completeness pairing, multi-instance rate limit impact, some document scope policy nuances
+Low confidence: maturity polish judgments only where marked LOW severity gaps
+
+Approximate tally for this baseline:
+- High confidence findings: ~55+
+- Medium confidence findings: ~12
+- Low confidence findings: ~8
+- Not verified items: ~10 (listed below)
+- Critical severity (proven): 0
+- High severity gaps/risks: G-002 G-012 G-021 G-023; R-001 R-002
+- Medium: majority of remaining gaps/risks
+- Low: G-007 G-013 G-014 G-015 G-016 G-026 G-027 G-031 G-032 G-035; R-011 R-012
+
+================================================================================
+## AUDIT LIMITATIONS
+================================================================================
+
+This audit is static code / migration / config inspection at Commit SHA above.
+
+Could NOT fully verify without runtime:
+1. Production Supabase Auth settings (confirm email, redirect allowlists, JWT expiry)
+2. That all 41 migrations are applied identically on staging/production
+3. Live cross-tenant isolation under real JWTs (tests exist; this pass did not execute them)
+4. End-to-end invite email delivery channel (token returned by API; mailer not verified)
+5. Actual Render/Vercel secret hygiene and instance topology (rate-limit effectiveness)
+6. Real device mobile QA beyond CSS structure
+7. PDF/signature upload success rates in production storage
+8. Whether ops manually change subscriptions.plan_key in production
+9. Whether workspace_feature_overrides are used in any live tenant
+10. Performance under load / QuoteBuilder at scale
+
+NOT VERIFIED items carry Risk Level tags in-body:
+- Auth dashboard / JWT / password policy → HIGH / MEDIUM → NEEDS VERIFICATION BEFORE PRODUCTION / BETA
+- Migration apply parity → HIGH → NEEDS VERIFICATION BEFORE PRODUCTION
+- Tenant isolation live → HIGH → NEEDS VERIFICATION BEFORE PRODUCTION
+- Invite email delivery → MEDIUM → NEEDS VERIFICATION BEFORE BETA
+- Hosting topology / rate limit → MEDIUM → NEEDS VERIFICATION BEFORE PRODUCTION
+- Device QA → MEDIUM → NEEDS VERIFICATION BEFORE BETA
+- Prod plan-change ops process → MEDIUM → NEEDS VERIFICATION BEFORE PRODUCTION
+
+================================================================================
+END OF AUDIT — SOURCE OF TRUTH FOR CURRENT STATE (Pass 2)
+Future roadmap must not be written into this file as if shipped.
+================================================================================

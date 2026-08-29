@@ -70,6 +70,26 @@ class InviteAccept(BaseModel):
     token: str = Field(min_length=16)
 
 
+class InvitePreviewOut(BaseModel):
+    status: Literal[
+        "valid",
+        "invalid",
+        "expired",
+        "already_accepted",
+        "wrong_account",
+    ]
+    workspace_id: str | None = None
+    workspace_name: str | None = None
+    role_key: str | None = None
+    email: str | None = None
+    expires_at: str | None = None
+
+
+class InviteAcceptOut(BaseModel):
+    workspace_id: str
+    status: Literal["success"] = "success"
+
+
 def _workspace_out(row: dict) -> WorkspaceOut:
     return WorkspaceOut(
         id=row["id"],
@@ -278,16 +298,76 @@ def list_invitations(
     return res.json()
 
 
-@router.post("/invitations/accept")
+def _invite_rpc_error(text: str) -> ApiError:
+    mapping = (
+        ("INVITE_EMAIL_MISMATCH", 403, "INVITE_EMAIL_MISMATCH"),
+        ("INVITE_EXPIRED", 400, "INVITE_EXPIRED"),
+        ("INVITE_ALREADY_ACCEPTED", 409, "INVITE_ALREADY_ACCEPTED"),
+        ("PLAN_LIMIT_REACHED", 403, "PLAN_LIMIT_REACHED"),
+        ("ROLE_NOT_ALLOWED", 403, "ROLE_NOT_ALLOWED"),
+        ("SUBSCRIPTION_INVALID", 403, "SUBSCRIPTION_INVALID"),
+        ("TENANT_INACTIVE", 403, "TENANT_INACTIVE"),
+        ("UNAUTHENTICATED", 401, "UNAUTHENTICATED"),
+        ("INVITE_INVALID", 400, "INVITE_INVALID"),
+    )
+    for needle, status, code in mapping:
+        if needle in text:
+            return ApiError(status, code, MESSAGES.get(code, MESSAGES["INVITE_INVALID"]))
+    return ApiError(400, "INVITE_INVALID", MESSAGES["INVITE_INVALID"])
+
+
+@router.get("/invitations/peek", response_model=InvitePreviewOut)
+def peek_invitation(
+    token: str,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> InvitePreviewOut:
+    raw = (token or "").strip()
+    if len(raw) < 16:
+        return InvitePreviewOut(status="invalid")
+    res = client.rpc("invitation_preview", {"p_token": raw})
+    if res.status_code != 200:
+        text = res.text
+        if "UNAUTHENTICATED" in text:
+            raise ApiError(401, "UNAUTHENTICATED", MESSAGES["UNAUTHENTICATED"])
+        return InvitePreviewOut(status="invalid")
+    payload = res.json() or {}
+    if not isinstance(payload, dict):
+        return InvitePreviewOut(status="invalid")
+    status = str(payload.get("status") or "invalid")
+    if status != "valid":
+        return InvitePreviewOut(status=status if status in {"invalid", "expired", "already_accepted"} else "invalid")
+    invited_email = str(payload.get("email") or "").strip().lower()
+    user_email = str(user.get("email") or "").strip().lower()
+    if invited_email and user_email and invited_email != user_email:
+        return InvitePreviewOut(
+            status="wrong_account",
+            email=invited_email,
+            workspace_name=None,
+            role_key=None,
+            workspace_id=None,
+            expires_at=None,
+        )
+    return InvitePreviewOut(
+        status="valid",
+        workspace_id=str(payload["workspace_id"]) if payload.get("workspace_id") else None,
+        workspace_name=str(payload["workspace_name"]) if payload.get("workspace_name") else None,
+        role_key=str(payload["role_key"]) if payload.get("role_key") else None,
+        email=invited_email or None,
+        expires_at=str(payload["expires_at"]) if payload.get("expires_at") else None,
+    )
+
+
+@router.post("/invitations/accept", response_model=InviteAcceptOut)
 def accept_invitation(
     body: InviteAccept,
     client: Annotated[UserClient, Depends(user_client)],
     _: Annotated[dict, Depends(current_user)],
-) -> dict:
-    res = client.rpc("accept_invitation", {"p_token": body.token})
+) -> InviteAcceptOut:
+    res = client.rpc("accept_invitation", {"p_token": body.token.strip()})
     if res.status_code != 200:
-        text = res.text
-        if "INVITE_EMAIL_MISMATCH" in text:
-            raise ApiError(403, "INVITE_EMAIL_MISMATCH", MESSAGES["INVITE_EMAIL_MISMATCH"])
+        raise _invite_rpc_error(res.text)
+    workspace_id = res.json()
+    if not workspace_id:
         raise ApiError(400, "INVITE_INVALID", MESSAGES["INVITE_INVALID"])
-    return {"workspace_id": res.json()}
+    return InviteAcceptOut(workspace_id=str(workspace_id), status="success")

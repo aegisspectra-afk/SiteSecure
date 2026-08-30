@@ -78,13 +78,15 @@ def get_session(
             if not isinstance(nested, dict):
                 continue
             ent_res = client.rpc("my_workspace_entitlements", {"p_workspace_id": ws_id})
+            # Fail closed for UX: never invent catalog base-plan features on resolver failure.
+            # Empty features keep nav/actions gated; plan_key stays conservative default.
             plan_key = default_plan_key()
             features: list[str] = []
-            if ent_res.status_code == 200 and ent_res.json():
+            if ent_res.status_code == 200:
                 payload = ent_res.json()
-                plan_key = payload.get("plan_key") or default_plan_key()
-                # Effective entitlements (overrides applied server-side in RPC).
-                features = list(payload.get("features") or [])
+                if isinstance(payload, dict) and "features" in payload:
+                    plan_key = payload.get("plan_key") or default_plan_key()
+                    features = list(payload.get("features") or [])
             memberships.append(
                 MembershipOut(
                     workspace_id=ws_id,

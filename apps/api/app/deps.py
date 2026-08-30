@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, Header, Request
 
-from .authz.catalog import default_plan_key, load_catalog
+from .authz.catalog import default_plan_key
 from .authz.types import AuthzContext
 from .config import Settings, get_settings
-from .errors import ApiError
+from .errors import MESSAGES, ApiError
 from .supabase_service import ServiceClient
 from .supabase_user import UserClient
+
+logger = logging.getLogger("site-secure")
 
 
 def request_id(request: Request) -> str:
@@ -42,6 +45,54 @@ def current_user(client: Annotated[UserClient, Depends(user_client)]) -> dict:
     return client.get_user()
 
 
+def parse_entitlements_rpc(response: Any, *, workspace_id: str) -> tuple[str, str, frozenset[str]]:
+    """Authoritative effective entitlements from my_workspace_entitlements.
+
+    Fail closed: never substitute catalog base-plan features (would ignore disable overrides).
+    Empty ``features`` on HTTP 200 is a valid entitlement set, not a failure.
+    """
+    status = getattr(response, "status_code", None)
+    if status != 200:
+        logger.warning("entitlements_rpc_failed workspace_id=%s status=%s", workspace_id, status)
+        raise ApiError(
+            503,
+            "ENTITLEMENTS_UNAVAILABLE",
+            MESSAGES["ENTITLEMENTS_UNAVAILABLE"],
+            details={"reason": "rpc_http_status"},
+        )
+    try:
+        payload = response.json()
+    except Exception:
+        logger.warning("entitlements_rpc_invalid_json workspace_id=%s", workspace_id)
+        raise ApiError(
+            503,
+            "ENTITLEMENTS_UNAVAILABLE",
+            MESSAGES["ENTITLEMENTS_UNAVAILABLE"],
+            details={"reason": "rpc_invalid_body"},
+        ) from None
+    # Non-member RPC returns null; after membership check this is still unsafe to invent features.
+    if payload is None:
+        logger.warning("entitlements_rpc_null workspace_id=%s", workspace_id)
+        raise ApiError(
+            503,
+            "ENTITLEMENTS_UNAVAILABLE",
+            MESSAGES["ENTITLEMENTS_UNAVAILABLE"],
+            details={"reason": "rpc_null"},
+        )
+    if not isinstance(payload, dict) or "features" not in payload:
+        logger.warning("entitlements_rpc_malformed workspace_id=%s", workspace_id)
+        raise ApiError(
+            503,
+            "ENTITLEMENTS_UNAVAILABLE",
+            MESSAGES["ENTITLEMENTS_UNAVAILABLE"],
+            details={"reason": "rpc_malformed"},
+        )
+    plan_key = payload.get("plan_key") or default_plan_key()
+    sub_status = payload.get("status") or "active"
+    features = frozenset(payload.get("features") or [])
+    return str(plan_key), str(sub_status), features
+
+
 def load_authz_context(
     client: UserClient,
     user_id: str,
@@ -70,19 +121,7 @@ def load_authz_context(
     ws = workspace.json()[0]
 
     ent = client.rpc("my_workspace_entitlements", {"p_workspace_id": workspace_id})
-    plan_key = default_plan_key()
-    sub_status = "active"
-    features: frozenset[str] = frozenset()
-    if ent.status_code == 200 and ent.json():
-        payload = ent.json()
-        plan_key = payload.get("plan_key") or default_plan_key()
-        sub_status = payload.get("status") or "active"
-        # Effective features from RPC (plan ∪/∖ workspace_feature_overrides via auth_feature).
-        features = frozenset(payload.get("features") or [])
-    else:
-        # Degraded fallback only when RPC unavailable — base plan catalog, no overrides.
-        catalog = load_catalog()
-        features = catalog["_plan_features"].get(plan_key, frozenset())
+    plan_key, sub_status, features = parse_entitlements_rpc(ent, workspace_id=workspace_id)
 
     assigned = client.get(
         "assignments",

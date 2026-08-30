@@ -2,6 +2,9 @@ from datetime import UTC, datetime
 
 from app.authz.usage import occupancy_from_rows, seat_meters
 
+# Freeze clock so hard-coded invite expiry fixtures stay valid (not wall-clock dependent).
+_FIXTURE_NOW = datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
+
 
 def test_owner_is_office_seat_not_field():
     occupancy = occupancy_from_rows(
@@ -13,6 +16,7 @@ def test_owner_is_office_seat_not_field():
             }
         ],
         invites=[],
+        now=_FIXTURE_NOW,
     )
     meters = {row["key"]: row for row in seat_meters(plan_key="solo", occupants=occupancy.occupants)}
     assert occupancy.active_members == 1
@@ -43,6 +47,7 @@ def test_duplicate_pending_invites_occupy_one_field_seat():
                 "created_at": "2026-08-15T15:21:20+00:00",
             },
         ],
+        now=_FIXTURE_NOW,
     )
     meters = {row["key"]: row for row in seat_meters(plan_key="solo", occupants=occupancy.occupants)}
     assert occupancy.pending_invites == 1
@@ -104,6 +109,7 @@ def test_invite_for_existing_member_does_not_double_count():
                 "created_at": "2026-08-15T00:00:00+00:00",
             }
         ],
+        now=_FIXTURE_NOW,
     )
     meters = {row["key"]: row for row in seat_meters(plan_key="solo", occupants=occupancy.occupants)}
     assert occupancy.active_members == 1
@@ -116,6 +122,7 @@ def test_disabled_membership_does_not_occupy_a_seat():
     occupancy = occupancy_from_rows(
         members=[{"role_key": "technician", "status": "disabled", "profiles": {"email": "old@sitesecure.test"}}],
         invites=[],
+        now=_FIXTURE_NOW,
     )
     assert occupancy.active_members == 0
     assert occupancy.roles == []
@@ -140,6 +147,7 @@ def test_two_distinct_technicians_occupy_two_field_seats():
                 "created_at": "2026-08-15T00:00:02+00:00",
             },
         ],
+        now=_FIXTURE_NOW,
     )
     meters = {row["key"]: row for row in seat_meters(plan_key="solo", occupants=occupancy.occupants)}
     assert meters["seats_field"]["current"] == 2

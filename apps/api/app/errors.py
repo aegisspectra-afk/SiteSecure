@@ -57,4 +57,5 @@ MESSAGES = {
     "QUOTE_INCOMPLETE": "לא ניתן לשלוח את ההצעה",
     "TEMPLATE_EMPTY": "לתבנית אין שורות להחלה",
     "API_UNAVAILABLE": "השירות אינו זמין",
+    "ENTITLEMENTS_UNAVAILABLE": "לא ניתן לאמת את הרשאות התוכנית כרגע",
 }

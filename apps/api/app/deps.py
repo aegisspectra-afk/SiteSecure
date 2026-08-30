@@ -77,8 +77,10 @@ def load_authz_context(
         payload = ent.json()
         plan_key = payload.get("plan_key") or default_plan_key()
         sub_status = payload.get("status") or "active"
+        # Effective features from RPC (plan ∪/∖ workspace_feature_overrides via auth_feature).
         features = frozenset(payload.get("features") or [])
     else:
+        # Degraded fallback only when RPC unavailable — base plan catalog, no overrides.
         catalog = load_catalog()
         features = catalog["_plan_features"].get(plan_key, frozenset())
 

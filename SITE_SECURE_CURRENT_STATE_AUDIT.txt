@@ -117,7 +117,7 @@ G-017 | CRM Activities entity | CRM | S | N | derived timeline | N | client-deri
 G-018 | Site zones / timeline / readiness | Sites | S | N | N | RLS only | N | — | BACKEND_ONLY (schema) | LOW | HIGH | 0011 sites zones/timeline; 0020 readiness | Site File | Expose or document internal-only | §12
 G-019 | Service contracts | Service | S | N | N | RLS | N | — | BACKEND_ONLY | LOW | HIGH | 0018 service_contracts | Service | Productize or hide | §18
 G-020 | After-action reports / checklist templates | Jobs | S | N | N | N | N | — | BACKEND_ONLY | LOW | HIGH | 0017 area tables | Jobs | Productize or hide | §16
-G-021 | Entitlements vs feature overrides mismatch | Plans/RLS | overrides Y | entitlements ignore overrides | uses session features | auth_feature uses overrides; RPC does not | session from RPC | — | PARTIAL | HIGH | HIGH | 0028_entitlements_rpc.sql; 0008 auth_feature | authorize() | Align RPC with auth_feature | §6 §7 §36
+G-021 | Entitlements vs feature overrides mismatch | Plans/RLS | overrides Y | effective via RPC | uses session features | auth_feature + my_workspace_entitlements aligned | session from RPC | — | WORKING (Phase 0 Task 03) | — | HIGH | 0041_entitlements_effective_overrides.sql; live test_entitlements_* PASSED | authorize() | Maintain; session N+1 remains scale concern | §6 §7 §36
 G-022 | Dual RBAC catalog drift risk | RBAC | SQL seed | catalog.json SoT for API | same package | engine loads JSON | can() uses JSON | — | PARTIAL (risk) | MEDIUM | HIGH | packages/authz/catalog.json; 0008_features_plans.sql | Deploy process | Single source CI check | §6 §35
 G-023 | Soft-delete / public quote service-role concentration | Security | — | ServiceClient paths | — | authorize then service role | — | — | WORKING with RISK | HIGH | HIGH | public_quotes.py; quotes.py; customers.py soft delete | Authz | Reduce surface / harden tests | §28 §36
 G-024 | Storage ACL coarser than document RBAC | Security/Docs | storage policies | docs authorize | embedded upload | membership path | documents.* | storage_gb soft | PARTIAL | MEDIUM | HIGH | 0023_storage.sql; documents.py | Tenancy | Tighten storage policies | §21 §36
@@ -626,7 +626,7 @@ Feature | Status | Confidence | Gap
 --------|--------|------------|----
 Auth | WORKING | HIGH | —
 Workspace | WORKING | HIGH | G-006
-RBAC | WORKING | HIGH | G-021 G-022
+RBAC | WORKING | HIGH | G-022
 Plans seats/features | WORKING | HIGH | G-002 storage residual
 Billing | MISSING | HIGH | G-012
 Dashboard | WORKING | HIGH | G-007
@@ -652,7 +652,7 @@ Do not duplicate gap narratives — registry is SoT.
 Broken/partial UX: → G-003 G-004 G-005 G-006 G-007 G-026 G-032
 Mock/marketing only: public demo copy (not app data) — Confidence HIGH absence of dashboard mocks
 Missing modules: → G-008–G-015 G-022 docs
-Enforcement gaps: → G-002 (storage residual) G-021 G-024
+Enforcement gaps: → G-002 (storage residual) G-024
 
 ================================================================================
 ## 35. Technical Debt
@@ -661,7 +661,7 @@ Enforcement gaps: → G-002 (storage residual) G-021 G-024
 Mapped to gaps where applicable:
 1. Schema ahead of product → G-008 G-017–G-020
 2. Dual catalogs → G-022
-3. Entitlements vs overrides → G-021
+3. Entitlements vs overrides → G-021 WORKING (Task 03); residual: session N+1 scale
 4. Soft storage residual / orphan accounting → G-002 PARTIAL
 5. Service-role concentration → G-023 (RISK)
 6. In-memory limiters → G-029
@@ -688,7 +688,7 @@ R-002 | Soft plan quotas (quotes/clients/storage) | Partially mitigated (Phase 0
 R-003 | Storage ACL any member under workspace path | Architectural | MEDIUM | HIGH | Becomes HIGH if hostile technician member can read/write unrelated customer files via Storage path guessing | Cross-entity file exposure within tenant | Storage, Documents | 0023_storage.sql | Authz matrix: technician tries other customer paths
 R-004 | Document assigned-scope policy gaps | Potential risk | MEDIUM | MEDIUM | Becomes HIGH if assigned-scope user can read quote/project/warranty docs without site visibility intended by product | Excess document visibility | Documents RLS 0029 | 0029_documents_update.sql | RLS tests per role/scope
 R-005 | Invite accept without seat re-check | RESOLVED (Phase 0 Task 01) | — | HIGH | Was: stale invite accepted after seats full | Was: seat overage | Invitations | 0039 accept_invitation FOR UPDATE + plan_limits seat re-check; live test_invite_accept_seat_limit_blocks_stale_invite PASSED | Retest after plan-limit catalog changes
-R-006 | Entitlements RPC ignores feature overrides | Observed inconsistency | MEDIUM | HIGH | Becomes HIGH if ops rely on overrides to disable features but API session still grants them (or inverse via RLS) | Feature entitlement bypass / false lockout | Plans, authorize features, some RLS | 0028_entitlements_rpc.sql vs 0008 auth_feature | Set override off; call session + RLS feature check
+R-006 | Entitlements RPC ignores feature overrides | RESOLVED (Phase 0 Task 03) | — | HIGH | Was: session/authorize used plan_features-only RPC while RLS used auth_feature overrides | Was: feature entitlement bypass / false lockout | Plans, authorize features, RLS | 0041 my_workspace_entitlements set-based = auth_feature; live disable/enable/session/cross-tenant PASSED | Retest if auth_feature semantics change
 R-007 | Dual RBAC catalog drift | Architectural | MEDIUM | HIGH | Becomes HIGH if SQL role_permissions diverge from catalog.json used by API | UI/DB/API permission disagreement | RBAC | catalog.json; 0008 seed | Diff CI between catalog and DB seed
 R-008 | In-memory rate limit | Architectural | MEDIUM | MEDIUM | Becomes HIGH under multi-instance deploy or distributed abuse | Ineffective DoS protection | API main.py | main.py deque rate limit | Confirm instance count on Render; load test
 R-009 | Platform admin email seeded in migration | Operational risk | MEDIUM | HIGH | Becomes HIGH if that mailbox is compromised or unintended in prod | Platform-wide admin | Admin | 0036_beta_feedback.sql | Verify prod is_platform_admin rows
@@ -720,7 +720,7 @@ Customer/quote hard quotas: WORKING. Storage hard quotas: PARTIAL (reservation +
 G-W01–G-W10 areas (Auth, Workspace, RBAC core, CRM, Sites, Quotes/Public, Projects/Jobs field, Documents, Dashboard/Today)
 
 ### Partially Working
-→ G-002 G-003 G-004 G-005 G-006 G-007 G-021 G-025 G-026 G-027 G-028 G-031
+→ G-002 G-003 G-004 G-005 G-006 G-007 G-025 G-026 G-027 G-028 G-031
 
 ### UI Only / Mock / Dead
 → G-032; marketing demo surfaces; upgrade copy without checkout (G-012)
@@ -729,7 +729,7 @@ G-W01–G-W10 areas (Auth, Workspace, RBAC core, CRM, Sites, Quotes/Public, Proj
 → G-008–G-016 G-022 (as risk) G-035; live security monitoring
 
 ### Critical Issues
-None proven Critical. Highest: R-001, G-012 (business), G-021; G-002 storage residual; R-002 mitigated
+None proven Critical. Highest: R-001, G-012 (business); G-002 storage residual; R-002 mitigated
 
 ### Recommended Next Steps (Effort × Impact)
 Action | Effort | Impact | Priority | Dependencies | Reason
@@ -737,7 +737,7 @@ Action | Effort | Impact | Priority | Dependencies | Reason
 G-001 invite accept + seat re-check | DONE | — | — | Phase 0 Task 01 | WORKING per live tests + 0039 RPC
 G-002 customer/quote hard quotas + storage reservations | PARTIAL | HIGH | P0 residual | 0040, documents reserved_bytes | Customers/quotes atomic; storage residual under-declare/orphan
 Enforce or explicitly demote remaining soft storage edge cases | S | HIGH | P0 | G-002, R-002 | Close storage honesty gap
-Align my_workspace_entitlements with auth_feature overrides | S | HIGH | P0 | G-021, R-006 | Entitlement correctness
+Align my_workspace_entitlements with auth_feature overrides | DONE | — | — | Phase 0 Task 03 | WORKING; R-006 RESOLVED
 Negative-test ServiceClient routes (unauth/cross-tenant) | S | HIGH | P0 | R-001, G-023 | Verify blast radius before beta
 Service call detail + basic assignment UX | M | HIGH | P1 | G-003, G-005 | Completes ops loop after quotes
 Rename calendar nav or ship real calendar | XS or L | MEDIUM | P1 | G-004 | Stops false expectation
@@ -943,14 +943,14 @@ Team invite acceptance UX: complete (G-001 WORKING).
 ### Top 10 gaps (by business/security importance)
 1. G-002 Storage quota residual (under-declare / orphans) — customers/quotes hard
 2. G-012 No billing/self-serve plans
-3. G-021 Entitlements vs overrides mismatch
-4. G-023 / R-001 Service-role concentration risk
-5. G-003 Service desk detail missing
-6. G-005 Job assignment UI thin
-7. G-004 Calendar is tasks only
-8. G-008 Notifications not shipped
-9. G-009–G-011 / G-014 Feature flags without products (inventory/finance/reports/ai)
-10. G-006 Multi-workspace switcher (memberships[0] only)
+3. G-023 / R-001 Service-role concentration risk
+4. G-003 Service desk detail missing
+5. G-005 Job assignment UI thin
+6. G-004 Calendar is tasks only
+7. G-008 Notifications not shipped
+8. G-009–G-011 / G-014 Feature flags without products (inventory/finance/reports/ai)
+9. G-006 Multi-workspace switcher (memberships[0] only)
+10. G-022 Dual RBAC catalog drift risk
 
 ### Ready for Beta (conditional)
 Internal/pilot beta of Solo core loop (CRM + Sites + Quotes/Public + Projects/Jobs + basic team)
@@ -962,9 +962,9 @@ Public paid launch with plan honesty, multi-tenant abuse testing complete, billi
 inventory/finance/reports promises, native mobile.
 
 ### Five next steps
-1. P0: Invite accept + seat re-check
-2. P0: Quota policy (enforce or demote messaging) + entitlements/overrides align
-3. P0: Security negative tests on service-role paths
+1. P0: Invite accept + seat re-check — DONE (Task 01)
+2. P0: Quota policy — PARTIAL (Task 02; storage residual remains)
+3. P0: Entitlements/overrides align — DONE (Task 03); next: ServiceClient negative tests (R-001)
 4. P1: Service detail + job assign UX; calendar naming honesty
 5. P1/P2: Hide unimplemented plan features; then billing when monetization starts
 
@@ -985,7 +985,7 @@ Checked and locked:
 - Gaps: single IDs in Master Gap Registry; sections reference G-XXX
 - Docs/SITE-SECURE-CONTEXT.md treated as legacy, not CURRENT STATE SoT
 
-No unresolved contradictory claims remaining after code re-check of seats vs quotas, sales variant, invite accept, entitlements RPC.
+No unresolved contradictory claims remaining after code re-check of seats vs quotas, sales variant, invite accept, entitlements RPC (0041 aligned with auth_feature).
 
 ================================================================================
 ## AUDIT QUALITY CHECK
@@ -1005,7 +1005,7 @@ Approximate tally for this baseline:
 - Low confidence findings: ~8
 - Not verified items: ~10 (listed below)
 - Critical severity (proven): 0
-- High severity gaps/risks: G-012 G-021 G-023; R-001; G-002/R-002 residual storage
+- High severity gaps/risks: G-012 G-023; R-001; G-002/R-002 residual storage
 - Medium: majority of remaining gaps/risks
 - Low: G-007 G-013 G-014 G-015 G-016 G-026 G-027 G-031 G-032 G-035; R-011 R-012
 

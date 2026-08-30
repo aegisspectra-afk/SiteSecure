@@ -83,6 +83,7 @@ def get_session(
             if ent_res.status_code == 200 and ent_res.json():
                 payload = ent_res.json()
                 plan_key = payload.get("plan_key") or default_plan_key()
+                # Effective entitlements (overrides applied server-side in RPC).
                 features = list(payload.get("features") or [])
             memberships.append(
                 MembershipOut(

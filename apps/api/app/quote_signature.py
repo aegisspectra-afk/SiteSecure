@@ -8,6 +8,7 @@ import re
 import uuid
 from typing import Any
 
+from .authz.limits import evaluate_storage_limit, raise_plan_limit
 from .errors import ApiError
 from .rest import as_list
 from .supabase_service import ServiceClient
@@ -36,6 +37,45 @@ def parse_signature_data_url(data_url: str) -> tuple[bytes, str]:
     return payload, mime
 
 
+def _storage_used_bytes_svc(svc: ServiceClient, workspace_id: str) -> int:
+    res = svc.get(
+        "documents",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "byte_size,reserved_bytes,created_at",
+        },
+    )
+    if res.status_code != 200:
+        return 0
+    from datetime import UTC, datetime
+
+    now = datetime.now(UTC)
+    total = 0
+    for row in res.json() or []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("byte_size") is not None:
+            try:
+                total += max(0, int(row.get("byte_size") or 0))
+            except (TypeError, ValueError):
+                pass
+            continue
+        created_raw = str(row.get("created_at") or "")
+        try:
+            created = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        if (now - created).total_seconds() > 24 * 3600:
+            continue
+        try:
+            total += max(0, int(row.get("reserved_bytes") or 0))
+        except (TypeError, ValueError):
+            pass
+    return total
+
+
 def store_quote_signature_document(
     svc: ServiceClient,
     *,
@@ -44,6 +84,7 @@ def store_quote_signature_document(
     signer_name: str,
     signed_at: str,
     signature_data_url: str,
+    plan_key: str | None = None,
 ) -> dict[str, Any]:
     """Upload signature bytes and insert a documents row. Does not mutate quote_versions."""
     image_bytes, mime_type = parse_signature_data_url(signature_data_url)
@@ -54,6 +95,27 @@ def store_quote_signature_document(
     storage_bucket = "signatures"
     storage_path = f"{workspace_id}/quote/{quote_id}/{document_id}/signature-v{version}.{ext}"
     checksum = hashlib.sha256(image_bytes).hexdigest()
+
+    resolved_plan = plan_key
+    if not resolved_plan:
+        sub = svc.get(
+            "subscriptions",
+            params={"workspace_id": f"eq.{workspace_id}", "select": "plan_key", "limit": "1"},
+        )
+        rows = sub.json() if sub.status_code == 200 else []
+        if isinstance(rows, list) and rows:
+            resolved_plan = str(rows[0].get("plan_key") or "solo")
+        else:
+            resolved_plan = "solo"
+
+    used = _storage_used_bytes_svc(svc, workspace_id)
+    raise_plan_limit(
+        evaluate_storage_limit(
+            plan_key=resolved_plan,
+            used_bytes=used,
+            requested_bytes=len(image_bytes),
+        )
+    )
 
     svc.storage_upload_bytes(storage_bucket, storage_path, image_bytes, mime_type)
 
@@ -69,6 +131,7 @@ def store_quote_signature_document(
             "storage_path": storage_path,
             "mime_type": mime_type,
             "byte_size": len(image_bytes),
+            "reserved_bytes": 0,
             "checksum": checksum,
             "original_filename": f"signature-v{version}.{ext}",
             "captured_at": signed_at,
@@ -76,6 +139,18 @@ def store_quote_signature_document(
     )
     # PostgREST create returns 201; as_list() only accepts 200 and would raise BUSINESS_RULE.
     if doc_res.status_code not in {200, 201}:
+        text = doc_res.text or ""
+        if "PLAN_LIMIT_REACHED" in text:
+            try:
+                svc.storage_remove(storage_bucket, storage_path)
+            except Exception:
+                pass
+            raise ApiError(
+                403,
+                "PLAN_LIMIT_REACHED",
+                "אין מספיק שטח אחסון להעלאת הקובץ",
+                {"resource": "storage"},
+            )
         raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשמור את החתימה")
     raw = doc_res.json()
     docs = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) and raw else [])

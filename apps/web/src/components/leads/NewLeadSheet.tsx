@@ -33,6 +33,7 @@ import {
   type NewLeadSiteMode,
 } from "../../lib/new-lead";
 import { he } from "../../i18n/he";
+import { planQuotaMessage } from "../../lib/plan-quota";
 import { QuoteFlowSheet } from "../quotes/quote-creation/QuoteFlowSheet";
 
 const EMPTY_ADDRESS: StructuredAddress = {};
@@ -254,7 +255,7 @@ export function NewLeadSheet({
       onClose();
       void navigate({ to: "/app/leads/$leadId", params: { leadId: created.id } });
     },
-    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.leadsError),
+    onError: (err) => setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.leadsError)),
   });
 
   const canSave = canSaveNewLead({

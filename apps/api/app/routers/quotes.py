@@ -12,7 +12,9 @@ from .. import pricing
 from ..audit import write_audit
 from ..authz.engine import authorize
 from ..authz.guard import require
+from ..authz.limits import evaluate_count_limit, raise_plan_limit
 from ..authz.types import ResourceRef
+from ..authz.usage import fetch_quotes_count
 from ..config import get_settings
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError, MESSAGES
@@ -758,6 +760,14 @@ def create_quote(
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "quotes.create", resource=ResourceRef(type="quote", owner_user_id=actor_id(user)))
+    raise_plan_limit(
+        evaluate_count_limit(
+            plan_key=ctx.plan_key,
+            limit_key="quota_quotes",
+            resource="quotes",
+            current=fetch_quotes_count(client, str(workspace_id)),
+        )
+    )
     vat = body.vat_percent
     if vat is None:
         ws = _load_workspace(client, workspace_id)
@@ -1351,6 +1361,14 @@ def duplicate_quote(
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.view", resource=_ref(existing))
     require(ctx, "quotes.create")
+    raise_plan_limit(
+        evaluate_count_limit(
+            plan_key=ctx.plan_key,
+            limit_key="quota_quotes",
+            resource="quotes",
+            current=fetch_quotes_count(client, str(workspace_id)),
+        )
+    )
     payload = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),

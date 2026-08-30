@@ -76,3 +76,73 @@ class ServiceClient:
             raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"]) from exc
         if response.status_code not in {200, 201}:
             raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשמור את החתימה")
+
+    def storage_remove(self, bucket: str, path: str) -> None:
+        headers = {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": "application/json",
+        }
+        url = f"{self.storage}/object/{bucket}"
+        try:
+            with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
+                response = client.request(
+                    "DELETE",
+                    url,
+                    headers=headers,
+                    json={"prefixes": [path.lstrip("/")]},
+                )
+        except (httpx.TimeoutException, httpx.TransportError):
+            return
+        if response.status_code not in {200, 204}:
+            # Fallback single-object delete path used by older Storage APIs.
+            try:
+                with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
+                    client.delete(
+                        f"{self.storage}/object/{bucket}/{path.lstrip('/')}",
+                        headers={
+                            "apikey": self._key,
+                            "Authorization": f"Bearer {self._key}",
+                        },
+                    )
+            except Exception:
+                return
+
+    def storage_object_size(self, bucket: str, path: str) -> int | None:
+        """Best-effort object size from Storage list metadata. None if unknown."""
+        clean = path.lstrip("/")
+        parent, _, name = clean.rpartition("/")
+        prefix = f"{parent}/" if parent else ""
+        headers = {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
+                response = client.post(
+                    f"{self.storage}/object/list/{bucket}",
+                    headers=headers,
+                    json={"prefix": prefix, "search": name, "limit": 100},
+                )
+        except (httpx.TimeoutException, httpx.TransportError):
+            return None
+        if response.status_code != 200:
+            return None
+        rows = response.json() or []
+        if not isinstance(rows, list):
+            return None
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("name") or "") != name:
+                continue
+            meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+            raw = meta.get("size") if isinstance(meta, dict) else None
+            if raw is None:
+                raw = row.get("size")
+            try:
+                return max(0, int(raw))
+            except (TypeError, ValueError):
+                return None
+        return None

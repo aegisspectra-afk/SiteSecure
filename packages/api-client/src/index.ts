@@ -1272,7 +1272,14 @@ export function createApiClient(opts: {
     },
     createDocumentUpload: (
       workspaceId: string,
-      body: { entity_type: string; entity_id: string; kind?: string; mime_type?: string; original_filename?: string },
+      body: {
+        entity_type: string;
+        entity_id: string;
+        kind?: string;
+        mime_type?: string;
+        original_filename?: string;
+        byte_size: number;
+      },
     ) =>
       request<{
         document_id: string;
@@ -1280,6 +1287,7 @@ export function createApiClient(opts: {
         storage_bucket: string;
         upload_url: string;
         expires_in: number;
+        reserved_bytes?: number;
       }>(`/api/v1/workspaces/${workspaceId}/documents/uploads`, {
         method: "POST",
         body: JSON.stringify(body),

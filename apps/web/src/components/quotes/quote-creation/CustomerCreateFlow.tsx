@@ -3,6 +3,7 @@ import { Button, Input } from "@site-secure/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { he } from "../../../i18n/he";
+import { planQuotaMessage } from "../../../lib/plan-quota";
 import { useSession } from "../../../lib/session";
 
 export function CustomerCreateFlow({
@@ -33,7 +34,7 @@ export function CustomerCreateFlow({
       onCreated({ id: row.id, name: row.display_name });
     },
     onError: (err) => {
-      setFormError(err instanceof ApiClientError ? err.message : he.customersError);
+      setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.customersError));
     },
   });
 

@@ -16,6 +16,7 @@ import { addressLine } from "../modules/ModuleKit";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
 import { installationStatusLabel } from "../../lib/customer-profile";
+import { planQuotaMessage } from "../../lib/plan-quota";
 import { quoteCreateSearch } from "../../lib/workflow-context";
 import { useSession } from "../../lib/session";
 
@@ -227,6 +228,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
         kind: isPhoto ? "photo" : "document",
         mime_type: file.type || undefined,
         original_filename: file.name,
+        byte_size: Math.max(file.size, 1),
       });
       const put = await fetch(intent.upload_url, {
         method: "PUT",
@@ -243,7 +245,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
       void queryClient.invalidateQueries({ queryKey: ["site-docs", workspaceId, siteId] });
       if (fileRef.current) fileRef.current.value = "";
     },
-    onError: (err) => setError(err instanceof Error ? err.message : he.sitesError),
+    onError: (err) => setError(planQuotaMessage(err) ?? (err instanceof Error ? err.message : he.sitesError)),
   });
 
   const createSystem = useMutation({

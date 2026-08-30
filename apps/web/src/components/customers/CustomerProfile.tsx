@@ -28,6 +28,7 @@ import { CustomerNewQuoteButton } from "../quotes/CustomerNewQuoteButton";
 import { QuoteFlowSheet } from "../quotes/quote-creation/QuoteFlowSheet";
 import { NextActionDialog } from "../workflow/NextActionDialog";
 import { he } from "../../i18n/he";
+import { planQuotaMessage } from "../../lib/plan-quota";
 import {
   buildCustomerActivity,
   buildSiteStats,
@@ -422,6 +423,7 @@ export function CustomerProfile({
         kind: "document",
         mime_type: file.type || undefined,
         original_filename: file.name,
+        byte_size: Math.max(file.size, 1),
       });
       const put = await fetch(intent.upload_url, {
         method: "PUT",
@@ -438,7 +440,7 @@ export function CustomerProfile({
       void queryClient.invalidateQueries({ queryKey: ["customer-docs", workspaceId, customerId] });
       if (fileRef.current) fileRef.current.value = "";
     },
-    onError: (err) => setError(err instanceof Error ? err.message : he.customersError),
+    onError: (err) => setError(planQuotaMessage(err) ?? (err instanceof Error ? err.message : he.customersError)),
   });
 
   const dirty =

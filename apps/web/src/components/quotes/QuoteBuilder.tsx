@@ -5,6 +5,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LottieAnimation } from "../lottie";
 import { he } from "../../i18n/he";
+import { planQuotaMessage } from "../../lib/plan-quota";
 import { can } from "../../lib/can";
 import {
   draftHasContent,
@@ -404,7 +405,7 @@ export function QuoteBuilder({
     },
     onError: (err) => {
       setSaveState("error");
-      setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
+      setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.quoteSaveError));
     },
   });
 
@@ -1092,7 +1093,7 @@ export function QuoteBuilder({
       const row = live.id && !dirty ? live : await save.mutateAsync();
       void navigate({ to: "/app/quotes/$quoteId/preview", params: { quoteId: row.id } });
     } catch (err) {
-      setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
+      setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.quoteSaveError));
     } finally {
       skipRouteRef.current = false;
     }
@@ -1145,7 +1146,7 @@ export function QuoteBuilder({
       setReadinessHighlight(false);
       setConfirmSend(true);
     } catch (err) {
-      setFormError(err instanceof ApiClientError ? err.message : he.quoteSaveError);
+      setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.quoteSaveError));
     } finally {
       skipRouteRef.current = false;
     }
@@ -1807,13 +1808,17 @@ export function QuoteBuilder({
                 variant="secondary"
                 disabled={!newCustomer.display_name.trim()}
                 onClick={async () => {
-                  const created = await api.createCustomer(workspaceId, {
-                    display_name: newCustomer.display_name.trim(),
-                    email: newCustomer.email.trim() || undefined,
-                    phone: newCustomer.phone.trim() || undefined,
-                  });
-                  setNewCustomer({ display_name: "", email: "", phone: "" });
-                  pickCustomer({ id: created.id, name: created.display_name });
+                  try {
+                    const created = await api.createCustomer(workspaceId, {
+                      display_name: newCustomer.display_name.trim(),
+                      email: newCustomer.email.trim() || undefined,
+                      phone: newCustomer.phone.trim() || undefined,
+                    });
+                    setNewCustomer({ display_name: "", email: "", phone: "" });
+                    pickCustomer({ id: created.id, name: created.display_name });
+                  } catch (err) {
+                    setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.customersError));
+                  }
                 }}
               >
                 {he.quoteCustomerCreate}

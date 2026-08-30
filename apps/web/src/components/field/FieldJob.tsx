@@ -12,6 +12,7 @@ import { Camera, MapPin, Wrench } from "lucide-react";
 import { useRef, useState, type RefObject } from "react";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
+import { planQuotaMessage } from "../../lib/plan-quota";
 import { useOnlineStatus } from "../../lib/use-online-status";
 import { useSession } from "../../lib/session";
 
@@ -144,6 +145,7 @@ export function FieldJob({ jobId }: { jobId: string }) {
         kind: "photo",
         mime_type: file.type || undefined,
         original_filename: file.name,
+        byte_size: Math.max(file.size, 1),
       });
       const put = await fetch(intent.upload_url, {
         method: "PUT",
@@ -160,7 +162,7 @@ export function FieldJob({ jobId }: { jobId: string }) {
       void queryClient.invalidateQueries({ queryKey: ["job-docs", workspaceId, siteId] });
       if (fileRef.current) fileRef.current.value = "";
     },
-    onError: (err) => setError(err instanceof Error ? err.message : he.sitesError),
+    onError: (err) => setError(planQuotaMessage(err) ?? (err instanceof Error ? err.message : he.sitesError)),
   });
 
   if (!workspaceId) return <ErrorState title={he.jobLoadError} />;

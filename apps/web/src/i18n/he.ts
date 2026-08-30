@@ -1408,6 +1408,7 @@ export const he = {
   clientsNearLimit: "מתקרבים למכסת הלקוחות",
   quotesAtLimit: "הגעתם למכסת הצעות המחיר",
   clientsAtLimit: "הגעתם למכסת הלקוחות",
+  storageQuotaReached: "אין מספיק שטח אחסון להעלאת הקובץ. נדרש שדרוג תוכנית או מחיקת קבצים.",
   upgradeToIncreaseQuotes: "שדרגו תוכנית להגדלת מכסת הצעות המחיר",
   upgradeToIncreaseClients: "שדרגו תוכנית להגדלת מכסת הלקוחות",
   uxStorageFull: "המכסה מלאה",

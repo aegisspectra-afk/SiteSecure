@@ -18,6 +18,7 @@ import { NextActionDialog } from "../../../components/workflow/NextActionDialog"
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
 import { buildCustomerDirectoryRows, type CustomerDirectoryFilter } from "../../../lib/customer-directory";
+import { planQuotaMessage } from "../../../lib/plan-quota";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/customers/")({
@@ -138,7 +139,7 @@ function CustomersBody() {
       }
     },
     onError: (err) => {
-      setFormError(err instanceof ApiClientError ? err.message : he.customersError);
+      setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.customersError));
     },
   });
 

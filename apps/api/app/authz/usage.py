@@ -242,7 +242,8 @@ def meter_for_invite_role(meters: list[dict[str, Any]], invite_role: str) -> dic
 
 
 def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:
-    """Sum of documents.byte_size for the workspace. Missing/null sizes count as 0."""
+    """Committed document bytes + active upload reservations (<24h, byte_size null)."""
+    completed = 0
     res = client.get(
         "documents",
         params={
@@ -250,16 +251,34 @@ def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:
             "select": "byte_size.sum()",
         },
     )
-    if res.status_code != 200:
-        return 0
-    rows = res.json() or []
-    if not rows:
-        return 0
-    raw = rows[0].get("sum") if isinstance(rows[0], dict) else None
-    try:
-        return max(0, int(raw or 0))
-    except (TypeError, ValueError):
-        return 0
+    if res.status_code == 200:
+        rows = res.json() or []
+        if rows and isinstance(rows[0], dict):
+            try:
+                completed = max(0, int(rows[0].get("sum") or 0))
+            except (TypeError, ValueError):
+                completed = 0
+
+    reserved = 0
+    pending = client.get(
+        "documents",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "byte_size": "is.null",
+            "select": "reserved_bytes,created_at",
+        },
+    )
+    if pending.status_code == 200:
+        now = datetime.now(UTC)
+        for row in pending.json() or []:
+            created = _parse_ts(row.get("created_at"))
+            if created is None or (now - created).total_seconds() > 24 * 3600:
+                continue
+            try:
+                reserved += max(0, int(row.get("reserved_bytes") or 0))
+            except (TypeError, ValueError):
+                continue
+    return completed + reserved
 
 
 def _count_rows(client: UserClient, table: str, workspace_id: str, *, filters: dict[str, str] | None = None) -> int:

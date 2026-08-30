@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
+from ..authz.limits import evaluate_count_limit, raise_plan_limit
 from ..authz.types import ResourceRef
+from ..authz.usage import fetch_customers_count
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
@@ -152,6 +154,14 @@ def create_customer(
 ) -> CustomerOut:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "crm.create", resource=ResourceRef(type="customer"))
+    raise_plan_limit(
+        evaluate_count_limit(
+            plan_key=ctx.plan_key,
+            limit_key="quota_clients",
+            resource="customers",
+            current=fetch_customers_count(client, str(workspace_id)),
+        )
+    )
     payload = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),

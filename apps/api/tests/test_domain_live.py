@@ -176,6 +176,7 @@ def test_storage_upload_intent_uses_user_jwt(settings, two_tenants, api):
             "entity_id": customer.json()["id"],
             "kind": "document",
             "original_filename": "spec.pdf",
+            "byte_size": 1024,
         },
     )
     assert intent.status_code == 200, intent.text

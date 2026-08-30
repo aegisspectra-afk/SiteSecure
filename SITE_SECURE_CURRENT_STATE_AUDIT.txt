@@ -98,7 +98,7 @@ DB/API/UI: Y = present & used | P = partial | N = absent | S = schema only
 ID | Feature | Domain | DB | API | UI | Backend Enf. | Frontend Enf. | Plan | Status | Severity | Confidence | Evidence | Dependencies | Recommended Action | Section Ref
 ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---
 G-001 | Invite acceptance web flow | Team | Y | Y | Y | Seat re-check on accept (0039 RPC) + create-time check | peek/accept UI | assignable_roles | WORKING | — | HIGH | 0039_invite_accept_enforcement.sql; GET /invitations/peek; POST /invitations/accept; routes/invite/$token.tsx; live tests test_invite_accept_live.py | Auth, Seats | Maintain; no multi-workspace switcher | §4 §5 §6 §34
-G-002 | Quote/client/storage hard quotas | Plans | Y | meters Y | meters Y | NOT on create/upload | hints only | Solo/Biz limits | PARTIAL | HIGH | HIGH | usage.py meters; quotes.py/customers.py/documents.py no PLAN_LIMIT; limits.py only seats | Plans | Enforce or stop claiming hard limits | §7 §21 §36
+G-002 | Quote/client/storage hard quotas | Plans | Y | Y | meters+errors | DB triggers + API on create/upload; storage reservations | UX messages | Solo/Biz/Ent | PARTIAL | MEDIUM | HIGH | 0040_hard_quota_enforcement.sql; limits.evaluate_count/storage; documents reserved_bytes; test_quota_live.py | Plans | Storage residual: under-declare+missing Storage metadata; orphan objects after expired reservation | §7 §21 §36
 G-003 | Service call detail | Service | Y | Y patch | list only | authorize service.* | nav gated | service feature | PARTIAL | MEDIUM | HIGH | ops_modules.py service-calls; routes/app/service/index.tsx no $callId | Customers, Sites | Add detail route + assignment UX | §18
 G-004 | Calendar (grid) | Ops | tasks Y | tasks Y | tasks as "יומן" | calendar.* | calendar.view nav | — | MISSING (tasks PARTIAL substitute) | MEDIUM | HIGH | app-nav.ts /app/tasks label he.navCalendar | Tasks | Rename or build real calendar | §19
 G-005 | Job assignment UI | Jobs | assignments Y | assign Y | thin/missing | jobs.assign | little UI | — | PARTIAL | MEDIUM | HIGH | jobs.py POST assign; no rich assign screen in routes | Technicians | Build assign UI | §16 §17
@@ -482,7 +482,7 @@ Site equipment ≠ stock movements.
 Confidence: HIGH
 
 Upload intent → Storage → complete → signed URL.
-Limits metered not enforced → G-002
+Limits metered; customers/quotes hard-enforced; storage reserved+checked with residual → G-002 PARTIAL
 Storage ACL coarse → G-024
 
 Evidence: documents.py; 0023_storage.sql; 0031/0037 migrations
@@ -627,7 +627,7 @@ Feature | Status | Confidence | Gap
 Auth | WORKING | HIGH | —
 Workspace | WORKING | HIGH | G-006
 RBAC | WORKING | HIGH | G-021 G-022
-Plans seats/features | WORKING | HIGH | G-002 soft quotas
+Plans seats/features | WORKING | HIGH | G-002 storage residual
 Billing | MISSING | HIGH | G-012
 Dashboard | WORKING | HIGH | G-007
 CRM Customers/Leads | WORKING | HIGH | G-016 G-017
@@ -652,7 +652,7 @@ Do not duplicate gap narratives — registry is SoT.
 Broken/partial UX: → G-003 G-004 G-005 G-006 G-007 G-026 G-032
 Mock/marketing only: public demo copy (not app data) — Confidence HIGH absence of dashboard mocks
 Missing modules: → G-008–G-015 G-022 docs
-Enforcement gaps: → G-002 G-021 G-024
+Enforcement gaps: → G-002 (storage residual) G-021 G-024
 
 ================================================================================
 ## 35. Technical Debt
@@ -662,7 +662,7 @@ Mapped to gaps where applicable:
 1. Schema ahead of product → G-008 G-017–G-020
 2. Dual catalogs → G-022
 3. Entitlements vs overrides → G-021
-4. Soft quotas → G-002
+4. Soft storage residual / orphan accounting → G-002 PARTIAL
 5. Service-role concentration → G-023 (RISK)
 6. In-memory limiters → G-029
 7. Docs drift → G-033
@@ -684,7 +684,7 @@ Classification note:
 Risk ID | Risk | Type | Current Severity | Confidence | Trigger Condition | Impact | Affected Area | Evidence | Recommended Verification
 --------|------|------|------------------|------------|-------------------|--------|---------------|----------|-------------------------
 R-001 | Service-role concentration after authorize | Potential risk / Architectural | HIGH | HIGH | Becomes CRITICAL if an authorization bug or missing require() allows unauthenticated or cross-tenant caller to hit ServiceClient paths (public_quotes, soft-delete, admin, signatures) | Full DB power via service role | Public quotes, soft-delete, admin | apps/api/app/routers/public_quotes.py; quotes.py; customers.py; admin.py; deps service_client | Live negative tests: unauth/cross-tenant on each ServiceClient route; code audit every service_client Depends
-R-002 | Soft plan quotas (quotes/clients/storage) | Observed control gap | HIGH | HIGH | Becomes worse if marketed as hard limits or if abuse fills storage/cost | Over-limit usage; billing honesty failure; noisy neighbor | Plans, Documents, Quotes, Customers | usage.py meters; no checks in quotes/customers/documents routers; limits.py seats-only | Attempt creates past quota in staging; confirm HTTP still 201
+R-002 | Soft plan quotas (quotes/clients/storage) | Partially mitigated (Phase 0 Task 02) | MEDIUM | HIGH | Becomes HIGH if Storage under-declare abuse succeeds when object metadata unavailable, or orphans accumulate | Residual storage honesty gap; customers/quotes hard | Plans, Documents, Quotes, Customers | 0040 triggers; reserved_bytes; live test_quota_live PASSED for count + reservation reject | Re-test Storage metadata path; orphan cleanup job
 R-003 | Storage ACL any member under workspace path | Architectural | MEDIUM | HIGH | Becomes HIGH if hostile technician member can read/write unrelated customer files via Storage path guessing | Cross-entity file exposure within tenant | Storage, Documents | 0023_storage.sql | Authz matrix: technician tries other customer paths
 R-004 | Document assigned-scope policy gaps | Potential risk | MEDIUM | MEDIUM | Becomes HIGH if assigned-scope user can read quote/project/warranty docs without site visibility intended by product | Excess document visibility | Documents RLS 0029 | 0029_documents_update.sql | RLS tests per role/scope
 R-005 | Invite accept without seat re-check | RESOLVED (Phase 0 Task 01) | — | HIGH | Was: stale invite accepted after seats full | Was: seat overage | Invitations | 0039 accept_invitation FOR UPDATE + plan_limits seat re-check; live test_invite_accept_seat_limit_blocks_stale_invite PASSED | Retest after plan-limit catalog changes
@@ -708,9 +708,9 @@ A new owner today can: register/login; create Solo workspace; manage customers/l
 build/send/sign quotes; convert approved quote→project→installation job; run field complete with checklist/photos;
 create service calls (list); manage tasks; invite field seats; view usage meters; (Business+) view audit.
 
-Cannot today: self-serve pay/upgrade; hard-stop on soft quotas; warehouse inventory; in-app notifications;
+Cannot today: self-serve pay/upgrade; warehouse inventory; in-app notifications;
 real AI; native mobile; true calendar scheduling board; multi-workspace switcher (→ G-006).
-Invitee self-serve accept UX + seat re-check on accept: WORKING (G-001).
+Customer/quote hard quotas: WORKING. Storage hard quotas: PARTIAL (reservation + complete re-check; residual under-declare/orphan).
 
 ================================================================================
 ## 38. Current State Summary
@@ -729,13 +729,14 @@ G-W01–G-W10 areas (Auth, Workspace, RBAC core, CRM, Sites, Quotes/Public, Proj
 → G-008–G-016 G-022 (as risk) G-035; live security monitoring
 
 ### Critical Issues
-None proven Critical. Highest: R-001, R-002, G-012 (business), G-021
+None proven Critical. Highest: R-001, G-012 (business), G-021; G-002 storage residual; R-002 mitigated
 
 ### Recommended Next Steps (Effort × Impact)
 Action | Effort | Impact | Priority | Dependencies | Reason
 -------|--------|--------|----------|--------------|--------
 G-001 invite accept + seat re-check | DONE | — | — | Phase 0 Task 01 | WORKING per live tests + 0039 RPC
-Enforce or explicitly demote soft quotas (quotes/clients/storage) | S–M | HIGH | P0 | G-002, R-002 | Prevents false commercial/security assumptions
+G-002 customer/quote hard quotas + storage reservations | PARTIAL | HIGH | P0 residual | 0040, documents reserved_bytes | Customers/quotes atomic; storage residual under-declare/orphan
+Enforce or explicitly demote remaining soft storage edge cases | S | HIGH | P0 | G-002, R-002 | Close storage honesty gap
 Align my_workspace_entitlements with auth_feature overrides | S | HIGH | P0 | G-021, R-006 | Entitlement correctness
 Negative-test ServiceClient routes (unauth/cross-tenant) | S | HIGH | P0 | R-001, G-023 | Verify blast radius before beta
 Service call detail + basic assignment UX | M | HIGH | P1 | G-003, G-005 | Completes ops loop after quotes
@@ -940,7 +941,7 @@ hard plan quotas, billing/payments, inventory/finance/reports, notifications, an
 Team invite acceptance UX: complete (G-001 WORKING).
 
 ### Top 10 gaps (by business/security importance)
-1. G-002 Soft quotas not enforced
+1. G-002 Storage quota residual (under-declare / orphans) — customers/quotes hard
 2. G-012 No billing/self-serve plans
 3. G-021 Entitlements vs overrides mismatch
 4. G-023 / R-001 Service-role concentration risk
@@ -974,7 +975,7 @@ inventory/finance/reports promises, native mobile.
 Checked and locked:
 - Plan names: Solo/Business/Enterprise consistently (Free/Pro called out as NON-EXISTENT)
 - Roles: seven roles match catalog.json
-- Quotes WORKING vs soft quota PARTIAL: consistent via G-002 (module works; limit soft)
+- Quotes WORKING vs quota PARTIAL: customers/quotes hard; storage residual via G-002
 - Sales dashboard: PARTIAL G-007 (not Working)
 - Calendar: MISSING grid / tasks PARTIAL substitute G-004 (not Working calendar)
 - Inventory: MISSING module vs catalog products WORKING — distinguished
@@ -1004,7 +1005,7 @@ Approximate tally for this baseline:
 - Low confidence findings: ~8
 - Not verified items: ~10 (listed below)
 - Critical severity (proven): 0
-- High severity gaps/risks: G-002 G-012 G-021 G-023; R-001 R-002
+- High severity gaps/risks: G-012 G-021 G-023; R-001; G-002/R-002 residual storage
 - Medium: majority of remaining gaps/risks
 - Low: G-007 G-013 G-014 G-015 G-016 G-026 G-027 G-031 G-032 G-035; R-011 R-012
 

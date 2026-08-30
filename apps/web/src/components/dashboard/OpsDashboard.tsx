@@ -13,14 +13,13 @@ import { hasQuoteRecords } from "../../lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../../lib/workspace-setup";
 import { ActivationCard } from "./ActivationCard";
 import { ActiveWork } from "./ActiveWork";
-import { ActivityList } from "./ActivityList";
 import { BusinessSnapshot } from "./BusinessSnapshot";
 import { CommandStatus } from "./CommandStatus";
 import { DashboardFreshness } from "./DashboardFreshness";
 import { DashboardKpiRow } from "./DashboardKpiRow";
 import { LeadsAttention } from "./LeadsAttention";
 import { NextBestAction } from "./NextBestAction";
-import { OpsDashHero, SiteOpsPanel } from "./OpsHero";
+import { OpsDashHero } from "./OpsHero";
 import { RecentQuotes } from "./RecentQuotes";
 import { SecurityStatusBar } from "./SecurityStatus";
 import { UsageSnapshot } from "./UsageSnapshot";
@@ -97,18 +96,17 @@ export function OpsDashboard({
       ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
   const attentionTotal = attentionCount(data.attention);
-  const siteNames = [
-    ...new Set(data.today.items.map((item) => item.site_name).filter((name): name is string => Boolean(name))),
-  ];
-  const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
   const todayItems = data.today.items;
+  const fieldTodayCount = todayItems.filter((item) => item.entity_type === "job").length;
+  const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
 
   return (
-    <div className="ops-dashboard flex flex-col gap-6">
+    <div className="ops-dashboard flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
         workspaceName={workspaceName}
         quoteAction={Boolean(quoteCta)}
+        fieldTodayCount={fieldTodayCount}
         secondaryAction={
           !quoteCta && invite ? (
             <Link
@@ -138,11 +136,7 @@ export function OpsDashboard({
       ) : null}
 
       {summary ? (
-        <DashboardKpiRow
-          quotesOpen={showQuotes ? summary.quotes_open : 0}
-          jobsOverdue={summary.jobs_overdue}
-          attentionCount={attentionTotal}
-        />
+        <DashboardKpiRow summary={summary} attention={data.attention} showQuotes={showQuotes} />
       ) : null}
 
       <CommandStatus attention={data.attention} />
@@ -153,20 +147,18 @@ export function OpsDashboard({
 
       {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
 
-      {can(roleKey, "sites.view", features) && siteNames.length > 0 ? (
-        <SiteOpsPanel siteNames={siteNames} />
-      ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {showBusiness && summary ? <BusinessSnapshot summary={summary} /> : null}
-        {usage && showSeats ? (
-          <UsageSnapshot usage={usage} canManageTeam={Boolean(invite) || can(roleKey, "users.view", features)} />
+      <div className="ops-dashboard-main">
+        {showBusiness && summary ? (
+          <BusinessSnapshot summary={summary} chart={data.business_chart ?? null} />
         ) : null}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
         {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} /> : null}
-        <ActivityList items={data.activity} canCreateQuote={Boolean(quoteCta)} />
+        {usage && showSeats ? (
+          <UsageSnapshot
+            usage={usage}
+            canManageTeam={Boolean(invite) || can(roleKey, "users.view", features)}
+            compact
+          />
+        ) : null}
       </div>
 
       {securitySignals.length ? (
@@ -196,31 +188,27 @@ export function ObserveDashboard({
   const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const empty =
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
-  const attentionTotal = attentionCount(data.attention);
 
   return (
-    <div className="ops-dashboard flex flex-col gap-6">
+    <div className="ops-dashboard flex flex-col gap-4">
       <OpsDashHero displayName={displayName} workspaceName={workspaceName} />
       {data.summary ? (
-        <DashboardKpiRow
-          quotesOpen={showQuotes ? data.summary.quotes_open : 0}
-          jobsOverdue={data.summary.jobs_overdue}
-          attentionCount={attentionTotal}
-        />
+        <DashboardKpiRow summary={data.summary} attention={data.attention} showQuotes={showQuotes} />
       ) : null}
       <CommandStatus attention={data.attention} />
-      {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
-        <BusinessSnapshot summary={data.summary} />
-      ) : null}
-      {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
+      <div className="ops-dashboard-main">
+        {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
+          <BusinessSnapshot summary={data.summary} chart={data.business_chart ?? null} />
+        ) : null}
+        {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
+      </div>
       {data.today.items.length > 0 ? <ActiveWork items={data.today.items} /> : null}
       {empty ? (
-        <div className="ops-panel p-5">
+        <div className="ops-panel p-4">
           <p className="text-sm font-medium text-fg">{he.dashboardEmptyTitle}</p>
           <p className="mt-1 text-sm text-fg-muted">{he.viewerEmptyBody}</p>
         </div>
       ) : null}
-      <ActivityList items={data.activity} />
       {securitySignals.length ? (
         <SecurityStatusBar signals={securitySignals} updatedAt={data.generated_at} />
       ) : null}

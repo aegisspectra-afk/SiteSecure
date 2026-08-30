@@ -183,6 +183,9 @@ def build_dashboard(
         variant=variant,
         assignments_reliable=assignments_reliable,
     )
+    business_chart = None
+    if variant in {"ops", "sales", "observe"} and visible_quotes:
+        business_chart = _business_chart(visible_quotes, now)
     payload = {
         "home_variant": variant,
         "generated_at": now.isoformat(),
@@ -191,6 +194,7 @@ def build_dashboard(
         "activity": _activity(events, visible_jobs, names, variant)[:ACTIVITY_CAP],
         "summary": summary,
         "recent_quotes": recent_quotes,
+        "business_chart": business_chart,
     }
     _assert_no_vanity(payload)
     return payload
@@ -459,6 +463,99 @@ def _ops_summary(
                 }
             )
     return summary, recent
+
+
+HEBREW_MONTH_SHORT = (
+    "ינו",
+    "פבר",
+    "מרץ",
+    "אפר",
+    "מאי",
+    "יוני",
+    "יולי",
+    "אוג",
+    "ספט",
+    "אוק",
+    "נוב",
+    "דצמ",
+)
+_SKIP_CHART_STATUS = frozenset({"cancelled", "expired"})
+
+
+def _month_start(year: int, month: int) -> datetime:
+    return datetime(year, month, 1, tzinfo=UTC)
+
+
+def _add_months(year: int, month: int, delta: int) -> tuple[int, int]:
+    index = (year * 12 + (month - 1)) + delta
+    return index // 12, (index % 12) + 1
+
+
+def _month_buckets(now: datetime, months: int = 6) -> list[tuple[datetime, datetime, str]]:
+    end_year, end_month = now.year, now.month
+    start_year, start_month = _add_months(end_year, end_month, -(months - 1))
+    buckets: list[tuple[datetime, datetime, str]] = []
+    year, month = start_year, start_month
+    for _ in range(months):
+        start = _month_start(year, month)
+        next_year, next_month = _add_months(year, month, 1)
+        end = _month_start(next_year, next_month)
+        buckets.append((start, end, HEBREW_MONTH_SHORT[month - 1]))
+        year, month = next_year, next_month
+    return buckets
+
+
+def _business_chart(quotes: list[dict[str, Any]], now: datetime) -> dict[str, Any] | None:
+    buckets = _month_buckets(now, 6)
+    revenue = [0.0] * len(buckets)
+    quote_counts = [0] * len(buckets)
+    approved = [0] * len(buckets)
+    totals = [0] * len(buckets)
+
+    for quote in quotes:
+        status = str(quote.get("status") or "")
+        if status in _SKIP_CHART_STATUS:
+            continue
+        updated = _parse_dt(str(quote.get("updated_at") or ""))
+        if not updated:
+            continue
+        amount = float(quote.get("total_gross") or 0)
+        for i, (start, end, _) in enumerate(buckets):
+            if start <= updated < end:
+                quote_counts[i] += 1
+                revenue[i] += amount
+                totals[i] += 1
+                if status == "approved":
+                    approved[i] += 1
+                break
+
+    if sum(quote_counts) == 0:
+        return None
+
+    revenue_change_percent = None
+    if len(revenue) >= 2:
+        prev, curr = revenue[-2], revenue[-1]
+        if prev > 0:
+            revenue_change_percent = round((curr - prev) / prev * 100)
+        elif curr > 0:
+            revenue_change_percent = 100
+
+    quote_change = quote_counts[-1] - quote_counts[-2] if len(quote_counts) >= 2 else None
+
+    conversion_change_percent = None
+    if len(totals) >= 2 and totals[-2] > 0 and totals[-1] > 0:
+        prev_rate = round(approved[-2] / totals[-2] * 100)
+        curr_rate = round(approved[-1] / totals[-1] * 100)
+        conversion_change_percent = curr_rate - prev_rate
+
+    return {
+        "labels_he": [label for _, _, label in buckets],
+        "revenue": [round(value, 2) for value in revenue],
+        "quotes": quote_counts,
+        "revenue_change_percent": revenue_change_percent,
+        "quote_change": quote_change,
+        "conversion_change_percent": conversion_change_percent,
+    }
 
 
 def _assert_no_vanity(payload: dict[str, Any]) -> None:

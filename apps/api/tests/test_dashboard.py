@@ -226,3 +226,13 @@ def test_dashboard_requires_auth():
     res = client.get("/api/v1/workspaces/00000000-0000-0000-0000-000000000001/dashboard")
     assert res.status_code == 401
     assert res.json()["error"]["code"] == "UNAUTHENTICATED"
+
+
+def test_business_chart_returns_six_month_series():
+    payload = _build("owner")
+    chart = payload["business_chart"]
+    assert chart is not None
+    assert len(chart["labels_he"]) == 6
+    assert len(chart["revenue"]) == 6
+    assert len(chart["quotes"]) == 6
+    assert sum(chart["quotes"]) >= 1

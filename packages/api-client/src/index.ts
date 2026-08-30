@@ -222,6 +222,15 @@ export type RecentQuote = {
   updated_at: string;
 };
 
+export type BusinessChart = {
+  labels_he: string[];
+  revenue: number[];
+  quotes: number[];
+  revenue_change_percent?: number | null;
+  quote_change?: number | null;
+  conversion_change_percent?: number | null;
+};
+
 export type DashboardResponse = {
   home_variant: "ops" | "sales" | "today" | "observe";
   generated_at: string;
@@ -230,6 +239,7 @@ export type DashboardResponse = {
   activity: { entity_type: string; entity_id: string; title_he: string; occurred_at: string }[];
   summary: DashboardSummary;
   recent_quotes: RecentQuote[];
+  business_chart?: BusinessChart | null;
 };
 
 export type QuoteGap = {

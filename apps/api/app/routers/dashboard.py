@@ -84,6 +84,16 @@ class RecentQuoteOut(BaseModel):
     updated_at: str
 
 
+class BusinessChartOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    labels_he: list[str]
+    revenue: list[float]
+    quotes: list[int]
+    revenue_change_percent: int | None = None
+    quote_change: int | None = None
+    conversion_change_percent: int | None = None
+
+
 class DashboardOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
     home_variant: Literal["ops", "sales", "today", "observe"]
@@ -93,6 +103,7 @@ class DashboardOut(BaseModel):
     activity: list[ActivityItemOut]
     summary: DashboardSummaryOut
     recent_quotes: list[RecentQuoteOut]
+    business_chart: BusinessChartOut | None = None
 
 
 def _optional_list(res) -> list[dict[str, Any]]:
@@ -132,7 +143,7 @@ def get_dashboard(
                     "workspace_id": f"eq.{workspace_id}",
                     "deleted_at": "is.null",
                     "select": QUOTE_SELECT,
-                    "limit": "100",
+                    "limit": "500",
                     "order": "updated_at.desc",
                 },
             )

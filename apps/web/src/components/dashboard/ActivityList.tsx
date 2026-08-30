@@ -10,7 +10,7 @@ function formatWhen(value: string): string {
 
 function GettingStarted({ canCreateQuote = false }: { canCreateQuote?: boolean }) {
   return (
-    <div className="mt-4 rounded-[var(--radius-panel)] border border-dashed border-border bg-bg-subtle px-4 py-5">
+    <div className="mt-3 rounded-[var(--radius-panel)] border border-dashed border-border bg-bg-subtle px-4 py-5">
       <p className="text-sm font-medium text-fg">{he.gettingStartedTitle}</p>
       <p className="mt-1 text-sm text-fg-muted">{he.gettingStartedBody}</p>
       {canCreateQuote ? (
@@ -35,15 +35,14 @@ export function ActivityList({
   canCreateQuote?: boolean;
 }) {
   return (
-    <section className="ops-card p-5" aria-labelledby="activity-heading">
-      <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">RECENT ACTIVITY</p>
-      <h2 id="activity-heading" className="mt-1 text-base font-semibold text-fg">
+    <section className="ops-card p-4" aria-labelledby="activity-heading">
+      <h2 id="activity-heading" className="text-base font-semibold text-fg">
         {he.activityTitle}
       </h2>
       {items.length === 0 ? (
         <GettingStarted canCreateQuote={canCreateQuote} />
       ) : (
-        <ul className="mt-4 flex flex-col gap-3">
+        <ul className="mt-3 flex flex-col gap-3">
           {items.map((item) => (
             <li
               key={`${item.entity_type}-${item.entity_id}-${item.occurred_at}`}

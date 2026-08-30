@@ -1,9 +1,26 @@
-import { Status, cn } from "@site-secure/ui";
-import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
+import type { AttentionGroup } from "@site-secure/api-client";
+import { Status } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
-import { attentionQueue, waitingDays, type AttentionQueueItem } from "../../lib/attention-queue";
+import {
+  attentionQueue,
+  attentionVisual,
+  waitingDays,
+  type AttentionQueueItem,
+} from "../../lib/attention-queue";
 import { itemHref } from "../../lib/home";
+
+function typeLabel(type: "action" | "followup" | "urgent"): string {
+  if (type === "action") return he.attentionTypeAction;
+  if (type === "urgent") return he.attentionTypeUrgent;
+  return he.attentionTypeFollowup;
+}
+
+function toneFor(type: "action" | "followup" | "urgent"): "info" | "warning" | "danger" {
+  if (type === "action") return "info";
+  if (type === "urgent") return "danger";
+  return "warning";
+}
 
 function why(row: AttentionQueueItem): string {
   const days = waitingDays(row.item.updated_at);
@@ -16,13 +33,15 @@ function why(row: AttentionQueueItem): string {
   return row.item.title_he;
 }
 
-function actionLabel(item: DashboardItem): string | null {
-  if (item.entity_type === "quote") return he.commandOpenQuote;
-  return null;
+function rowDescription(row: AttentionQueueItem): string {
+  const item = row.item;
+  const parts: string[] = [];
+  if (item.customer_name) parts.push(item.customer_name);
+  const detail = why(row);
+  if (detail && detail !== item.title_he) parts.push(detail);
+  else if (!item.customer_name && item.site_name) parts.push(item.site_name);
+  return parts.length ? parts.join(" · ") : detail;
 }
-
-const tone = (severity: DashboardItem["severity"]) =>
-  severity === "now" ? "danger" : severity === "next" ? "warning" : "neutral";
 
 export function AttentionList({
   groups,
@@ -34,25 +53,19 @@ export function AttentionList({
   const queue = attentionQueue(groups);
   if (!queue.length) return null;
   const body = (
-    <>
-      {framed ? (
-        <>
-          <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">ATTENTION</p>
-          <h2 id="attention-heading" className="text-lg font-semibold text-fg">
-            {he.attentionTitle}
-          </h2>
-        </>
-      ) : null}
-      <ul className="mt-3 divide-y divide-border border-t border-border">
-        {queue.map((row) => (
-          <AttentionRow key={`${row.kind}-${row.item.entity_id}-${row.item.title_he}`} row={row} />
-        ))}
-      </ul>
-    </>
+    <ul className={framed ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
+      {queue.map((row) => (
+        <AttentionRow key={`${row.kind}-${row.item.entity_id}-${row.item.title_he}`} row={row} />
+      ))}
+    </ul>
   );
-  if (!framed) return <div className="mt-2">{body}</div>;
+  if (!framed) return body;
   return (
-    <section className="ops-panel p-5" aria-labelledby="attention-heading">
+    <section className="ops-panel p-4" aria-labelledby="attention-heading">
+      <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">ATTENTION</p>
+      <h2 id="attention-heading" className="text-lg font-semibold text-fg">
+        {he.attentionTitle}
+      </h2>
       {body}
     </section>
   );
@@ -60,40 +73,56 @@ export function AttentionList({
 
 function AttentionRow({ row }: { row: AttentionQueueItem }) {
   const item = row.item;
+  const visual = attentionVisual(row);
   const href = itemHref(item.entity_type, item.entity_id);
-  const label = actionLabel(item);
-  const body = (
+  const label = item.entity_type === "quote" ? he.commandOpenQuote : he.recentQuotesOpen;
+  const description = rowDescription(row);
+
+  const content = (
     <>
-      <span className="flex min-w-0 flex-col gap-1">
-        <span className="truncate text-sm font-medium text-fg">{item.number || item.title_he}</span>
-        <span className="text-sm text-fg-muted">{why(row)}</span>
-        <Status label={row.groupLabel} tone={tone(item.severity)} />
-      </span>
-      {href && label ? <span className="shrink-0 text-sm font-medium text-action">{label}</span> : null}
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <span className={`ops-attention-dot is-${visual.color}`} aria-hidden />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-fg">
+            {item.number || item.title_he}
+            {item.title_he && item.number ? (
+              <>
+                <span className="text-fg-muted"> · </span>
+                <span className="font-normal text-fg-muted">{item.title_he}</span>
+              </>
+            ) : null}
+          </p>
+          {description ? <p className="mt-0.5 text-sm text-fg-muted">{description}</p> : null}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Status label={typeLabel(visual.type)} tone={toneFor(visual.type)} />
+        {href && label ? (
+          <span className="text-sm font-medium text-action">{label}</span>
+        ) : null}
+      </div>
     </>
   );
-  const className = cn(
-    "flex min-h-11 items-center justify-between gap-3 py-3",
-    href &&
-      "rounded-[var(--radius-control)] hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-  );
+
+  const className = `ops-attention-row is-${visual.color}`;
+
+  if (href && item.entity_type === "quote") {
+    return (
+      <li>
+        <Link to="/app/quotes/$quoteId" params={{ quoteId: item.entity_id }} className={className}>
+          {content}
+        </Link>
+      </li>
+    );
+  }
   if (href) {
-    if (item.entity_type === "quote") {
-      return (
-        <li>
-          <Link to="/app/quotes/$quoteId" params={{ quoteId: item.entity_id }} className={className}>
-            {body}
-          </Link>
-        </li>
-      );
-    }
     return (
       <li>
         <a href={href} className={className}>
-          {body}
+          {content}
         </a>
       </li>
     );
   }
-  return <li className={className}>{body}</li>;
+  return <li className={className}>{content}</li>;
 }

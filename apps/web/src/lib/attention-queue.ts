@@ -14,6 +14,28 @@ export function attentionQueue(groups: AttentionGroup[]): AttentionQueueItem[] {
     .sort((a, b) => SEVERITY_ORDER[a.item.severity] - SEVERITY_ORDER[b.item.severity]);
 }
 
+export function attentionUrgentCount(groups: AttentionGroup[]): number {
+  return attentionQueue(groups).filter((row) => row.item.severity === "now").length;
+}
+
+export type AttentionVisual = {
+  color: "blue" | "yellow" | "red" | "purple";
+  type: "action" | "followup" | "urgent";
+};
+
+export function attentionVisual(row: AttentionQueueItem): AttentionVisual {
+  if (row.kind === "quote_approved_pending_project") {
+    return { color: "blue", type: "action" };
+  }
+  if (row.kind === "quote_expiring" || row.item.severity === "now") {
+    return { color: "red", type: "urgent" };
+  }
+  if (row.kind === "quote_stale_draft") {
+    return { color: "purple", type: "followup" };
+  }
+  return { color: "yellow", type: "followup" };
+}
+
 export function waitingDays(updatedAt: string | null | undefined, now = new Date()): number | null {
   if (!updatedAt) return null;
   const then = new Date(updatedAt);

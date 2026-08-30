@@ -34,24 +34,38 @@ export function SecurityStatusBar({
   const allHealthy = rows.every(({ signal }) => signal.status === "healthy");
   const time = formatUpdatedAt(updatedAt);
 
-  return (
-    <Link
-      to="/app/settings/security"
-      className="ops-security-bar"
-      aria-label={allHealthy ? he.securityBarHealthy : he.securityBarAttention}
-    >
+  const content = (
+    <>
       <span
         className={`size-2 shrink-0 rounded-full ${allHealthy ? "bg-success" : "bg-warning"}`}
         aria-hidden
       />
-      <span className="text-sm font-medium text-fg">
+      <span className="text-sm text-fg-muted">
         {allHealthy ? he.securityBarHealthy : he.securityBarAttention}
+        {time ? ` · ${he.securityBarUpdated(time)}` : ""}
       </span>
-      {time ? <span className="text-sm text-fg-muted">{he.securityBarUpdated(time)}</span> : null}
-      <span className="ms-auto text-sm font-medium text-action">{he.securityCenterLink}</span>
       <span className="sr-only">
         {rows.map(({ key, signal }) => `${labelFor(key, signal.label_he)}: ${signal.status}`).join(", ")}
       </span>
+    </>
+  );
+
+  if (allHealthy) {
+    return (
+      <div className="ops-security-footer" aria-label={he.securityBarHealthy}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to="/app/settings/security"
+      className="ops-security-bar"
+      aria-label={he.securityBarAttention}
+    >
+      {content}
+      <span className="ms-auto text-sm font-medium text-action">{he.securityCenterLink}</span>
     </Link>
   );
 }
@@ -66,7 +80,7 @@ export function SecurityStatus({ signals }: { signals: SecuritySignal[] }) {
   const allHealthy = rows.every(({ signal }) => signal.status === "healthy");
 
   return (
-    <section className="ops-card px-5 py-4" aria-labelledby="security-status-heading">
+    <section className="ops-card px-4 py-3" aria-labelledby="security-status-heading">
       <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.securityStatusKicker}</p>
       <h2 id="security-status-heading" className="mt-1 text-base font-semibold text-fg">
         {he.securityStatusTitle}

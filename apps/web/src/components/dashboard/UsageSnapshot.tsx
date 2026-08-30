@@ -160,9 +160,11 @@ const RING_ORDER = ["seats_operator", "seats_field", "storage_gb", "quota_quotes
 export function UsageSnapshot({
   usage,
   canManageTeam = false,
+  compact = false,
 }: {
   usage: WorkspaceUsage;
   canManageTeam?: boolean;
+  compact?: boolean;
 }) {
   const ordered = RING_ORDER.map((key) => usage.meters.find((meter) => meter.key === key)).filter(
     (meter): meter is WorkspaceUsageMeter => Boolean(meter),
@@ -173,14 +175,23 @@ export function UsageSnapshot({
   const panelId = useId();
 
   return (
-    <section className="ops-card p-5" aria-labelledby="usage-heading">
-      <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.usageKicker}</p>
-      <h2 id="usage-heading" className="mt-1 text-base font-semibold text-fg">
-        {he.usageTitle}
-      </h2>
-      <p className="mt-1 text-sm text-fg-muted">{he.usageSubtitle}</p>
+    <section className={`ops-card p-4${compact ? " ops-usage-compact" : ""}`} aria-labelledby="usage-heading">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="usage-heading" className="text-base font-semibold text-fg">
+          {he.usageTitle}
+        </h2>
+        {canManageTeam ? (
+          <Link
+            to="/app/settings/users"
+            className="inline-flex min-h-9 items-center rounded-[var(--radius-control)] border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            {he.usageManageUsers}
+          </Link>
+        ) : null}
+      </div>
+      {!compact ? <p className="mt-1 text-sm text-fg-muted">{he.usageSubtitle}</p> : null}
       {ringMeters.length ? (
-        <div className="ops-usage-rings mt-5">
+        <div className={`ops-usage-rings mt-4${compact ? " is-compact" : ""}`}>
           {ringMeters.map((meter) => {
             const { arc, center, overLimit } = meterRingPercent(meter);
             const rawPercent =
@@ -242,10 +253,10 @@ export function UsageSnapshot({
           ))}
         </dl>
       ) : null}
-      <p className="mt-5 border-t border-border pt-4 text-sm text-fg-muted">
+      <p className={`${compact ? "mt-3" : "mt-5"} border-t border-border pt-3 text-sm text-fg-muted`}>
         {he.usageActivitySummary(usage.active_members, usage.pending_invites)}
       </p>
-      {canManageTeam ? (
+      {!compact && canManageTeam ? (
         <Link
           to="/app/settings/users"
           className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"

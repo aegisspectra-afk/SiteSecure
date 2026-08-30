@@ -126,7 +126,7 @@ G-026 | Knowledge / warranties depth | Ops | Y | Y | list-centric | perms | nav 
 G-027 | System Builder non-CCTV | Quotes | catalog | — | types disabled | — | UI disabled | quotes | PARTIAL | LOW | HIGH | SystemBuilderDrawer.tsx; system-builder.ts | Catalog | Enable or hide types | §14
 G-028 | Quote email / WhatsApp delivery | Quotes | — | status+token | mailto / wa.me | N provider | client links | — | PARTIAL | MEDIUM | HIGH | quote-whatsapp-share.ts; send endpoints | Public quote | Provider or honest UX copy | §14 §31
 G-029 | In-memory rate limit / unused idempotency_keys | API | idempotency_keys S | in-memory | — | weak multi-instance | — | — | PARTIAL | MEDIUM | MEDIUM | main.py rate limit; idempotency.py | Deploy scale | Redis/DB limiters | §26 §35
-G-030 | Platform admin email seed in migration | Security | 0036 | admin routes | /admin | is_platform_admin | route gate | — | WORKING with RISK | MEDIUM | HIGH | 0036_beta_feedback.sql | Ops | Rotate/remove hardcoded seed | §28 §36
+G-030 | Platform admin email seed in migration | Security | 0036 historical | admin routes | /admin | is_platform_admin UUID | route gate | — | WORKING (Phase 0 Task 05) | — | HIGH | 0042 grant/revoke RPCs + bootstrap_platform_admin.py; 0036 email seed historical only; live test_platform_admin_live PASSED | Ops | Maintain operator bootstrap; do not re-seed by email | §28 §36
 G-031 | Roles ACL editor | RBAC | role_permissions Y | catalog fixed | read-only matrix | grants fixed | roles.manage gated | team feature | PARTIAL | LOW | HIGH | settings/roles.tsx | RBAC | Keep catalog-driven or build editor | §6
 G-032 | Dead dashboard components | Dashboard | — | — | unused files | — | — | — | UI_ONLY dead | LOW | HIGH | SalesSnapshot, BusinessHealth, QuotePipeline, UxRings | — | Delete or wire | §9 §34
 G-033 | Docs drift (legacy V1 context) | Docs | — | — | — | — | — | — | PARTIAL | MEDIUM | HIGH | Docs/SITE-SECURE-CONTEXT.md vs apps/* | Onboarding eng | Mark legacy / update | §35
@@ -559,7 +559,7 @@ Present: Supabase Auth JWT; roles from memberships; authorize()+RLS; CORS allowl
 rate limit in-process; public quote hashed tokens; filename sanitize; Vercel X-Frame/X-Content-Type;
 service role type checks.
 
-Gaps/Risks: → G-024, G-029, G-030, G-025
+Gaps/Risks: → G-024, G-029, G-025
 
 Sessions management: Security Center marks not_built — CURRENT STATE.
 
@@ -669,7 +669,7 @@ Mapped to gaps where applicable:
 8. Incomplete audit → G-025
 9. Storage ACL → G-024
 10. Naming V1/V2 / Solo vs Free-Pro language confusion (docs/process)
-11. Platform admin seed → G-030
+11. Platform admin seed → G-030 WORKING (Task 05; 0036 email historical only)
 12. Mobile stubs → G-015
 
 ================================================================================
@@ -691,7 +691,7 @@ R-005 | Invite accept without seat re-check | RESOLVED (Phase 0 Task 01) | — |
 R-006 | Entitlements RPC ignores feature overrides | RESOLVED (Phase 0 Task 03+03B) | — | HIGH | Was: session/authorize used plan_features-only RPC while RLS used auth_feature; Task 03B closed fail-open catalog fallback on RPC error | Was: feature entitlement bypass / false lockout | Plans, authorize features, RLS | 0041 + parse_entitlements_rpc raises ENTITLEMENTS_UNAVAILABLE; session uses empty features on failure | Retest if auth_feature semantics change
 R-007 | Dual RBAC catalog drift | Architectural | MEDIUM | HIGH | Becomes HIGH if SQL role_permissions diverge from catalog.json used by API | UI/DB/API permission disagreement | RBAC | catalog.json; 0008 seed | Diff CI between catalog and DB seed
 R-008 | In-memory rate limit | Architectural | MEDIUM | MEDIUM | Becomes HIGH under multi-instance deploy or distributed abuse | Ineffective DoS protection | API main.py | main.py deque rate limit | Confirm instance count on Render; load test
-R-009 | Platform admin email seeded in migration | Operational risk | MEDIUM | HIGH | Becomes HIGH if that mailbox is compromised or unintended in prod | Platform-wide admin | Admin | 0036_beta_feedback.sql | Verify prod is_platform_admin rows
+R-009 | Platform admin email seeded in migration | RESOLVED (Phase 0 Task 05) | — | HIGH | Was: 0036 UPDATE by personal email; future envs would inherit that seed | Was: unintended platform-wide admin if email exists | Admin bootstrap | 0042 hygiene + service_role grant/revoke by UUID; operator script; existing admin row preserved | Re-run bootstrap tests when changing platform.py
 R-010 | Incomplete / silent audit writes | Architectural | MEDIUM | HIGH | Becomes HIGH under incident response needing full trail | Missing forensic data | Audit | audit.py best-effort | Force audit failure; confirm swallowed
 R-011 | No API security headers (CSP/HSTS) | Architectural | LOW | HIGH | Becomes MEDIUM if API serves browsable content abused for clickjacking (less relevant for pure JSON API) | Limited for JSON API | API | main.py middleware | Decide header policy
 R-012 | Sessions management not built | Product gap | LOW | HIGH | Becomes MEDIUM if stolen refresh tokens cannot be revoked via product UI | Session hygiene | Security center | team.py not_built signal | Supabase session revoke ops runbook

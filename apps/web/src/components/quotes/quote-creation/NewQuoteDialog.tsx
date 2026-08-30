@@ -8,11 +8,20 @@ import { CustomerSelector, SiteSelector } from "./CustomerSelector";
 import { QuoteFlowSheet } from "./QuoteFlowSheet";
 import { QuoteStartOptions } from "./QuoteStartOptions";
 
-type Step = "menu" | "existing" | "create" | "pickSite";
+export type QuoteDialogStep = "menu" | "existing" | "create" | "pickSite";
 
-export function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewQuoteDialog({
+  open,
+  onClose,
+  startStep = "menu",
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** When opening from activation with no customers, jump to create-customer. */
+  startStep?: QuoteDialogStep;
+}) {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("menu");
+  const [step, setStep] = useState<QuoteDialogStep>(startStep);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
   const [sites, setSites] = useState<
@@ -23,14 +32,16 @@ export function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () =
 
   useEffect(() => {
     if (!open) {
-      setStep("menu");
+      setStep(startStep);
       setSelectedCustomerId("");
       setSelectedCustomerName("");
       setSites([]);
       setNextAction(null);
       setNavigating(false);
+      return;
     }
-  }, [open]);
+    setStep(startStep);
+  }, [open, startStep]);
 
   function closeAll() {
     setNextAction(null);

@@ -132,6 +132,9 @@ function CustomersBody() {
       setPhone("");
       setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["activation-customers", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
       if (canCreateQuote) {
         setCreatedCustomerId(row.id);
       } else {

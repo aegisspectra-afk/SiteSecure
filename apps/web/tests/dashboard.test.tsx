@@ -134,15 +134,19 @@ describe("module destinations", () => {
 
 describe("OpsDashboard", () => {
   it("empty state has no fake create CTAs or KPI copy", () => {
-    render(<OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} />);
+    render(
+      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} customerCount={0} countsReady />,
+    );
     expect(screen.getByRole("heading", { name: he.dashboardTitleShort })).toBeInTheDocument();
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.activationTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.nextActionTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.activeWorkTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
     expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
     expect(screen.getByText(he.gettingStartedTitle)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
@@ -186,17 +190,30 @@ describe("OpsDashboard", () => {
         roleKey="owner"
         features={["crm", "quotes", "settings"]}
         memberCount={1}
+        customerCount={0}
+        countsReady
         workspaceStatus="active"
       />,
     );
+    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+    expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
   });
 
   it("sales empty state has no team administration", () => {
-    render(<OpsDashboard data={{ ...emptyDash, home_variant: "sales" }} roleKey="sales" features={["crm", "quotes"]} />);
+    render(
+      <OpsDashboard
+        data={{ ...emptyDash, home_variant: "sales" }}
+        roleKey="sales"
+        features={["crm", "quotes"]}
+        customerCount={0}
+        countsReady
+      />,
+    );
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
   });
 
@@ -335,8 +352,10 @@ describe("OpsDashboard", () => {
           ],
         }}
         roleKey="owner"
-        features={["settings", "quotes"]}
+        features={["settings", "quotes", "crm"]}
         memberCount={1}
+        customerCount={1}
+        countsReady
         workspaceStatus="active"
         usage={{
           workspace_id: "w1",
@@ -362,26 +381,87 @@ describe("OpsDashboard", () => {
               unit: "seats",
               at_limit: false,
             },
+            {
+              key: "quota_clients",
+              label_he: "לקוחות",
+              current: 1,
+              limit: 30,
+              unlimited: false,
+              unit: "customers",
+              at_limit: false,
+            },
           ],
         }}
       />,
     );
-    expect(screen.getByText(/1\/2.*50%/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.activationTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.uxRingsTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.businessTitle })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /משתמשים במשרד: 100 אחוז/ })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /משתמשים בשטח: 0 אחוז/ })).toBeInTheDocument();
-    expect(screen.getByText(he.setupPendingLabel)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.inviteUser })).toHaveAttribute("href", "/app/settings/users");
     expect(screen.getByText(he.uxSeatFull)).toBeInTheDocument();
-    expect(screen.queryByText(he.uxSeatEmpty)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.nextActionTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.nextActionInvite)).toBeInTheDocument();
+    expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
+    expect(screen.getByText(he.uxInviteField)).toBeInTheDocument();
     expect(screen.queryByText("NPS")).not.toBeInTheDocument();
     expect(screen.queryByText("92%")).not.toBeInTheDocument();
     expect(screen.queryByText("4.8")).not.toBeInTheDocument();
     expect(screen.queryByText(/Margin/i)).not.toBeInTheDocument();
+  });
+
+  it("shows activation card for empty workspace instead of invite-first setup", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="owner"
+        features={["settings", "quotes", "crm"]}
+        customerCount={0}
+        countsReady
+        memberCount={1}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.activationTitle })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
+    expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+    expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
+  });
+
+  it("hides activation after first quote exists", () => {
+    render(
+      <OpsDashboard
+        data={{ ...emptyDash, summary: { ...emptySummary, quotes_draft: 1 } }}
+        roleKey="owner"
+        features={["quotes", "crm"]}
+        customerCount={1}
+        countsReady
+        memberCount={2}
+      />,
+    );
+    expect(screen.queryByRole("heading", { name: he.activationTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.activationTitleWithCustomer })).not.toBeInTheDocument();
+  });
+
+  it("does not show create-quote activation CTA without quotes.create", () => {
+    render(
+      <OpsDashboard data={emptyDash} roleKey="viewer" features={["crm", "quotes"]} customerCount={0} countsReady />,
+    );
+    expect(screen.queryByRole("button", { name: he.activationCta })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.activationTitle })).not.toBeInTheDocument();
+  });
+
+  it("shows customer-only activation when quotes.create is missing but crm.create exists", () => {
+    render(
+      <OpsDashboard
+        data={emptyDash}
+        roleKey="founding_technician"
+        features={["crm"]}
+        customerCount={0}
+        countsReady
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.activationCreateCustomerTitle })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.activationCreateCustomer })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: he.activationCta })).not.toBeInTheDocument();
   });
 
   it("hides the setup ring after onboarding steps are actually done", () => {
@@ -389,14 +469,16 @@ describe("OpsDashboard", () => {
       <OpsDashboard
         data={emptyDash}
         roleKey="owner"
-        features={["settings", "quotes"]}
+        features={["settings", "quotes", "crm"]}
         memberCount={2}
+        customerCount={1}
+        countsReady
         workspaceStatus="active"
       />,
     );
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
-    expect(screen.getAllByText(he.uxStartFirstQuote).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: he.activationTitleWithCustomer })).toBeInTheDocument();
   });
 
   it("does not invent quote conversion when there are no quotes", () => {
@@ -564,39 +646,54 @@ describe("permission helpers", () => {
 });
 
 describe("workspaceSetup", () => {
-  it("computes real setup steps and a matching completion percent", () => {
-    const solo = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
-    expect(solo.complete).toBe(false);
-    expect(solo.done).toBe(1);
-    expect(solo.total).toBe(2);
-    expect(solo.percent).toBe(50);
-    expect(solo.steps.map((step) => step.id)).toEqual(["workspace", "invite"]);
-    expect(solo.steps.find((step) => step.id === "invite")?.current).toBe(true);
-
-    const staffed = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 2 });
-    expect(staffed.complete).toBe(true);
-    expect(staffed.percent).toBe(100);
-
-    const pending = workspaceSetup({
+  it("tracks customer and quote milestones from live counts", () => {
+    const empty = workspaceSetup({
       roleKey: "owner",
-      features: ["settings"],
-      memberCount: 1,
-      pendingInvites: 1,
+      features: ["settings", "crm", "quotes"],
+      customerCount: 0,
+      quoteCount: 0,
     });
-    expect(pending.complete).toBe(true);
-    expect(pending.percent).toBe(100);
+    expect(empty.complete).toBe(false);
+    expect(empty.done).toBe(1);
+    expect(empty.total).toBe(3);
+    expect(empty.percent).toBe(33);
+    expect(empty.steps.map((step) => step.id)).toEqual(["workspace", "first_customer", "first_quote"]);
+    expect(empty.steps.find((step) => step.id === "first_customer")?.current).toBe(true);
 
-    const unknownMembers = workspaceSetup({
+    const withCustomer = workspaceSetup({
       roleKey: "owner",
-      features: ["settings"],
-      memberCount: null,
+      features: ["settings", "crm", "quotes"],
+      customerCount: 1,
+      quoteCount: 0,
     });
-    expect(unknownMembers.complete).toBe(true);
+    expect(withCustomer.done).toBe(2);
+    expect(withCustomer.steps.find((step) => step.id === "first_quote")?.current).toBe(true);
 
-    const sales = workspaceSetup({ roleKey: "sales", features: ["crm"], memberCount: 1 });
-    expect(sales.complete).toBe(true);
-    expect(sales.percent).toBe(100);
-    expect(sales.steps.map((step) => step.id)).toEqual(["workspace"]);
+    const activated = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "crm", "quotes"],
+      customerCount: 2,
+      quoteCount: 1,
+    });
+    expect(activated.complete).toBe(true);
+    expect(activated.percent).toBe(100);
+
+    const unknown = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "crm", "quotes"],
+      customerCount: null,
+      quoteCount: null,
+    });
+    expect(unknown.steps.map((step) => step.id)).toEqual(["workspace"]);
+    expect(unknown.complete).toBe(true);
+
+    const sales = workspaceSetup({
+      roleKey: "sales",
+      features: ["crm", "quotes"],
+      customerCount: 0,
+      quoteCount: 0,
+    });
+    expect(sales.steps.map((step) => step.id)).toEqual(["workspace", "first_customer", "first_quote"]);
   });
 
   it("admin actions stay on live settings routes", () => {
@@ -612,8 +709,13 @@ describe("workspaceSetup", () => {
 });
 
 describe("nextBestAction", () => {
-  it("prioritizes live commercial work over invite setup", () => {
-    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 1 });
+  it("prioritizes first quote over invite when there are no quotes", () => {
+    const setup = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "quotes", "crm"],
+      customerCount: 0,
+      quoteCount: 0,
+    });
     expect(
       nextBestAction({
         setup,
@@ -626,54 +728,68 @@ describe("nextBestAction", () => {
       })?.id,
     ).toBe("first-quote");
 
-    const staffed = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes"], memberCount: 2 });
-    expect(
-      nextBestAction({
-        setup: staffed,
-        summary: emptySummary,
-        attention: [],
-        usage: null,
-        canCreateQuote: true,
-        canInvite: true,
-        canViewQuotes: true,
-      })?.id,
-    ).toBe("first-quote");
-
-    const invited = workspaceSetup({
+    const noQuotePerm = workspaceSetup({
       roleKey: "owner",
-      features: ["settings", "quotes"],
-      memberCount: 1,
-      pendingInvites: 1,
+      features: ["settings"],
+      customerCount: 0,
+      quoteCount: 0,
     });
-    expect(invited.complete).toBe(true);
     expect(
       nextBestAction({
-        setup: invited,
-        summary: emptySummary,
-        attention: [],
-        usage: null,
-        canCreateQuote: true,
-        canInvite: true,
-        canViewQuotes: true,
-      })?.id,
-    ).toBe("first-quote");
-
-    const noQuoteYet = workspaceSetup({ roleKey: "owner", features: ["settings"], memberCount: 1 });
-    expect(
-      nextBestAction({
-        setup: noQuoteYet,
+        setup: noQuotePerm,
         summary: emptySummary,
         attention: [],
         usage: null,
         canCreateQuote: false,
         canInvite: true,
         canViewQuotes: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("may invite field seats only after quotes exist", () => {
+    const setup = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "quotes", "crm"],
+      customerCount: 1,
+      quoteCount: 1,
+    });
+    expect(
+      nextBestAction({
+        setup,
+        summary: { ...emptySummary, quotes_draft: 1 },
+        attention: [],
+        usage: {
+          workspace_id: "w1",
+          plan_key: "solo",
+          active_members: 1,
+          pending_invites: 0,
+          meters: [
+            {
+              key: "seats_field",
+              label_he: "שטח",
+              current: 0,
+              limit: 3,
+              unlimited: false,
+              unit: "seats",
+              at_limit: false,
+            },
+          ],
+        },
+        canCreateQuote: true,
+        canInvite: true,
+        canViewQuotes: true,
       })?.id,
-    ).toBe("setup-invite");
+    ).toBe("invite-field");
   });
 
   it("does not ask sales to administer the team", () => {
-    const setup = workspaceSetup({ roleKey: "sales", features: ["crm", "quotes"], memberCount: 1 });
+    const setup = workspaceSetup({
+      roleKey: "sales",
+      features: ["crm", "quotes"],
+      customerCount: 0,
+      quoteCount: 0,
+    });
     expect(
       nextBestAction({
         setup,
@@ -688,7 +804,12 @@ describe("nextBestAction", () => {
   });
 
   it("prioritizes approved quotes pending project creation even while invite is open", () => {
-    const setup = workspaceSetup({ roleKey: "owner", features: ["settings", "quotes", "projects"], memberCount: 1 });
+    const setup = workspaceSetup({
+      roleKey: "owner",
+      features: ["settings", "quotes", "projects", "crm"],
+      customerCount: 1,
+      quoteCount: 2,
+    });
     const action = nextBestAction({
       setup,
       summary: { ...emptySummary, quotes_approved: 2, quotes_open: 0 },

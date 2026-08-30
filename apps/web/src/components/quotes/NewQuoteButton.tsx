@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { he } from "../../i18n/he";
-import { NewQuoteDialog } from "./quote-creation/NewQuoteDialog";
+import { NewQuoteDialog, type QuoteDialogStep } from "./quote-creation/NewQuoteDialog";
 
 const primaryClass =
   "quote-new-btn inline-flex h-11 min-h-11 items-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-action px-4 text-sm font-medium text-action-fg shadow-[0_1px_0_color-mix(in_srgb,var(--color-fg)_8%,transparent)] transition-[filter,transform,box-shadow,border-color] duration-150 hover:brightness-[1.06] hover:shadow-sm active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60";
@@ -15,12 +15,15 @@ export function NewQuoteButton({
   variant = "primary",
   title,
   loading,
+  startStep = "menu",
 }: {
   children?: ReactNode;
   className?: string;
   variant?: "primary" | "link";
   title?: string;
   loading?: boolean;
+  /** Activation shortcut: open create-customer step when the workspace has no customers yet. */
+  startStep?: QuoteDialogStep;
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -48,7 +51,7 @@ export function NewQuoteButton({
         {variant === "primary" ? <FileText className="size-4 shrink-0 opacity-90" strokeWidth={1.75} aria-hidden /> : null}
         <span>{loading ? he.loading : label}</span>
       </button>
-      <NewQuoteDialog open={open} onClose={closeDialog} />
+      <NewQuoteDialog open={open} onClose={closeDialog} startStep={startStep} />
     </>
   );
 }

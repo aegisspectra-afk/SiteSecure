@@ -61,6 +61,7 @@ function DashboardBody({
 }) {
   const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
   const canSecurity = can(roleKey, "settings.general", features) || can(roleKey, "workspace.edit", features);
+  const canProbeCustomers = can(roleKey, "crm.view", features) || can(roleKey, "crm.create", features);
 
   const query = useQuery({
     queryKey: ["dashboard", workspaceId],
@@ -81,6 +82,12 @@ function DashboardBody({
     queryKey: ["dashboard-lead-next", workspaceId],
     enabled: Boolean(workspaceId) && can(roleKey, "leads.view", features),
     queryFn: () => api.listLeads(workspaceId!, { limit: 20 }),
+  });
+  // Roles without usage access still need a real customer existence signal for activation.
+  const customersProbe = useQuery({
+    queryKey: ["activation-customers", workspaceId],
+    enabled: Boolean(workspaceId) && canProbeCustomers && !(canTeam && usage.isSuccess),
+    queryFn: () => api.listCustomers(workspaceId!, { limit: 1 }),
   });
 
   const leadAttention =
@@ -106,6 +113,26 @@ function DashboardBody({
 
   const memberCount = canTeam ? (usage.data?.active_members ?? null) : null;
   const usageData = canTeam ? (usage.data ?? null) : null;
+
+  let customerCount: number | null = null;
+  let countsReady = true;
+  if (canTeam) {
+    if (usage.isLoading) {
+      countsReady = false;
+    } else if (usage.data) {
+      customerCount = usage.data.meters.find((m) => m.key === "quota_clients")?.current ?? 0;
+    } else if (customersProbe.isLoading) {
+      countsReady = false;
+    } else {
+      customerCount = customersProbe.isError ? 0 : (customersProbe.data?.items.length ?? 0);
+    }
+  } else if (canProbeCustomers) {
+    if (customersProbe.isLoading) {
+      countsReady = false;
+    } else {
+      customerCount = customersProbe.isError ? 0 : (customersProbe.data?.items.length ?? 0);
+    }
+  }
 
   if (variant === "observe") {
     return (
@@ -133,6 +160,8 @@ function DashboardBody({
       leadAttentionItems={leadAttentionItems}
       displayName={displayName}
       workspaceName={workspaceName}
+      customerCount={customerCount}
+      countsReady={countsReady}
     />
   );
 }

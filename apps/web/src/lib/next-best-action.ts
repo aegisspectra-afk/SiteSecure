@@ -27,6 +27,7 @@ export type NextAction = {
  * Invite/team setup only surfaces when there is nothing operational to do.
  */
 export function nextBestAction(opts: {
+  /** Kept for callers; activation progress lives on ActivationCard / workspaceSetup. */
   setup: { complete: boolean; steps: SetupStep[] };
   summary: DashboardSummary | null;
   attention: AttentionGroup[];
@@ -37,6 +38,7 @@ export function nextBestAction(opts: {
   canCreateProject?: boolean;
   leadAttention?: LeadOut | null;
 }): NextAction | null {
+  void opts.setup;
   if (opts.leadAttention) {
     const lead = opts.leadAttention;
     const name = lead.contact_name || leadDisplayTitle(lead);
@@ -97,26 +99,19 @@ export function nextBestAction(opts: {
     };
   }
 
-  const current = opts.setup.steps.find((step) => step.current);
-  if (!opts.setup.complete && current?.href && opts.canInvite) {
-    return {
-      id: "setup-invite",
-      title: he.nextActionInvite,
-      body: he.nextActionInviteBody,
-      href: current.href,
-      label: he.inviteUser,
-    };
-  }
-
-  const field = opts.usage?.meters.find((meter) => meter.key === "seats_field");
-  if (opts.canInvite && field && !field.unlimited && field.current === 0) {
-    return {
-      id: "invite-field",
-      title: he.uxInviteField,
-      body: he.uxSeatEmpty,
-      href: "/app/settings/users",
-      label: he.inviteUser,
-    };
+  // Invite is optional team growth — never the primary activation signal.
+  // Only surface after the workspace already has commercial quote activity.
+  if (conversion.total > 0) {
+    const field = opts.usage?.meters.find((meter) => meter.key === "seats_field");
+    if (opts.canInvite && field && !field.unlimited && field.current === 0) {
+      return {
+        id: "invite-field",
+        title: he.uxInviteField,
+        body: he.uxSeatEmpty,
+        href: "/app/settings/users",
+        label: he.inviteUser,
+      };
+    }
   }
 
   return null;

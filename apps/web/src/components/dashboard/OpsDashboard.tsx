@@ -1,11 +1,17 @@
 import type { DashboardResponse, LeadOut, SecuritySignal, WorkspaceUsage } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
+import {
+  deriveActivation,
+  quoteCountFromSummary,
+  shouldShowActivationCard,
+} from "../../lib/activation";
 import { can } from "../../lib/can";
-import { hasFeature, quickActions } from "../../lib/home";
+import { hasFeature } from "../../lib/home";
 import { attentionCount, nextBestAction } from "../../lib/next-best-action";
 import { hasQuoteRecords } from "../../lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../../lib/workspace-setup";
+import { ActivationCard } from "./ActivationCard";
 import { ActiveWork } from "./ActiveWork";
 import { ActivityList } from "./ActivityList";
 import { BusinessSnapshot } from "./BusinessSnapshot";
@@ -30,6 +36,8 @@ export function OpsDashboard({
   leadAttentionItems = [],
   displayName = null,
   workspaceName = null,
+  customerCount = null,
+  countsReady = true,
 }: {
   data: DashboardResponse;
   roleKey: string | undefined;
@@ -42,39 +50,57 @@ export function OpsDashboard({
   leadAttentionItems?: LeadOut[];
   displayName?: string | null;
   workspaceName?: string | null;
+  customerCount?: number | null;
+  countsReady?: boolean;
 }) {
+  const quoteCount = quoteCountFromSummary(data.summary);
+  const activation = deriveActivation({
+    customerCount,
+    quoteCount,
+    countsReady,
+  });
   const setup = workspaceSetup({
     roleKey,
     features,
+    customerCount: countsReady ? (customerCount ?? 0) : null,
+    quoteCount: countsReady ? quoteCount : null,
     memberCount,
     pendingInvites: usage?.pending_invites,
   });
   const summary = data.summary;
   const recentQuotes = data.recent_quotes ?? [];
-  const quoteActions = quickActions(roleKey, features);
-  const quoteCta = quoteActions[0];
+  const canCreateQuote = can(roleKey, "quotes.create", features) && hasFeature(features, "quotes");
+  const canCreateCustomer = can(roleKey, "crm.create", features) && hasFeature(features, "crm");
+  const quoteCta = canCreateQuote;
   const invite = liveAdminActions(roleKey, features).find((action) => action.href === "/app/settings/users");
   const showQuotes = Boolean(summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const showSeats = Boolean(usage) && (can(roleKey, "users.view", features) || can(roleKey, "users.invite", features));
   const showBusiness = showQuotes && Boolean(summary) && hasQuoteRecords(summary);
+  const showActivation = shouldShowActivationCard({
+    activation,
+    canCreateQuote,
+    canCreateCustomer,
+  });
   const action = nextBestAction({
     setup,
     summary: showQuotes ? summary : null,
     attention: data.attention,
     usage,
-    canCreateQuote: Boolean(quoteCta),
+    canCreateQuote,
     canInvite: Boolean(invite),
     canViewQuotes: showQuotes,
     canCreateProject: can(roleKey, "projects.create", features),
-    leadAttention,
+    leadAttention: showActivation ? null : leadAttention,
   });
   const setupProgress =
     !setup.complete && setup.total > 0
-      ? { percent: setup.percent, done: setup.steps.filter((step) => step.done).length, total: setup.total }
+      ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
   const attentionTotal = attentionCount(data.attention);
-  const siteNames = [...new Set(data.today.items.map((item) => item.site_name).filter((name): name is string => Boolean(name)))];
-  const showNextAction = Boolean(action) && attentionTotal === 0;
+  const siteNames = [
+    ...new Set(data.today.items.map((item) => item.site_name).filter((name): name is string => Boolean(name))),
+  ];
+  const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
   const todayItems = data.today.items;
 
   return (
@@ -102,6 +128,15 @@ export function OpsDashboard({
         }
       />
 
+      {showActivation ? (
+        <ActivationCard
+          activation={activation}
+          setupProgress={setupProgress}
+          canCreateQuote={canCreateQuote}
+          canCreateCustomer={canCreateCustomer}
+        />
+      ) : null}
+
       {summary ? (
         <DashboardKpiRow
           quotesOpen={showQuotes ? summary.quotes_open : 0}
@@ -112,9 +147,9 @@ export function OpsDashboard({
 
       <CommandStatus attention={data.attention} />
 
-      {showNextAction && action ? <NextBestAction action={action} setupProgress={setupProgress} /> : null}
+      {showNextAction && action ? <NextBestAction action={action} setupProgress={null} /> : null}
 
-      <LeadsAttention items={leadAttentionItems} />
+      {!showActivation ? <LeadsAttention items={leadAttentionItems} /> : null}
 
       {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
 

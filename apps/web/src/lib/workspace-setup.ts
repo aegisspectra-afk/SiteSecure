@@ -6,33 +6,54 @@ export type SetupStep = {
   label: string;
   done: boolean;
   current: boolean;
-  href?: "/app/settings/users";
+  href?: "/app/customers" | "/app/quotes" | "/app/quotes/new" | "/app/settings/users";
 };
 
 /**
- * Onboarding steps are the source of truth. The setup ring is done/total of this list.
- * Add a live step here when the product can actually complete it; do not hardcode 1/2.
+ * Business activation progress (workspace → first customer → first quote).
+ * Derived from live counts — not invite/team setup.
+ * Team invite remains available via liveAdminActions / settings, not as the primary ring.
+ *
+ * null counts = unknown → step omitted (avoids false incomplete / flicker).
  */
 export function workspaceSetup(opts: {
   roleKey: string | undefined;
   features: string[];
-  memberCount: number | null;
+  customerCount?: number | null;
+  quoteCount?: number | null;
+  /** @deprecated Invite is no longer part of activation progress. Ignored. */
+  memberCount?: number | null;
+  /** @deprecated Ignored — invite is not an activation milestone. */
   pendingInvites?: number;
 }): { steps: SetupStep[]; complete: boolean; done: number; total: number; percent: number } {
   const steps: SetupStep[] = [{ id: "workspace", label: he.setupWorkspace, done: true, current: false }];
-  if (can(opts.roleKey, "users.invite", opts.features) || can(opts.roleKey, "users.view", opts.features)) {
-    // Unknown memberCount must not pretend the workspace is solo (false invite priority).
-    // Pending invites count as progress on the invite step.
-    const invited =
-      opts.memberCount == null || opts.memberCount > 1 || (opts.pendingInvites ?? 0) > 0;
+
+  const trackCustomers =
+    can(opts.roleKey, "crm.create", opts.features) || can(opts.roleKey, "crm.view", opts.features);
+  if (trackCustomers && opts.customerCount != null) {
+    const done = opts.customerCount > 0;
     steps.push({
-      id: "invite",
-      label: he.setupInvite,
-      done: invited,
-      current: !invited,
-      href: "/app/settings/users",
+      id: "first_customer",
+      label: he.setupFirstCustomer,
+      done,
+      current: false,
+      href: "/app/customers",
     });
   }
+
+  const trackQuotes =
+    can(opts.roleKey, "quotes.create", opts.features) || can(opts.roleKey, "quotes.view", opts.features);
+  if (trackQuotes && opts.quoteCount != null) {
+    const done = opts.quoteCount > 0;
+    steps.push({
+      id: "first_quote",
+      label: he.setupFirstQuote,
+      done,
+      current: false,
+      href: can(opts.roleKey, "quotes.create", opts.features) ? "/app/quotes/new" : "/app/quotes",
+    });
+  }
+
   const complete = steps.every((step) => step.done);
   const done = steps.filter((step) => step.done).length;
   const total = steps.length;

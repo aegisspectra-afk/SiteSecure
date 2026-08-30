@@ -31,6 +31,8 @@ export function CustomerCreateFlow({
     onSuccess: (row) => {
       setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["activation-customers", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
       onCreated({ id: row.id, name: row.display_name });
     },
     onError: (err) => {

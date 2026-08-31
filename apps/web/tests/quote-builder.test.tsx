@@ -244,9 +244,9 @@ describe("CPQ builder", () => {
     expect(screen.queryByRole("button", { name: he.cpqSendForApproval })).not.toBeInTheDocument();
   });
 
-  it("shows approved CTA when quote is approved", () => {
-    renderBuilder(quote({ status: "approved", customer_id: "c1", number: "Q-00012" }));
-    expect(screen.getAllByRole("button", { name: he.cpqApprovedCta }).length).toBeGreaterThan(0);
+  it("shows create project as primary CTA on approved quote", () => {
+    renderBuilder(quote({ status: "approved", customer_id: "c1", site_id: "s1", number: "Q-00012" }));
+    expect(screen.getAllByRole("button", { name: he.workflowCreateProject }).length).toBeGreaterThan(0);
   });
 
   it("seeds customer context from initial props", async () => {
@@ -274,11 +274,9 @@ describe("CPQ builder", () => {
 
   it("shows create project CTA on approved quote without linked project", async () => {
     api.listProjects.mockResolvedValue({ items: [] });
-    renderBuilder(quote({ status: "approved", customer_id: "c1", title: "מצלמות", number: "1042" }));
+    renderBuilder(quote({ status: "approved", customer_id: "c1", title: "מצלמות", number: "1042", site_id: "s1" }));
     await waitFor(() => expect(api.listProjects).toHaveBeenCalled());
-    openQuoteOverflowMenu();
-    expect(screen.getByRole("menuitem", { name: he.workflowCreateProject })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: he.workflowOpenProjectArrow })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: he.workflowCreateProject }).length).toBeGreaterThan(0);
   });
 
   it("shows open project CTA when linked project exists", async () => {
@@ -295,11 +293,11 @@ describe("CPQ builder", () => {
         },
       ],
     });
-    renderBuilder(quote({ status: "approved", customer_id: "c1", number: "1042" }));
-    await waitFor(() => expect(api.listProjects).toHaveBeenCalled());
-    openQuoteOverflowMenu();
-    expect(screen.getByRole("menuitem", { name: he.workflowOpenProjectArrow })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: he.workflowCreateProject })).not.toBeInTheDocument();
+    renderBuilder(quote({ status: "approved", customer_id: "c1", number: "1042", site_id: "s1" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: he.workflowOpenProject }).length).toBeGreaterThan(0),
+    );
+    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
   });
 
   it("does not show create project on draft quotes", () => {

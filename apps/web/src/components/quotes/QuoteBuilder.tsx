@@ -28,7 +28,7 @@ import {
 } from "../../lib/quote-cpq";
 import type { SystemBuilderLine } from "../../lib/system-builder";
 import { resolveSystemSectionName } from "../../lib/system-section";
-import { quoteStatusLabel, formatMoney } from "../../lib/quotes";
+import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
 import { resolveQuoteContext } from "../../lib/workflow-context";
@@ -62,6 +62,12 @@ import { QuoteHeader } from "./workspace/QuoteHeader";
 import { QuoteMobileSheet } from "./workspace/QuoteMobileSheet";
 import { QuoteMobileActionsBar } from "./workspace/QuoteMobileActionsBar";
 import { QuoteMobileAddMenu, type QuoteMobileAddAction } from "./workspace/QuoteMobileAddMenu";
+import { QuoteLifecycleBanner } from "./workspace/QuoteLifecycleBanner";
+import {
+  quoteLifecycleShowsBanner,
+  quoteLifecycleStatusLabel,
+  resolveQuoteLifecyclePrimary,
+} from "../../lib/quote-lifecycle";
 import { QuoteSidebar } from "./workspace/QuoteSidebar";
 import { QuoteSidebarPanel } from "./workspace/QuoteSidebarPanel";
 import { UnifiedReadiness } from "./workspace/UnifiedReadiness";
@@ -162,6 +168,7 @@ export function QuoteBuilder({
   }>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [projectDialog, setProjectDialog] = useState(false);
+  const [projectSitePick, setProjectSitePick] = useState("");
   const [projectError, setProjectError] = useState<string | null>(null);
   const [projectToast, setProjectToast] = useState(false);
   const [catalogQ, setCatalogQ] = useState("");
@@ -326,9 +333,10 @@ export function QuoteBuilder({
     staleTime: 60_000,
   });
   const sitesQuery = useQuery({
-    queryKey: ["cpq-sites", workspaceId, draft.customer_id],
-    enabled: canSites && Boolean(draft.customer_id),
-    queryFn: () => api.listSites(workspaceId, { customer_id: draft.customer_id, limit: 50 }),
+    queryKey: ["cpq-sites", workspaceId, draft.customer_id || live.customer_id],
+    enabled: canSites && Boolean(draft.customer_id || live.customer_id),
+    queryFn: () =>
+      api.listSites(workspaceId, { customer_id: draft.customer_id || live.customer_id || undefined, limit: 50 }),
   });
   const linkedProjectQuery = useQuery({
     queryKey: ["project-by-quote", workspaceId, live.id],
@@ -688,7 +696,11 @@ export function QuoteBuilder({
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
   const createProject = useMutation({
-    mutationFn: () => api.createProjectFromQuote(workspaceId, { source_quote_id: live.id }),
+    mutationFn: (siteId?: string) =>
+      api.createProjectFromQuote(workspaceId, {
+        source_quote_id: live.id,
+        ...(siteId ? { site_id: siteId } : {}),
+      }),
     onSuccess: (project) => {
       setProjectError(null);
       setProjectDialog(false);
@@ -696,6 +708,7 @@ export function QuoteBuilder({
       void queryClient.invalidateQueries({ queryKey: ["project-by-quote", workspaceId, live.id] });
       void queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] });
       void queryClient.invalidateQueries({ queryKey: ["customer-projects", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
       void navigate({ to: "/app/projects/$projectId", params: { projectId: project.id } });
     },
     onError: (err) => {
@@ -814,9 +827,23 @@ export function QuoteBuilder({
     (customerQuery.data?.email || "").trim() ||
     (customerContactsQuery.data?.find((c) => c.is_primary)?.email || "").trim() ||
     (customerContactsQuery.data?.find((c) => c.email)?.email || "").trim();
-  const statusDisplayLabel =
-    live.status === "draft" && canSendNow ? he.quoteDocReadyToSend : quoteStatusLabel(live.status);
+  const statusDisplayLabel = quoteLifecycleStatusLabel(live.status, canSendNow);
   const primaryCta = quotePrimaryCtaKind(live.status);
+  const lifecyclePrimary = resolveQuoteLifecyclePrimary({
+    status: live.status,
+    siteId: live.site_id || draft.site_id || null,
+    linkedProjectId: linkedProject?.id ?? null,
+    canCreateProject,
+    canViewProjects,
+    canRevise: canCreate,
+    canSend,
+    canSendNow,
+    hasLiveId: Boolean(live.id),
+  });
+  const lifecyclePrimaryIsProjectAction =
+    lifecyclePrimary.kind === "create_project" ||
+    lifecyclePrimary.kind === "select_site" ||
+    lifecyclePrimary.kind === "open_project";
 
   useEffect(() => {
     if (!moreOpen && !mobileMenuOpen) return;
@@ -1260,47 +1287,44 @@ export function QuoteBuilder({
     }
   }
 
+  function openProjectDialog() {
+    setProjectError(null);
+    setProjectSitePick(live.site_id || draft.site_id || sitesQuery.data?.items[0]?.id || "");
+    setProjectDialog(true);
+  }
+
   function runPrimaryCta() {
-    if (primaryCta === "send") {
+    const kind = lifecyclePrimary.kind;
+    if (kind === "send") {
       void startSendFlow();
       return;
     }
-    if (primaryCta === "show_link") {
+    if (kind === "show_link") {
       void openShareDialog();
       return;
     }
-    if (primaryCta === "show_activity") {
+    if (kind === "show_activity") {
       setWorkspaceTab("history");
       window.setTimeout(() => {
         document.getElementById("cpq-summary-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 40);
       return;
     }
-    if (primaryCta === "revise" && canCreate) {
+    if (kind === "revise" && canCreate) {
       revise.mutate();
+      return;
+    }
+    if (kind === "create_project" || kind === "select_site") {
+      openProjectDialog();
+      return;
+    }
+    if (kind === "open_project" && linkedProject) {
+      void navigate({ to: "/app/projects/$projectId", params: { projectId: linkedProject.id } });
     }
   }
 
-  const primaryCtaLabel =
-    primaryCta === "send"
-      ? he.cpqSendForApproval
-      : primaryCta === "show_link"
-        ? he.cpqShowLink
-        : primaryCta === "show_activity"
-          ? he.cpqShowActivity
-          : primaryCta === "approved"
-            ? he.cpqApprovedCta
-            : primaryCta === "revise"
-              ? he.quoteRevise
-              : primaryCta === "cancelled"
-                ? he.cpqCancelledCta
-                : null;
-  const primaryCtaDisabled =
-    primaryCta === "approved" ||
-    primaryCta === "cancelled" ||
-    (primaryCta === "revise" && !canCreate) ||
-    (primaryCta === "show_link" && !live.id) ||
-    (primaryCta === "send" && (!canSend || !canSendNow));
+  const primaryCtaLabel = lifecyclePrimary.label;
+  const primaryCtaDisabled = lifecyclePrimary.disabled;
 
   const customerPhoneDisplay = customerQuery.data?.phone || primaryContactPhone || linkedLead?.phone || "";
   const liveDocument = liveQuoteToPublicDocument(
@@ -1460,7 +1484,7 @@ export function QuoteBuilder({
         </div>
         <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuActions}>
           <p className="cpq-overflow-label">{he.cpqMenuActions}</p>
-          {live.status === "approved" && linkedProject && canViewProjects ? (
+          {live.status === "approved" && linkedProject && canViewProjects && !lifecyclePrimaryIsProjectAction ? (
             <button
               type="button"
               role="menuitem"
@@ -1473,7 +1497,7 @@ export function QuoteBuilder({
               {he.workflowOpenProjectArrow}
             </button>
           ) : null}
-          {live.status === "approved" && !linkedProject && canCreateProject ? (
+          {live.status === "approved" && !linkedProject && canCreateProject && !lifecyclePrimaryIsProjectAction ? (
             <button
               type="button"
               role="menuitem"
@@ -1638,19 +1662,30 @@ export function QuoteBuilder({
         onSave={() => save.mutate()}
         previewDisabled={!live.id && !draftHasContent(draft)}
         onPreview={() => void goCustomerView()}
-        primaryCtaLabel={primaryCtaLabel && (primaryCta !== "send" || canSend) ? primaryCtaLabel : null}
+        primaryCtaLabel={primaryCtaLabel && (lifecyclePrimary.kind !== "send" || canSend) ? primaryCtaLabel : null}
         primaryCtaDisabled={primaryCtaDisabled}
-        primaryCtaLoading={primaryCta === "revise" ? revise.isPending : false}
+        primaryCtaLoading={
+          lifecyclePrimary.kind === "revise"
+            ? revise.isPending
+            : lifecyclePrimaryIsProjectAction
+              ? createProject.isPending
+              : false
+        }
         primaryCtaVariant={
-          primaryCta === "send"
+          lifecyclePrimary.kind === "send"
             ? "ghost"
-            : primaryCta === "approved" || primaryCta === "cancelled"
+            : lifecyclePrimary.kind === "show_link" || lifecyclePrimary.kind === "show_activity"
               ? "secondary"
-              : undefined
+              : lifecyclePrimary.kind === "cancelled" || lifecyclePrimary.kind === "approved"
+                ? "secondary"
+                : undefined
         }
         onPrimaryCta={() => runPrimaryCta()}
         primaryCtaTitle={
-          primaryCta === "send" && !canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined
+          lifecyclePrimary.title ??
+          (lifecyclePrimary.kind === "send" && !canSendNow
+            ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+            : undefined)
         }
         moreOpen={moreOpen}
         morePlacement={morePlacement}
@@ -1774,6 +1809,13 @@ export function QuoteBuilder({
               </a>
             </div>
           </section>
+        ) : null}
+        {quoteLifecycleShowsBanner(live.status) ? (
+          <QuoteLifecycleBanner
+            quote={live}
+            linkedProject={linkedProject}
+            canCreateProject={canCreateProject}
+          />
         ) : null}
 
         <QuoteContextBar
@@ -2157,15 +2199,21 @@ export function QuoteBuilder({
             }}
             primaryCtaLabel={primaryCtaLabel}
             primaryCtaDisabled={primaryCtaDisabled}
-            primaryCtaLoading={primaryCta === "revise" ? revise.isPending : false}
-            primaryCtaTitle={
-              primaryCta === "send" && !canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined
+            primaryCtaLoading={
+              lifecyclePrimary.kind === "revise"
+                ? revise.isPending
+                : lifecyclePrimaryIsProjectAction
+                  ? createProject.isPending
+                  : false
             }
-            onPrimaryCta={() => {
-              if (primaryCta === "send") void startSendFlow();
-              else runPrimaryCta();
-            }}
-            showPrimaryCta={Boolean(primaryCtaLabel && (primaryCta !== "send" || canSend))}
+            primaryCtaTitle={
+              lifecyclePrimary.title ??
+              (lifecyclePrimary.kind === "send" && !canSendNow
+                ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                : undefined)
+            }
+            onPrimaryCta={() => runPrimaryCta()}
+            showPrimaryCta={Boolean(primaryCtaLabel && (lifecyclePrimary.kind !== "send" || canSend))}
             overflowOpen={mobileMenuOpen}
             onOverflowToggle={() => {
               setMobileAddOpen(false);
@@ -2247,10 +2295,20 @@ export function QuoteBuilder({
         mode={linkedProject ? "exists" : "create"}
         quoteNumber={live.number}
         projectId={linkedProject?.id}
-        siteId={live.site_id}
+        siteId={live.site_id || draft.site_id || undefined}
+        sites={(sitesQuery.data?.items ?? []).map((site) => ({
+          id: site.id,
+          name: site.name,
+          address: typeof site.address === "string" ? site.address : null,
+        }))}
+        selectedSiteId={projectSitePick}
+        onSiteChange={setProjectSitePick}
         creating={createProject.isPending}
         error={projectError}
-        onCreate={() => createProject.mutate()}
+        onCreate={(siteId) => {
+          if (!live.site_id && siteId) createProject.mutate(siteId);
+          else createProject.mutate(undefined);
+        }}
       />
 
       <SystemPickerModal

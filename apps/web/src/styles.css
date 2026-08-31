@@ -6364,6 +6364,76 @@ html.theme-revealing::view-transition-new(root) {
   );
 }
 
+.cpq-lifecycle-banner {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-1);
+  padding: 0.85rem 1rem;
+}
+
+.cpq-lifecycle-banner.is-approved {
+  border-color: color-mix(in srgb, var(--color-success, #067647) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success, #067647) 6%, var(--color-bg-1));
+}
+
+.cpq-lifecycle-banner.is-waiting {
+  border-color: color-mix(in srgb, var(--color-action) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-action) 5%, var(--color-bg-1));
+}
+
+.cpq-lifecycle-banner.is-rejected {
+  border-color: color-mix(in srgb, var(--color-danger, #b42318) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger, #b42318) 5%, var(--color-bg-1));
+}
+
+.cpq-lifecycle-banner-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--color-fg-muted);
+}
+
+.cpq-lifecycle-banner.is-approved .cpq-lifecycle-banner-icon {
+  color: var(--color-success, #067647);
+}
+
+.cpq-lifecycle-banner.is-rejected .cpq-lifecycle-banner-icon {
+  color: var(--color-danger, #b42318);
+}
+
+.cpq-lifecycle-banner-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cpq-lifecycle-banner-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--color-fg);
+}
+
+.cpq-lifecycle-banner-meta {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+}
+
+.cpq-lifecycle-banner-meta li + li {
+  margin-top: 0.15rem;
+}
+
+.cpq-lifecycle-banner-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+}
+
 @media (min-width: 1024px) {
   .quote-builder-actions {
     display: none;

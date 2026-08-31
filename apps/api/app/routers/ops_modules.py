@@ -240,6 +240,7 @@ class ProjectCreate(BaseModel):
 class ProjectFromQuoteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source_quote_id: str = Field(min_length=1)
+    site_id: str | None = None
 
 
 class ProjectPatch(BaseModel):
@@ -288,6 +289,41 @@ def _load_quote_for_project(client: UserClient, workspace_id: UUID, quote_id: st
         )
     )
     return rows[0] if rows else None
+
+
+def _attach_quote_site_for_project(
+    client: UserClient,
+    workspace_id: UUID,
+    quote: dict,
+    site_id: str,
+) -> dict:
+    customer_id = quote.get("customer_id")
+    if not customer_id:
+        raise ApiError(
+            409,
+            "RESOURCE_STATE",
+            "להצעת המחיר אין לקוח משויך, ולכן לא ניתן ליצור פרויקט.",
+        )
+    site = one_or_404(
+        client.get(
+            "sites",
+            params={
+                "id": f"eq.{site_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,customer_id",
+            },
+        )
+    )
+    if str(site.get("customer_id") or "") != str(customer_id):
+        raise ApiError(400, "VALIDATION_ERROR", "האתר אינו שייך ללקוח של ההצעה.")
+    patched_or_403(
+        client.patch(
+            "quotes",
+            {"site_id": site_id},
+            params={"id": f"eq.{quote['id']}", "workspace_id": f"eq.{workspace_id}"},
+        )
+    )
+    return {**quote, "site_id": site_id}
 
 
 @router.get("/projects")
@@ -379,6 +415,8 @@ def create_project_from_quote(
     require(ctx, "projects.create", resource=ResourceRef(type="project"))
     quote = _load_quote_for_project(client, workspace_id, body.source_quote_id)
     existing = _existing_project_for_quote(client, workspace_id, body.source_quote_id)
+    if quote and not quote.get("site_id") and body.site_id:
+        quote = _attach_quote_site_for_project(client, workspace_id, quote, body.site_id)
     plan = plan_project_from_quote(
         quote=quote,
         workspace_id=str(workspace_id),

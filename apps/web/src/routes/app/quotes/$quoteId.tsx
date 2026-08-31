@@ -28,6 +28,11 @@ function QuoteDetailBody() {
     enabled: Boolean(workspaceId),
     queryFn: () => api.getQuote(workspaceId!, quoteId),
     staleTime: 20_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: (ctx) => {
+      const status = ctx.state.data?.status;
+      return status === "sent" || status === "viewed" ? 15_000 : false;
+    },
   });
 
   if (loading || !workspaceId || (query.isLoading && !query.data) || (!query.data && !query.isError)) {

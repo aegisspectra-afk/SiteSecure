@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { QuoteFlowSheet } from "../quotes/quote-creation/QuoteFlowSheet";
 
+type SiteOption = { id: string; name: string; address?: string | null };
+
 export function ProjectFromQuoteDialog({
   open,
   onClose,
@@ -10,6 +12,9 @@ export function ProjectFromQuoteDialog({
   quoteNumber,
   projectId,
   siteId,
+  sites,
+  selectedSiteId,
+  onSiteChange,
   creating,
   error,
   onCreate,
@@ -20,9 +25,12 @@ export function ProjectFromQuoteDialog({
   quoteNumber?: string | null;
   projectId?: string | null;
   siteId?: string | null;
+  sites?: SiteOption[];
+  selectedSiteId?: string;
+  onSiteChange?: (siteId: string) => void;
   creating?: boolean;
   error?: string | null;
-  onCreate: () => void;
+  onCreate: (siteId?: string) => void;
 }) {
   const navigate = useNavigate();
   const title = mode === "exists" ? he.workflowProjectExistsTitle : he.workflowQuoteApprovedTitle;
@@ -30,6 +38,8 @@ export function ProjectFromQuoteDialog({
     mode === "exists"
       ? he.workflowProjectExistsBody
       : he.workflowQuoteApprovedBody(quoteNumber ?? "");
+  const effectiveSiteId = siteId || selectedSiteId || "";
+  const canCreate = Boolean(effectiveSiteId);
 
   function openProject() {
     if (!projectId) return;
@@ -42,9 +52,9 @@ export function ProjectFromQuoteDialog({
   }
 
   function openSite() {
-    if (!siteId) return;
+    if (!effectiveSiteId) return;
     onClose();
-    void navigate({ to: "/app/sites/$siteId", params: { siteId } });
+    void navigate({ to: "/app/sites/$siteId", params: { siteId: effectiveSiteId } });
   }
 
   return (
@@ -58,7 +68,7 @@ export function ProjectFromQuoteDialog({
               className="quote-flow-action is-recommended"
               data-autofocus
               disabled={creating}
-              onClick={onCreate}
+              onClick={() => onCreate()}
             >
               <span className="quote-flow-action-icon" aria-hidden>
                 <Briefcase className="size-4" strokeWidth={1.75} />
@@ -71,9 +81,48 @@ export function ProjectFromQuoteDialog({
               </span>
             </button>
           ) : (
-            <p className="rounded-[var(--radius-control)] border border-border px-3 py-3 text-sm text-fg-muted">
-              {he.workflowProjectNeedsSite}
-            </p>
+            <>
+              <p className="rounded-[var(--radius-control)] border border-border px-3 py-3 text-sm text-fg-muted">
+                {he.cpqSelectSiteBeforeProject}
+              </p>
+              {sites?.length ? (
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-fg">{he.workflowPickSite}</span>
+                  <select
+                    className="min-h-11 rounded-[var(--radius-control)] border border-border bg-bg px-3"
+                    value={selectedSiteId || ""}
+                    onChange={(event) => onSiteChange?.(event.target.value)}
+                  >
+                    <option value="">{he.workflowPickSitePlaceholder}</option>
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                        {site.address ? ` · ${site.address}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="text-sm text-fg-muted">{he.workflowNoSiteAttached}</p>
+              )}
+              <button
+                type="button"
+                className="quote-flow-action is-recommended"
+                data-autofocus
+                disabled={creating || !canCreate}
+                onClick={() => onCreate(selectedSiteId || undefined)}
+              >
+                <span className="quote-flow-action-icon" aria-hidden>
+                  <Briefcase className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="min-w-0 flex-1 text-start">
+                  <span className="block text-sm font-semibold text-fg">
+                    {creating ? he.workflowCreatingProject : he.workflowCreateProject}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-fg-muted">{he.workflowCreateProjectHint}</span>
+                </span>
+              </button>
+            </>
           )
         ) : (
           <button type="button" className="quote-flow-action is-recommended" data-autofocus onClick={openProject}>
@@ -95,7 +144,7 @@ export function ProjectFromQuoteDialog({
             <span className="mt-0.5 block text-xs text-fg-muted">{he.workflowBackToQuoteHint}</span>
           </span>
         </button>
-        {siteId ? (
+        {effectiveSiteId ? (
           <button type="button" className="quote-flow-action is-muted" onClick={openSite} disabled={creating}>
             <span className="quote-flow-action-icon is-muted" aria-hidden>
               <MapPin className="size-4" strokeWidth={1.75} />

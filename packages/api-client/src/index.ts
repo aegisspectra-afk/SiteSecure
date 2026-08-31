@@ -306,7 +306,9 @@ export type QuoteOut = {
   sent_at?: string | null;
   viewed_at?: string | null;
   approved_at?: string | null;
+  approved_name?: string | null;
   rejected_at?: string | null;
+  rejection_reason?: string | null;
   public_url?: string | null;
   public_token?: string | null;
   validation?: { can_send: boolean; gaps: QuoteGap[] };
@@ -1370,7 +1372,7 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    createProjectFromQuote: (workspaceId: string, body: { source_quote_id: string }) =>
+    createProjectFromQuote: (workspaceId: string, body: { source_quote_id: string; site_id?: string | null }) =>
       request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects/from-quote`, {
         method: "POST",
         body: JSON.stringify(body),

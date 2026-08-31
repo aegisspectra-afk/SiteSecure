@@ -554,6 +554,12 @@ export function QuoteBuilder({
       return row;
     },
   });
+  const persistSectionName = useCallback(
+    async (sectionId: string, name: string) => {
+      await patchSection.mutateAsync({ sectionId, body: { name } });
+    },
+    [patchSection.mutateAsync],
+  );
   const deleteSection = useMutation({
     mutationFn: async (sectionId: string) => {
       const current = await createOnce();
@@ -645,8 +651,24 @@ export function QuoteBuilder({
     },
   });
 
+  const handleDeleteItem = useCallback(
+    (itemId: string) => {
+      deleteItem.mutate(itemId);
+    },
+    [deleteItem.mutate],
+  );
+
   const linkedProject = linkedProjectQuery.data ?? null;
   const items = live.items ?? [];
+  const handleReorderItem = useCallback(
+    async (itemId: string, direction: "up" | "down") => {
+      const plan = neighborSortOrders(items, itemId, direction);
+      if (!plan) return;
+      await patchItem.mutateAsync({ itemId: plan.itemId, body: { sort_order: plan.sort_order } });
+      await patchItem.mutateAsync({ itemId: plan.swapId, body: { sort_order: plan.swap_order } });
+    },
+    [items, patchItem.mutateAsync],
+  );
   const currency = live.currency ?? "ILS";
   const vatPercent = live.vat_percent ?? 18;
   const templateOptions = templatesQuery.data?.items ?? [];
@@ -941,13 +963,6 @@ export function QuoteBuilder({
     }
   }
 
-  async function reorderItem(itemId: string, direction: "up" | "down") {
-    const plan = neighborSortOrders(items, itemId, direction);
-    if (!plan) return;
-    await patchItem.mutateAsync({ itemId: plan.itemId, body: { sort_order: plan.sort_order } });
-    await patchItem.mutateAsync({ itemId: plan.swapId, body: { sort_order: plan.swap_order } });
-  }
-
   async function addSystemBuilderLines(lines: SystemBuilderLine[]) {
     for (const line of lines) {
       if (!line.product) continue;
@@ -1078,19 +1093,6 @@ export function QuoteBuilder({
     skipHistory.current = false;
   }
 
-  const saveLabel =
-    saveState === "saving"
-      ? he.cpqSaving
-      : saveState === "error"
-        ? he.quoteSaveError
-        : !live.id
-          ? he.quoteUnsaved
-          : dirty
-            ? he.cpqUnsavedChanges
-            : savedAt
-              ? he.cpqSavedAgo(Math.max(0, Math.round((Date.now() - savedAt) / 1000)))
-              : he.cpqSavedJustNow;
-
   function scrollToZone(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -1219,7 +1221,7 @@ export function QuoteBuilder({
     primaryCta === "cancelled" ||
     (primaryCta === "revise" && !canCreate) ||
     (primaryCta === "show_link" && !live.id) ||
-    (primaryCta === "send" && !canSend);
+    (primaryCta === "send" && (!canSend || !canSendNow));
 
   const customerPhoneDisplay = customerQuery.data?.phone || primaryContactPhone || linkedLead?.phone || "";
   const liveDocument = liveQuoteToPublicDocument(
@@ -1498,6 +1500,7 @@ export function QuoteBuilder({
       <div className="cpq-submit-block">
         <Button
           className="cpq-submit-primary"
+          disabled={!canSendNow}
           title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
           onClick={() => void startSendFlow()}
         >
@@ -1576,8 +1579,9 @@ export function QuoteBuilder({
         customerName={selectedName || undefined}
         siteName={selectedSite?.name || live.site_name || undefined}
         saveState={saveState}
-        saveLabel={saveLabel}
+        savedAt={savedAt}
         dirty={dirty}
+        hasLiveId={Boolean(live.id)}
         activeStep={activeStep}
         onStepSelect={goToStep}
         canEdit={canEdit}
@@ -2060,14 +2064,14 @@ export function QuoteBuilder({
           onOpenSystemBuilder={canEdit && canCatalog ? () => setSystemBuilderOpen(true) : undefined}
           onOpenQuickAdd={canEdit ? () => setQuickAddOpen(true) : undefined}
           onAddSection={canEdit ? () => addSection.mutate() : undefined}
-          onRenameSection={(sectionId, name) => patchSection.mutate({ sectionId, body: { name } })}
+          onRenameSection={persistSectionName}
           onToggleSection={(sectionId, collapsed) => patchSection.mutate({ sectionId, body: { collapsed } })}
           onDuplicateSection={(sectionId) => duplicateSection.mutate(sectionId)}
           onDeleteSection={(sectionId) => deleteSection.mutate(sectionId)}
           onAdd={(body) => addItem.mutate(body)}
           onPersistLine={persistQuoteLine}
-          onDelete={(itemId) => deleteItem.mutate(itemId)}
-          onReorder={(itemId, direction) => void reorderItem(itemId, direction)}
+          onDelete={handleDeleteItem}
+          onReorder={handleReorderItem}
         />
       </div>
 

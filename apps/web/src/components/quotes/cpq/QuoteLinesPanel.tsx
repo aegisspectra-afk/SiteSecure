@@ -8,6 +8,7 @@ import type { QuoteLinePatch } from "../../../lib/quote-line-edit";
 import { LINE_ITEM_DISCOUNT_TYPE } from "../../../lib/quote-line-edit";
 import { formatMoney } from "../../../lib/quotes";
 import { QuoteLineRow } from "./QuoteLineRow";
+import { QuoteSectionNameField } from "./QuoteSectionNameField";
 
 type AddBody = {
   item_type?: string;
@@ -64,7 +65,7 @@ export function QuoteLinesPanel({
   onOpenQuickAdd?: () => void;
   onFocusCatalog?: () => void;
   onAddSection?: () => void;
-  onRenameSection?: (sectionId: string, name: string) => void;
+  onRenameSection?: (sectionId: string, name: string) => Promise<void>;
   onToggleSection?: (sectionId: string, collapsed: boolean) => void;
   onDuplicateSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
@@ -160,12 +161,11 @@ export function QuoteLinesPanel({
                   <div className="cpq-section-head">
                     <div className="min-w-0 flex-1">
                       {canEdit && onRenameSection ? (
-                        <Input
-                          id={`section-name-${group.section.id}`}
-                          label={he.cpqAddSection}
-                          className="max-w-sm font-medium"
-                          value={group.section.name}
-                          onChange={(e) => onRenameSection(group.section!.id, e.target.value)}
+                        <QuoteSectionNameField
+                          sectionId={group.section.id}
+                          name={group.section.name}
+                          canEdit={canEdit}
+                          onPersist={onRenameSection}
                         />
                       ) : (
                         <h3 className="text-base font-semibold">{group.section.name || he.cpqSectionUntitled}</h3>

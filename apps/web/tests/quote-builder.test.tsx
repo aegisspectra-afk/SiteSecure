@@ -174,10 +174,37 @@ describe("CPQ builder", () => {
 
     const submitButtons = screen.getAllByRole("button", { name: he.cpqSendForApproval });
     expect(submitButtons.length).toBeGreaterThanOrEqual(2);
-    submitButtons.forEach((button) => expect(button).toBeEnabled());
+    submitButtons.forEach((button) => expect(button).toBeDisabled());
+  });
 
-    fireEvent.click(submitButtons[0]);
-    expect(within(readiness).getByRole("alert")).toHaveTextContent(he.cpqSendBlockedHint(2));
+  it("enables send when critical readiness gaps are resolved", () => {
+    renderBuilder(
+      quote({
+        customer_id: "c1",
+        title: "התקנה",
+        valid_until: "2099-01-01",
+        payment_terms: "מזומן",
+        items: [
+          {
+            id: "i1",
+            quote_id: "q1",
+            item_type: "catalog",
+            description: "מצלמה",
+            qty: 1,
+            unit_price: 100,
+            discount: 0,
+            discount_type: "amount",
+            sort_order: 10,
+            line_net: 100,
+          },
+        ],
+        validation: { can_send: true, gaps: [] },
+        total_gross: 100,
+      }),
+    );
+
+    const submitButtons = screen.getAllByRole("button", { name: he.cpqSendForApproval });
+    submitButtons.forEach((button) => expect(button).toBeEnabled());
   });
 
   it("opens an unsaved quote locally without creating a draft", async () => {

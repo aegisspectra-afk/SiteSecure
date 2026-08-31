@@ -4,6 +4,7 @@ import { Menu, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { he } from "../../../i18n/he";
 import { QuoteStepper } from "./QuoteStepper";
+import { QuoteSaveIndicator } from "./QuoteSaveIndicator";
 import type { QuoteWorkspaceStep } from "./types";
 
 export function QuoteHeader({
@@ -13,8 +14,9 @@ export function QuoteHeader({
   customerName,
   siteName,
   saveState,
-  saveLabel,
+  savedAt,
   dirty,
+  hasLiveId,
   activeStep,
   onStepSelect,
   canEdit,
@@ -46,8 +48,9 @@ export function QuoteHeader({
   customerName?: string;
   siteName?: string;
   saveState: "saved" | "saving" | "error" | "local";
-  saveLabel: string;
+  savedAt: number | null;
   dirty: boolean;
+  hasLiveId: boolean;
   activeStep: QuoteWorkspaceStep;
   onStepSelect: (step: QuoteWorkspaceStep) => void;
   canEdit: boolean;
@@ -110,10 +113,7 @@ export function QuoteHeader({
           <p className="cpq-header-meta cpq-header-meta-desktop" title={metaParts.join(" · ")}>
             {metaParts.join(" · ")}
           </p>
-          <p className="cpq-save-state cpq-save-state-inline" aria-live="polite">
-            <span className={`cpq-save-dot is-${saveState === "error" ? "error" : dirty ? "dirty" : saveState}`} />
-            {saveLabel}
-          </p>
+          <QuoteSaveIndicator saveState={saveState} savedAt={savedAt} dirty={dirty} hasLiveId={hasLiveId} />
         </div>
 
         <div className="cpq-stepper-desktop">

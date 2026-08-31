@@ -44,6 +44,27 @@ function renderRow(
 }
 
 describe("QuoteLineRow", () => {
+  it("debounces rapid keystrokes before a single persist on blur", async () => {
+    vi.useFakeTimers();
+    const onPersist = vi.fn(async () => undefined);
+    renderRow({ onPersist });
+
+    const desc = screen.getByLabelText(he.quoteItemDescription) as HTMLInputElement;
+    fireEvent.focus(desc);
+    fireEvent.change(desc, { target: { value: "מ" } });
+    fireEvent.change(desc, { target: { value: "מצ" } });
+    fireEvent.change(desc, { target: { value: "מצלמה חדשה" } });
+    fireEvent.blur(desc);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(onPersist).toHaveBeenCalledTimes(1);
+    expect(onPersist).toHaveBeenCalledWith("i1", { description: "מצלמה חדשה" });
+    vi.useRealTimers();
+  });
+
   it("keeps local draft while typing without remounting", async () => {
     const { onPersist } = renderRow();
 

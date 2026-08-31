@@ -38,6 +38,7 @@ export function QuoteLinesPanel({
   onDelete,
   onReorder,
   onOpenSystemBuilder,
+  onOpenAddSystem,
   onOpenQuickAdd,
   onFocusCatalog,
   onAddSection,
@@ -62,6 +63,7 @@ export function QuoteLinesPanel({
   onDelete: (itemId: string) => void;
   onReorder: (itemId: string, direction: "up" | "down") => void;
   onOpenSystemBuilder?: () => void;
+  onOpenAddSystem?: () => void;
   onOpenQuickAdd?: () => void;
   onFocusCatalog?: () => void;
   onAddSection?: () => void;
@@ -107,6 +109,12 @@ export function QuoteLinesPanel({
               <Plus className="size-4" aria-hidden />
               {he.quoteAddItem}
             </Button>
+            {onOpenAddSystem ? (
+              <Button type="button" variant="secondary" onClick={onOpenAddSystem}>
+                <Plus className="size-4" aria-hidden />
+                {he.cpqAddSystem}
+              </Button>
+            ) : null}
             {onAddSection ? (
               <Button type="button" variant="secondary" onClick={onAddSection}>
                 <Plus className="size-4" aria-hidden />
@@ -131,6 +139,11 @@ export function QuoteLinesPanel({
               <Button type="button" onClick={() => onAdd(defaultFreeLine())}>
                 {he.quoteAddItem}
               </Button>
+              {onOpenAddSystem ? (
+                <Button type="button" variant="secondary" onClick={onOpenAddSystem}>
+                  {he.cpqAddSystem}
+                </Button>
+              ) : null}
               {onOpenSystemBuilder ? (
                 <Button type="button" variant="secondary" onClick={onOpenSystemBuilder}>
                   {he.cpqBuildSystem}

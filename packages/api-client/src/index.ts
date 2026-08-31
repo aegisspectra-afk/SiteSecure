@@ -427,6 +427,7 @@ export type QuotePackage = {
   description?: string;
   category?: string;
   is_active?: boolean;
+  item_count?: number;
 };
 
 export type QuoteVersionMeta = {

@@ -17,7 +17,7 @@ export type QuickAddActionId =
   | "free"
   | "section"
   | "system"
-  | "package"
+  | "addSystem"
   | "template";
 
 type Action = {
@@ -90,6 +90,13 @@ export function QuoteQuickAdd({
     if (canCatalog) {
       list.push(
         {
+          id: "addSystem",
+          label: he.cpqQuickAddAddSystem,
+          hint: he.cpqQuickAddAddSystemHint,
+          icon: Boxes,
+          keywords: "system מערכת cctv alarm scope",
+        },
+        {
           id: "catalog",
           label: he.cpqQuickAddCatalog,
           hint: he.cpqQuickAddCatalogHint,
@@ -101,14 +108,7 @@ export function QuoteQuickAdd({
           label: he.cpqQuickAddTemplate,
           hint: he.cpqQuickAddTemplateHint,
           icon: FileStack,
-          keywords: "template תבנית",
-        },
-        {
-          id: "package",
-          label: he.cpqQuickAddPackage,
-          hint: he.cpqQuickAddPackageHint,
-          icon: Boxes,
-          keywords: "package חבילה bundle",
+          keywords: "template תבנית הצעה",
         },
       );
     }

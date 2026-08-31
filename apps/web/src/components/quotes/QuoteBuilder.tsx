@@ -27,6 +27,7 @@ import {
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
 import type { SystemBuilderLine } from "../../lib/system-builder";
+import { resolveSystemSectionName } from "../../lib/system-section";
 import { quoteStatusLabel, formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
@@ -38,6 +39,8 @@ import { TemplateFastPath } from "./cpq/TemplateFastPath";
 import { QuoteSummaryAside } from "./cpq/QuoteSummaryAside";
 import { RevisionComparePanel } from "./cpq/RevisionComparePanel";
 import { SystemBuilderDrawer } from "./cpq/SystemBuilderDrawer";
+import { SystemPickerModal } from "./cpq/SystemPickerModal";
+import { TemplateApplyModal } from "./cpq/TemplateApplyModal";
 import { QuoteContextCard } from "./quote-creation/QuoteContextCard";
 import { CustomerSelector } from "./quote-creation/CustomerSelector";
 import { QuoteShareDialog } from "./QuoteShareDialog";
@@ -168,6 +171,10 @@ export function QuoteBuilder({
   );
   const [fastPathTemplateId, setFastPathTemplateId] = useState("");
   const [systemBuilderOpen, setSystemBuilderOpen] = useState(false);
+  const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+  const [templateApplyOpen, setTemplateApplyOpen] = useState(false);
+  const [applyingSystemId, setApplyingSystemId] = useState<string | null>(null);
+  const [applyingTemplatePickId, setApplyingTemplatePickId] = useState<string | null>(null);
   const [systemCatalogReady, setSystemCatalogReady] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
@@ -330,8 +337,14 @@ export function QuoteBuilder({
   });
   const templatesQuery = useQuery({
     queryKey: ["cpq-templates", workspaceId],
-    enabled: canCatalog && templatesReady,
+    enabled: canCatalog && (templatesReady || templateApplyOpen),
     queryFn: () => api.listQuoteTemplates(workspaceId),
+    staleTime: 60_000,
+  });
+  const systemsQuery = useQuery({
+    queryKey: ["cpq-systems", workspaceId],
+    enabled: canEdit && systemPickerOpen,
+    queryFn: () => api.listQuotePackages(workspaceId),
     staleTime: 60_000,
   });
   const leadsQuery = useQuery({
@@ -497,8 +510,52 @@ export function QuoteBuilder({
       commitRoute(row.id);
       return row;
     },
-    onSuccess: () => setFormError(null),
-    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
+    onSuccess: () => {
+      setFormError(null);
+      setTemplateApplyOpen(false);
+      setApplyingTemplatePickId(null);
+    },
+    onError: (err) => {
+      setApplyingTemplatePickId(null);
+      setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
+    },
+  });
+  const applySystem = useMutation({
+    mutationFn: async (systemId: string) => {
+      setApplyingSystemId(systemId);
+      const current = await createOnce();
+      const system =
+        systemsQuery.data?.items.find((row) => row.id === systemId) ??
+        (await api.listQuotePackages(workspaceId)).items.find((row) => row.id === systemId);
+      const sectionName = resolveSystemSectionName(system?.name || "", current.sections ?? []);
+      const sortBase = Math.max(0, ...(current.sections ?? []).map((section) => section.sort_order ?? 0));
+      const withSection = await api.createQuoteSection(workspaceId, current.id, {
+        name: sectionName,
+        sort_order: sortBase + 10,
+      });
+      const sectionId =
+        withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
+        withSection.sections?.[withSection.sections.length - 1]?.id;
+      if (!sectionId) {
+        throw new Error(he.quotesError);
+      }
+      const row = await api.applyQuotePackage(workspaceId, current.id, {
+        package_id: systemId,
+        section_id: sectionId,
+      });
+      applyRow(row);
+      commitRoute(row.id);
+      return row;
+    },
+    onSuccess: () => {
+      setFormError(null);
+      setSystemPickerOpen(false);
+      setApplyingSystemId(null);
+    },
+    onError: (err) => {
+      setApplyingSystemId(null);
+      setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
+    },
   });
   const send = useMutation({
     mutationFn: async () => {
@@ -1069,11 +1126,11 @@ export function QuoteBuilder({
     }
     if (id === "template") {
       setTemplatesReady(true);
-      window.setTimeout(() => document.getElementById("template_id")?.focus(), 40);
+      setTemplateApplyOpen(true);
       return;
     }
-    if (id === "package") {
-      saveAsPackage.mutate();
+    if (id === "addSystem") {
+      setSystemPickerOpen(true);
     }
   }
 
@@ -2062,6 +2119,7 @@ export function QuoteBuilder({
           debouncedCatalogQ={debouncedCatalogQ}
           addPending={addItem.isPending}
           onOpenSystemBuilder={canEdit && canCatalog ? () => setSystemBuilderOpen(true) : undefined}
+          onOpenAddSystem={canEdit ? () => setSystemPickerOpen(true) : undefined}
           onOpenQuickAdd={canEdit ? () => setQuickAddOpen(true) : undefined}
           onAddSection={canEdit ? () => addSection.mutate() : undefined}
           onRenameSection={persistSectionName}
@@ -2156,6 +2214,39 @@ export function QuoteBuilder({
         creating={createProject.isPending}
         error={projectError}
         onCreate={() => createProject.mutate()}
+      />
+
+      <SystemPickerModal
+        open={systemPickerOpen}
+        onClose={() => {
+          if (applySystem.isPending) return;
+          setSystemPickerOpen(false);
+        }}
+        systems={systemsQuery.data?.items ?? []}
+        loading={systemsQuery.isFetching}
+        error={systemsQuery.isError ? he.quotesError : null}
+        applyingId={applyingSystemId}
+        onApply={(systemId) => {
+          if (applySystem.isPending) return;
+          applySystem.mutate(systemId);
+        }}
+      />
+
+      <TemplateApplyModal
+        open={templateApplyOpen}
+        onClose={() => {
+          if (applyTemplate.isPending) return;
+          setTemplateApplyOpen(false);
+        }}
+        templates={templateOptions}
+        loading={templatesQuery.isFetching}
+        error={templatesQuery.isError ? he.quotesError : null}
+        applyingId={applyingTemplatePickId}
+        onApply={(templateId) => {
+          if (applyTemplate.isPending) return;
+          setApplyingTemplatePickId(templateId);
+          applyTemplate.mutate(templateId);
+        }}
       />
 
       <SystemBuilderDrawer

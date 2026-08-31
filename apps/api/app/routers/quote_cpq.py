@@ -43,7 +43,18 @@ PACKAGE_SELECT = (
 )
 
 
-class SectionIn(BaseModel):
+def _package_out(row: dict) -> dict:
+    out = dict(row)
+    nested = out.pop("quote_package_items", None) or []
+    count = 0
+    if isinstance(nested, list) and nested and isinstance(nested[0], dict):
+        count = int(nested[0].get("count") or 0)
+    elif isinstance(nested, dict):
+        count = int(nested.get("count") or 0)
+    out["item_count"] = count
+    return out
+
+
     model_config = ConfigDict(extra="forbid")
     name: str = "סעיף חדש"
     sort_order: int = 0
@@ -348,12 +359,12 @@ def list_packages(
             params={
                 "workspace_id": f"eq.{workspace_id}",
                 "is_active": "eq.true",
-                "select": PACKAGE_SELECT,
+                "select": f"{PACKAGE_SELECT},quote_package_items(count)",
                 "order": "name.asc",
             },
         )
     )
-    return {"items": rows}
+    return {"items": [_package_out(row) for row in rows]}
 
 
 @router.post("/catalog/packages")

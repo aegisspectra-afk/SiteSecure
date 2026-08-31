@@ -149,6 +149,11 @@ describe("quote builder helpers", () => {
 });
 
 function openQuoteOverflowMenu() {
+  const overflowButtons = screen.queryAllByRole("button", { name: he.cpqMoreActionsAria });
+  if (overflowButtons.length > 0) {
+    fireEvent.click(overflowButtons[overflowButtons.length - 1]!);
+    return;
+  }
   const mobileMenu = screen.queryByRole("button", { name: he.cpqHeaderMenuAria });
   if (mobileMenu) {
     fireEvent.click(mobileMenu);
@@ -173,7 +178,7 @@ describe("CPQ builder", () => {
     expect(screen.getByText(he.cpqEmptyTitle)).toBeInTheDocument();
 
     const submitButtons = screen.getAllByRole("button", { name: he.cpqSendForApproval });
-    expect(submitButtons.length).toBeGreaterThanOrEqual(2);
+    expect(submitButtons.length).toBeGreaterThanOrEqual(1);
     submitButtons.forEach((button) => expect(button).toBeDisabled());
   });
 

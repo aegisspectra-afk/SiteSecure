@@ -4985,13 +4985,18 @@ html.theme-revealing::view-transition-new(root) {
   }
 
   .cpq-workspace-v2.cpq-workspace {
-    padding-bottom: calc(var(--cpq-mobile-sheet-offset, 3.25rem) + var(--ops-bottom-nav-offset, 3.75rem));
+    padding-bottom: calc(
+      var(--cpq-mobile-sheet-offset, 3.25rem) + var(--cpq-mobile-actions-offset, 6.75rem) +
+        var(--ops-bottom-nav-offset, 3.75rem)
+    );
   }
 
   .cpq-overflow-menu.is-mobile {
     inset-inline-end: 0;
-    inset-block-start: calc(100% + 0.35rem);
+    inset-block-start: auto;
+    inset-block-end: calc(100% + 0.35rem);
     min-width: 12rem;
+    z-index: 50;
   }
 }
 
@@ -5095,6 +5100,7 @@ html.theme-revealing::view-transition-new(root) {
 
 .cpq-workspace-v2.cpq-workspace {
   align-items: start;
+  --cpq-mobile-actions-offset: calc(6.75rem + env(safe-area-inset-bottom, 0px));
   --cpq-mobile-sheet-offset: calc(3.25rem + env(safe-area-inset-bottom, 0px));
 }
 
@@ -5706,10 +5712,18 @@ html.theme-revealing::view-transition-new(root) {
 .cpq-mobile-sheet {
   position: fixed;
   inset-inline: 0;
-  bottom: var(--ops-bottom-nav-offset, calc(3.75rem + env(safe-area-inset-bottom, 0px)));
+  bottom: calc(
+    var(--ops-bottom-nav-offset, calc(3.75rem + env(safe-area-inset-bottom, 0px))) +
+      var(--cpq-mobile-actions-offset, calc(6.75rem + env(safe-area-inset-bottom, 0px)))
+  );
   z-index: 39;
   display: flex;
-  max-height: min(68dvh, calc(100dvh - var(--ops-bottom-nav-offset, 3.75rem) - 3.5rem));
+  max-height: min(
+    68dvh,
+    calc(
+      100dvh - var(--ops-bottom-nav-offset, 3.75rem) - var(--cpq-mobile-actions-offset, 6.75rem) - 3.5rem
+    )
+  );
   flex-direction: column;
   pointer-events: auto;
   border: 1px solid var(--color-border);
@@ -6177,31 +6191,117 @@ html.theme-revealing::view-transition-new(root) {
   color: var(--color-fg);
 }
 
+.cpq-mobile-sheet-mini-hint {
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.cpq-mobile-sheet-mini-compact {
+  justify-content: center;
+  gap: 0.35rem;
+}
+
 .quote-builder-actions {
   position: fixed;
   inset-inline: 0;
-  /* Sit above .ops-bottom-nav (z-index 40); do not compete with a second bar. */
   bottom: var(--ops-bottom-nav-offset, calc(3.75rem + env(safe-area-inset-bottom, 0px)));
   z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
   border-top: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg-1) 95%, transparent);
-  padding: 0.65rem 0.75rem;
+  padding: 0.5rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
   backdrop-filter: blur(8px);
+}
+
+.cpq-mobile-actions-summary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-bg-subtle);
+  padding: 0.4rem 0.65rem;
+  text-align: start;
+}
+
+.cpq-mobile-actions-summary-main {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.cpq-mobile-total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-fg-muted);
+}
+
+.cpq-mobile-actions-summary-meta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cpq-mobile-status-pill,
+.cpq-mobile-readiness-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 1.35rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.cpq-mobile-status-pill {
+  border: 1px solid var(--color-border);
+  color: var(--color-fg-muted);
+  background: var(--color-bg-1);
+}
+
+.cpq-mobile-readiness-pill {
+  border: 1px solid color-mix(in srgb, var(--color-warning, #b54708) 35%, var(--color-border));
+  color: var(--color-warning, #b54708);
+  background: color-mix(in srgb, var(--color-warning, #b54708) 8%, var(--color-bg-1));
 }
 
 .quote-builder-actions .cpq-mobile-actions-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.45rem;
   width: 100%;
   max-width: 100%;
 }
 
-.quote-builder-actions .cpq-mobile-total {
+.quote-builder-actions .cpq-mobile-action-add,
+.quote-builder-actions .cpq-mobile-action-preview {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.quote-builder-actions .cpq-mobile-action-primary {
   flex: 1 1 auto;
   min-width: 0;
-  margin-inline-end: auto;
+  font-weight: 650;
+}
+
+.quote-builder-actions .cpq-mobile-action-overflow {
+  flex: 0 0 auto;
+}
+
+.quote-builder-actions .cpq-mobile-total {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-fg);
 }
 
 .quote-builder-actions .btn,
@@ -6209,8 +6309,59 @@ html.theme-revealing::view-transition-new(root) {
   min-height: 44px;
 }
 
+.cpq-mobile-add-root {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+}
+
+.cpq-mobile-add-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(0 0 0 / 28%);
+  pointer-events: auto;
+}
+
+.cpq-mobile-add-menu {
+  position: fixed;
+  inset-inline: 0.75rem;
+  bottom: calc(
+    var(--ops-bottom-nav-offset, calc(3.75rem + env(safe-area-inset-bottom, 0px))) +
+      var(--cpq-mobile-actions-offset, calc(6.75rem + env(safe-area-inset-bottom, 0px))) + 0.35rem
+  );
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-1);
+  box-shadow: 0 -8px 28px rgb(0 0 0 / 12%);
+  pointer-events: auto;
+}
+
+.cpq-mobile-add-item {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: start;
+  color: var(--color-fg);
+}
+
+.cpq-mobile-add-item:hover {
+  background: var(--color-bg-subtle);
+}
+
 .quote-builder.cpq-builder {
-  padding-bottom: calc(9.75rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(
+    var(--cpq-mobile-sheet-offset, 3.25rem) + var(--cpq-mobile-actions-offset, 6.75rem) +
+      var(--ops-bottom-nav-offset, 3.75rem) + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 @media (min-width: 1024px) {

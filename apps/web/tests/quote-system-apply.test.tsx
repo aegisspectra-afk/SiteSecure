@@ -167,7 +167,9 @@ describe("QuoteBuilder system apply", () => {
 
   it("quick add addSystem opens picker not save-as", async () => {
     renderBuilder(quote());
-    fireEvent.click(screen.getByRole("button", { name: he.cpqAddCommand }));
+    const itemsSection = document.getElementById("quote-items");
+    expect(itemsSection).toBeTruthy();
+    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddCommand }));
     const listbox = await screen.findByRole("listbox");
     fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) }));
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
@@ -177,7 +179,9 @@ describe("QuoteBuilder system apply", () => {
 
   it("quick add template opens apply modal", async () => {
     renderBuilder(quote());
-    fireEvent.click(screen.getByRole("button", { name: he.cpqAddCommand }));
+    const itemsSection = document.getElementById("quote-items");
+    expect(itemsSection).toBeTruthy();
+    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddCommand }));
     const listbox = await screen.findByRole("listbox");
     fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddTemplate) }));
     expect(await screen.findByRole("dialog", { name: he.cpqApplyProposalTemplateTitle })).toBeInTheDocument();

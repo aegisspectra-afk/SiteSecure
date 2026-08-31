@@ -10,12 +10,15 @@ export function QuoteMobileSheet({
   totalLabel,
   children,
   footer,
+  compactHandle = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   totalLabel: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** When true, the collapsed handle omits the duplicate total (shown in the mobile action bar). */
+  compactHandle?: boolean;
 }) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -113,10 +116,17 @@ export function QuoteMobileSheet({
         >
           <span className="cpq-mobile-sheet-grabber" aria-hidden />
           {!open ? (
-            <span className="cpq-mobile-sheet-mini">
-              <span className="cpq-mobile-sheet-mini-label">{he.cpqMobileSheetTotal}</span>
-              <span className="cpq-mobile-sheet-mini-value ltr-meta">{totalLabel}</span>
-            </span>
+            compactHandle ? (
+              <span className="cpq-mobile-sheet-mini cpq-mobile-sheet-mini-compact">
+                <span className="cpq-mobile-sheet-mini-label">{he.cpqMobileSheetTitle}</span>
+                <span className="cpq-mobile-sheet-mini-hint">{he.cpqMobileOpenSummary}</span>
+              </span>
+            ) : (
+              <span className="cpq-mobile-sheet-mini">
+                <span className="cpq-mobile-sheet-mini-label">{he.cpqMobileSheetTotal}</span>
+                <span className="cpq-mobile-sheet-mini-value ltr-meta">{totalLabel}</span>
+              </span>
+            )
           ) : (
             <span id={titleId} className="cpq-mobile-sheet-title">
               {he.cpqMobileSheetTitle}

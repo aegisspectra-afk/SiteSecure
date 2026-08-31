@@ -40,6 +40,7 @@ export function QuoteHeader({
   onMobileMenuToggle,
   mobileMenuRef,
   mobileMenu,
+  showMobileMenuButton = true,
   className,
 }: {
   quoteNumber?: string | null;
@@ -74,6 +75,7 @@ export function QuoteHeader({
   onMobileMenuToggle: () => void;
   mobileMenuRef: React.RefObject<HTMLDivElement | null>;
   mobileMenu: ReactNode;
+  showMobileMenuButton?: boolean;
   className?: string;
 }) {
   const metaParts = [
@@ -155,20 +157,22 @@ export function QuoteHeader({
           </div>
         </div>
 
-        <div className="cpq-header-actions cpq-header-actions-mobile">
-          <div className="relative" ref={mobileMenuRef}>
-            <Button
-              variant="ghost"
-              onClick={onMobileMenuToggle}
-              aria-expanded={mobileMenuOpen}
-              aria-haspopup="menu"
-              aria-label={he.cpqHeaderMenuAria}
-            >
-              <Menu className="size-5" aria-hidden />
-            </Button>
-            {mobileMenuOpen ? mobileMenu : null}
+        {showMobileMenuButton ? (
+          <div className="cpq-header-actions cpq-header-actions-mobile">
+            <div className="relative" ref={mobileMenuRef}>
+              <Button
+                variant="ghost"
+                onClick={onMobileMenuToggle}
+                aria-expanded={mobileMenuOpen}
+                aria-haspopup="menu"
+                aria-label={he.cpqHeaderMenuAria}
+              >
+                <Menu className="size-5" aria-hidden />
+              </Button>
+              {mobileMenuOpen ? mobileMenu : null}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       <QuoteStepper variant="icons" className="cpq-stepper-mobile-bar" active={activeStep} onSelect={onStepSelect} />

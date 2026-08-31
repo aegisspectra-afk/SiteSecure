@@ -60,6 +60,8 @@ import { buildQuoteReadiness, buildUnifiedReadinessItems } from "../../lib/quote
 import { QuoteContextBar } from "./workspace/QuoteContextBar";
 import { QuoteHeader } from "./workspace/QuoteHeader";
 import { QuoteMobileSheet } from "./workspace/QuoteMobileSheet";
+import { QuoteMobileActionsBar } from "./workspace/QuoteMobileActionsBar";
+import { QuoteMobileAddMenu, type QuoteMobileAddAction } from "./workspace/QuoteMobileAddMenu";
 import { QuoteSidebar } from "./workspace/QuoteSidebar";
 import { QuoteSidebarPanel } from "./workspace/QuoteSidebarPanel";
 import { UnifiedReadiness } from "./workspace/UnifiedReadiness";
@@ -193,6 +195,7 @@ export function QuoteBuilder({
   const [contextAccordionOpen, setContextAccordionOpen] = useState(() => !quote.customer_id);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileAddOpen, setMobileAddOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [readinessHighlight, setReadinessHighlight] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -1134,6 +1137,25 @@ export function QuoteBuilder({
     }
   }
 
+  function handleMobileAddPick(action: QuoteMobileAddAction) {
+    setMobileAddOpen(false);
+    if (action === "item") {
+      setQuickAddOpen(true);
+      return;
+    }
+    if (action === "system") {
+      setSystemPickerOpen(true);
+      return;
+    }
+    if (action === "section") {
+      addSection.mutate();
+      return;
+    }
+    if (action === "buildSystem") {
+      setSystemBuilderOpen(true);
+    }
+  }
+
   function undo() {
     if (historyIndex <= 0) return;
     skipHistory.current = true;
@@ -1308,53 +1330,22 @@ export function QuoteBuilder({
   const moreMenuPanel = (placement: "down" | "up" | "mobile") =>
     (placement === "mobile" ? mobileMenuOpen : moreOpen && morePlacement === placement) ? (
       <div
-        className={`cpq-overflow-menu cpq-overflow-menu-wide${placement === "up" ? " is-up" : ""}${placement === "mobile" ? " is-mobile" : ""}`}
+        className={`cpq-overflow-menu cpq-overflow-menu-wide${placement === "up" ? " is-up" : ""}${placement === "mobile" ? " is-mobile is-up" : ""}`}
         role="menu"
       >
-        {placement === "mobile" ? (
-          <div className="cpq-overflow-group" role="group" aria-label={he.cpqMobileActions}>
-            {canEdit ? (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={!live.id && !draftHasContent(draft)}
-                onClick={() => {
-                  save.mutate();
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {he.save}
-              </button>
-            ) : null}
+        {placement === "mobile" && canEdit ? (
+          <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
             <button
               type="button"
               role="menuitem"
               disabled={!live.id && !draftHasContent(draft)}
               onClick={() => {
+                save.mutate();
                 setMobileMenuOpen(false);
-                void goCustomerView();
               }}
             >
-              {he.quotePreviewPrimary}
+              {he.save}
             </button>
-            {primaryCtaLabel && (primaryCta !== "send" || canSend) ? (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={primaryCtaDisabled}
-                title={
-                  primaryCta === "send" && !canSendNow
-                    ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
-                    : undefined
-                }
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  runPrimaryCta();
-                }}
-              >
-                {primaryCtaLabel}
-              </button>
-            ) : null}
           </div>
         ) : null}
         <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
@@ -1676,6 +1667,7 @@ export function QuoteBuilder({
         }}
         mobileMenuRef={mobileMenuRef}
         mobileMenu={moreMenuPanel("mobile")}
+        showMobileMenuButton={isDesktopLayout}
       />
 
       <SendQuoteConfirm
@@ -2143,11 +2135,56 @@ export function QuoteBuilder({
           open={mobileSheetOpen}
           onOpenChange={setMobileSheetOpen}
           totalLabel={formatMoney(live.total_gross, currency)}
-          footer={sidebarSubmitFooter}
+          compactHandle
         >
           {sidebarPanel}
         </QuoteMobileSheet>
       )}
+
+      {!isDesktopLayout ? (
+        <>
+          <QuoteMobileActionsBar
+            totalLabel={formatMoney(live.total_gross, currency)}
+            readinessPercent={readiness.percent}
+            canSendNow={canSendNow}
+            statusLabel={statusDisplayLabel}
+            canEdit={canEdit}
+            previewDisabled={!live.id && !draftHasContent(draft)}
+            onPreview={() => void goCustomerView()}
+            onAdd={() => {
+              setMobileMenuOpen(false);
+              setMobileAddOpen(true);
+            }}
+            primaryCtaLabel={primaryCtaLabel}
+            primaryCtaDisabled={primaryCtaDisabled}
+            primaryCtaLoading={primaryCta === "revise" ? revise.isPending : false}
+            primaryCtaTitle={
+              primaryCta === "send" && !canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined
+            }
+            onPrimaryCta={() => {
+              if (primaryCta === "send") void startSendFlow();
+              else runPrimaryCta();
+            }}
+            showPrimaryCta={Boolean(primaryCtaLabel && (primaryCta !== "send" || canSend))}
+            overflowOpen={mobileMenuOpen}
+            onOverflowToggle={() => {
+              setMobileAddOpen(false);
+              setMoreOpen(false);
+              setMobileMenuOpen((v) => !v);
+            }}
+            overflowRef={mobileMenuRef}
+            overflowMenu={moreMenuPanel("mobile")}
+            onOpenSummary={() => setMobileSheetOpen(true)}
+          />
+          <QuoteMobileAddMenu
+            open={mobileAddOpen}
+            onClose={() => setMobileAddOpen(false)}
+            onPick={handleMobileAddPick}
+            canEdit={canEdit}
+            canCatalog={canEdit && canCatalog}
+          />
+        </>
+      ) : null}
 
       {livePreviewOpen ? (
         <aside className="cpq-live-preview-pane xl:sticky xl:top-28" aria-label={he.cpqLivePreview}>

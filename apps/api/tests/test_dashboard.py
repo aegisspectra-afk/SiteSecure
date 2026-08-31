@@ -236,3 +236,30 @@ def test_business_chart_returns_six_month_series():
     assert len(chart["revenue"]) == 6
     assert len(chart["quotes"]) == 6
     assert sum(chart["quotes"]) >= 1
+
+
+def test_today_jobs_respect_workspace_timezone():
+    """Near UTC midnight, local calendar day must drive Today — not UTC date."""
+    late_utc = datetime(2026, 8, 14, 22, 30, tzinfo=UTC)  # Aug 15 01:30 Asia/Jerusalem
+    jobs = [
+        {
+            "id": "job-local-today",
+            "number": "J-TODAY",
+            "status": "scheduled",
+            "customer_id": "c1",
+            "site_id": "s1",
+            "scheduled_for": "2026-08-14T21:00:00+00:00",  # Aug 15 00:00 local
+        },
+        {
+            "id": "job-local-yesterday",
+            "number": "J-PREV",
+            "status": "scheduled",
+            "customer_id": "c1",
+            "site_id": "s1",
+            "scheduled_for": "2026-08-14T18:00:00+00:00",  # Aug 14 21:00 local
+        },
+    ]
+    payload = _build("owner", now=late_utc, tz_name="Asia/Jerusalem", jobs=jobs, job_assignees={})
+    today_ids = {item["entity_id"] for item in payload["today"]["items"]}
+    assert "job-local-today" in today_ids
+    assert "job-local-yesterday" not in today_ids

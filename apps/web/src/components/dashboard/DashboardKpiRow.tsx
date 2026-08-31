@@ -1,10 +1,7 @@
-import type { AttentionGroup, DashboardSummary } from "@site-secure/api-client";
-import { AlertTriangle, Clock, FileText, TrendingUp, type LucideIcon } from "lucide-react";
+import type { DashboardSummary } from "@site-secure/api-client";
+import { Clock, FileText, type LucideIcon } from "lucide-react";
 import { he } from "../../i18n/he";
-import { attentionCount } from "../../lib/next-best-action";
-import { attentionUrgentCount } from "../../lib/attention-queue";
 import { formatMoney } from "../../lib/quotes";
-import { quoteConversion } from "../../lib/ux-metrics";
 
 type KpiCard = {
   label: string;
@@ -16,52 +13,38 @@ type KpiCard = {
 
 export function DashboardKpiRow({
   summary,
-  attention = [],
-  showQuotes = true,
+  showOpenQuotes = true,
 }: {
   summary: DashboardSummary;
-  attention?: AttentionGroup[];
-  showQuotes?: boolean;
+  showOpenQuotes?: boolean;
 }) {
-  const conversion = quoteConversion(summary);
-  const urgent = attentionUrgentCount(attention);
-  const attentionTotal = attentionCount(attention);
   const openValue = formatMoney(summary.quotes_open_value ?? 0);
+  const cards: KpiCard[] = [];
 
-  const cards: KpiCard[] = [
-    {
+  if (showOpenQuotes && summary.quotes_open > 0) {
+    cards.push({
       label: he.opsHealthMetricQuotes,
-      value: showQuotes ? summary.quotes_open : 0,
-      subText: showQuotes && summary.quotes_open > 0 ? he.kpiOpenValueSub(openValue) : "—",
-      tone: summary.quotes_open > 0 ? "warning" : "default",
+      value: summary.quotes_open,
+      subText: he.kpiOpenValueSub(openValue),
+      tone: "warning",
       icon: FileText,
-    },
-    {
+    });
+  }
+
+  if (summary.jobs_overdue > 0) {
+    cards.push({
       label: he.opsHealthMetricOverdue,
       value: summary.jobs_overdue,
-      subText: summary.jobs_overdue > 0 ? he.kpiStatusCritical : he.kpiOverdueClear,
-      tone: summary.jobs_overdue > 0 ? "danger" : "success",
+      subText: he.kpiStatusCritical,
+      tone: "danger",
       icon: Clock,
-    },
-    {
-      label: he.opsHealthMetricAttention,
-      value: attentionTotal,
-      subText: urgent > 0 ? he.kpiUrgentSub(urgent) : attentionTotal > 0 ? he.kpiStatusAttention : "—",
-      tone: urgent > 0 ? "danger" : attentionTotal > 0 ? "warning" : "default",
-      icon: AlertTriangle,
-    },
-    {
-      label: he.kpiConversionLabel,
-      value: conversion.percent != null && conversion.total >= 1 ? he.uxPercent(conversion.percent) : "—",
-      subText:
-        conversion.total > 0 ? he.kpiConversionSub(conversion.approved, conversion.total) : he.kpiConversionEmpty,
-      tone: conversion.percent != null && conversion.percent >= 30 ? "success" : "default",
-      icon: TrendingUp,
-    },
-  ];
+    });
+  }
+
+  if (!cards.length) return null;
 
   return (
-    <div className="ops-kpi-row is-four" aria-label={he.dashboardKpiLabel}>
+    <div className="ops-kpi-row is-compact" aria-label={he.dashboardKpiLabel}>
       {cards.map((card) => {
         const Icon = card.icon;
         const valueTone =

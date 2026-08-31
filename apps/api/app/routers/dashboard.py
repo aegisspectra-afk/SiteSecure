@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.engine import authorize
 from ..authz.guard import require
-from ..dashboard import build_dashboard
+from ..dashboard import DEFAULT_WORKSPACE_TZ, build_dashboard
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..identity import actor_id
 from ..rest import as_list
@@ -129,6 +129,16 @@ def get_dashboard(
     ctx = load_authz_context(client, actor_id(user), str(workspace_id))
     require(ctx, "dashboard.view")
 
+    workspace_tz = DEFAULT_WORKSPACE_TZ
+    workspace_rows = _optional_list(
+        client.get(
+            "workspaces",
+            params={"id": f"eq.{workspace_id}", "select": "timezone", "limit": "1"},
+        )
+    )
+    if workspace_rows and workspace_rows[0].get("timezone"):
+        workspace_tz = str(workspace_rows[0]["timezone"])
+
     can_quotes_view = authorize(ctx=ctx, action="quotes.view").allowed
     can_jobs_view = authorize(ctx=ctx, action="jobs.view").allowed
     can_jobs_start = authorize(ctx=ctx, action="jobs.start").allowed
@@ -234,6 +244,7 @@ def get_dashboard(
         role_key=ctx.role_key,
         user_id=ctx.user_id,
         now=datetime.now(UTC),
+        tz_name=workspace_tz,
         quotes=quotes,
         jobs=jobs,
         job_assignees=job_assignees,

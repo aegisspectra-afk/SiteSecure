@@ -8,6 +8,7 @@ import {
 } from "../../lib/activation";
 import { can } from "../../lib/can";
 import { hasFeature } from "../../lib/home";
+import { shouldShowDashboardKpiRow } from "../../lib/dashboard-kpi";
 import { attentionCount, nextBestAction } from "../../lib/next-best-action";
 import { hasQuoteRecords } from "../../lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../../lib/workspace-setup";
@@ -99,6 +100,14 @@ export function OpsDashboard({
   const todayItems = data.today.items;
   const fieldTodayCount = todayItems.filter((item) => item.entity_type === "job").length;
   const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
+  const showKpiRow =
+    Boolean(summary) &&
+    shouldShowDashboardKpiRow({
+      showActivation,
+      summary,
+      showQuotes,
+      attention: data.attention,
+    });
 
   return (
     <div className="ops-dashboard flex flex-col gap-4">
@@ -135,19 +144,18 @@ export function OpsDashboard({
         />
       ) : null}
 
-      {summary ? (
-        <DashboardKpiRow summary={summary} attention={data.attention} showQuotes={showQuotes} />
-      ) : null}
-
       <CommandStatus attention={data.attention} />
+
+      {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
 
       {showNextAction && action ? <NextBestAction action={action} setupProgress={null} /> : null}
 
       {!showActivation ? <LeadsAttention items={leadAttentionItems} /> : null}
 
-      {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
-
       <div className="ops-dashboard-main">
+        {showKpiRow && summary ? (
+          <DashboardKpiRow summary={summary} showOpenQuotes={showQuotes} />
+        ) : null}
         {showBusiness && summary ? (
           <BusinessSnapshot summary={summary} chart={data.business_chart ?? null} />
         ) : null}
@@ -186,23 +194,31 @@ export function ObserveDashboard({
   workspaceName?: string | null;
 }) {
   const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
+  const showKpiRow =
+    Boolean(data.summary) &&
+    shouldShowDashboardKpiRow({
+      showActivation: false,
+      summary: data.summary,
+      showQuotes,
+      attention: data.attention,
+    });
   const empty =
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
 
   return (
     <div className="ops-dashboard flex flex-col gap-4">
       <OpsDashHero displayName={displayName} workspaceName={workspaceName} />
-      {data.summary ? (
-        <DashboardKpiRow summary={data.summary} attention={data.attention} showQuotes={showQuotes} />
-      ) : null}
       <CommandStatus attention={data.attention} />
+      {data.today.items.length > 0 ? <ActiveWork items={data.today.items} /> : null}
       <div className="ops-dashboard-main">
+        {showKpiRow && data.summary ? (
+          <DashboardKpiRow summary={data.summary} showOpenQuotes={showQuotes} />
+        ) : null}
         {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
           <BusinessSnapshot summary={data.summary} chart={data.business_chart ?? null} />
         ) : null}
         {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
       </div>
-      {data.today.items.length > 0 ? <ActiveWork items={data.today.items} /> : null}
       {empty ? (
         <div className="ops-panel p-4">
           <p className="text-sm font-medium text-fg">{he.dashboardEmptyTitle}</p>

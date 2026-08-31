@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 HomeVariant = Literal["ops", "sales", "today", "observe"]
+
+DEFAULT_WORKSPACE_TZ = "Asia/Jerusalem"
 
 HOME_VARIANT: dict[str, HomeVariant] = {
     "owner": "ops",
@@ -58,6 +61,20 @@ VANITY_KEYS = frozenset(
 ATTENTION_CAP = 5
 TODAY_CAP = 12
 ACTIVITY_CAP = 8
+
+
+def _resolve_tz(tz_name: str | None) -> ZoneInfo:
+    try:
+        return ZoneInfo(tz_name or DEFAULT_WORKSPACE_TZ)
+    except Exception:
+        return ZoneInfo(DEFAULT_WORKSPACE_TZ)
+
+
+def _local_now(now: datetime, tz_name: str | None) -> datetime:
+    tz = _resolve_tz(tz_name)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    return now.astimezone(tz)
 
 
 def home_variant(role_key: str) -> HomeVariant:
@@ -118,6 +135,7 @@ def build_dashboard(
     role_key: str,
     user_id: str,
     now: datetime,
+    tz_name: str | None = None,
     quotes: list[dict[str, Any]],
     jobs: list[dict[str, Any]],
     job_assignees: dict[str, set[str]],
@@ -134,6 +152,8 @@ def build_dashboard(
     variant = home_variant(role_key)
     if now.tzinfo is None:
         now = now.replace(tzinfo=UTC)
+    local_now = _local_now(now, tz_name)
+    tz = _resolve_tz(tz_name)
 
     visible_quotes = quotes if can_quotes_view else []
     if variant == "sales":
@@ -159,7 +179,7 @@ def build_dashboard(
         if group:
             attention.append(group)
     if variant in {"ops", "observe", "today"}:
-        overdue = _overdue_jobs(visible_jobs, names, now)
+        overdue = _overdue_jobs(visible_jobs, names, local_now, tz)
         if variant == "today":
             overdue = [row for row in overdue if row["entity_id"] in {j["id"] for j in visible_jobs}]
         group = _group("job_overdue", "עבודות באיחור", overdue)
@@ -169,7 +189,8 @@ def build_dashboard(
     today_items = _today_jobs(
         visible_jobs,
         names,
-        now,
+        local_now,
+        tz,
         can_jobs_start=can_jobs_start and variant == "today",
         can_jobs_complete=can_jobs_complete and variant == "today",
     )
@@ -179,13 +200,14 @@ def build_dashboard(
         visible_jobs,
         job_assignees,
         names,
-        now,
+        local_now,
+        tz,
         variant=variant,
         assignments_reliable=assignments_reliable,
     )
     business_chart = None
     if variant in {"ops", "sales", "observe"} and visible_quotes:
-        business_chart = _business_chart(visible_quotes, now)
+        business_chart = _business_chart(visible_quotes, local_now, tz)
     payload = {
         "home_variant": variant,
         "generated_at": now.isoformat(),
@@ -293,14 +315,18 @@ def _unassigned_jobs(
 def _overdue_jobs(
     jobs: list[dict[str, Any]],
     names: dict[str, str],
-    now: datetime,
+    local_now: datetime,
+    tz: ZoneInfo,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for job in jobs:
         if job.get("status") not in OPEN_JOB:
             continue
         when = _parse_dt(job.get("scheduled_for") if isinstance(job.get("scheduled_for"), str) else None)
-        if not when or when >= now:
+        if not when:
+            continue
+        when_local = when.astimezone(tz)
+        if when_local >= local_now:
             continue
         rows.append(
             _item(
@@ -320,20 +346,23 @@ def _overdue_jobs(
 def _today_jobs(
     jobs: list[dict[str, Any]],
     names: dict[str, str],
-    now: datetime,
+    local_now: datetime,
+    tz: ZoneInfo,
     *,
     can_jobs_start: bool,
     can_jobs_complete: bool,
 ) -> list[dict[str, Any]]:
-    today = now.date()
+    today = local_now.date()
     rows: list[dict[str, Any]] = []
     for job in jobs:
         if job.get("status") in {"completed", "cancelled"}:
             continue
         when = _parse_dt(job.get("scheduled_for") if isinstance(job.get("scheduled_for"), str) else None)
-        if when and when.date() != today and job.get("status") == "scheduled":
-            continue
-        if not when and job.get("status") == "scheduled":
+        if when:
+            when_local = when.astimezone(tz)
+            if when_local.date() != today and job.get("status") == "scheduled":
+                continue
+        elif job.get("status") == "scheduled":
             continue
         actions: list[str] = []
         status = job.get("status")
@@ -405,7 +434,8 @@ def _ops_summary(
     jobs: list[dict[str, Any]],
     job_assignees: dict[str, set[str]],
     names: dict[str, str],
-    now: datetime,
+    local_now: datetime,
+    tz: ZoneInfo,
     *,
     variant: HomeVariant,
     assignments_reliable: bool,
@@ -430,7 +460,7 @@ def _ops_summary(
     if variant != "sales":
         for job in open_jobs:
             when = _parse_dt(job.get("scheduled_for") if isinstance(job.get("scheduled_for"), str) else None)
-            if when and when < now:
+            if when and when.astimezone(tz) < local_now:
                 overdue += 1
             if assignments_reliable and not job_assignees.get(str(job["id"])):
                 unassigned += 1
@@ -482,8 +512,8 @@ HEBREW_MONTH_SHORT = (
 _SKIP_CHART_STATUS = frozenset({"cancelled", "expired"})
 
 
-def _month_start(year: int, month: int) -> datetime:
-    return datetime(year, month, 1, tzinfo=UTC)
+def _month_start(year: int, month: int, tz: ZoneInfo) -> datetime:
+    return datetime(year, month, 1, tzinfo=tz)
 
 
 def _add_months(year: int, month: int, delta: int) -> tuple[int, int]:
@@ -491,22 +521,24 @@ def _add_months(year: int, month: int, delta: int) -> tuple[int, int]:
     return index // 12, (index % 12) + 1
 
 
-def _month_buckets(now: datetime, months: int = 6) -> list[tuple[datetime, datetime, str]]:
-    end_year, end_month = now.year, now.month
+def _month_buckets(local_now: datetime, tz: ZoneInfo, months: int = 6) -> list[tuple[datetime, datetime, str]]:
+    end_year, end_month = local_now.year, local_now.month
     start_year, start_month = _add_months(end_year, end_month, -(months - 1))
     buckets: list[tuple[datetime, datetime, str]] = []
     year, month = start_year, start_month
     for _ in range(months):
-        start = _month_start(year, month)
+        start = _month_start(year, month, tz)
         next_year, next_month = _add_months(year, month, 1)
-        end = _month_start(next_year, next_month)
+        end = _month_start(next_year, next_month, tz)
         buckets.append((start, end, HEBREW_MONTH_SHORT[month - 1]))
         year, month = next_year, next_month
     return buckets
 
 
-def _business_chart(quotes: list[dict[str, Any]], now: datetime) -> dict[str, Any] | None:
-    buckets = _month_buckets(now, 6)
+def _business_chart(
+    quotes: list[dict[str, Any]], local_now: datetime, tz: ZoneInfo
+) -> dict[str, Any] | None:
+    buckets = _month_buckets(local_now, tz, 6)
     revenue = [0.0] * len(buckets)
     quote_counts = [0] * len(buckets)
     approved = [0] * len(buckets)
@@ -521,7 +553,8 @@ def _business_chart(quotes: list[dict[str, Any]], now: datetime) -> dict[str, An
             continue
         amount = float(quote.get("total_gross") or 0)
         for i, (start, end, _) in enumerate(buckets):
-            if start <= updated < end:
+            updated_local = updated.astimezone(tz)
+            if start <= updated_local < end:
                 quote_counts[i] += 1
                 revenue[i] += amount
                 totals[i] += 1

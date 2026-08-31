@@ -1570,6 +1570,17 @@ body {
   .ops-kpi-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .ops-kpi-row.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 36rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .ops-kpi-row.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .ops-kpi-card {

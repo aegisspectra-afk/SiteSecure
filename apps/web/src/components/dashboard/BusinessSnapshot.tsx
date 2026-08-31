@@ -108,7 +108,7 @@ export function BusinessSnapshot({
       {chart ? (
         <div className="ops-snapshot-chart mt-3">
           <div className="mb-1 flex items-center justify-between gap-2 text-xs text-fg-muted">
-            <span>{he.businessChartRevenueTrend}</span>
+            <span>{he.businessChartQuoteValueTrend}</span>
             <TrendBadge value={chart.revenue_change_percent} />
           </div>
           <SparklineChart

@@ -190,6 +190,7 @@ export const he = {
   setupFirstCustomer: "לקוח ראשון",
   setupFirstQuote: "הצעת מחיר ראשונה",
   dashboardFieldToday: "בשטח היום",
+  dashboardFieldJobsToday: (count: number) => (count === 1 ? "עבודה אחת" : `${count} עבודות`),
   dashboardFieldTechnicians: (count: number) => (count === 1 ? "טכנאי אחד" : `${count} טכנאים`),
   dashboardFieldNone: "אין משימות",
   kpiOverdueClear: "אין חריגות SLA",
@@ -217,6 +218,7 @@ export const he = {
   snapshotQuoteVolumeCount: (count: number) => (count === 1 ? "הצעה אחת" : `${count} הצעות`),
   businessChartWindow: "6 חודשים אחרונים",
   businessChartRevenueTrend: "מגמת שווי הצעות",
+  businessChartQuoteValueTrend: "מגמת שווי הצעות",
   businessChartAria: (labels: string[], revenue: number[]) =>
     `מגמת שווי הצעות: ${labels.map((label, index) => `${label} ${revenue[index] ?? 0}`).join(", ")}`,
   nextActionOpenQuotes: (count: number) =>

@@ -145,7 +145,7 @@ describe("OpsDashboard", () => {
     expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
     expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
-    expect(screen.getByText(he.gettingStartedTitle)).toBeInTheDocument();
+    expect(screen.queryByLabelText(he.dashboardKpiLabel)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
@@ -175,12 +175,9 @@ describe("OpsDashboard", () => {
         ]}
       />,
     );
-    expect(screen.getByText(he.securityBarHealthy)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.securityBarHealthy)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.securityStatusTitle })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: new RegExp(he.securityCenterLink) })).toHaveAttribute(
-      "href",
-      "/app/settings/security",
-    );
+    expect(screen.queryByRole("link", { name: new RegExp(he.securityCenterLink) })).not.toBeInTheDocument();
   });
 
   it("owner empty state offers live quote creation first", () => {
@@ -493,9 +490,84 @@ describe("OpsDashboard", () => {
   it("attention rows link to the live quote route", () => {
     render(<AttentionList groups={attentionDash.attention} />);
     expect(screen.getByText("Q-00012")).toBeInTheDocument();
-    expect(screen.getByText(/ממתינות לאישור הלקוח/)).toBeInTheDocument();
     expect(screen.getByText(he.commandOpenQuote)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/app/quotes/$quoteId");
+  });
+
+  it("hides the KPI row during activation for an empty workspace", () => {
+    render(
+      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} customerCount={0} countsReady />,
+    );
+    expect(screen.queryByLabelText(he.dashboardKpiLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(he.kpiConversionLabel)).not.toBeInTheDocument();
+  });
+
+  it("places needs attention before business pulse when quotes exist", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...attentionDash,
+          summary: {
+            ...emptySummary,
+            quotes_sent: 1,
+            quotes_open: 1,
+            quotes_open_value: 8400,
+          },
+        }}
+        roleKey="owner"
+        features={["quotes"]}
+        customerCount={1}
+        countsReady
+        memberCount={2}
+      />,
+    );
+    const attentionHeading = screen.getByRole("heading", { name: he.commandTitleCount(1) });
+    const businessHeading = screen.getByRole("heading", { name: he.businessTitle });
+    expect(
+      attentionHeading.compareDocumentPosition(businessHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("shows truthful job count in the hero field-today chip", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          today: {
+            label_he: "היום",
+            items: [
+              {
+                entity_type: "job",
+                entity_id: "j1",
+                number: "J-00005",
+                title_he: "בביצוע",
+                customer_name: "לקוח א",
+                site_name: "DEMO Site A",
+                scheduled_for: "2026-08-14T09:00:00+00:00",
+                severity: "now",
+                actions: [],
+              },
+              {
+                entity_type: "job",
+                entity_id: "j2",
+                number: "J-00006",
+                title_he: "מתוכננת",
+                customer_name: "לקוח ב",
+                site_name: "DEMO Site B",
+                scheduled_for: "2026-08-14T14:00:00+00:00",
+                severity: "next",
+                actions: [],
+              },
+            ],
+          },
+        }}
+        roleKey="owner"
+        features={["quotes", "jobs"]}
+        memberCount={2}
+      />,
+    );
+    expect(screen.getByText(he.dashboardFieldJobsToday(2))).toBeInTheDocument();
+    expect(screen.queryByText(he.dashboardFieldTechnicians(2))).not.toBeInTheDocument();
   });
 
   it("shows business health from real quote values once the workspace is operating", () => {

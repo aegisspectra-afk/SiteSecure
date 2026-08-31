@@ -51,7 +51,7 @@ export function OpsDashHero({
         <div className="ops-dash-field-today text-end">
           <p className="text-xs text-fg-muted">{he.dashboardFieldToday}</p>
           <p className="text-sm font-medium text-fg">
-            {fieldTodayCount > 0 ? he.dashboardFieldTechnicians(fieldTodayCount) : he.dashboardFieldNone}
+            {fieldTodayCount > 0 ? he.dashboardFieldJobsToday(fieldTodayCount) : he.dashboardFieldNone}
           </p>
         </div>
         {quoteAction ? <NewQuoteButton /> : null}

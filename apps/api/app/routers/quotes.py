@@ -350,7 +350,97 @@ def _persist_totals(
     return patched, items
 
 
-def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: QuoteItemIn, ctx) -> bool:
+TEMPLATE_ITEM_SELECT = (
+    "product_id,description,qty,sort_order,section_name,unit_price,discount,discount_type,item_type"
+)
+
+
+def _section_name_key(name: str | None) -> str | None:
+    if not name:
+        return None
+    cleaned = str(name).strip()
+    return cleaned or None
+
+
+def _resolve_template_section_id(
+    client: UserClient,
+    workspace_id: UUID,
+    quote_id: UUID,
+    section_name: str | None,
+    *,
+    section_by_name: dict[str, str],
+    existing_sections: list[dict],
+    next_sort: int,
+) -> tuple[str | None, int]:
+    key = _section_name_key(section_name)
+    if not key:
+        return None, next_sort
+    if key in section_by_name:
+        return section_by_name[key], next_sort
+    for sec in existing_sections:
+        if _section_name_key(sec.get("name")) == key:
+            sid = str(sec["id"])
+            section_by_name[key] = sid
+            return sid, next_sort
+    row = created_or_403(
+        client.post(
+            "quote_sections",
+            {
+                "workspace_id": str(workspace_id),
+                "quote_id": str(quote_id),
+                "name": key,
+                "sort_order": next_sort,
+                "discount_type": "amount",
+                "discount_value": 0,
+                "collapsed": False,
+            },
+        )
+    )
+    existing_sections.append(row)
+    section_by_name[key] = str(row["id"])
+    return section_by_name[key], next_sort + 10
+
+
+def _template_item_to_quote_item_in(
+    row: dict,
+    *,
+    sort_order: int,
+    section_id: str | None,
+) -> QuoteItemIn | None:
+    qty = float(row.get("qty") or 1)
+    if qty <= 0:
+        return None
+    item_type = _normalize_item_type(str(row.get("item_type") or "catalog"))
+    product_id = row.get("product_id")
+    if item_type == "catalog" and not product_id:
+        return None
+    payload: dict = {
+        "item_type": item_type,
+        "description": str(row.get("description") or ""),
+        "qty": qty,
+        "sort_order": sort_order,
+        "section_id": section_id,
+    }
+    if product_id:
+        payload["product_id"] = str(product_id)
+    if row.get("unit_price") is not None:
+        payload["unit_price"] = float(row["unit_price"])
+    if row.get("discount") is not None:
+        payload["discount"] = float(row["discount"])
+    if row.get("discount_type") is not None:
+        payload["discount_type"] = str(row["discount_type"])
+    return QuoteItemIn(**payload)
+
+
+def _insert_line(
+    client: UserClient,
+    workspace_id: UUID,
+    quote_id: UUID,
+    body: QuoteItemIn,
+    ctx,
+    *,
+    allow_template_price: bool = False,
+) -> bool:
     item_type = _normalize_item_type(body.item_type)
     discount_type = _normalize_discount_type(body.discount_type)
     product = None
@@ -384,7 +474,7 @@ def _insert_line(client: UserClient, workspace_id: UUID, quote_id: UUID, body: Q
         if unit_price is None:
             unit_price = float(product.get("list_price") or 0)
         elif abs(float(unit_price) - float(product.get("list_price") or 0)) > 0.009:
-            if not authorize(ctx=ctx, action="quotes.override_price").allowed:
+            if not allow_template_price and not authorize(ctx=ctx, action="quotes.override_price").allowed:
                 raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לדריסת מחיר מכירה")
         if cost is None:
             cost = float(product.get("cost") or 0)
@@ -887,7 +977,7 @@ def apply_template(
             params={
                 "template_id": f"eq.{template['id']}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "product_id,description,qty,sort_order",
+                "select": TEMPLATE_ITEM_SELECT,
                 "order": "sort_order.asc",
             },
         )
@@ -895,27 +985,36 @@ def apply_template(
     if not template_items:
         raise ApiError(400, "TEMPLATE_EMPTY", MESSAGES["TEMPLATE_EMPTY"])
     existing_items = _load_items(client, workspace_id, quote_id)
+    existing_sections = _load_sections(client, workspace_id, quote_id)
     sort_base = max((int(item.get("sort_order") or 0) for item in existing_items), default=0)
+    section_sort_base = max((int(sec.get("sort_order") or 0) for sec in existing_sections), default=0)
+    if section_sort_base:
+        section_sort_base += 10
+    else:
+        section_sort_base = 10
+    section_by_name: dict[str, str] = {}
     inserted = 0
     for index, row in enumerate(template_items, start=1):
-        product_id = row.get("product_id")
-        if not product_id:
-            continue
-        qty = float(row.get("qty") or 1)
-        if qty <= 0:
+        section_id, section_sort_base = _resolve_template_section_id(
+            client,
+            workspace_id,
+            quote_id,
+            row.get("section_name") if isinstance(row.get("section_name"), str) else None,
+            section_by_name=section_by_name,
+            existing_sections=existing_sections,
+            next_sort=section_sort_base,
+        )
+        line_sort = sort_base + int(row.get("sort_order") or index * 10)
+        body = _template_item_to_quote_item_in(row, sort_order=line_sort, section_id=section_id)
+        if not body:
             continue
         ok = _insert_line(
             client,
             workspace_id,
             quote_id,
-            QuoteItemIn(
-                product_id=str(product_id),
-                item_type="catalog",
-                description=str(row.get("description") or ""),
-                qty=qty,
-                sort_order=sort_base + (index * 10),
-            ),
+            body,
             ctx,
+            allow_template_price=True,
         )
         if ok:
             inserted += 1

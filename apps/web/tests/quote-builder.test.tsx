@@ -274,4 +274,83 @@ describe("CPQ builder", () => {
     renderBuilder(quote({ status: "draft" }));
     expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
   });
+
+  it("shows start-from-template fast path for scoped empty quote", async () => {
+    renderBuilder(quote({ customer_id: "c1", site_id: "s1", items: [] }));
+    const fastPath = await screen.findByRole("region", { name: he.quoteStartFromTemplate });
+    expect(within(fastPath).getByRole("button", { name: he.quoteApplyTemplate })).toBeEnabled();
+  });
+
+  it("hides start-from-template once quote has items", () => {
+    renderBuilder(
+      quote({
+        customer_id: "c1",
+        items: [
+          {
+            id: "i1",
+            quote_id: "q1",
+            item_type: "catalog",
+            description: "שורה",
+            qty: 1,
+            unit_price: 10,
+            discount: 0,
+            discount_type: "amount",
+            sort_order: 10,
+            line_net: 10,
+          },
+        ],
+      }),
+    );
+    expect(screen.queryByRole("region", { name: he.quoteStartFromTemplate })).not.toBeInTheDocument();
+  });
+
+  it("applies template and shows scope in builder", async () => {
+    api.applyQuoteTemplate.mockResolvedValueOnce(
+      quote({
+        customer_id: "c1",
+        site_id: "s1",
+        sections: [
+          {
+            id: "sec1",
+            name: "מצלמות",
+            sort_order: 10,
+            discount_type: "amount",
+            discount_value: 0,
+            collapsed: false,
+          },
+        ],
+        items: [
+          {
+            id: "i1",
+            quote_id: "q1",
+            item_type: "catalog",
+            description: "מצלמה",
+            qty: 2,
+            unit_price: 450,
+            discount: 0,
+            discount_type: "amount",
+            sort_order: 10,
+            section_id: "sec1",
+            line_net: 900,
+          },
+        ],
+        total_gross: 900,
+      }),
+    );
+    renderBuilder(quote({ customer_id: "c1", site_id: "s1", items: [] }));
+    const fastPath = await screen.findByRole("region", { name: he.quoteStartFromTemplate });
+    fireEvent.click(within(fastPath).getByRole("button", { name: he.quoteApplyTemplate }));
+    await waitFor(() => expect(api.applyQuoteTemplate).toHaveBeenCalledTimes(1));
+    expect(await screen.findByDisplayValue("מצלמה")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: he.quoteStartFromTemplate })).not.toBeInTheDocument();
+  });
+
+  it("surfaces template apply errors without losing customer context", async () => {
+    api.applyQuoteTemplate.mockRejectedValueOnce({ message: "תבנית ריקה", code: "TEMPLATE_EMPTY" });
+    renderBuilder(quote({ customer_id: "c1", site_id: "s1", items: [] }));
+    const fastPath = await screen.findByRole("region", { name: he.quoteStartFromTemplate });
+    fireEvent.click(within(fastPath).getByRole("button", { name: he.quoteApplyTemplate }));
+    await waitFor(() => expect(api.applyQuoteTemplate).toHaveBeenCalled());
+    expect(screen.getByRole("region", { name: he.quoteStartFromTemplate })).toBeInTheDocument();
+  });
 });

@@ -34,6 +34,7 @@ import { resolveQuoteContext } from "../../lib/workflow-context";
 import { LeadRequirementsCard } from "./cpq/LeadRequirementsCard";
 import { QuoteAuditStrip } from "./cpq/QuoteAuditStrip";
 import { QuoteLinesPanel } from "./cpq/QuoteLinesPanel";
+import { TemplateFastPath } from "./cpq/TemplateFastPath";
 import { QuoteSummaryAside } from "./cpq/QuoteSummaryAside";
 import { RevisionComparePanel } from "./cpq/RevisionComparePanel";
 import { SystemBuilderDrawer } from "./cpq/SystemBuilderDrawer";
@@ -162,7 +163,10 @@ export function QuoteBuilder({
   const [customerLabel, setCustomerLabel] = useState(quote.customer_name ?? "");
   const [newCustomer, setNewCustomer] = useState({ display_name: "", email: "", phone: "" });
   const [newSite, setNewSite] = useState({ name: "", address: "" });
-  const [templatesReady, setTemplatesReady] = useState(Boolean(quote.template_id));
+  const [templatesReady, setTemplatesReady] = useState(
+    Boolean(quote.template_id) || (Boolean(quote.customer_id) && !(quote.items?.length ?? 0)),
+  );
+  const [fastPathTemplateId, setFastPathTemplateId] = useState("");
   const [systemBuilderOpen, setSystemBuilderOpen] = useState(false);
   const [systemCatalogReady, setSystemCatalogReady] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -493,6 +497,7 @@ export function QuoteBuilder({
       commitRoute(row.id);
       return row;
     },
+    onSuccess: () => setFormError(null),
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
   const send = useMutation({
@@ -644,6 +649,28 @@ export function QuoteBuilder({
   const items = live.items ?? [];
   const currency = live.currency ?? "ILS";
   const vatPercent = live.vat_percent ?? 18;
+  const templateOptions = templatesQuery.data?.items ?? [];
+  const hasCustomerContext = Boolean(draft.customer_id || live.customer_id);
+  const showTemplateFastPath =
+    canCatalog && canEdit && hasCustomerContext && items.length === 0 && templateOptions.length > 0;
+
+  useEffect(() => {
+    if (hasCustomerContext && items.length === 0) {
+      setTemplatesReady(true);
+    }
+  }, [hasCustomerContext, items.length]);
+
+  useEffect(() => {
+    if (!templateOptions.length) {
+      setFastPathTemplateId("");
+      return;
+    }
+    const preferred =
+      draft.template_id && templateOptions.some((row) => row.id === draft.template_id)
+        ? draft.template_id
+        : templateOptions[0]?.id ?? "";
+    setFastPathTemplateId(preferred);
+  }, [templateOptions, draft.template_id]);
   const linkedLead = useMemo(
     () => (leadsQuery.data?.items ?? []).find((row) => row.id === draft.lead_id) ?? null,
     [leadsQuery.data?.items, draft.lead_id],
@@ -1999,6 +2026,24 @@ export function QuoteBuilder({
           ) : null}
         </section>
         </QuoteContextBar>
+
+        {showTemplateFastPath ? (
+          <TemplateFastPath
+            templates={templateOptions.map((row) => ({ id: row.id, name_he: row.name_he }))}
+            selectedId={fastPathTemplateId}
+            onSelect={(templateId) => {
+              setFastPathTemplateId(templateId);
+              updateDraft({ template_id: templateId });
+            }}
+            onApply={(templateId) => {
+              if (applyTemplate.isPending) return;
+              updateDraft({ template_id: templateId });
+              applyTemplate.mutate(templateId);
+            }}
+            applying={applyTemplate.isPending}
+            disabled={!canEdit}
+          />
+        ) : null}
 
         <QuoteLinesPanel
           items={items}

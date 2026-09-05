@@ -89,6 +89,15 @@ def _csv_bytes(sku: str) -> bytes:
     ).encode("utf-8")
 
 
+def _csv_dup_sku_bytes(sku: str) -> bytes:
+    """Two product rows with the same SKU — triggers UNIQUE mid-batch RPC failure."""
+    return (
+        "sku,name,cost,resolution_mp,form_factor\n"
+        f"{sku},CSV Cam A,150,4,bullet\n"
+        f"{sku},CSV Cam B,160,4,dome\n"
+    ).encode("utf-8")
+
+
 def _leaf(api: TestClient, token: str, ws: str, key: str) -> str:
     cats = api.get(f"/api/v1/workspaces/{ws}/catalog/categories", headers=_auth(token))
     assert cats.status_code == 200, cats.text
@@ -297,11 +306,16 @@ def test_tenant_isolation_session_and_commit(api, tenants):
     assert commit_cross.status_code in {403, 404}
 
 
-def test_atomic_rollback_on_force_fail(api, tenants):
+def test_atomic_rollback_on_unique_sku_conflict(api, tenants):
+    """Mid-batch UNIQUE(workspace_id, sku) failure rolls back all intended creates.
+
+    No production test hook: duplicate SKUs in one import plan hit the DB constraint
+    after the first insert, aborting the SECURITY DEFINER transaction.
+    """
     ws = tenants["ws_a"]
     a = _auth(tenants["token_a"])
     sku = f"ROLL-{uuid.uuid4().hex[:8]}"
-    files = {"file": ("roll.csv", _csv_bytes(sku), "text/csv")}
+    files = {"file": ("roll.csv", _csv_dup_sku_bytes(sku), "text/csv")}
     parsed = api.post(f"/api/v1/workspaces/{ws}/catalog/import/parse", headers=a, files=files)
     assert parsed.status_code == 200
     sid = parsed.json()["session_id"]
@@ -312,10 +326,18 @@ def test_atomic_rollback_on_force_fail(api, tenants):
         "duplicate_policy": "skip",
         "sheets": [_sheet_cfg(sheet, cam_id)],
         "confirm": True,
-        "test_force_fail": True,
     }
     fail = api.post(f"/api/v1/workspaces/{ws}/catalog/import/commit", headers=a, json=body)
     assert fail.status_code == 409, fail.text
+
+    # Removed production hook must be rejected by schema (extra=forbid), not acted on
+    hook = api.post(
+        f"/api/v1/workspaces/{ws}/catalog/import/commit",
+        headers=a,
+        json={**body, "test_force_fail": True},
+    )
+    assert hook.status_code in {400, 422}, hook.text
+    assert "test_force_fail" in hook.text or "extra_forbidden" in hook.text or "Extra inputs" in hook.text
 
     products = api.get(
         f"/api/v1/workspaces/{ws}/catalog/products",
@@ -325,14 +347,204 @@ def test_atomic_rollback_on_force_fail(api, tenants):
     assert products.status_code == 200
     assert not any(p.get("sku") == sku for p in products.json().get("items", []))
 
-    # retry without force works (session still alive)
+    # Session retained after failure — preview still works
+    prev = api.post(
+        f"/api/v1/workspaces/{ws}/catalog/import/preview",
+        headers=a,
+        json={"session_id": sid, "duplicate_policy": "skip", "sheets": [_sheet_cfg(sheet, cam_id)]},
+    )
+    assert prev.status_code == 200
+
+    # Safe retry: new clean upload (corrected workbook) commits successfully
+    clean = {"file": ("roll_ok.csv", _csv_bytes(sku), "text/csv")}
+    parsed2 = api.post(f"/api/v1/workspaces/{ws}/catalog/import/parse", headers=a, files=clean)
+    assert parsed2.status_code == 200
+    sheet2 = parsed2.json()["sheets"][0]
     ok = api.post(
         f"/api/v1/workspaces/{ws}/catalog/import/commit",
         headers=a,
-        json={**body, "test_force_fail": False},
+        json={
+            "session_id": parsed2.json()["session_id"],
+            "duplicate_policy": "skip",
+            "sheets": [_sheet_cfg(sheet2, cam_id)],
+            "confirm": True,
+        },
     )
     assert ok.status_code == 200, ok.text
     assert ok.json()["imported"] == 1
+
+
+def test_rpc_rejects_cross_workspace_update_and_category(settings, tenants):
+    """Direct RPC abuse: cannot update foreign product IDs or use foreign categories."""
+    from test_tenant_isolation import _rpc
+
+    token_a = tenants["token_a"]
+    token_b = tenants["token_b"]
+    ws_a = tenants["ws_a"]
+    ws_b = tenants["ws_b"]
+
+    # Seed one product in B via RPC create
+    sku_b = f"BONLY-{uuid.uuid4().hex[:6]}"
+    seed = _rpc(
+        settings,
+        token_b,
+        "catalog_import_commit",
+        {
+            "p_workspace_id": ws_b,
+            "p_rows": [
+                {
+                    "action": "create",
+                    "sku": sku_b,
+                    "name": "B product",
+                    "list_price": 1,
+                    "cost": 1,
+                    "unit": "unit",
+                    "kind": "product",
+                    "attributes": {},
+                }
+            ],
+        },
+    )
+    assert seed.status_code == 200, seed.text
+    product_b_id = seed.json()["product_ids"][0]
+
+    # A cannot update B's product even if existing_id is known
+    steal = _rpc(
+        settings,
+        token_a,
+        "catalog_import_commit",
+        {
+            "p_workspace_id": ws_a,
+            "p_rows": [
+                {
+                    "action": "update",
+                    "existing_id": product_b_id,
+                    "sku": sku_b,
+                    "name": "stolen",
+                    "list_price": 9,
+                    "cost": 9,
+                    "unit": "unit",
+                    "kind": "product",
+                    "attributes": {},
+                }
+            ],
+        },
+    )
+    assert steal.status_code >= 400, steal.text
+
+    # Category from B cannot be used when committing into A
+    api = TestClient(app)
+    cats = api.get(f"/api/v1/workspaces/{ws_b}/catalog/categories", headers=_auth(token_b))
+    assert cats.status_code == 200
+    foreign_cat = next(c["id"] for c in cats.json()["items"] if c.get("key") == "cameras_ip")
+    bad_cat = _rpc(
+        settings,
+        token_a,
+        "catalog_import_commit",
+        {
+            "p_workspace_id": ws_a,
+            "p_rows": [
+                {
+                    "action": "create",
+                    "sku": f"XCAT-{uuid.uuid4().hex[:6]}",
+                    "name": "bad cat",
+                    "category_id": foreign_cat,
+                    "list_price": 1,
+                    "cost": 1,
+                    "unit": "unit",
+                    "kind": "product",
+                    "attributes": {},
+                }
+            ],
+        },
+    )
+    assert bad_cat.status_code >= 400, bad_cat.text
+
+    # A cannot pass workspace_id=B unless managerial on B
+    cross = _rpc(
+        settings,
+        token_a,
+        "catalog_import_commit",
+        {
+            "p_workspace_id": ws_b,
+            "p_rows": [
+                {
+                    "action": "create",
+                    "sku": f"XWS-{uuid.uuid4().hex[:6]}",
+                    "name": "cross",
+                    "list_price": 1,
+                    "cost": 1,
+                    "unit": "unit",
+                    "kind": "product",
+                    "attributes": {},
+                }
+            ],
+        },
+    )
+    assert cross.status_code >= 400, cross.text
+
+
+def test_viewer_cannot_invoke_commit_rpc(settings, tenants):
+    from test_tenant_isolation import VIEWER_ID, _ensure_member, _password_grant, _rpc
+
+    _ensure_member(settings, tenants["token_a"], tenants["ws_a"], VIEWER_ID, "viewer")
+    try:
+        viewer_token = _password_grant(settings, "ss.phase3.viewer@sitesecure.test", tenants["password"])
+    except Exception:
+        pytest.skip("viewer test user unavailable")
+    denied = _rpc(
+        settings,
+        viewer_token,
+        "catalog_import_commit",
+        {
+            "p_workspace_id": tenants["ws_a"],
+            "p_rows": [
+                {
+                    "action": "create",
+                    "sku": f"V-{uuid.uuid4().hex[:6]}",
+                    "name": "nope",
+                    "list_price": 1,
+                    "cost": 1,
+                    "unit": "unit",
+                    "kind": "product",
+                    "attributes": {},
+                }
+            ],
+        },
+    )
+    assert denied.status_code >= 400, denied.text
+
+
+def test_fresh_workspace_golden_rule_empty_products(settings, tenants):
+    """New workspace: hierarchy taxonomy allowed; zero seeded products."""
+    from test_tenant_isolation import _rpc
+
+    name = f"Golden Empty {uuid.uuid4().hex[:6]}"
+    created = _rpc(
+        settings,
+        tenants["token_a"],
+        "create_workspace",
+        {"p_name": name, "p_plan_key": "solo"},
+    )
+    assert created.status_code == 200, created.text
+    ws = created.json()
+    api = TestClient(app)
+    a = _auth(tenants["token_a"])
+    products = api.get(
+        f"/api/v1/workspaces/{ws}/catalog/products",
+        headers=a,
+        params={"limit": 100, "include_inactive": "true"},
+    )
+    assert products.status_code == 200, products.text
+    assert products.json()["items"] == []
+    cats = api.get(f"/api/v1/workspaces/{ws}/catalog/categories", headers=a)
+    assert cats.status_code == 200
+    items = cats.json()["items"]
+    assert any(c.get("key") == "cameras_ip" for c in items)
+    assert any(c.get("key") == "nvr" for c in items)
+    # No seeded SKUs / supplier markers in category names
+    blob = " ".join(f"{c.get('key','')} {c.get('name_he','')}" for c in items).lower()
+    assert "uniview" not in blob and "beres" not in blob
 
 
 def test_duplicate_skip_default(api, tenants):

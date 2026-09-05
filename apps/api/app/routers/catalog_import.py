@@ -53,8 +53,6 @@ class ImportPreviewIn(BaseModel):
 
 class ImportCommitIn(ImportPreviewIn):
     confirm: bool = False
-    # Test hook: forces mid-transaction failure so the RPC rolls back all writes.
-    test_force_fail: bool = False
 
 
 def _public_sheets(sheets: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -308,17 +306,7 @@ def commit_import(
         client=client, workspace_id=workspace_id, body=body, can_set_cost=can_cost
     )
     rows, failed = _candidate_rpc_rows(candidates, can_cost=can_cost)
-
     rpc_rows = list(rows)
-    if body.test_force_fail:
-        rpc_rows.append(
-            {
-                "action": "create",
-                "sku": "__FORCE_FAIL__",
-                "name": "__FORCE_FAIL__",
-                "_test_force_fail": True,
-            }
-        )
 
     if not rpc_rows:
         get_import_session_store().delete(body.session_id, workspace_id=str(workspace_id))

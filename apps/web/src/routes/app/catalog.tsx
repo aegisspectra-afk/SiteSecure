@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../components/settings/RequirePermission";
+import { CatalogImportWizard } from "../../components/catalog/CatalogImportWizard";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
 import { formatMoney } from "../../lib/quotes";
@@ -83,6 +84,7 @@ function CatalogBody() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [formError, setFormError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog-categories", workspaceId],
@@ -262,6 +264,23 @@ function CatalogBody() {
     }));
   }
 
+  async function downloadTemplate() {
+    if (!workspaceId) return;
+    try {
+      const { blob, filename } = await api.catalogImportTemplate(workspaceId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "site-secure-catalog-import-template.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setFormError(err instanceof ApiClientError ? err.message : he.catalogImportError);
+    }
+  }
+
+  const isTrulyEmpty = !productsQuery.isLoading && (productsQuery.data?.items?.length ?? 0) === 0 && !q && !filterCategoryId;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -269,14 +288,50 @@ function CatalogBody() {
         description={he.catalogLead}
         action={
           canEdit ? (
-            <Button onClick={startCreate} disabled={editingId === "new"}>
-              {he.catalogCreate}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" onClick={() => void downloadTemplate()}>
+                {he.catalogImportTemplate}
+              </Button>
+              <Button variant="ghost" onClick={() => setImportOpen(true)}>
+                {he.catalogImport}
+              </Button>
+              <Button onClick={startCreate} disabled={editingId === "new"}>
+                {he.catalogCreate}
+              </Button>
+            </div>
           ) : null
         }
       />
 
+      <CatalogImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          void queryClient.invalidateQueries({ queryKey: ["catalog-products", workspaceId] });
+        }}
+        categories={categories}
+      />
+
       <div className="ops-card flex flex-col gap-4 p-4">
+        {isTrulyEmpty && canEdit && !editingId ? (
+          <div className="flex flex-col items-start gap-3 rounded-[var(--radius-control)] border border-dashed border-border p-6">
+            <div>
+              <p className="text-base font-semibold text-fg">{he.catalogEmpty}</p>
+              <p className="mt-1 text-sm text-fg-muted">{he.catalogEmptyBody}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setImportOpen(true)}>{he.catalogImport}</Button>
+              <Button variant="ghost" onClick={startCreate}>
+                {he.catalogAddManual}
+              </Button>
+              <Button variant="ghost" onClick={() => void downloadTemplate()}>
+                {he.catalogImportTemplate}
+              </Button>
+            </div>
+            <p className="text-xs text-fg-muted">{he.catalogImportGoogleHint}</p>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Input id="catalog-search" label={he.catalogSearch} value={q} onChange={(ev) => setQ(ev.target.value)} />
           <Select

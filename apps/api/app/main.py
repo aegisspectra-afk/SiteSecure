@@ -16,6 +16,7 @@ from .routers import (
     admin,
     auth,
     catalog,
+    catalog_import,
     cctv,
     customers,
     dashboard,
@@ -124,6 +125,7 @@ def create_app() -> FastAPI:
     app.include_router(quotes.router)
     app.include_router(quote_cpq.router)
     app.include_router(catalog.router)
+    app.include_router(catalog_import.router)
     app.include_router(cctv.router)
     app.include_router(public_quotes.router)
     app.include_router(documents.router)

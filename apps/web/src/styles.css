@@ -9223,3 +9223,233 @@ html.theme-revealing::view-transition-new(root) {
     grid-column: 1 / -1;
   }
 }
+
+/* Catalog Import Wizard — opaque elevated dialog (Task 15 UI) */
+.catalog-import-root {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  isolation: isolate;
+}
+
+@media (min-width: 640px) {
+  .catalog-import-root {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.catalog-import-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-scrim) 92%, transparent);
+  opacity: 0;
+  transition: opacity 160ms ease;
+  cursor: default;
+}
+
+.catalog-import-backdrop.is-open {
+  opacity: 1;
+}
+
+.catalog-import-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(960px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
+  overflow: hidden;
+  margin: auto 0 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+  /* Solid elevated surface — never animate element opacity (that would reveal page bleed). */
+  background-color: var(--color-bg-2);
+  background-image: none;
+  color: var(--color-fg);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 4%, transparent),
+    var(--shadow-popover);
+  opacity: 1;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 180ms;
+}
+
+@media (min-width: 640px) {
+  .catalog-import-panel {
+    margin: 0;
+    border-radius: var(--radius-panel);
+    width: min(960px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+  }
+}
+
+@media (max-width: 639px) {
+  .catalog-import-panel {
+    width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}
+
+.catalog-import-panel.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0s;
+}
+
+.catalog-import-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-2);
+}
+
+.catalog-import-stepper {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 1.25rem;
+  background: var(--color-bg-1);
+}
+
+.catalog-import-stepper-desktop {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .catalog-import-stepper-mobile {
+    display: none;
+  }
+  .catalog-import-stepper-desktop {
+    display: flex;
+  }
+}
+
+.catalog-import-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline-end: 0.65rem;
+  color: var(--color-fg-subtle);
+  font-size: 0.8125rem;
+}
+
+.catalog-import-step:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: 1.25rem;
+  height: 1px;
+  margin-inline-start: 0.35rem;
+  background: var(--color-border);
+}
+
+.catalog-import-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--color-bg-2);
+}
+
+.catalog-import-step--current {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.catalog-import-step--current .catalog-import-step-index {
+  border-color: var(--color-action);
+  background: color-mix(in srgb, var(--color-action) 12%, var(--color-bg-2));
+  color: var(--color-action);
+}
+
+.catalog-import-step--done {
+  color: var(--color-fg-muted);
+}
+
+.catalog-import-step--done .catalog-import-step-index {
+  border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-bg-2));
+  color: var(--color-success);
+}
+
+.catalog-import-body {
+  flex: 1;
+  overflow: auto;
+  padding: 1.25rem;
+  background: var(--color-bg-2);
+}
+
+.catalog-import-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  padding: 0.85rem 1.25rem;
+  background: var(--color-bg-1);
+}
+
+.catalog-import-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.25rem;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 85%, var(--color-fg));
+  border-radius: var(--radius-panel);
+  background: var(--color-bg-1);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.catalog-import-dropzone.is-dragover {
+  border-color: var(--color-action);
+  background: color-mix(in srgb, var(--color-action) 8%, var(--color-bg-1));
+}
+
+.catalog-import-callout {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 0.85rem 1rem;
+  background: var(--color-bg-1);
+}
+
+.catalog-import-callout--warn {
+  border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-warning) 8%, var(--color-bg-1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog-import-backdrop,
+  .catalog-import-panel {
+    transition: none;
+  }
+}

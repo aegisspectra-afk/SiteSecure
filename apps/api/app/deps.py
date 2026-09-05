@@ -104,13 +104,26 @@ def load_authz_context(
             "user_id": f"eq.{user_id}",
             "workspace_id": f"eq.{workspace_id}",
             "status": "eq.active",
-            "select": "role_key,technician_code,program_type,status",
+            "select": "role_key,workspace_role_key,technician_code,program_type,status",
         },
     )
     if memberships.status_code != 200 or not memberships.json():
+        # Backward compatible if column not yet visible
+        memberships = client.get(
+            "workspace_memberships",
+            params={
+                "user_id": f"eq.{user_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "status": "eq.active",
+                "select": "role_key,technician_code,program_type,status",
+            },
+        )
+    if memberships.status_code != 200 or not memberships.json():
         raise ApiError(404, "NOT_FOUND", "לא נמצא")
 
-    role_key = memberships.json()[0]["role_key"]
+    member_row = memberships.json()[0]
+    role_key = member_row["role_key"]
+    workspace_role_key = member_row.get("workspace_role_key") or role_key
 
     workspace = client.get(
         "workspaces",
@@ -131,6 +144,10 @@ def load_authz_context(
     if assigned.status_code == 200:
         assigned_ids = frozenset(row["resource_id"] for row in assigned.json())
 
+    from .workspace_rbac import resolve_role_grants
+
+    grants = resolve_role_grants(client, workspace_id, workspace_role_key, role_key)
+
     return AuthzContext(
         user_id=user_id,
         workspace_id=workspace_id,
@@ -140,6 +157,8 @@ def load_authz_context(
         plan_key=plan_key,
         features=features,
         assigned_resource_ids=assigned_ids,
+        workspace_role_key=workspace_role_key,
+        grants=grants,
     )
 
 

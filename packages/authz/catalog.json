@@ -18,7 +18,7 @@
   "scopes": ["all", "owned", "assigned", "team"],
   "features": [
     "core", "crm", "sales", "catalog", "quotes", "projects", "service",
-    "settings", "inventory", "finance", "reports", "automation", "team",
+    "settings", "inventory", "finance", "accounting_documents", "reports", "automation", "team",
     "audit", "api", "ai", "branches"
   ],
   "plans": [
@@ -51,7 +51,7 @@
     {
       "key": "enterprise",
       "label_he": "Enterprise",
-      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "reports", "automation", "team", "audit", "api", "ai", "branches"],
+      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "accounting_documents", "reports", "automation", "team", "audit", "api", "ai", "branches"],
       "limits": {
         "seats_operator": 0,
         "seats_field": 0,

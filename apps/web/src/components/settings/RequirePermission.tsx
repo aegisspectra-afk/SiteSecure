@@ -28,7 +28,8 @@ export function RequireAnyPermission({
   const { session } = useSession();
   const membership = session?.memberships[0];
   const features = membership?.features ?? [];
-  if (!permissions.some((permission) => can(membership?.role_key, permission, features))) {
+  const grants = membership?.permissions ?? null;
+  if (!permissions.some((permission) => can(membership?.role_key, permission, features, grants))) {
     return <Forbidden />;
   }
   return children;

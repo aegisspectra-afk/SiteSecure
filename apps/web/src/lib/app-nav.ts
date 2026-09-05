@@ -93,19 +93,9 @@ export const TARGET_IA = [
     ],
   },
   {
-    id: "admin",
-    label: () => he.navGroupAdmin,
-    items: [
-      { id: "users", status: "live" as const, routeHint: "/app/settings/users" },
-      { id: "roles", status: "live" as const, routeHint: "/app/settings/roles" },
-    ],
-  },
-  {
     id: "system",
     label: () => he.navGroupSystem,
     items: [
-      { id: "security", status: "live" as const, routeHint: "/app/settings/security" },
-      { id: "audit", status: "live" as const, routeHint: "/app/settings/audit" },
       { id: "settings", status: "live" as const, routeHint: "/app/settings" },
     ],
   },
@@ -134,13 +124,17 @@ export function planLabel(planKey: string | undefined): string {
 
 export function isNavSelected(to: AppNavTo, pathname: string): boolean {
   if (to === "/app/settings") {
-    return pathname === "/app/settings" || pathname === "/app/settings/";
+    return pathname === "/app/settings" || pathname.startsWith("/app/settings/");
   }
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-export function appNav(roleKey: string | undefined, features: string[] = []): AppNavGroup[] {
-  const allow = (permission: string) => can(roleKey, permission, features);
+export function appNav(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): AppNavGroup[] {
+  const allow = (permission: string) => can(roleKey, permission, features, permissions);
   const fieldHome = homeVariant(roleKey) === "today";
 
   const groups: { id: string; label: string; items: AppNavItem[] }[] = [
@@ -229,30 +223,20 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
       ],
     },
     {
-      id: "admin",
-      label: he.navGroupAdmin,
-      items: [
-        { to: "/app/settings/users", label: he.navUsers, icon: "team", visible: allow("users.view") },
-        {
-          to: "/app/settings/roles",
-          label: he.navRoles,
-          icon: "roles",
-          visible: allow("users.view") || allow("roles.manage"),
-        },
-      ],
-    },
-    {
       id: "system",
       label: he.navGroupSystem,
       items: [
         {
-          to: "/app/settings/security",
-          label: he.navSecurity,
-          icon: "security",
-          visible: allow("settings.general") || allow("workspace.edit"),
+          to: "/app/settings",
+          label: he.navSettings,
+          icon: "settings",
+          visible:
+            allow("workspace.edit") ||
+            allow("users.view") ||
+            allow("roles.manage") ||
+            allow("settings.general") ||
+            allow("audit.view"),
         },
-        { to: "/app/settings/audit", label: he.navAudit, icon: "audit", visible: allow("audit.view") },
-        { to: "/app/settings", label: he.navSettings, icon: "settings", visible: allow("workspace.edit") },
       ],
     },
   ];
@@ -269,8 +253,12 @@ export function appNav(roleKey: string | undefined, features: string[] = []): Ap
 }
 
 /** Home destination for the role — used by desktop overview + mobile בית. */
-export function homeNavLink(roleKey: string | undefined, features: string[] = []): AppNavLink | null {
-  if (!can(roleKey, "dashboard.view", features)) return null;
+export function homeNavLink(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): AppNavLink | null {
+  if (!can(roleKey, "dashboard.view", features, permissions)) return null;
   const fieldHome = homeVariant(roleKey) === "today";
   return fieldHome
     ? { to: "/app/today", label: he.navHome, icon: "today" }
@@ -281,8 +269,12 @@ export function homeNavLink(roleKey: string | undefined, features: string[] = []
  * Field work destinations for the mobile Work sheet / command-center Work section.
  * Live routes only — no placeholders for unshipped modules (e.g. installations).
  */
-export function mobileWorkNav(roleKey: string | undefined, features: string[] = []): AppNavLink[] {
-  const allow = (permission: string) => can(roleKey, permission, features);
+export function mobileWorkNav(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): AppNavLink[] {
+  const allow = (permission: string) => can(roleKey, permission, features, permissions);
   const fieldHome = homeVariant(roleKey) === "today";
   const items: AppNavItem[] = [
     {
@@ -339,8 +331,12 @@ export type MobileQuickAction = {
 };
 
 /** Compact command-center sections for mobile More — not a copy of the desktop sidebar. */
-export function mobileCommandSections(roleKey: string | undefined, features: string[] = []): MobileCommandSection[] {
-  const allow = (permission: string) => can(roleKey, permission, features);
+export function mobileCommandSections(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): MobileCommandSection[] {
+  const allow = (permission: string) => can(roleKey, permission, features, permissions);
   const primary = mobilePrimaryRoutes(roleKey, features);
   const work = mobileWorkNav(roleKey, features);
 
@@ -361,21 +357,7 @@ export function mobileCommandSections(roleKey: string | undefined, features: str
   ];
 
   const manageItems: AppNavItem[] = [
-    { to: "/app/settings/users", label: he.navUsers, icon: "team", visible: allow("users.view") },
-    {
-      to: "/app/settings/roles",
-      label: he.navRolesShort,
-      icon: "roles",
-      visible: allow("users.view") || allow("roles.manage"),
-    },
-    {
-      to: "/app/settings/security",
-      label: he.navSecurity,
-      icon: "security",
-      visible: allow("settings.general") || allow("workspace.edit"),
-    },
-    { to: "/app/settings", label: he.navSettings, icon: "settings", visible: allow("workspace.edit") },
-    { to: "/app/settings/audit", label: he.navAudit, icon: "audit", visible: allow("audit.view") },
+    { to: "/app/settings", label: he.navSettings, icon: "settings", visible: allow("workspace.edit") || allow("users.view") || allow("roles.manage") || allow("settings.general") || allow("audit.view") },
   ];
 
   const opsExtra: AppNavItem[] = [
@@ -414,24 +396,32 @@ export function mobileCommandSections(roleKey: string | undefined, features: str
 }
 
 /** Legacy group shape for selection helpers — flattens command sections. */
-export function mobileMoreNav(roleKey: string | undefined, features: string[] = []): AppNavGroup[] {
-  return mobileCommandSections(roleKey, features).map((section) => ({
+export function mobileMoreNav(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): AppNavGroup[] {
+  return mobileCommandSections(roleKey, features, permissions).map((section) => ({
     id: section.id,
     label: section.label,
     items: section.items,
   }));
 }
 
-export function mobileQuickActions(roleKey: string | undefined, features: string[] = []): MobileQuickAction[] {
+export function mobileQuickActions(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): MobileQuickAction[] {
   const actions: MobileQuickAction[] = [];
-  if (can(roleKey, "leads.create", features)) {
+  if (can(roleKey, "leads.create", features, permissions)) {
     actions.push({ id: "lead", label: he.navQuickLead, to: "/app/leads", search: { new: "1" } });
   }
-  if (can(roleKey, "dashboard.view", features) || can(roleKey, "calendar.view", features)) {
+  if (can(roleKey, "dashboard.view", features, permissions) || can(roleKey, "calendar.view", features, permissions)) {
     actions.push({
       id: "visit",
       label: he.navQuickVisit,
-      to: homeVariant(roleKey) === "today" || can(roleKey, "dashboard.view", features) ? "/app/today" : "/app/tasks",
+      to: homeVariant(roleKey) === "today" || can(roleKey, "dashboard.view", features, permissions) ? "/app/today" : "/app/tasks",
     });
   }
   return actions.slice(0, 4);
@@ -454,19 +444,23 @@ export function isMoreNavSelected(
  * Mobile bottom spine: בית · לקוחות · עבודה · משימות · עוד
  * Derived from the same entitlement rules as desktop — different presentation only.
  */
-export function bottomNav(roleKey: string | undefined, features: string[] = []): BottomNavEntry[] {
+export function bottomNav(
+  roleKey: string | undefined,
+  features: string[] = [],
+  permissions?: string[] | null,
+): BottomNavEntry[] {
   const items: BottomNavEntry[] = [];
-  const home = homeNavLink(roleKey, features);
+  const home = homeNavLink(roleKey, features, permissions);
   if (home) {
     items.push({ kind: "route", to: home.to, label: he.navHome, icon: home.icon });
   }
-  if (can(roleKey, "crm.view", features) && hasFeature(features, "crm")) {
+  if (can(roleKey, "crm.view", features, permissions) && hasFeature(features, "crm")) {
     items.push({ kind: "route", to: "/app/customers", label: he.navCustomers, icon: "customers" });
   }
-  if (mobileWorkNav(roleKey, features).length > 0) {
+  if (mobileWorkNav(roleKey, features, permissions).length > 0) {
     items.push({ kind: "work", label: he.navWork, icon: "work" });
   }
-  if (can(roleKey, "calendar.view", features)) {
+  if (can(roleKey, "calendar.view", features, permissions)) {
     items.push({ kind: "route", to: "/app/tasks", label: he.navTasks, icon: "calendar" });
   }
   items.push({ kind: "more", label: he.navMore, icon: "more" });

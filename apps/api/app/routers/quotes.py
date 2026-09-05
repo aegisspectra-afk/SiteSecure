@@ -677,7 +677,21 @@ def _upsert_version_snapshot(
     workspace, customer, site = _related(client, workspace_id, quote)
     settings = _load_quote_settings(client, workspace_id)
     branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
+    quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
     sections = _load_sections(client, workspace_id, quote_id)
+    pdf_tpl_row = _load_default_pdf_template(client, workspace_id)
+    pdf_template = None
+    if pdf_tpl_row:
+        config = pdf_tpl_row.get("config") if isinstance(pdf_tpl_row.get("config"), dict) else {}
+        pdf_template = {
+            "id": pdf_tpl_row.get("id"),
+            "name": pdf_tpl_row.get("name"),
+            **config,
+        }
+        if quotes_cfg.get("pdf_notes") and not config.get("notes"):
+            pdf_template["notes"] = quotes_cfg.get("pdf_notes")
+        if quotes_cfg.get("payment_terms") and not config.get("paymentTerms"):
+            pdf_template["paymentTerms"] = quotes_cfg.get("payment_terms")
     snapshot = version_snapshot(
         quote,
         items,
@@ -687,6 +701,7 @@ def _upsert_version_snapshot(
         status=snapshot_status,
         sections=sections,
         branding=branding,
+        pdf_template=pdf_template,
     )
     existing = as_list(
         client.get(
@@ -761,16 +776,100 @@ def _prepare_share_link(
     return existing, items, token
 
 
+def _load_default_pdf_template(client: UserClient, workspace_id: UUID) -> dict | None:
+    rows = as_list(
+        client.get(
+            "pdf_document_templates",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "doc_type": "eq.quote",
+                "is_default": "eq.true",
+                "select": "id,name,config,status",
+                "limit": "1",
+            },
+        )
+    )
+    if rows:
+        return rows[0]
+    rows = as_list(
+        client.get(
+            "pdf_document_templates",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "doc_type": "eq.quote",
+                "status": "eq.active",
+                "select": "id,name,config,status",
+                "order": "created_at.asc",
+                "limit": "1",
+            },
+        )
+    )
+    return rows[0] if rows else None
+
+
 def _document_payload(
     client: UserClient,
     workspace_id: UUID,
     quote: dict,
     items: list[dict],
 ) -> dict:
+    from ..documents.company_profile import missing_quote_company_fields, normalize_company_profile
+
     workspace, customer, site = _related(client, workspace_id, quote)
     sections = _load_sections(client, workspace_id, UUID(quote["id"]))
     settings = _load_quote_settings(client, workspace_id)
     branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
+    quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
+    profile = normalize_company_profile(workspace, branding)
+    missing = missing_quote_company_fields(profile)
+    if missing:
+        raise ApiError(
+            400,
+            "COMPANY_PROFILE_INCOMPLETE",
+            "חסרים פרטי חברה להפקת המסמך",
+            {"missing_fields": missing, "cta": "company_branding"},
+        )
+    status = str(quote.get("status") or "draft")
+    company_snapshot = None
+    frozen_pdf_template = None
+    if status not in {"draft"}:
+        version = int(quote.get("version") or 1)
+        versions = as_list(
+            client.get(
+                "quote_versions",
+                params={
+                    "quote_id": f"eq.{quote['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "version": f"eq.{version}",
+                    "select": "snapshot",
+                    "limit": "1",
+                },
+            )
+        )
+        if versions:
+            snap = versions[0].get("snapshot") if isinstance(versions[0].get("snapshot"), dict) else {}
+            public = snap.get("public") if isinstance(snap.get("public"), dict) else {}
+            if isinstance(public.get("company_snapshot"), dict) and public.get("company_snapshot"):
+                company_snapshot = public["company_snapshot"]
+            elif isinstance(public.get("company"), dict) and public.get("company"):
+                # Legacy sent snapshots: freeze the company block that was issued
+                company_snapshot = public["company"]
+            if isinstance(public.get("pdf_template"), dict):
+                frozen_pdf_template = public["pdf_template"]
+
+    pdf_tpl = _load_default_pdf_template(client, workspace_id)
+    pdf_template = frozen_pdf_template
+    if pdf_template is None and pdf_tpl:
+        config = pdf_tpl.get("config") if isinstance(pdf_tpl.get("config"), dict) else {}
+        pdf_template = {
+            "id": pdf_tpl.get("id"),
+            "name": pdf_tpl.get("name"),
+            **config,
+        }
+        if quotes_cfg.get("pdf_notes") and not config.get("notes"):
+            pdf_template["notes"] = quotes_cfg.get("pdf_notes")
+        if quotes_cfg.get("payment_terms") and not config.get("paymentTerms"):
+            pdf_template["paymentTerms"] = quotes_cfg.get("payment_terms")
     return public_payload(
         quote,
         items,
@@ -779,6 +878,9 @@ def _document_payload(
         site=site,
         sections=sections,
         branding=branding,
+        company_snapshot=company_snapshot,
+        pdf_template=pdf_template,
+        freeze_company=bool(company_snapshot) or status not in {"draft"},
     )
 
 

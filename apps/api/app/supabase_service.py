@@ -108,6 +108,22 @@ class ServiceClient:
             except Exception:
                 return
 
+    def storage_download_bytes(self, bucket: str, path: str) -> bytes | None:
+        """Download a private object with the service role. Returns None if missing."""
+        headers = {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+        }
+        url = f"{self.storage}/object/{bucket}/{path.lstrip('/')}"
+        try:
+            with httpx.Client(timeout=max(DEFAULT_TIMEOUT, 30.0)) as client:
+                response = client.get(url, headers=headers)
+        except (httpx.TimeoutException, httpx.TransportError):
+            return None
+        if response.status_code != 200:
+            return None
+        return response.content
+
     def storage_object_size(self, bucket: str, path: str) -> int | None:
         """Best-effort object size from Storage list metadata. None if unknown."""
         clean = path.lstrip("/")

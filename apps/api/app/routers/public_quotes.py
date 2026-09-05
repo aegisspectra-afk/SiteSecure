@@ -253,12 +253,18 @@ def get_public_quote_pdf(
     svc: Annotated[ServiceClient, Depends(service_client)],
     inline: bool = False,
 ):
+    from ..documents.logo import attach_logo_bytes, resolve_logo_bytes
     from ..pdf_response import pdf_response
     from ..quote_pdf import render_quote_pdf
 
     public = _assemble(svc, token, mark_viewed=False)
     for banned in ("cost_total", "margin_amount", "margin_percent", "internal_notes", "cost"):
         public.pop(banned, None)
+    logo = resolve_logo_bytes(
+        company=public.get("company") if isinstance(public.get("company"), dict) else None,
+        download_fn=svc.storage_download_bytes,
+    )
+    public = attach_logo_bytes(public, logo)
     pdf_bytes, filename = render_quote_pdf(public)
     return pdf_response(pdf_bytes, filename, inline=inline)
 

@@ -96,21 +96,11 @@ def _address_line(address: object) -> str:
 
 
 def company_block(workspace: dict, branding: dict | None = None) -> dict:
-    brand = branding if isinstance(branding, dict) else {}
-    name = _text(workspace.get("name")) or None
-    brand_name = _text(brand.get("name") or brand.get("brand_name")) or name
-    company: dict = {
-        "name": name,
-        "brand_name": brand_name,
-        "logo_url": brand.get("logo_url") or None,
-    }
-    # Only surface contact fields when already stored — never invent.
-    for key in ("phone", "email", "address", "website"):
-        raw = brand.get(key)
-        if raw in (None, "", {}):
-            continue
-        company[key] = raw
-    return company
+    """Build public company identity from canonical Company Profile (never invents IDs)."""
+    from .documents.company_profile import company_block_from_profile, normalize_company_profile
+
+    profile = normalize_company_profile(workspace, branding)
+    return company_block_from_profile(profile)
 
 
 def customer_block(customer: dict | None) -> dict | None:
@@ -121,6 +111,10 @@ def customer_block(customer: dict | None) -> dict | None:
         "email": customer.get("email"),
         "phone": customer.get("phone"),
     }
+    for key in ("tax_id", "business_number", "contact_name", "legal_name"):
+        val = customer.get(key)
+        if val not in (None, ""):
+            out[key] = val
     billing = customer.get("billing_address")
     if isinstance(billing, dict) and billing:
         out["address"] = billing
@@ -141,10 +135,26 @@ def public_payload(
     superseded: bool = False,
     sections: list[dict] | None = None,
     branding: dict | None = None,
+    company_snapshot: dict | None = None,
+    pdf_template: dict | None = None,
+    template_version: str = "quote-v2",
+    freeze_company: bool = False,
 ) -> dict:
+    from .documents.company_profile import company_snapshot_from_profile, normalize_company_profile
+    from .documents.types import TEMPLATE_VERSIONS, DocumentType
+
     address = (site or {}).get("address") or {}
     site_address = _address_line(address)
-    return {
+    if company_snapshot and isinstance(company_snapshot, dict) and company_snapshot:
+        company = company_block({}, company_snapshot)
+        snap = dict(company_snapshot)
+    else:
+        profile = normalize_company_profile(workspace, branding)
+        company = company_block(workspace, branding)
+        snap = company_snapshot_from_profile(profile) if freeze_company else None
+
+    tpl_ver = template_version or TEMPLATE_VERSIONS[DocumentType.QUOTE]
+    payload = {
         "id": quote.get("id"),
         "number": quote.get("number"),
         "version": quote.get("version") or 1,
@@ -169,7 +179,7 @@ def public_payload(
         "total_gross": _num(quote.get("total_gross")),
         "issued_at": quote.get("sent_at") or quote.get("created_at"),
         "sent_at": quote.get("sent_at"),
-        "company": company_block(workspace, branding),
+        "company": company,
         "customer": customer_block(customer),
         "site": None
         if not site
@@ -182,7 +192,14 @@ def public_payload(
         "approved_at": quote.get("approved_at"),
         "approved_name": quote.get("approved_name"),
         "rejected_at": quote.get("rejected_at"),
+        "template_version": tpl_ver,
+        "document_type": DocumentType.QUOTE.value,
     }
+    if snap:
+        payload["company_snapshot"] = snap
+    if pdf_template and isinstance(pdf_template, dict):
+        payload["pdf_template"] = pdf_template
+    return payload
 
 
 def version_snapshot(
@@ -195,7 +212,10 @@ def version_snapshot(
     status: str,
     sections: list[dict] | None = None,
     branding: dict | None = None,
+    pdf_template: dict | None = None,
 ) -> dict:
+    """Freeze customer document at send/share time — company + template included."""
+    freeze = status not in {"draft"}
     return {
         "status": status,
         "quote": dict(quote),
@@ -210,5 +230,7 @@ def version_snapshot(
             status=status,
             sections=sections,
             branding=branding,
+            pdf_template=pdf_template,
+            freeze_company=freeze,
         ),
     }

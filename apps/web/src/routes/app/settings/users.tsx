@@ -37,8 +37,9 @@ function UsersBody() {
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const queryClient = useQueryClient();
-  const canInvite = can(membership?.role_key, "users.invite", membership?.features ?? []);
-  const canManage = can(membership?.role_key, "users.manage", membership?.features ?? []);
+  const grants = membership?.permissions ?? null;
+  const canInvite = can(membership?.role_key, "users.invite", membership?.features ?? [], grants);
+  const canManage = can(membership?.role_key, "users.manage", membership?.features ?? [], grants);
   const [email, setEmail] = useState("");
   const [roleKey, setRoleKey] = useState("technician");
   const [formError, setFormError] = useState<string | null>(null);
@@ -50,6 +51,11 @@ function UsersBody() {
     enabled: Boolean(workspaceId),
     queryFn: () => api.listMembers(workspaceId!),
   });
+  const rolesQuery = useQuery({
+    queryKey: ["workspace-roles", workspaceId],
+    enabled: Boolean(workspaceId),
+    queryFn: () => api.listWorkspaceRoles(workspaceId!),
+  });
   const usageQuery = useQuery({
     queryKey: ["usage", workspaceId],
     enabled: Boolean(workspaceId),
@@ -57,11 +63,17 @@ function UsersBody() {
   });
 
   const meters = usageQuery.data?.meters ?? [];
-  const seatMeter = meters.find((row) => row.key === seatBucket(roleKey));
+  const selectedRole = rolesQuery.data?.find((r) => r.key === roleKey);
+  const seatRoleKey = selectedRole?.base_role_key ?? roleKey;
+  const seatMeter = meters.find((row) => row.key === seatBucket(seatRoleKey));
   const atSeatLimit = Boolean(seatMeter?.at_limit);
 
   const invite = useMutation({
-    mutationFn: () => api.createInvitation(workspaceId!, { email: email.trim(), role_key: roleKey }),
+    mutationFn: () =>
+      api.createInvitation(workspaceId!, {
+        email: email.trim(),
+        role_key: selectedRole?.base_role_key ?? roleKey,
+      }),
     onSuccess: (row) => {
       setEmail("");
       setRoleKey("technician");
@@ -85,11 +97,15 @@ function UsersBody() {
   });
 
   const patch = useMutation({
-    mutationFn: (input: { id: string; role_key: string }) =>
-      api.patchMember(workspaceId!, input.id, { role_key: input.role_key }),
+    mutationFn: (input: { id: string; workspace_role_key?: string; status?: "active" | "disabled" }) =>
+      api.patchMember(workspaceId!, input.id, {
+        workspace_role_key: input.workspace_role_key,
+        status: input.status,
+      }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
       void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["workspace-roles", workspaceId] });
     },
   });
 
@@ -114,29 +130,28 @@ function UsersBody() {
     );
   }
 
-  const canAssignOwner = can(membership?.role_key, "workspace.delete", membership?.features ?? []);
-  const inviteRoles = assignableInviteRoles(membership?.plan_key).map((value) => ({
-    value,
-    label: roleLabel(value),
-  }));
-  const manageRoles = canAssignOwner
-    ? [...inviteRoles, { value: "owner", label: roleLabel("owner") }]
-    : inviteRoles;
+  const canAssignOwner = can(membership?.role_key, "workspace.delete", membership?.features ?? [], grants);
+  const planInvite = new Set(assignableInviteRoles(membership?.plan_key));
+  const workspaceRoles = rolesQuery.data ?? [];
+  const inviteRoles = workspaceRoles
+    .filter((role) => planInvite.has(role.base_role_key) && role.key !== "owner")
+    .map((role) => ({ value: role.key, label: role.label_he, base: role.base_role_key }));
+  const manageRoles = workspaceRoles
+    .filter((role) => (canAssignOwner ? true : role.key !== "owner"))
+    .map((role) => ({ value: role.key, label: role.label_he }));
   const usage = usageQuery.data?.meters ?? [];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="settings-panel flex flex-col gap-8">
       <PageHeader
-        title={he.usersTitle}
+        title={he.navUsers}
         description={`${planLabel(membership?.plan_key)} · ${he.usersLead}`}
       />
       <dl className="grid gap-3 sm:grid-cols-2">
         {usage.map((row) => (
-          <div key={row.key} className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
-            <dt className="text-xs font-medium text-fg-muted">{row.label_he}</dt>
-            <dd className="mt-1 text-sm font-semibold text-fg">
-              {formatMeterUsage(row)}
-            </dd>
+          <div key={row.key} className="settings-locked-field">
+            <dt className="settings-field-label">{row.label_he}</dt>
+            <dd className="settings-locked-value">{formatMeterUsage(row)}</dd>
           </div>
         ))}
       </dl>
@@ -185,7 +200,7 @@ function UsersBody() {
         </p>
       ) : null}
       {inviteLink ? (
-        <div className="rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3">
+        <div className="settings-locked-field">
           <p className="text-sm text-fg">{he.inviteLinkReady}</p>
           <p className="mt-2 break-all text-xs text-fg-muted ltr-meta">{inviteLink}</p>
           <Button
@@ -210,39 +225,67 @@ function UsersBody() {
               <TH>{he.email}</TH>
               <TH>{he.role}</TH>
               <TH>{he.status}</TH>
+              {canManage ? <TH>{he.actions}</TH> : null}
             </TR>
           </THead>
           <TBody>
-            {query.data.map((member) => (
-              <TR key={member.id}>
-                <TD>{member.full_name || "—"}</TD>
-                <TD className="ltr-meta">{member.email || "—"}</TD>
-                <TD>
-                  {canManage && member.user_id !== session?.user_id ? (
-                    <select
-                      className="min-h-9 rounded-[var(--radius-control)] border border-border bg-transparent px-2 text-sm"
-                      value={member.role_key}
-                      onChange={(ev) => patch.mutate({ id: member.id, role_key: ev.target.value })}
-                      aria-label={he.changeRole}
-                    >
-                      {manageRoles.map((role) => (
-                        <option key={role.value} value={role.value}>
-                          {role.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    roleLabel(member.role_key)
-                  )}
-                </TD>
-                <TD>
-                  <Status
-                    label={member.status === "active" ? he.statusActive : he.statusDisabled}
-                    tone={member.status === "active" ? "success" : "neutral"}
-                  />
-                </TD>
-              </TR>
-            ))}
+            {query.data.map((member) => {
+              const effectiveRole = member.workspace_role_key || member.role_key;
+              const roleName =
+                workspaceRoles.find((r) => r.key === effectiveRole)?.label_he ?? roleLabel(member.role_key);
+              return (
+                <TR key={member.id}>
+                  <TD>{member.full_name || "—"}</TD>
+                  <TD className="ltr-meta">{member.email || "—"}</TD>
+                  <TD>
+                    {canManage && member.user_id !== session?.user_id ? (
+                      <select
+                        className="min-h-9 rounded-[var(--radius-control)] border border-border bg-transparent px-2 text-sm"
+                        value={effectiveRole}
+                        onChange={(ev) =>
+                          patch.mutate({ id: member.id, workspace_role_key: ev.target.value })
+                        }
+                        aria-label={he.changeRole}
+                      >
+                        {manageRoles.map((role) => (
+                          <option key={role.value} value={role.value}>
+                            {role.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      roleName
+                    )}
+                  </TD>
+                  <TD>
+                    <Status
+                      label={member.status === "active" ? he.statusActive : he.statusDisabled}
+                      tone={member.status === "active" ? "success" : "neutral"}
+                    />
+                  </TD>
+                  {canManage ? (
+                    <TD>
+                      {member.user_id !== session?.user_id ? (
+                        <button
+                          type="button"
+                          className="settings-text-btn"
+                          onClick={() =>
+                            patch.mutate({
+                              id: member.id,
+                              status: member.status === "active" ? "disabled" : "active",
+                            })
+                          }
+                        >
+                          {member.status === "active" ? he.deactivateUser : he.activateUser}
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </TD>
+                  ) : null}
+                </TR>
+              );
+            })}
           </TBody>
         </Table>
       )}

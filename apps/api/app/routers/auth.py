@@ -25,10 +25,12 @@ class MembershipOut(BaseModel):
     workspace_name: str
     workspace_status: str
     role_key: str
+    workspace_role_key: str | None = None
     technician_code: str | None = None
     program_type: str | None = None
     plan_key: str
     features: list[str]
+    permissions: list[str] = Field(default_factory=list)
     is_beta: bool = False
     beta_program: str | None = None
 
@@ -62,7 +64,7 @@ def get_session(
         params={
             "user_id": f"eq.{user_id}",
             "status": "eq.active",
-            "select": "workspace_id,role_key,technician_code,program_type,workspaces(id,name,status,is_beta,beta_program)",
+            "select": "workspace_id,role_key,workspace_role_key,technician_code,program_type,workspaces(id,name,status,is_beta,beta_program)",
             # Important for UI stability: the frontend uses `memberships[0]` as the active workspace.
             # Make the ordering deterministic.
             "order": "created_at.desc",
@@ -87,16 +89,28 @@ def get_session(
                 if isinstance(payload, dict) and "features" in payload:
                     plan_key = payload.get("plan_key") or default_plan_key()
                     features = list(payload.get("features") or [])
+            role_key = row["role_key"]
+            workspace_role_key = row.get("workspace_role_key") or role_key
+            permissions: list[str] = []
+            try:
+                from ..workspace_rbac import resolve_role_grants
+
+                permissions = sorted(resolve_role_grants(client, ws_id, workspace_role_key, role_key))
+            except Exception:
+                catalog = load_catalog()
+                permissions = sorted(catalog.get("_grants", {}).get(role_key) or [])
             memberships.append(
                 MembershipOut(
                     workspace_id=ws_id,
                     workspace_name=nested["name"],
                     workspace_status=nested["status"],
-                    role_key=row["role_key"],
+                    role_key=role_key,
+                    workspace_role_key=workspace_role_key,
                     technician_code=row.get("technician_code"),
                     program_type=row.get("program_type"),
                     plan_key=plan_key,
                     features=features,
+                    permissions=permissions,
                     is_beta=bool(nested.get("is_beta")),
                     beta_program=nested.get("beta_program"),
                 )

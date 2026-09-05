@@ -72,6 +72,14 @@ export function assignableInviteRoles(planKey: string | undefined): string[] {
   return ["technician", "founding_technician", "viewer"];
 }
 
+/**
+ * Custom roles + editable permission matrix.
+ * Maps SaaS FREE→solo (fixed roles), PRO+→business/enterprise (`team` feature).
+ */
+export function planAllowsCustomRbac(planKey: string | undefined): boolean {
+  return planHasFeature(planKey, "team");
+}
+
 export function seatUsage(planKey: string | undefined, occupiedRoleKeys: string[]): SeatUsage[] {
   const keys: SeatLimitKey[] = ["seats_operator", "seats_field"];
   return keys.map((key) => {

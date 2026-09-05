@@ -13,11 +13,12 @@ from .. import pricing
 from ..audit import write_audit
 from ..authz.guard import require
 from ..authz.types import ResourceRef
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
 from ..quote_validation import critical_gaps_only
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..supabase_service import ServiceClient
 from .quotes import (
     ITEM_SELECT,
     QuoteItemIn,
@@ -836,9 +837,11 @@ def quote_pdf(
     quote_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     inline: bool = False,
 ):
     """Binary PDF from the same canonical document payload as preview/customer view."""
+    from ..documents.logo import attach_logo_bytes, resolve_logo_bytes
     from ..pdf_response import pdf_response
     from ..quote_pdf import render_quote_pdf
 
@@ -849,6 +852,11 @@ def quote_pdf(
     document = _document_payload(client, workspace_id, row, items)
     for banned in ("cost_total", "margin_amount", "margin_percent", "internal_notes", "cost"):
         document.pop(banned, None)
+    logo = resolve_logo_bytes(
+        company=document.get("company") if isinstance(document.get("company"), dict) else None,
+        download_fn=svc.storage_download_bytes,
+    )
+    document = attach_logo_bytes(document, logo)
     pdf_bytes, filename = render_quote_pdf(document)
     _record_event(
         client,
@@ -856,6 +864,6 @@ def quote_pdf(
         quote_id,
         "pdf_generated",
         actor_id(user),
-        {"version": row.get("version") or 1, "filename": filename},
+        {"version": row.get("version") or 1, "filename": filename, "template_version": document.get("template_version")},
     )
     return pdf_response(pdf_bytes, filename, inline=inline)

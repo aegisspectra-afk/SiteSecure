@@ -110,6 +110,7 @@ export function MobileMoreSheet({
   pathname,
   roleKey,
   features,
+  permissions,
   workspaceName,
   planKey,
   workspaceActive = true,
@@ -127,6 +128,7 @@ export function MobileMoreSheet({
   pathname: string;
   roleKey?: string;
   features?: string[];
+  permissions?: string[] | null;
   workspaceName?: string | null;
   planKey?: string;
   workspaceActive?: boolean;
@@ -141,8 +143,11 @@ export function MobileMoreSheet({
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const sections = useMemo(() => mobileCommandSections(roleKey, features ?? []), [roleKey, features]);
-  const quick = useMemo(() => mobileQuickActions(roleKey, features ?? []), [roleKey, features]);
+  const sections = useMemo(
+    () => mobileCommandSections(roleKey, features ?? [], permissions),
+    [roleKey, features, permissions],
+  );
+  const quick = useMemo(() => mobileQuickActions(roleKey, features ?? [], permissions), [roleKey, features, permissions]);
   const filtered = useMemo(() => filterSections(sections, query), [sections, query]);
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
 

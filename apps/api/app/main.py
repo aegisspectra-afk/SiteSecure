@@ -31,6 +31,7 @@ from .routers import (
     sites,
     systems,
     team,
+    workspace_settings,
     workspaces,
 )
 
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(workspaces.router)
+    app.include_router(workspace_settings.router)
     app.include_router(feedback.router)
     app.include_router(admin.router)
     app.include_router(team.router)

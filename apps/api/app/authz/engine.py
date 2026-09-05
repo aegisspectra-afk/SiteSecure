@@ -42,7 +42,9 @@ def authorize(
         return _deny("FEATURE_NOT_INCLUDED", feature=required_feature)
 
     grants: frozenset[str] = catalog["_grants"].get(ctx.role_key, frozenset())
-    if action not in grants:
+    if ctx.grants:
+        grants = ctx.grants
+    if action not in grants and "*" not in grants:
         return _deny("PERMISSION_DENIED", action=action, role=ctx.role_key)
 
     scope = catalog["_role_scope"].get(ctx.role_key, "all")

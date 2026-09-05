@@ -15,6 +15,8 @@ from fpdf import FPDF
 from fpdf.enums import TableCellFillMode, XPos, YPos
 from fpdf.fonts import FontFace
 
+from .documents.formatters import format_date_he, format_money
+
 FONTS_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 FONT_REGULAR = FONTS_DIR / "DejaVuSans.ttf"
 FONT_BOLD = FONTS_DIR / "DejaVuSans-Bold.ttf"
@@ -23,7 +25,7 @@ _LRI = "\u2066"
 _PDI = "\u2069"
 _NBH = "\u2011"  # non-breaking hyphen — keep SKUs intact
 
-# Calm enterprise palette (Stripe / Linear adjacent — not loud invoice colors)
+# Calm enterprise palette — workspace brandPrimary overrides ACCENT when set
 INK = (22, 32, 42)
 MUTED = (100, 112, 125)
 LINE = (220, 226, 234)
@@ -80,14 +82,7 @@ def _sku_ltr(value: object) -> str:
 
 
 def _money(value: object, currency: str = "ILS") -> str:
-    try:
-        amount = float(value or 0)
-    except (TypeError, ValueError):
-        amount = 0.0
-    raw = f"{amount:,.2f}"
-    if currency == "ILS":
-        return f"{_LRI}{raw}{_PDI} ₪"
-    return f"{_LRI}{raw} {currency}{_PDI}"
+    return format_money(value, currency)
 
 
 def _money_cell(value: object, currency: str = "ILS") -> str:
@@ -112,11 +107,7 @@ def _qty(value: object) -> str:
 
 
 def _date_he(value: object) -> str:
-    raw = _txt(value)
-    if len(raw) >= 10 and raw[4] == "-" and raw[7] == "-":
-        y, m, d = raw[:10].split("-")
-        return _ltr(f"{d}.{m}.{y}")
-    return _ltr(raw[:10]) if raw else ""
+    return format_date_he(value)
 
 
 def _filename(number: object) -> str:
@@ -197,12 +188,14 @@ def _status_he(status: object) -> str:
 
 
 class QuotePdf(FPDF):
-    def __init__(self, *, brand: str, number: str) -> None:
+    def __init__(self, *, brand: str, number: str, footer_bits: str = "", accent: tuple[int, int, int] = ACCENT) -> None:
         super().__init__(orientation="P", unit="mm", format="A4")
         self._brand = brand
         self._number = number
+        self._footer_bits = footer_bits
+        self._accent = accent
         self.set_auto_page_break(auto=True, margin=18)
-        self.set_margins(14, 14, 14)
+        self.set_margins(16, 16, 16)
         regular, bold = _resolve_fonts()
         self.add_font("Doc", style="", fname=str(regular))
         self.add_font("Doc", style="B", fname=str(bold))
@@ -210,11 +203,11 @@ class QuotePdf(FPDF):
         self.alias_nb_pages()
 
     def header(self) -> None:
-        # Top brand accent bar on every page
-        self.set_fill_color(*ACCENT)
-        self.rect(0, 0, self.w, 2.2, style="F")
+        # Thin brand accent rule — restrained, not a banner
+        self.set_fill_color(*self._accent)
+        self.rect(0, 0, self.w, 1.6, style="F")
         if self.page_no() <= 1:
-            self.set_y(10)
+            self.set_y(12)
             return
         self.set_y(8)
         self.set_draw_color(*LINE)
@@ -238,20 +231,61 @@ class QuotePdf(FPDF):
         self.ln(3)
 
     def footer(self) -> None:
-        self.set_y(-13)
+        self.set_y(-14)
         self.set_draw_color(*LINE)
         self.set_line_width(0.3)
         self.line(self.l_margin, self.get_y(), self.l_margin + self.epw, self.get_y())
         self.ln(1.5)
-        # Split RTL brand from LTR product mark — same-cell mix was reversing Hebrew glyphs.
         self.set_font("Doc", size=7.5)
         self.set_text_color(*MUTED)
         self.set_text_shaping(use_shaping_engine=True, direction="rtl")
-        self.cell(self.epw * 0.42, 5, text=self._brand, align="R")
+        left = self._footer_bits or self._brand
+        self.cell(self.epw * 0.72, 5, text=left, align="R")
         self.set_text_shaping(False)
-        mark = f" · {_LRI}SITE SECURE{_PDI}  ·  {self.page_no()}/{{nb}}"
-        self.cell(self.epw * 0.58, 5, text=mark, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pages = f"עמוד {self.page_no()} מתוך {{nb}}"
+        self.cell(self.epw * 0.28, 5, text=pages, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.set_text_shaping(use_shaping_engine=True, direction="rtl")
+
+
+def _logo_image_bytes(company: dict) -> bytes | None:
+    raw_b64 = _txt(company.get("logo_bytes_b64"))
+    if not raw_b64:
+        return None
+    try:
+        return base64.b64decode(raw_b64)
+    except Exception:
+        return None
+
+
+def _hex_rgb(value: object, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+    primary = _txt(value)
+    if primary.startswith("#") and len(primary) == 7:
+        try:
+            return tuple(int(primary[i : i + 2], 16) for i in (1, 3, 5))  # type: ignore[return-value]
+        except ValueError:
+            return fallback
+    return fallback
+
+
+def _draw_logo(pdf: QuotePdf, company: dict, *, max_w_mm: float = 38.0, max_h_mm: float = 14.0) -> float:
+    """Draw logo preserving aspect ratio. Returns height used (mm)."""
+    data = _logo_image_bytes(company)
+    if not data:
+        return 0.0
+    try:
+        x = pdf.l_margin + pdf.epw - max_w_mm
+        y = pdf.get_y()
+        pdf.image(BytesIO(data), x=x, y=y, w=max_w_mm, h=max_h_mm, keep_aspect_ratio=True)
+        return max_h_mm
+    except TypeError:
+        # Older fpdf without keep_aspect_ratio
+        try:
+            pdf.image(BytesIO(data), x=x, y=y, h=max_h_mm)
+            return max_h_mm
+        except Exception:
+            return 0.0
+    except Exception:
+        return 0.0
 
 
 def _font(pdf: QuotePdf, *, size: float = 10, bold: bool = False) -> None:
@@ -334,7 +368,22 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     company = document.get("company") or {}
     customer = document.get("customer") or {}
     site = document.get("site") or {}
-    brand = _txt(company.get("brand_name") or company.get("name")) or "SITE SECURE"
+    tpl = document.get("pdf_template") if isinstance(document.get("pdf_template"), dict) else {}
+
+    def _flag(key: str, default: bool = True) -> bool:
+        if key not in tpl:
+            return default
+        return bool(tpl.get(key))
+
+    accent = _hex_rgb(company.get("brand_primary") or tpl.get("primaryColor"), ACCENT)
+    accent_soft = (
+        min(255, accent[0] + 208),
+        min(255, accent[1] + 165),
+        min(255, accent[2] + 122),
+    )
+    total_bg = accent
+
+    brand = _txt(company.get("brand_name") or company.get("display_name") or company.get("name")) or "—"
     legal = _txt(company.get("legal_name") or company.get("name"))
     number = _txt(document.get("number")) or "—"
     version = document.get("version") or 1
@@ -349,83 +398,167 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         addr_from_site = raw_addr.get("line") or raw_addr.get("formatted")
     else:
         addr_from_site = raw_addr
-    site_addr = _txt(document.get("project_address") or customer.get("address_line") or addr_from_site)
-    # Avoid repeating the quote title as "site"
+    site_addr = _txt(document.get("project_address") or addr_from_site)
     if site_name and title and site_name == title:
         site_name = ""
 
-    pdf = QuotePdf(brand=brand, number=number)
+    footer_bits = " · ".join(
+        p
+        for p in (
+            legal or brand,
+            (
+                f"{_txt(company.get('business_number_label'))} {_ltr(company.get('business_number'))}"
+                if _txt(company.get("business_number"))
+                else ""
+            ),
+            _txt(company.get("phone")),
+            _txt(company.get("email")),
+        )
+        if p
+    )
+
+    pdf = QuotePdf(brand=brand, number=number, footer_bits=footer_bits, accent=accent)
     pdf.add_page()
     pdf.set_text_color(*INK)
 
-    # ── Compact brand row ───────────────────────────────────────
-    pdf.set_text_color(*ACCENT)
-    _font(pdf, size=11, bold=True)
-    pdf.cell(pdf.epw * 0.62, 6, text=brand, align="R")
-    if status_label:
-        pdf.set_fill_color(*ACCENT_SOFT)
-        pdf.set_text_color(*ACCENT)
-        _font(pdf, size=8, bold=True)
-        pdf.cell(pdf.epw * 0.38, 6, text=status_label, align="L", fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    else:
-        pdf.ln(6)
-    if legal and legal != brand:
-        pdf.set_text_color(*MUTED)
-        _font(pdf, size=8)
-        pdf.cell(pdf.epw, 4, text=legal, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    header_top = pdf.get_y()
+    logo_h = 0.0
+    if _flag("headerLogo", True) and _flag("showLogo", True):
+        logo_h = _draw_logo(pdf, company)
 
-    # ── Hero identity (single title stack) ───────────────────────
-    # Always reset X before multi_cell — fpdf leaves cursor at the right edge
-    # after the previous cell, which would push customer/title off-page.
-    pdf.ln(2)
+    pdf.set_xy(pdf.l_margin, header_top)
+    pdf.set_text_color(*accent)
+    _font(pdf, size=16, bold=True)
+    pdf.cell(pdf.epw * 0.42, 7, text="הצעת מחיר", align="L")
+    pdf.set_xy(pdf.l_margin, header_top + 7)
     pdf.set_text_color(*INK)
-    _right_text(pdf, f"הצעת מחיר {_ltr(f'#{number}')}", size=18, bold=True, h=8)
+    _font(pdf, size=13, bold=True)
+    pdf.set_text_shaping(False)
+    pdf.cell(pdf.epw * 0.42, 6, text=_ltr(number), align="L")
+    pdf.set_text_shaping(use_shaping_engine=True, direction="rtl")
+    issued = _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
+    until = _date_he(document.get("valid_until")) if _flag("showQuoteValidity", True) else ""
+    pdf.set_xy(pdf.l_margin, header_top + 13)
+    pdf.set_text_color(*MUTED)
+    _font(pdf, size=8.5)
+    meta_l = " · ".join(m for m in (issued, f"בתוקף עד {until}" if until else "") if m)
+    if meta_l:
+        pdf.cell(pdf.epw * 0.42, 4.5, text=meta_l, align="L")
+
+    company_x = pdf.l_margin + pdf.epw * 0.45
+    if logo_h:
+        pdf.set_y(header_top + logo_h + 1)
+    else:
+        pdf.set_y(header_top)
+    pdf.set_x(company_x)
+    pdf.set_text_color(*INK)
+    _font(pdf, size=12, bold=True)
+    pdf.cell(pdf.epw * 0.55, 6, text=brand, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if _flag("headerCompany", True):
+        if legal and legal != brand:
+            pdf.set_x(company_x)
+            pdf.set_text_color(*MUTED)
+            _font(pdf, size=8)
+            pdf.cell(pdf.epw * 0.55, 4, text=legal, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        bn = _txt(company.get("business_number"))
+        if bn:
+            label = _txt(company.get("business_number_label")) or "ח.פ."
+            pdf.set_x(company_x)
+            pdf.set_text_color(*MUTED)
+            _font(pdf, size=8)
+            pdf.cell(
+                pdf.epw * 0.55,
+                4,
+                text=f"{label} {_ltr(bn)}",
+                align="R",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+        if _flag("showCompanyAddress", True):
+            addr = _txt(company.get("address") or company.get("address_line"))
+            if addr:
+                pdf.set_x(company_x)
+                pdf.set_text_color(*MUTED)
+                _font(pdf, size=8)
+                pdf.cell(pdf.epw * 0.55, 4, text=addr, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if _flag("headerContact", True):
+        contact_bits = [_txt(company.get("phone")), _txt(company.get("email")), _txt(company.get("website"))]
+        contact = " · ".join(b for b in contact_bits if b)
+        if contact:
+            pdf.set_x(company_x)
+            pdf.set_text_color(*MUTED)
+            _font(pdf, size=8)
+            pdf.cell(pdf.epw * 0.55, 4, text=contact, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.set_y(max(pdf.get_y(), header_top + 22) + 2)
+    if status_label:
+        pdf.set_fill_color(*accent_soft)
+        pdf.set_text_color(*accent)
+        _font(pdf, size=8, bold=True)
+        pdf.cell(28, 5.5, text=status_label, align="C", fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(1)
+
     if title:
         pdf.set_text_color(*INK)
-        _right_text(pdf, title, size=13, bold=True, h=6.5)
+        _right_text(pdf, title, size=12, bold=True, h=6)
 
-    # Customer · site on one subdued line
-    who_bits = [b for b in (customer_name, site_name or site_addr) if b]
-    if who_bits:
-        pdf.set_text_color(*MUTED)
-        _right_text(pdf, " · ".join(who_bits), size=10, h=5.5)
+    if customer_name or _txt(customer.get("phone")) or _txt(customer.get("email")):
+        _ensure_space(pdf, 22)
+        pdf.set_text_color(*accent)
+        _font(pdf, size=9, bold=True)
+        pdf.cell(pdf.epw, 5, text="לכבוד", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_text_color(*INK)
+        if customer_name:
+            _right_text(pdf, customer_name, size=11, bold=True, h=5.5)
+        cust_bn = _txt(customer.get("tax_id") or customer.get("business_number"))
+        if cust_bn:
+            _right_text(pdf, f"ח.פ. {_ltr(cust_bn)}", size=8.5, h=4.5)
+        for label, val in (
+            ("איש קשר", customer.get("contact_name")),
+            ("טלפון", customer.get("phone")),
+            ("דוא״ל", customer.get("email")),
+        ):
+            v = _txt(val)
+            if not v:
+                continue
+            if label == "איש קשר":
+                _right_text(pdf, f"{label}: {v}", size=8.5, h=4.5)
+            else:
+                _right_text(pdf, f"{label}: {_ltr(v)}", size=8.5, h=4.5)
+        caddr = _txt(customer.get("address_line"))
+        if caddr:
+            _right_text(pdf, caddr, size=8.5, h=4.5)
 
-    issued = _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
-    until = _date_he(document.get("valid_until"))
-    meta = [m for m in (issued, f"בתוקף עד {until}" if until else "", f"גרסה {_ltr(version)}") if m]
-    if meta:
-        pdf.set_text_color(*MUTED)
-        _right_text(pdf, " · ".join(meta), size=8.5, h=4.5)
+    if site_name or site_addr:
+        pdf.ln(1)
+        pdf.set_text_color(*accent)
+        _font(pdf, size=9, bold=True)
+        pdf.cell(pdf.epw, 5, text="אתר / מיקום עבודה", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_text_color(*INK)
+        if site_name:
+            _right_text(pdf, site_name, size=10, bold=True, h=5)
+        if site_addr and site_addr != site_name:
+            _right_text(pdf, site_addr, size=8.5, h=4.5)
 
     if lead:
         pdf.ln(0.5)
         pdf.set_text_color(*MUTED)
         _right_text(pdf, lead, size=9, h=4.5)
 
-    # Customer contact strip — name is in who_bits; phone/email/address here
-    phone = _txt(customer.get("phone"))
-    email = _txt(customer.get("email"))
-    address = _txt(customer.get("address_line") or (site_addr if site_addr not in who_bits else ""))
-    who_line = " · ".join(who_bits)
-    contact_bits: list[str] = []
-    if phone:
-        contact_bits.append(f"טלפון: {_ltr(phone)}")
-    if email:
-        contact_bits.append(f"אימייל: {_ltr(email)}")
-    if address and address not in who_line:
-        contact_bits.append(address)
-    if contact_bits:
+    meta_bits = [f"גרסה {_ltr(version)}"]
+    if _txt(document.get("payment_terms")):
+        meta_bits.append(f"תנאי תשלום: {_txt(document.get('payment_terms'))}")
+    if meta_bits:
         pdf.set_text_color(*MUTED)
-        _right_text(pdf, " · ".join(contact_bits), size=8.5, h=4.5)
+        _right_text(pdf, " · ".join(meta_bits), size=8, h=4.2)
 
     pdf.ln(1)
-    pdf.set_draw_color(*ACCENT)
-    pdf.set_line_width(0.55)
+    pdf.set_draw_color(*accent)
+    pdf.set_line_width(0.45)
     y = pdf.get_y()
     pdf.line(pdf.l_margin, y, pdf.l_margin + pdf.epw, y)
     pdf.ln(4)
 
-    # ── Line items ──────────────────────────────────────────────
     _section_label(pdf, "פירוט ההצעה")
 
     sections = {s["id"]: s for s in (document.get("sections") or []) if isinstance(s, dict) and s.get("id")}
@@ -445,7 +578,6 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     def emit_table(rows: list[dict], *, start_index: int) -> int:
         if not rows:
             return start_index
-        # Physical LTR cols → visual RTL: # | מק״ט | תיאור | כמות | מחיר | [הנחה] | סה״כ
         if show_discount:
             headers = ("סה״כ", "הנחה", "מחיר", "כמות", "תיאור", "מק״ט", "#")
             widths = (
@@ -471,7 +603,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             aligns = ("R", "R", "C", "R", "L", "C")
 
         _ensure_space(pdf, 22)
-        heading = FontFace(emphasis="BOLD", size_pt=8, color=WHITE, fill_color=ACCENT)
+        heading = FontFace(emphasis="BOLD", size_pt=8, color=WHITE, fill_color=accent)
         with pdf.table(
             width=pdf.epw,
             col_widths=widths,
@@ -489,10 +621,12 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             pdf.set_text_color(*INK)
             idx = start_index
             for item in rows:
-                if item.get("item_type") == "note":
+                itype = _txt(item.get("item_type")).lower()
+                if itype in {"note", "free_text", "freetext"}:
                     note = table.row()
                     body = _txt(item.get("description") or item.get("name")) or "—"
-                    note.cell(f"הערה: {body}", colspan=len(headers))
+                    prefix = "הערה: " if itype == "note" else ""
+                    note.cell(f"{prefix}{body}", colspan=len(headers))
                     continue
                 idx += 1
                 cell_desc = _line_description(item)
@@ -532,7 +666,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         if not items and not section.get("name"):
             continue
         _ensure_space(pdf, 14)
-        pdf.set_text_color(*ACCENT)
+        pdf.set_text_color(*accent)
         _right_text(pdf, _txt(section.get("name")) or "סעיף", size=9.5, bold=True, h=5)
         pdf.set_text_color(*INK)
         line_no = emit_table(items, start_index=line_no)
@@ -540,7 +674,6 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     if loose:
         line_no = emit_table(loose, start_index=line_no)
 
-    # ── Totals ──────────────────────────────────────────────────
     _ensure_space(pdf, 38)
     pdf.ln(2)
     box_w = min(86.0, pdf.epw * 0.52)
@@ -555,20 +688,28 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         dlabel = f"{_ltr(disc)}%" if dtype == "percent" else _money(disc, currency)
         rows_data.append(("הנחה", dlabel, False))
     vat_pct = document.get("vat_percent")
-    vat_label = f"מע״מ {_ltr(vat_pct)}%" if vat_pct is not None else "מע״מ"
-    rows_data.append((vat_label, _money(document.get("vat_amount"), currency), False))
-    rows_data.append(("סה״כ לתשלום", _money(document.get("total_gross"), currency), True))
+    vat_amount = document.get("vat_amount")
+    tax_status = _txt(company.get("tax_status"))
+    show_vat = tax_status not in {"exempt", "zero_rated"} and (
+        vat_amount is None or abs(float(vat_amount or 0)) > 0.004 or bool(vat_pct)
+    )
+    if show_vat:
+        vat_label = f"מע״מ {_ltr(vat_pct)}%" if vat_pct is not None else "מע״מ"
+        rows_data.append((vat_label, _money(vat_amount, currency), False))
+    rows_data.append(
+        ("סה״כ כולל מע״מ" if show_vat else "סה״כ לתשלום", _money(document.get("total_gross"), currency), True)
+    )
 
     box_h = 7 + len(rows_data) * 6.8 + 3
     pdf.set_fill_color(*SURFACE)
-    pdf.set_draw_color(*ACCENT)
+    pdf.set_draw_color(*accent)
     pdf.set_line_width(0.45)
     pdf.rect(box_x, y, box_w, box_h, style="FD")
 
     cy = y + 3.5
     for label, value, emphasize in rows_data:
         if emphasize:
-            pdf.set_fill_color(*TOTAL_BG)
+            pdf.set_fill_color(*total_bg)
             pdf.rect(box_x, cy - 1, box_w, 8.5, style="F")
             pdf.set_text_color(*WHITE)
             _font(pdf, size=11, bold=True)
@@ -583,27 +724,42 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     pdf.set_y(y + box_h + 3)
     pdf.set_text_color(*INK)
 
-    # ── Terms (cards) + smart page break ────────────────────────
-    terms_blocks: list[tuple[str, object]] = [
-        ("תנאי תשלום", document.get("payment_terms")),
-        ("אחריות", document.get("warranty")),
-        ("תנאים כלליים", document.get("general_terms")),
-        ("הערות", document.get("customer_notes")),
-    ]
+    payment = company.get("payment") if isinstance(company.get("payment"), dict) else None
+    if payment and company.get("show_bank"):
+        bits = []
+        if payment.get("bank_name"):
+            bits.append(f"בנק: {payment['bank_name']}")
+        if payment.get("bank_branch"):
+            bits.append(f"סניף: {_ltr(payment['bank_branch'])}")
+        if payment.get("bank_account"):
+            bits.append(f"חשבון: {_ltr(payment['bank_account'])}")
+        if payment.get("account_holder"):
+            bits.append(f"בעל החשבון: {payment['account_holder']}")
+        if payment.get("instructions"):
+            bits.append(str(payment["instructions"]))
+        if bits:
+            _card(pdf, "פרטי תשלום", "\n".join(bits))
+
+    terms_blocks: list[tuple[str, object]] = []
+    if _flag("footerPayment", True) and _flag("showPaymentTerms", True):
+        terms_blocks.append(("תנאי תשלום", tpl.get("paymentTerms") or document.get("payment_terms")))
+    terms_blocks.append(("אחריות", document.get("warranty")))
+    terms_blocks.append(("תנאים כלליים", document.get("general_terms")))
+    if _flag("footerNotes", True) and _flag("showTechnicalNotes", True):
+        terms_blocks.append(("הערות", tpl.get("notes") or document.get("customer_notes")))
     terms_blocks = [(t, b) for t, b in terms_blocks if _txt(b)]
 
     approved_at = document.get("approved_at")
     approved_name = _txt(document.get("approved_name"))
     is_approved = bool(approved_at and approved_name)
+    show_signature = _flag("footerSignature", True) and _flag("showCustomerSignature", True)
 
-    # Rough remaining: prefer keeping terms+approval together on one page when possible.
     remaining = pdf.page_break_trigger - pdf.get_y()
     approx_terms = sum(12 + max(1, _txt(b).count("\n") + 1) * 5 for _, b in terms_blocks)
     approx_approval = 36 if is_approved else 28
     if terms_blocks and remaining < approx_terms + approx_approval - 8:
-        # Intentional terms page rather than orphan strip
         pdf.add_page()
-        pdf.set_text_color(*ACCENT)
+        pdf.set_text_color(*accent)
         _font(pdf, size=14, bold=True)
         pdf.multi_cell(pdf.epw, 7, text="תנאים ואישור", align="R")
         pdf.set_text_color(*MUTED)
@@ -614,68 +770,64 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     for title_t, body in terms_blocks:
         _card(pdf, title_t, _txt(body))
 
-    # ── Approval ────────────────────────────────────────────────
-    _ensure_space(pdf, 32)
-    signature = document.get("signature") if isinstance(document.get("signature"), dict) else {}
-    if is_approved:
-        ink = _signature_image_bytes(signature)
-        box_h = 52 if ink else 28
-        y0 = pdf.get_y()
-        pdf.set_fill_color(*SUCCESS_SOFT)
-        pdf.set_draw_color(*SUCCESS)
-        pdf.set_line_width(0.45)
-        pdf.rect(pdf.l_margin, y0, pdf.epw, box_h, style="FD")
-        pdf.set_xy(pdf.l_margin + 3, y0 + 3)
-        pdf.set_text_color(*SUCCESS)
-        _font(pdf, size=11, bold=True)
-        pdf.cell(pdf.epw - 6, 6, text="הצעה מאושרת דיגיטלית ✓", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_text_color(*INK)
-        _font(pdf, size=9.5)
-        pdf.set_x(pdf.l_margin + 3)
-        pdf.cell(pdf.epw - 6, 5, text=f"אושרה על ידי: {approved_name}", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_x(pdf.l_margin + 3)
-        pdf.set_text_color(*MUTED)
-        pdf.cell(
-            pdf.epw - 6,
-            5,
-            text=f"תאריך אישור: {_date_he(approved_at)}  ·  חתימה דיגיטלית: ✓",
-            align="R",
-            new_x=XPos.LMARGIN,
-            new_y=YPos.NEXT,
-        )
-        if ink:
-            try:
-                img_w = 42.0
-                img_x = pdf.l_margin + 4
-                img_y = y0 + 20
-                pdf.image(BytesIO(ink), x=img_x, y=img_y, w=img_w)
-            except Exception:
-                pass
-        pdf.set_y(y0 + box_h + 2)
-    else:
-        _section_label(pdf, _txt(signature.get("title")) or "אישור ההצעה")
-        pdf.set_text_color(*MUTED)
-        _right_text(
-            pdf,
-            "האישור הרשמי מתבצע בקישור המאובטח ללקוח (חתימה דיגיטלית).",
-            size=8.5,
-            h=4.5,
-        )
-        consent = _txt(signature.get("consent_he") or signature.get("consent_text"))
-        if consent:
-            _right_text(pdf, consent, size=8, h=4.2)
-        # Compact physical fallback only
-        pdf.ln(3)
-        pdf.set_text_color(*INK)
-        _font(pdf, size=8.5)
-        field_w = pdf.epw / 3
-        y = pdf.get_y()
-        for i, label in enumerate(
-            ("תאריך: ______________", "חתימה: ______________", "שם מלא: ______________")
-        ):
-            pdf.set_xy(pdf.l_margin + i * field_w, y)
-            pdf.cell(field_w - 2, 5, text=label, align="R")
-        pdf.set_y(y + 8)
+    if show_signature or is_approved:
+        _ensure_space(pdf, 32)
+        signature = document.get("signature") if isinstance(document.get("signature"), dict) else {}
+        if is_approved:
+            ink = _signature_image_bytes(signature)
+            box_h_sig = 52 if ink else 28
+            y0 = pdf.get_y()
+            pdf.set_fill_color(*SUCCESS_SOFT)
+            pdf.set_draw_color(*SUCCESS)
+            pdf.set_line_width(0.45)
+            pdf.rect(pdf.l_margin, y0, pdf.epw, box_h_sig, style="FD")
+            pdf.set_xy(pdf.l_margin + 3, y0 + 3)
+            pdf.set_text_color(*SUCCESS)
+            _font(pdf, size=11, bold=True)
+            pdf.cell(pdf.epw - 6, 6, text="הצעה מאושרת דיגיטלית ✓", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_text_color(*INK)
+            _font(pdf, size=9.5)
+            pdf.set_x(pdf.l_margin + 3)
+            pdf.cell(pdf.epw - 6, 5, text=f"אושרה על ידי: {approved_name}", align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_x(pdf.l_margin + 3)
+            pdf.set_text_color(*MUTED)
+            pdf.cell(
+                pdf.epw - 6,
+                5,
+                text=f"תאריך אישור: {_date_he(approved_at)}  ·  חתימה דיגיטלית: ✓",
+                align="R",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            if ink:
+                try:
+                    pdf.image(BytesIO(ink), x=pdf.l_margin + 4, y=y0 + 20, w=42.0)
+                except Exception:
+                    pass
+            pdf.set_y(y0 + box_h_sig + 2)
+        else:
+            _section_label(pdf, _txt(signature.get("title")) or "אישור ההצעה")
+            pdf.set_text_color(*MUTED)
+            _right_text(
+                pdf,
+                "האישור הרשמי מתבצע בקישור המאובטח ללקוח (חתימה דיגיטלית).",
+                size=8.5,
+                h=4.5,
+            )
+            consent = _txt(signature.get("consent_he") or signature.get("consent_text"))
+            if consent:
+                _right_text(pdf, consent, size=8, h=4.2)
+            pdf.ln(3)
+            pdf.set_text_color(*INK)
+            _font(pdf, size=8.5)
+            field_w = pdf.epw / 3
+            y = pdf.get_y()
+            for i, label in enumerate(
+                ("תאריך: ______________", "חתימה: ______________", "שם מלא: ______________")
+            ):
+                pdf.set_xy(pdf.l_margin + i * field_w, y)
+                pdf.cell(field_w - 2, 5, text=label, align="R")
+            pdf.set_y(y + 8)
 
     buf = BytesIO()
     pdf.output(buf)

@@ -37,6 +37,8 @@ class AuthzContext:
     plan_key: str
     features: frozenset[str]
     assigned_resource_ids: frozenset[str] = field(default_factory=frozenset)
+    workspace_role_key: str | None = None
+    grants: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)

@@ -102,7 +102,7 @@ describe("appNav", () => {
   }
 
   it("locks Target IA with all core modules live", () => {
-    expect(TARGET_IA.map((group) => group.id)).toEqual(["overview", "sales", "ops", "admin", "system"]);
+    expect(TARGET_IA.map((group) => group.id)).toEqual(["overview", "sales", "ops", "system"]);
     const planned = TARGET_IA.flatMap((group) =>
       group.items.filter((item) => (item.status as string) === "planned").map((item) => item.id),
     );
@@ -121,13 +121,13 @@ describe("appNav", () => {
         "/app/service",
         "/app/warranties",
         "/app/knowledge",
+        "/app/settings",
       ]),
     );
     expect(appNav("owner", solo).map((group) => group.id)).toEqual([
       "overview",
       "sales",
       "ops",
-      "admin",
       "system",
     ]);
   });
@@ -141,6 +141,7 @@ describe("appNav", () => {
     expect(technician).toContain("/app/service");
     expect(technician).not.toContain("/app/leads");
     expect(technician).not.toContain("/app/settings/users");
+    expect(technician).not.toContain("/app/settings");
 
     const sales = paths("sales", solo);
     expect(sales).toContain("/app/dashboard");
@@ -159,10 +160,10 @@ describe("appNav", () => {
     expect(manager).toContain("/app/dashboard");
     expect(manager).toContain("/app/quotes");
     expect(manager).toContain("/app/projects");
-    expect(manager).toContain("/app/settings/users");
-    expect(manager).toContain("/app/settings/roles");
-    expect(manager).toContain("/app/settings/security");
-    expect(manager).not.toContain("/app/settings");
+    expect(manager).toContain("/app/settings");
+    expect(manager).not.toContain("/app/settings/users");
+    expect(manager).not.toContain("/app/settings/roles");
+    expect(manager).not.toContain("/app/settings/security");
     expect(manager).not.toContain("/app/settings/audit");
 
     const soloOwner = paths("owner", solo);
@@ -171,28 +172,29 @@ describe("appNav", () => {
     expect(soloOwner).toContain("/app/sites");
     expect(soloOwner).toContain("/app/quotes");
     expect(appNav("owner", solo)[0]?.items[0]?.label).toBe(he.navDashboard);
-    expect(appNav("owner", solo).find((group) => group.id === "admin")?.items.map((item) => item.to)).toEqual([
-      "/app/settings/users",
-      "/app/settings/roles",
+    expect(appNav("owner", solo).find((group) => group.id === "system")?.items.map((item) => item.to)).toEqual([
+      "/app/settings",
     ]);
-    expect(soloOwner).toContain("/app/settings/users");
-    expect(soloOwner).toContain("/app/settings/roles");
-    expect(soloOwner).toContain("/app/settings/security");
     expect(soloOwner).toContain("/app/settings");
+    expect(soloOwner).not.toContain("/app/settings/users");
+    expect(soloOwner).not.toContain("/app/settings/roles");
+    expect(soloOwner).not.toContain("/app/settings/security");
     expect(soloOwner).not.toContain("/app/settings/audit");
 
     const businessOwner = paths("owner", business);
-    expect(businessOwner).toContain("/app/settings/audit");
+    expect(businessOwner).toContain("/app/settings");
+    expect(businessOwner).not.toContain("/app/settings/audit");
 
     const admin = paths("administrator", business);
-    expect(admin).toContain("/app/settings/users");
-    expect(admin).toContain("/app/settings/audit");
     expect(admin).toContain("/app/settings");
+    expect(admin).not.toContain("/app/settings/users");
+    expect(admin).not.toContain("/app/settings/audit");
 
     const ft = paths("founding_technician", solo);
     expect(ft).toContain("/app/today");
     expect(ft).toContain("/app/customers");
-    expect(ft).toContain("/app/settings/security");
+    expect(ft).toContain("/app/settings");
+    expect(ft).not.toContain("/app/settings/security");
   });
 
   it("bottom nav is a short live spine, not a copied sidebar", () => {

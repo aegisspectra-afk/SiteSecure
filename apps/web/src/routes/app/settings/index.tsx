@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
-import { ThemePicker } from "../../../components/ThemePicker";
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
 import { useSession } from "../../../lib/session";
@@ -28,6 +27,7 @@ function SettingsBody() {
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
   const [vat, setVat] = useState("18");
   const [formError, setFormError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const query = useQuery({
     queryKey: ["workspace", workspaceId],
@@ -51,6 +51,8 @@ function SettingsBody() {
       }),
     onSuccess: () => {
       setFormError(null);
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1800);
       void queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId] });
     },
     onError: (err) => {
@@ -80,34 +82,44 @@ function SettingsBody() {
   }
 
   return (
-    <div className="flex max-w-lg flex-col gap-8">
-      <PageHeader title={he.settingsTitle} description={he.settingsLead} />
-      <section className="ops-card flex flex-col gap-3 p-5">
-        <p className="text-sm font-medium text-fg">{he.appearanceTitle}</p>
-        <ThemePicker id="settings-theme" />
-      </section>
-      <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-        <Input id="ws-name" label={he.workspaceName} value={name} onChange={(ev) => setName(ev.target.value)} />
-        <Input
-          id="ws-timezone"
-          label={he.timezone}
-          value={timezone}
-          onChange={(ev) => setTimezone(ev.target.value)}
-          className="ltr-meta"
-        />
-        <Input
-          id="ws-vat"
-          label={he.vat}
-          type="number"
-          min={0}
-          max={100}
-          value={vat}
-          onChange={(ev) => setVat(ev.target.value)}
-          className="ltr-meta"
-        />
+    <div className="settings-panel flex flex-col gap-6">
+      <PageHeader title={he.settingsNavGeneral} description={he.settingsGeneralLead} />
+      <form className="settings-form" onSubmit={onSubmit}>
+        <div className="settings-field-grid">
+          <Input id="ws-name" label={he.workspaceName} value={name} onChange={(ev) => setName(ev.target.value)} />
+          <Input
+            id="ws-timezone"
+            label={he.timezone}
+            value={timezone}
+            onChange={(ev) => setTimezone(ev.target.value)}
+            className="ltr-meta"
+          />
+          <Input
+            id="ws-vat"
+            label={he.vat}
+            type="number"
+            min={0}
+            max={100}
+            value={vat}
+            onChange={(ev) => setVat(ev.target.value)}
+            className="ltr-meta"
+          />
+          <div className="settings-locked-field">
+            <span className="settings-field-label">{he.currencyLabel}</span>
+            <p className="settings-locked-value ltr-meta" title={he.currencyLockedHint}>
+              ₪ · ILS
+            </p>
+            <p className="settings-field-hint">{he.currencyLockedHint}</p>
+          </div>
+        </div>
         {formError ? (
           <p className="text-sm text-danger" role="alert">
             {formError}
+          </p>
+        ) : null}
+        {savedFlash ? (
+          <p className="text-sm text-success" role="status">
+            {he.settingsSaved}
           </p>
         ) : null}
         <Button type="submit" variant="primary" loading={save.isPending} className="self-start">

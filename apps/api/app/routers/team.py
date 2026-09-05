@@ -30,6 +30,7 @@ ASSIGNABLE_ROLES = frozenset(
 
 class MemberPatch(BaseModel):
     role_key: str | None = None
+    workspace_role_key: str | None = None
     status: Literal["active", "disabled"] | None = None
 
 
@@ -39,6 +40,7 @@ class MemberOut(BaseModel):
     full_name: str = ""
     email: str | None = None
     role_key: str
+    workspace_role_key: str | None = None
     status: str
     created_at: str | None = None
 
@@ -127,7 +129,7 @@ def list_members_directory(
         "workspace_memberships",
         params={
             "workspace_id": f"eq.{workspace_id}",
-            "select": "id,user_id,role_key,status,created_at,profiles(full_name,email)",
+            "select": "id,user_id,role_key,workspace_role_key,status,created_at,profiles(full_name,email)",
             "order": "created_at.asc",
         },
     )
@@ -152,6 +154,7 @@ def list_members_directory(
                 full_name=profile.get("full_name") or "",
                 email=profile.get("email"),
                 role_key=row["role_key"],
+                workspace_role_key=row.get("workspace_role_key") or row["role_key"],
                 status=row["status"],
                 created_at=row.get("created_at"),
             )
@@ -233,10 +236,23 @@ def patch_member(
         )
         raise ApiError(403, "BUSINESS_RULE", "לא ניתן לשנות את התפקיד של עצמכם")
     patch: dict[str, str] = {}
-    if body.role_key is not None:
-        if body.role_key not in ASSIGNABLE_ROLES:
+    if body.workspace_role_key is not None or body.role_key is not None:
+        from ..workspace_rbac import find_workspace_role
+
+        requested = (body.workspace_role_key or body.role_key or "").strip()
+        ws_role = find_workspace_role(client, str(workspace_id), requested)
+        if ws_role is None and body.role_key is not None and body.role_key in ASSIGNABLE_ROLES:
+            # System role by catalog key before workspace seed match
+            base_key = body.role_key
+            effective_key = body.role_key
+        elif ws_role is None:
+            raise ApiError(400, "VALIDATION_ERROR", "תפקיד לא קיים בסביבה")
+        else:
+            base_key = str(ws_role.get("base_role_key") or ws_role["key"])
+            effective_key = str(ws_role["key"])
+        if base_key not in ASSIGNABLE_ROLES and base_key != "owner":
             raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
-        if body.role_key == "owner" and ctx.role_key != "owner":
+        if base_key == "owner" and ctx.role_key != "owner":
             write_audit(
                 client,
                 str(workspace_id),
@@ -246,7 +262,8 @@ def patch_member(
                 metadata={"result": "denied", "code": "OWNER_ASSIGN_RESTRICTED"},
             )
             raise ApiError(403, "BUSINESS_RULE", "רק בעלים יכול למנות בעלים")
-        patch["role_key"] = body.role_key
+        patch["role_key"] = base_key
+        patch["workspace_role_key"] = effective_key
     if body.status is not None:
         patch["status"] = body.status
     if not patch:
@@ -272,6 +289,7 @@ def patch_member(
             "result": "success",
             "from_role": row["role_key"],
             "to_role": updated.get("role_key", row["role_key"]),
+            "workspace_role_key": updated.get("workspace_role_key"),
             "status": updated.get("status", row["status"]),
         },
     )
@@ -282,6 +300,7 @@ def patch_member(
         full_name=profile.get("full_name") or "",
         email=profile.get("email"),
         role_key=updated["role_key"],
+        workspace_role_key=updated.get("workspace_role_key") or updated["role_key"],
         status=updated["status"],
         created_at=updated.get("created_at"),
     )

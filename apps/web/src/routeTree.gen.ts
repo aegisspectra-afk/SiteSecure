@@ -27,6 +27,7 @@ import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
 import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
+import { Route as AppSettingsRouteRouteImport } from "./routes/app/settings/route"
 import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
@@ -46,9 +47,17 @@ import { Route as AppQuotesQuoteIdRouteImport } from "./routes/app/quotes/$quote
 import { Route as AppQuotesNewRouteImport } from "./routes/app/quotes/new"
 import { Route as AppServiceIndexRouteImport } from "./routes/app/service/index"
 import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
+import { Route as AppSettingsAppearanceRouteImport } from "./routes/app/settings/appearance"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
+import { Route as AppSettingsCompanyRouteImport } from "./routes/app/settings/company"
+import { Route as AppSettingsNotificationsRouteImport } from "./routes/app/settings/notifications"
+import { Route as AppSettingsNumberingRouteImport } from "./routes/app/settings/numbering"
+import { Route as AppSettingsPdfTemplatesRouteImport } from "./routes/app/settings/pdf-templates"
+import { Route as AppSettingsQuotesRouteImport } from "./routes/app/settings/quotes"
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
 import { Route as AppSettingsSecurityRouteImport } from "./routes/app/settings/security"
+import { Route as AppSettingsSitesRouteImport } from "./routes/app/settings/sites"
+import { Route as AppSettingsSystemRouteImport } from "./routes/app/settings/system"
 import { Route as AppSettingsUsersRouteImport } from "./routes/app/settings/users"
 import { Route as AppSitesIndexRouteImport } from "./routes/app/sites/index"
 import { Route as AppSitesSiteIdRouteImport } from "./routes/app/sites/$siteId"
@@ -147,6 +156,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: "/dashboard",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppTodayRoute = AppTodayRouteImport.update({
   id: "/today",
   path: "/today",
@@ -238,29 +252,70 @@ const AppServiceIndexRoute = AppServiceIndexRouteImport.update({
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
-  id: "/settings/",
-  path: "/settings/",
-  getParentRoute: () => AppRouteRoute,
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
+  id: "/appearance",
+  path: "/appearance",
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
-  id: "/settings/audit",
-  path: "/settings/audit",
-  getParentRoute: () => AppRouteRoute,
+  id: "/audit",
+  path: "/audit",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
+  id: "/company",
+  path: "/company",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsNotificationsRoute =
+  AppSettingsNotificationsRouteImport.update({
+    id: "/notifications",
+    path: "/notifications",
+    getParentRoute: () => AppSettingsRouteRoute,
+  } as any)
+const AppSettingsNumberingRoute = AppSettingsNumberingRouteImport.update({
+  id: "/numbering",
+  path: "/numbering",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsPdfTemplatesRoute = AppSettingsPdfTemplatesRouteImport.update({
+  id: "/pdf-templates",
+  path: "/pdf-templates",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsQuotesRoute = AppSettingsQuotesRouteImport.update({
+  id: "/quotes",
+  path: "/quotes",
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsRolesRoute = AppSettingsRolesRouteImport.update({
-  id: "/settings/roles",
-  path: "/settings/roles",
-  getParentRoute: () => AppRouteRoute,
+  id: "/roles",
+  path: "/roles",
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
-  id: "/settings/security",
-  path: "/settings/security",
-  getParentRoute: () => AppRouteRoute,
+  id: "/security",
+  path: "/security",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsSitesRoute = AppSettingsSitesRouteImport.update({
+  id: "/sites",
+  path: "/sites",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsSystemRoute = AppSettingsSystemRouteImport.update({
+  id: "/system",
+  path: "/system",
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
-  id: "/settings/users",
-  path: "/settings/users",
-  getParentRoute: () => AppRouteRoute,
+  id: "/users",
+  path: "/users",
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSitesIndexRoute = AppSitesIndexRouteImport.update({
   id: "/sites/",
@@ -303,6 +358,7 @@ export interface FileRoutesByFullPath {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
@@ -324,9 +380,17 @@ export interface FileRoutesByFullPath {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
+  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/notifications": typeof AppSettingsNotificationsRoute
+  "/app/settings/numbering": typeof AppSettingsNumberingRoute
+  "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/sites": typeof AppSettingsSitesRoute
+  "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
@@ -371,9 +435,17 @@ export interface FileRoutesByTo {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
+  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/notifications": typeof AppSettingsNotificationsRoute
+  "/app/settings/numbering": typeof AppSettingsNumberingRoute
+  "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/sites": typeof AppSettingsSitesRoute
+  "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
@@ -400,6 +472,7 @@ export interface FileRoutesById {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
@@ -421,9 +494,17 @@ export interface FileRoutesById {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
+  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/notifications": typeof AppSettingsNotificationsRoute
+  "/app/settings/numbering": typeof AppSettingsNumberingRoute
+  "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
+  "/app/settings/sites": typeof AppSettingsSitesRoute
+  "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
@@ -451,6 +532,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/settings"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
@@ -472,9 +554,17 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
+    | "/app/settings/appearance"
     | "/app/settings/audit"
+    | "/app/settings/company"
+    | "/app/settings/notifications"
+    | "/app/settings/numbering"
+    | "/app/settings/pdf-templates"
+    | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
+    | "/app/settings/sites"
+    | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
     | "/public/quotes/$token"
@@ -519,9 +609,17 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
+    | "/app/settings/appearance"
     | "/app/settings/audit"
+    | "/app/settings/company"
+    | "/app/settings/notifications"
+    | "/app/settings/numbering"
+    | "/app/settings/pdf-templates"
+    | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
+    | "/app/settings/sites"
+    | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
     | "/public/quotes/$token"
@@ -547,6 +645,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/settings"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
@@ -568,9 +667,17 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
+    | "/app/settings/appearance"
     | "/app/settings/audit"
+    | "/app/settings/company"
+    | "/app/settings/notifications"
+    | "/app/settings/numbering"
+    | "/app/settings/pdf-templates"
+    | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
+    | "/app/settings/sites"
+    | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
     | "/public/quotes/$token"
@@ -733,6 +840,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/settings": {
+      id: "/app/settings"
+      path: "/settings"
+      fullPath: "/app/settings"
+      preLoaderRoute: typeof AppSettingsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/app/today": {
       id: "/app/today"
       path: "/today"
@@ -861,38 +975,94 @@ declare module "@tanstack/react-router" {
     }
     "/app/settings/": {
       id: "/app/settings/"
-      path: "/settings"
+      path: "/"
       fullPath: "/app/settings/"
       preLoaderRoute: typeof AppSettingsIndexRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/appearance": {
+      id: "/app/settings/appearance"
+      path: "/appearance"
+      fullPath: "/app/settings/appearance"
+      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/audit": {
       id: "/app/settings/audit"
-      path: "/settings/audit"
+      path: "/audit"
       fullPath: "/app/settings/audit"
       preLoaderRoute: typeof AppSettingsAuditRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/company": {
+      id: "/app/settings/company"
+      path: "/company"
+      fullPath: "/app/settings/company"
+      preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/notifications": {
+      id: "/app/settings/notifications"
+      path: "/notifications"
+      fullPath: "/app/settings/notifications"
+      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/numbering": {
+      id: "/app/settings/numbering"
+      path: "/numbering"
+      fullPath: "/app/settings/numbering"
+      preLoaderRoute: typeof AppSettingsNumberingRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/pdf-templates": {
+      id: "/app/settings/pdf-templates"
+      path: "/pdf-templates"
+      fullPath: "/app/settings/pdf-templates"
+      preLoaderRoute: typeof AppSettingsPdfTemplatesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/quotes": {
+      id: "/app/settings/quotes"
+      path: "/quotes"
+      fullPath: "/app/settings/quotes"
+      preLoaderRoute: typeof AppSettingsQuotesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/roles": {
       id: "/app/settings/roles"
-      path: "/settings/roles"
+      path: "/roles"
       fullPath: "/app/settings/roles"
       preLoaderRoute: typeof AppSettingsRolesRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/security": {
       id: "/app/settings/security"
-      path: "/settings/security"
+      path: "/security"
       fullPath: "/app/settings/security"
       preLoaderRoute: typeof AppSettingsSecurityRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/sites": {
+      id: "/app/settings/sites"
+      path: "/sites"
+      fullPath: "/app/settings/sites"
+      preLoaderRoute: typeof AppSettingsSitesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/system": {
+      id: "/app/settings/system"
+      path: "/system"
+      fullPath: "/app/settings/system"
+      preLoaderRoute: typeof AppSettingsSystemRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/users": {
       id: "/app/settings/users"
-      path: "/settings/users"
+      path: "/users"
       fullPath: "/app/settings/users"
       preLoaderRoute: typeof AppSettingsUsersRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/sites/": {
       id: "/app/sites/"
@@ -961,6 +1131,41 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface AppSettingsRouteRouteChildren {
+  AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
+  AppSettingsAuditRoute: typeof AppSettingsAuditRoute
+  AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsNumberingRoute: typeof AppSettingsNumberingRoute
+  AppSettingsPdfTemplatesRoute: typeof AppSettingsPdfTemplatesRoute
+  AppSettingsQuotesRoute: typeof AppSettingsQuotesRoute
+  AppSettingsRolesRoute: typeof AppSettingsRolesRoute
+  AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsSitesRoute: typeof AppSettingsSitesRoute
+  AppSettingsSystemRoute: typeof AppSettingsSystemRoute
+  AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+}
+
+const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
+  AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
+  AppSettingsAuditRoute: AppSettingsAuditRoute,
+  AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsNumberingRoute: AppSettingsNumberingRoute,
+  AppSettingsPdfTemplatesRoute: AppSettingsPdfTemplatesRoute,
+  AppSettingsQuotesRoute: AppSettingsQuotesRoute,
+  AppSettingsRolesRoute: AppSettingsRolesRoute,
+  AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsSitesRoute: AppSettingsSitesRoute,
+  AppSettingsSystemRoute: AppSettingsSystemRoute,
+  AppSettingsUsersRoute: AppSettingsUsersRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
+}
+
+const AppSettingsRouteRouteWithChildren =
+  AppSettingsRouteRoute._addFileChildren(AppSettingsRouteRouteChildren)
+
 interface AppQuotesQuoteIdRouteChildren {
   AppQuotesQuoteIdPreviewRoute: typeof AppQuotesQuoteIdPreviewRoute
 }
@@ -973,6 +1178,7 @@ const AppQuotesQuoteIdRouteWithChildren =
   AppQuotesQuoteIdRoute._addFileChildren(AppQuotesQuoteIdRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppCatalogRoute: typeof AppCatalogRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
@@ -983,10 +1189,6 @@ interface AppRouteRouteChildren {
   AppProjectsProjectIdRoute: typeof AppProjectsProjectIdRoute
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
   AppQuotesNewRoute: typeof AppQuotesNewRoute
-  AppSettingsAuditRoute: typeof AppSettingsAuditRoute
-  AppSettingsRolesRoute: typeof AppSettingsRolesRoute
-  AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
-  AppSettingsUsersRoute: typeof AppSettingsUsersRoute
   AppSitesSiteIdRoute: typeof AppSitesSiteIdRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppKnowledgeIndexRoute: typeof AppKnowledgeIndexRoute
@@ -994,13 +1196,13 @@ interface AppRouteRouteChildren {
   AppProjectsIndexRoute: typeof AppProjectsIndexRoute
   AppQuotesIndexRoute: typeof AppQuotesIndexRoute
   AppServiceIndexRoute: typeof AppServiceIndexRoute
-  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppSitesIndexRoute: typeof AppSitesIndexRoute
   AppTasksIndexRoute: typeof AppTasksIndexRoute
   AppWarrantiesIndexRoute: typeof AppWarrantiesIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppCatalogRoute: AppCatalogRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
@@ -1011,10 +1213,6 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppProjectsProjectIdRoute: AppProjectsProjectIdRoute,
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
   AppQuotesNewRoute: AppQuotesNewRoute,
-  AppSettingsAuditRoute: AppSettingsAuditRoute,
-  AppSettingsRolesRoute: AppSettingsRolesRoute,
-  AppSettingsSecurityRoute: AppSettingsSecurityRoute,
-  AppSettingsUsersRoute: AppSettingsUsersRoute,
   AppSitesSiteIdRoute: AppSitesSiteIdRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppKnowledgeIndexRoute: AppKnowledgeIndexRoute,
@@ -1022,7 +1220,6 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppProjectsIndexRoute: AppProjectsIndexRoute,
   AppQuotesIndexRoute: AppQuotesIndexRoute,
   AppServiceIndexRoute: AppServiceIndexRoute,
-  AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppSitesIndexRoute: AppSitesIndexRoute,
   AppTasksIndexRoute: AppTasksIndexRoute,
   AppWarrantiesIndexRoute: AppWarrantiesIndexRoute,

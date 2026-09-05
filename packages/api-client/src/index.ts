@@ -1877,6 +1877,47 @@ export function createApiClient(opts: {
         headers: { "Content-Type": "application/json" },
       });
     },
+    getCompanyProfile: (workspaceId: string) =>
+      request<{ workspace_id: string; profile: Record<string, unknown>; missing_for_quote: string[] }>(
+        `/api/v1/workspaces/${workspaceId}/company-profile`,
+      ),
+    createCompanyLogoUpload: (
+      workspaceId: string,
+      body: { original_filename?: string; mime_type: string; byte_size: number },
+    ) =>
+      request<{
+        logo_asset_id: string;
+        logo_bucket: string;
+        logo_storage_path: string;
+        upload_url: string;
+        expires_in: number;
+        mime_type: string;
+        max_bytes: number;
+      }>(`/api/v1/workspaces/${workspaceId}/company-profile/logo-upload`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    completeCompanyLogo: (
+      workspaceId: string,
+      body: {
+        logo_asset_id: string;
+        logo_storage_path: string;
+        logo_bucket?: string;
+        mime_type?: string;
+      },
+    ) =>
+      request<{ workspace_id: string; profile: Record<string, unknown>; missing_for_quote: string[] }>(
+        `/api/v1/workspaces/${workspaceId}/company-profile/logo-complete`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    previewCompanyDocument: (workspaceId: string, documentType: "quote" | "tax_invoice" = "quote") => {
+      const q = new URLSearchParams({ document_type: documentType, inline: "true" });
+      return requestBlob(`/api/v1/workspaces/${workspaceId}/company-profile/document-preview?${q}`, {
+        method: "POST",
+        body: "{}",
+        headers: { "Content-Type": "application/json" },
+      });
+    },
     createInvitation: (workspaceId: string, body: { email: string; role_key?: string }) =>
       request<InviteOut>(`/api/v1/workspaces/${workspaceId}/invitations`, {
         method: "POST",

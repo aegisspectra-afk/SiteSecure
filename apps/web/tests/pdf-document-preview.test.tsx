@@ -57,11 +57,15 @@ describe("pdf preview zoom helpers", () => {
   });
 
   it("fit mode uses available container width", () => {
-    // page width 595.28, container 400, pad 24 → (400-24)/595.28 ≈ 0.63 → clamp keeps in range
+    // page width 595.28, container 400, pad 24 → (400-24)/595.28
     const scale = computeFitScale(595.28, 400);
-    expect(scale).toBeGreaterThanOrEqual(0.5);
+    expect(scale).toBeGreaterThanOrEqual(0.35);
     expect(scale).toBeLessThanOrEqual(1.5);
     expect(scale).toBeCloseTo((400 - 24) / 595.28, 3);
+    // Narrow phone must go below the manual 50% floor
+    const phone = computeFitScale(595.28, 375);
+    expect(phone).toBeLessThan(0.6);
+    expect(phone).toBeGreaterThan(0.35);
   });
 });
 

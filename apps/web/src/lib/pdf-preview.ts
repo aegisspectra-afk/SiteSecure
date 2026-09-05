@@ -23,13 +23,16 @@ export function stepPdfZoom(current: number, direction: -1 | 1): number {
   return next ?? PDF_ZOOM_MAX;
 }
 
-/** Fit PDF page width into available stage width (CSS pixels). */
+/** Fit PDF page width into available stage width (CSS pixels).
+ * Allows below the manual zoom floor so phones can truly fit A4. */
 export function computeFitScale(pageWidthAtScale1: number, containerWidth: number, padX = PDF_PREVIEW_STAGE_PAD_X): number {
   if (!(pageWidthAtScale1 > 0) || !(containerWidth > 0)) return 0.75;
-  const available = Math.max(80, containerWidth - padX);
-  return clampPdfZoom(available / pageWidthAtScale1);
+  const available = Math.max(64, containerWidth - padX);
+  const raw = available / pageWidthAtScale1;
+  return Math.min(PDF_ZOOM_MAX, Math.max(0.35, raw));
 }
 
 export function formatZoomPercent(scale: number): string {
-  return `${Math.round(clampPdfZoom(scale) * 100)}%`;
+  const pct = Math.round(Math.min(PDF_ZOOM_MAX, Math.max(0.35, scale)) * 100);
+  return `${pct}%`;
 }

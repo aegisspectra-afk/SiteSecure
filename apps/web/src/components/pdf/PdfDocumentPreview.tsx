@@ -53,14 +53,28 @@ export function PdfDocumentPreview({
   useEffect(() => {
     const el = stageRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0;
-      setContainerWidth(w);
-    });
+    const measure = () => {
+      // Prefer the laid-out box; cap by viewport so expanding scroll content cannot inflate fit scale.
+      const rectW = el.getBoundingClientRect().width;
+      const clientW = el.clientWidth;
+      const viewportCap = typeof window !== "undefined" ? Math.max(200, window.innerWidth - 24) : Number.POSITIVE_INFINITY;
+      const w = Math.min(rectW || clientW || 0, clientW || rectW || 0, viewportCap);
+      if (w > 0) setContainerWidth(w);
+    };
+    const ro = new ResizeObserver(() => measure());
     ro.observe(el);
-    setContainerWidth(el.clientWidth);
+    measure();
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!fitWidth) return;
+    const el = stageRef.current;
+    if (!el) return;
+    const viewportCap = typeof window !== "undefined" ? Math.max(200, window.innerWidth - 24) : el.clientWidth;
+    const w = Math.min(el.getBoundingClientRect().width || el.clientWidth, viewportCap);
+    if (w > 0) setContainerWidth(w);
+  }, [fitWidth, data]);
 
   useEffect(() => {
     if (!data || data.byteLength === 0) {
@@ -219,7 +233,8 @@ function PdfCanvasPage({
         canvas.style.width = `${viewport.width}px`;
         canvas.style.height = `${viewport.height}px`;
         if (wrapRef.current) {
-          wrapRef.current.style.width = `${viewport.width}px`;
+          wrapRef.current.style.width = "";
+          wrapRef.current.style.maxWidth = "100%";
         }
         const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
         renderTask = page.render({

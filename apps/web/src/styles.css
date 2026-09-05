@@ -8951,14 +8951,28 @@ html.theme-revealing::view-transition-new(root) {
   }
   .pdf-studio-col.is-mobile-active {
     display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
   .pdf-studio-preview {
     max-height: none;
     min-height: 70vh;
+    width: 100%;
+    max-width: 100%;
   }
   .pdf-preview-stage {
     max-height: none;
     min-height: 60vh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .pdf-preview-page {
+    max-width: 100%;
+  }
+  .pdf-preview-canvas {
+    max-width: 100%;
   }
 }
 

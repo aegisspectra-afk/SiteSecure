@@ -1758,6 +1758,7 @@ export const he = {
   catalogModel: "דגם",
   catalogUnit: "יחידת מידה",
   catalogAttributes: "מאפיינים טכניים",
+  catalogAttrUnknown: "לא ידוע",
   catalogPrice: "מחיר מכירה",
   catalogCost: "עלות",
   catalogEmpty: "אין פריטים בקטלוג",

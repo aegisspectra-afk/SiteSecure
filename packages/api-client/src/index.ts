@@ -383,7 +383,14 @@ export type QuoteItemIn = {
 export type CatalogAttributeField = {
   key: string;
   label_he: string;
-  type: "text" | "bool" | string;
+  type: "text" | "bool" | "number" | "enum" | string;
+  integer?: boolean;
+  minimum?: number;
+  maximum?: number;
+  max_length?: number;
+  enum?: string[];
+  enum_labels_he?: Record<string, string>;
+  tristate?: boolean;
 };
 
 export type CatalogProduct = {

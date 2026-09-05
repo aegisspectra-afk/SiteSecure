@@ -31,7 +31,8 @@ type Draft = {
   root_id: string;
   category_id: string;
   is_active: boolean;
-  attributes: Record<string, string | boolean>;
+  /** string values; bools use "" | "true" | "false" so unknown ≠ false */
+  attributes: Record<string, string>;
 };
 
 const emptyDraft: Draft = {
@@ -140,11 +141,21 @@ function CatalogBody() {
       const attrs: Record<string, unknown> = {};
       for (const field of attrSchema) {
         const raw = draft.attributes[field.key];
+        if (raw == null || String(raw).trim() === "") continue;
         if (field.type === "bool") {
-          attrs[field.key] = Boolean(raw);
-        } else if (raw != null && String(raw).trim() !== "") {
-          attrs[field.key] = String(raw).trim();
+          if (raw === "true") attrs[field.key] = true;
+          else if (raw === "false") attrs[field.key] = false;
+          continue;
         }
+        if (field.type === "number") {
+          const n = Number(String(raw).replace(",", ""));
+          if (!Number.isFinite(n)) {
+            throw new ApiClientError(400, "VALIDATION_ERROR", `${field.label_he}: מספר לא תקין`);
+          }
+          attrs[field.key] = n;
+          continue;
+        }
+        attrs[field.key] = String(raw).trim();
       }
       const body = {
         name: draft.name.trim(),
@@ -173,7 +184,19 @@ function CatalogBody() {
       void queryClient.invalidateQueries({ queryKey: ["cpq-catalog", workspaceId] });
     },
     onError: (err) => {
-      setFormError(err instanceof ApiClientError ? err.message : he.catalogError);
+      if (err instanceof ApiClientError) {
+        const fields = err.details?.fields;
+        if (fields && typeof fields === "object") {
+          const parts = Object.entries(fields as Record<string, string>).map(
+            ([key, msg]) => `${key}: ${msg}`,
+          );
+          setFormError(parts.length ? `${err.message} — ${parts.join(" · ")}` : err.message);
+          return;
+        }
+        setFormError(err.message);
+        return;
+      }
+      setFormError(he.catalogError);
     },
   });
 
@@ -189,10 +212,13 @@ function CatalogBody() {
   function startEdit(row: CatalogProduct) {
     const leaf = categories.find((c) => c.id === row.category_id);
     const rootId = leaf?.parent_id ?? "";
-    const attrs: Record<string, string | boolean> = {};
+    const attrs: Record<string, string> = {};
     const rawAttrs = row.attributes && typeof row.attributes === "object" ? row.attributes : {};
     for (const [key, value] of Object.entries(rawAttrs)) {
-      attrs[key] = typeof value === "boolean" ? value : String(value ?? "");
+      if (value === true) attrs[key] = "true";
+      else if (value === false) attrs[key] = "false";
+      else if (value == null) continue;
+      else attrs[key] = String(value);
     }
     setEditingId(row.id);
     setDraft({
@@ -358,38 +384,58 @@ function CatalogBody() {
             {attrSchema.length ? (
               <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
                 <p className="text-sm font-medium text-fg md:col-span-2">{he.catalogAttributes}</p>
-                {attrSchema.map((field) =>
-                  field.type === "bool" ? (
-                    <Select
-                      key={field.key}
-                      id={`attr-${field.key}`}
-                      label={field.label_he}
-                      value={draft.attributes[field.key] ? "yes" : "no"}
-                      onChange={(ev) =>
-                        setDraft((p) => ({
-                          ...p,
-                          attributes: { ...p.attributes, [field.key]: ev.target.value === "yes" },
-                        }))
-                      }
-                    >
-                      <option value="no">לא</option>
-                      <option value="yes">כן</option>
-                    </Select>
-                  ) : (
+                {attrSchema.map((field) => {
+                  const value = draft.attributes[field.key] ?? "";
+                  const setAttr = (next: string) =>
+                    setDraft((p) => ({
+                      ...p,
+                      attributes: { ...p.attributes, [field.key]: next },
+                    }));
+                  if (field.type === "bool") {
+                    return (
+                      <Select
+                        key={field.key}
+                        id={`attr-${field.key}`}
+                        label={field.label_he}
+                        value={value === "true" || value === "false" ? value : ""}
+                        onChange={(ev) => setAttr(ev.target.value)}
+                      >
+                        <option value="">{he.catalogAttrUnknown}</option>
+                        <option value="true">כן</option>
+                        <option value="false">לא</option>
+                      </Select>
+                    );
+                  }
+                  if (field.type === "enum" && field.enum?.length) {
+                    return (
+                      <Select
+                        key={field.key}
+                        id={`attr-${field.key}`}
+                        label={field.label_he}
+                        value={value}
+                        onChange={(ev) => setAttr(ev.target.value)}
+                      >
+                        <option value="">{he.catalogAttrUnknown}</option>
+                        {field.enum.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {field.enum_labels_he?.[opt] ?? opt}
+                          </option>
+                        ))}
+                      </Select>
+                    );
+                  }
+                  return (
                     <Input
                       key={field.key}
                       id={`attr-${field.key}`}
                       label={field.label_he}
-                      value={String(draft.attributes[field.key] ?? "")}
-                      onChange={(ev) =>
-                        setDraft((p) => ({
-                          ...p,
-                          attributes: { ...p.attributes, [field.key]: ev.target.value },
-                        }))
-                      }
+                      type={field.type === "number" ? "number" : "text"}
+                      inputMode={field.type === "number" ? "decimal" : undefined}
+                      value={value}
+                      onChange={(ev) => setAttr(ev.target.value)}
                     />
-                  ),
-                )}
+                  );
+                })}
               </div>
             ) : null}
             {formError ? <p className="text-sm text-danger md:col-span-2">{formError}</p> : null}

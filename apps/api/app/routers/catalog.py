@@ -9,7 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.engine import authorize
 from ..authz.guard import require
-from ..catalog_attrs import attribute_schema_for_category, normalize_unit
+from ..catalog_attrs import (
+    AttributeValidationError,
+    attribute_schema_for_category,
+    normalize_unit,
+    validate_product_attributes,
+)
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import ApiError
 from ..identity import actor_id
@@ -27,6 +32,38 @@ TEMPLATE_SELECT = "id,workspace_id,key,name_he,quote_template_items(count)"
 COST_FIELDS = ("cost",)
 
 KIND_TO_ITEM = {"service": "labor", "product": "catalog", "bundle": "catalog"}
+
+
+def _category_keys(cat_index: dict[str, dict], category_id: str | None) -> tuple[str | None, str | None]:
+    if not category_id:
+        return None, None
+    cat = cat_index.get(str(category_id))
+    if not cat:
+        return None, None
+    parent = cat_index.get(str(cat.get("parent_id"))) if cat.get("parent_id") else None
+    return cat.get("key"), (parent or {}).get("key")
+
+
+def _validated_attributes(
+    attributes: dict[str, Any] | None,
+    *,
+    cat_index: dict[str, dict],
+    category_id: str | None,
+) -> dict[str, Any]:
+    category_key, parent_key = _category_keys(cat_index, category_id)
+    try:
+        return validate_product_attributes(
+            attributes if isinstance(attributes, dict) else {},
+            category_key=category_key,
+            parent_key=parent_key,
+        )
+    except AttributeValidationError as exc:
+        raise ApiError(
+            400,
+            "VALIDATION_ERROR",
+            "מאפיינים טכניים לא תקינים",
+            details={"fields": exc.field_errors},
+        ) from exc
 
 
 class ProductCreate(BaseModel):
@@ -269,6 +306,14 @@ def create_product(
         cost = 0
     elif not _can_view_cost(ctx):
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לעלות")
+    cats = _category_index(_load_categories(client, workspace_id, include_archived=True))
+    if body.category_id and str(body.category_id) not in cats:
+        raise ApiError(400, "VALIDATION_ERROR", "קטגוריה לא נמצאה")
+    attributes = _validated_attributes(
+        body.attributes,
+        cat_index=cats,
+        category_id=body.category_id,
+    )
     payload = {
         "workspace_id": str(workspace_id),
         "name": body.name.strip(),
@@ -283,14 +328,13 @@ def create_product(
         "is_active": body.is_active,
         "manufacturer": (body.manufacturer or "").strip() or None,
         "model": (body.model or "").strip() or None,
-        "attributes": body.attributes if isinstance(body.attributes, dict) else {},
+        "attributes": attributes,
     }
     if body.category_id:
         payload["category_id"] = body.category_id
     row = created_or_403(client.post("products", payload))
     if isinstance(row, list):
         row = row[0] if row else {}
-    cats = _category_index(_load_categories(client, workspace_id, include_archived=True))
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
 
 
@@ -304,10 +348,14 @@ def patch_product(
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "catalog.edit")
-    one_or_404(
+    existing = one_or_404(
         client.get(
             "products",
-            params={"id": f"eq.{product_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+            params={
+                "id": f"eq.{product_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,category_id,attributes",
+            },
         )
     )
     patch = body.model_dump(exclude_none=True)
@@ -323,8 +371,25 @@ def patch_product(
         patch["manufacturer"] = patch["manufacturer"].strip() or None
     if "model" in patch and isinstance(patch["model"], str):
         patch["model"] = patch["model"].strip() or None
-    if "attributes" in patch and patch["attributes"] is None:
-        patch["attributes"] = {}
+    cats = _category_index(_load_categories(client, workspace_id, include_archived=True))
+    category_id = patch.get("category_id", existing.get("category_id"))
+    if category_id and str(category_id) not in cats:
+        raise ApiError(400, "VALIDATION_ERROR", "קטגוריה לא נמצאה")
+    if "attributes" in patch:
+        raw_attrs = patch["attributes"] if isinstance(patch["attributes"], dict) else {}
+        patch["attributes"] = _validated_attributes(
+            raw_attrs,
+            cat_index=cats,
+            category_id=category_id,
+        )
+    elif "category_id" in patch:
+        # Re-validate stored attrs against the new category leaf.
+        stored = existing.get("attributes") if isinstance(existing.get("attributes"), dict) else {}
+        patch["attributes"] = _validated_attributes(
+            stored,
+            cat_index=cats,
+            category_id=category_id,
+        )
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
     row = patched_or_403(
@@ -334,7 +399,6 @@ def patch_product(
             params={"id": f"eq.{product_id}", "workspace_id": f"eq.{workspace_id}"},
         )
     )
-    cats = _category_index(_load_categories(client, workspace_id, include_archived=True))
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
 
 

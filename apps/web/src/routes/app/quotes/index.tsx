@@ -177,7 +177,7 @@ function QuotesBody() {
         void navigate({ to: "/app/quotes/$quoteId/preview", params: { quoteId } })
       }
       onLoadMore={() => void quotesQuery.fetchNextPage()}
-      onDelete={canDelete ? (ids) => remove.mutateAsync(ids) : undefined}
+      onDelete={canDelete ? (ids) => remove.mutateAsync(ids).then(() => undefined) : undefined}
       onDuplicate={canCreate ? (ids) => duplicate.mutateAsync(ids).then(() => undefined) : undefined}
     />
   );

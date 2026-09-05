@@ -60,7 +60,6 @@ function DashboardBody({
   api: ReturnType<typeof useSession>["api"];
 }) {
   const canTeam = can(roleKey, "users.view", features) || can(roleKey, "workspace.billing", features);
-  const canSecurity = can(roleKey, "settings.general", features) || can(roleKey, "workspace.edit", features);
   const canProbeCustomers = can(roleKey, "crm.view", features) || can(roleKey, "crm.create", features);
 
   const query = useQuery({
@@ -72,11 +71,6 @@ function DashboardBody({
     queryKey: ["usage", workspaceId],
     enabled: Boolean(workspaceId) && canTeam,
     queryFn: () => api.getUsage(workspaceId!),
-  });
-  const security = useQuery({
-    queryKey: ["security", workspaceId],
-    enabled: Boolean(workspaceId) && canSecurity,
-    queryFn: () => api.getSecurityCenter(workspaceId!),
   });
   const leadAttentionQuery = useQuery({
     queryKey: ["dashboard-lead-next", workspaceId],
@@ -141,7 +135,6 @@ function DashboardBody({
         workspaceStatus={workspaceStatus}
         roleKey={roleKey}
         features={features}
-        securitySignals={security.data?.signals ?? []}
         displayName={displayName}
         workspaceName={workspaceName}
       />
@@ -155,7 +148,6 @@ function DashboardBody({
       memberCount={memberCount}
       usage={usageData}
       workspaceStatus={workspaceStatus}
-      securitySignals={security.data?.signals ?? []}
       leadAttention={leadAttention}
       leadAttentionItems={leadAttentionItems}
       displayName={displayName}

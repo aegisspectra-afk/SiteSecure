@@ -63,5 +63,7 @@ export function itemHref(entityType: string, entityId: string): string | null {
   if (entityType === "customer") return moduleHref("customer", entityId);
   if (entityType === "site") return moduleHref("site", entityId);
   if (entityType === "job") return moduleHref("job", entityId);
+  if (entityType === "lead") return `/app/leads/${entityId}`;
+  if (entityType === "project") return `/app/projects/${entityId}`;
   return null;
 }

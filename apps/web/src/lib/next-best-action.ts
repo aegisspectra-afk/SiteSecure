@@ -1,5 +1,6 @@
 import type { AttentionGroup, DashboardSummary, LeadOut, WorkspaceUsage } from "@site-secure/api-client";
 import { he } from "../i18n/he";
+import { attentionEntityCount } from "./attention-queue";
 import { quoteConversion } from "./ux-metrics";
 import { leadDisplayTitle, leadRequirementsSummary } from "./leads";
 import type { SetupStep } from "./workspace-setup";
@@ -118,5 +119,5 @@ export function nextBestAction(opts: {
 }
 
 export function attentionCount(groups: AttentionGroup[]): number {
-  return groups.reduce((sum, group) => sum + group.count, 0);
+  return attentionEntityCount(groups);
 }

@@ -169,8 +169,10 @@ def test_owner_attention_is_objects_not_kpis():
     assert payload["recent_quotes"]
     awaiting = next(g for g in payload["attention"] if g["kind"] == "quote_awaiting_customer")
     assert awaiting["items"][0]["updated_at"]
+    assert "expiring_soon" in awaiting["items"][0]["actions"]
     kinds = [g["kind"] for g in payload["attention"]]
     assert "quote_awaiting_customer" in kinds
+    assert "quote_expiring" not in kinds
     assert "job_unassigned" in kinds
     blob = str(payload)
     assert "9999" not in blob
@@ -214,9 +216,10 @@ def test_founding_technician_is_today_not_ops():
 def test_viewer_has_no_mutation_actions():
     payload = _build("viewer")
     assert payload["home_variant"] == "observe"
+    mutation = {"start", "complete", "create_project", "create_customer"}
     actions = [action for g in payload["attention"] for item in g["items"] for action in item["actions"]]
     actions += [action for item in payload["today"]["items"] for action in item["actions"]]
-    assert actions == []
+    assert mutation.isdisjoint(actions)
     assert authorize(ctx=_ctx("viewer"), action="crm.create").allowed is False
     assert authorize(ctx=_ctx("viewer"), action="jobs.start").allowed is False
 

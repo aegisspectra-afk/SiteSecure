@@ -1,4 +1,4 @@
-import type { DashboardResponse, LeadOut, SecuritySignal, WorkspaceUsage } from "@site-secure/api-client";
+import type { DashboardResponse, LeadOut, WorkspaceUsage } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import {
@@ -6,24 +6,25 @@ import {
   quoteCountFromSummary,
   shouldShowActivationCard,
 } from "../../lib/activation";
+import {
+  attentionEntityCount,
+  filterLeadAttention,
+  leadsToAttentionGroups,
+} from "../../lib/attention-queue";
 import { can } from "../../lib/can";
 import { hasFeature } from "../../lib/home";
-import { shouldShowDashboardKpiRow } from "../../lib/dashboard-kpi";
-import { attentionCount, nextBestAction } from "../../lib/next-best-action";
+import { nextBestAction } from "../../lib/next-best-action";
 import { hasQuoteRecords } from "../../lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../../lib/workspace-setup";
 import { ActivationCard } from "./ActivationCard";
 import { ActiveWork } from "./ActiveWork";
-import { BusinessSnapshot } from "./BusinessSnapshot";
+import { CommercialPulse } from "./CommercialPulse";
 import { CommandStatus } from "./CommandStatus";
 import { DashboardFreshness } from "./DashboardFreshness";
-import { DashboardKpiRow } from "./DashboardKpiRow";
-import { LeadsAttention } from "./LeadsAttention";
 import { NextBestAction } from "./NextBestAction";
 import { OpsDashHero } from "./OpsHero";
 import { RecentQuotes } from "./RecentQuotes";
-import { SecurityStatusBar } from "./SecurityStatus";
-import { UsageSnapshot } from "./UsageSnapshot";
+import { UsageThresholdBanner, usageThresholdMeters } from "./UsageThresholdBanner";
 
 export function OpsDashboard({
   data,
@@ -31,11 +32,9 @@ export function OpsDashboard({
   features,
   memberCount = null,
   usage = null,
-  securitySignals = [],
   leadAttention = null,
   leadAttentionItems = [],
   displayName = null,
-  workspaceName = null,
   customerCount = null,
   countsReady = true,
 }: {
@@ -45,7 +44,6 @@ export function OpsDashboard({
   memberCount?: number | null;
   usage?: WorkspaceUsage | null;
   workspaceStatus?: string;
-  securitySignals?: SecuritySignal[];
   leadAttention?: LeadOut | null;
   leadAttentionItems?: LeadOut[];
   displayName?: string | null;
@@ -71,16 +69,24 @@ export function OpsDashboard({
   const recentQuotes = data.recent_quotes ?? [];
   const canCreateQuote = can(roleKey, "quotes.create", features) && hasFeature(features, "quotes");
   const canCreateCustomer = can(roleKey, "crm.create", features) && hasFeature(features, "crm");
+  const canCreateProject = can(roleKey, "projects.create", features);
   const quoteCta = canCreateQuote;
   const invite = liveAdminActions(roleKey, features).find((action) => action.href === "/app/settings/users");
   const showQuotes = Boolean(summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
-  const showSeats = Boolean(usage) && (can(roleKey, "users.view", features) || can(roleKey, "users.invite", features));
   const showBusiness = showQuotes && Boolean(summary) && hasQuoteRecords(summary);
   const showActivation = shouldShowActivationCard({
     activation,
     canCreateQuote,
     canCreateCustomer,
   });
+
+  const leadRows = showActivation ? [] : filterLeadAttention(leadAttentionItems);
+  const attentionGroups = [
+    ...data.attention,
+    ...(showActivation ? [] : leadsToAttentionGroups(leadRows)),
+  ];
+  const attentionTotal = attentionEntityCount(attentionGroups);
+
   const action = nextBestAction({
     setup,
     summary: showQuotes ? summary : null,
@@ -89,33 +95,29 @@ export function OpsDashboard({
     canCreateQuote,
     canInvite: Boolean(invite),
     canViewQuotes: showQuotes,
-    canCreateProject: can(roleKey, "projects.create", features),
-    leadAttention: showActivation ? null : leadAttention,
+    canCreateProject,
+    leadAttention: showActivation || attentionTotal > 0 ? null : leadAttention,
   });
   const setupProgress =
     !setup.complete && setup.total > 0
       ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
-  const attentionTotal = attentionCount(data.attention);
   const todayItems = data.today.items;
   const fieldTodayCount = todayItems.filter((item) => item.entity_type === "job").length;
   const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
-  const showKpiRow =
-    Boolean(summary) &&
-    shouldShowDashboardKpiRow({
-      showActivation,
-      summary,
-      showQuotes,
-      attention: data.attention,
-    });
+  const showToday = can(roleKey, "jobs.view", features);
+  const thresholdMeters = usageThresholdMeters(usage);
+  const canManageTeam = Boolean(invite) || can(roleKey, "users.view", features);
 
   return (
-    <div className="ops-dashboard flex flex-col gap-4">
+    <div className="ops-dashboard ops-command-center flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
-        workspaceName={workspaceName}
         quoteAction={Boolean(quoteCta)}
+        attentionCount={attentionTotal}
         fieldTodayCount={fieldTodayCount}
+        quotesOpen={showQuotes ? (summary?.quotes_open ?? 0) : 0}
+        pipelineValue={showQuotes ? (summary?.quotes_open_value ?? null) : null}
         secondaryAction={
           !quoteCta && invite ? (
             <Link
@@ -123,13 +125,6 @@ export function OpsDashboard({
               className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg transition-colors duration-200 hover:bg-action-hover"
             >
               {invite.label}
-            </Link>
-          ) : can(roleKey, "jobs.view", features) ? (
-            <Link
-              to="/app/today"
-              className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-border px-4 text-sm font-medium text-fg-muted transition-colors duration-200 hover:bg-bg-subtle hover:text-fg"
-            >
-              {he.todayViewAll}
             </Link>
           ) : undefined
         }
@@ -144,34 +139,29 @@ export function OpsDashboard({
         />
       ) : null}
 
-      <CommandStatus attention={data.attention} />
+      {!showActivation ? (
+        <CommandStatus
+          attention={attentionGroups}
+          canCreateProject={canCreateProject}
+          viewAllTo={showQuotes ? "/app/quotes" : "/app/today"}
+        />
+      ) : null}
 
-      {todayItems.length > 0 ? <ActiveWork items={todayItems} /> : null}
+      {showToday ? <ActiveWork items={todayItems} compactEmpty /> : null}
 
       {showNextAction && action ? <NextBestAction action={action} setupProgress={null} /> : null}
 
-      {!showActivation ? <LeadsAttention items={leadAttentionItems} /> : null}
+      {thresholdMeters.length ? (
+        <UsageThresholdBanner meters={thresholdMeters} canManageTeam={canManageTeam} />
+      ) : null}
 
       <div className="ops-dashboard-main">
-        {showKpiRow && summary ? (
-          <DashboardKpiRow summary={summary} showOpenQuotes={showQuotes} />
-        ) : null}
         {showBusiness && summary ? (
-          <BusinessSnapshot summary={summary} chart={data.business_chart ?? null} />
+          <CommercialPulse summary={summary} chart={data.business_chart ?? null} />
         ) : null}
         {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} /> : null}
-        {usage && showSeats ? (
-          <UsageSnapshot
-            usage={usage}
-            canManageTeam={Boolean(invite) || can(roleKey, "users.view", features)}
-            compact
-          />
-        ) : null}
       </div>
 
-      {securitySignals.length ? (
-        <SecurityStatusBar signals={securitySignals} updatedAt={data.generated_at} />
-      ) : null}
       <DashboardFreshness generatedAt={data.generated_at} />
     </div>
   );
@@ -181,41 +171,34 @@ export function ObserveDashboard({
   data,
   roleKey,
   features = [],
-  securitySignals = [],
   displayName = null,
-  workspaceName = null,
 }: {
   data: DashboardResponse;
   workspaceStatus?: string;
   roleKey?: string;
   features?: string[];
-  securitySignals?: SecuritySignal[];
   displayName?: string | null;
   workspaceName?: string | null;
 }) {
   const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
-  const showKpiRow =
-    Boolean(data.summary) &&
-    shouldShowDashboardKpiRow({
-      showActivation: false,
-      summary: data.summary,
-      showQuotes,
-      attention: data.attention,
-    });
+  const attentionTotal = attentionEntityCount(data.attention);
   const empty =
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
 
   return (
-    <div className="ops-dashboard flex flex-col gap-4">
-      <OpsDashHero displayName={displayName} workspaceName={workspaceName} />
-      <CommandStatus attention={data.attention} />
+    <div className="ops-dashboard ops-command-center flex flex-col gap-4">
+      <OpsDashHero
+        displayName={displayName}
+        attentionCount={attentionTotal}
+        fieldTodayCount={data.today.items.filter((i) => i.entity_type === "job").length}
+        quotesOpen={showQuotes ? (data.summary?.quotes_open ?? 0) : 0}
+        pipelineValue={showQuotes ? (data.summary?.quotes_open_value ?? null) : null}
+      />
+      <CommandStatus attention={data.attention} canCreateProject={false} />
       {data.today.items.length > 0 ? <ActiveWork items={data.today.items} /> : null}
       <div className="ops-dashboard-main">
-        {showKpiRow && data.summary ? (
-          <DashboardKpiRow summary={data.summary} showOpenQuotes={showQuotes} />
-        ) : null}
         {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
-          <BusinessSnapshot summary={data.summary} chart={data.business_chart ?? null} />
+          <CommercialPulse summary={data.summary} chart={data.business_chart ?? null} />
         ) : null}
         {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
       </div>
@@ -224,9 +207,6 @@ export function ObserveDashboard({
           <p className="text-sm font-medium text-fg">{he.dashboardEmptyTitle}</p>
           <p className="mt-1 text-sm text-fg-muted">{he.viewerEmptyBody}</p>
         </div>
-      ) : null}
-      {securitySignals.length ? (
-        <SecurityStatusBar signals={securitySignals} updatedAt={data.generated_at} />
       ) : null}
       <DashboardFreshness generatedAt={data.generated_at} />
     </div>

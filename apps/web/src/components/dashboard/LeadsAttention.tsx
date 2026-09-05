@@ -2,6 +2,7 @@ import type { LeadOut } from "@site-secure/api-client";
 import { Status } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
+import { filterLeadAttention as filterLeadAttentionCore } from "../../lib/attention-queue";
 import {
   leadDisplayTitle,
   leadPriorityLabel,
@@ -9,6 +10,7 @@ import {
   leadStatusLabel,
 } from "../../lib/leads";
 
+/** @deprecated Prefer unified attention queue; kept for callers/tests. */
 export function LeadsAttention({ items = [] }: { items?: LeadOut[] }) {
   if (!items.length) return null;
 
@@ -64,10 +66,8 @@ function LeadAttentionRow({ lead }: { lead: LeadOut }) {
   );
 }
 
-export const LEAD_ATTENTION_STATUSES = new Set(["new", "contacted", "visit_scheduling", "quote_preparing", "follow_up"]);
+export const LEAD_ATTENTION_STATUSES = new Set(["new", "contacted", "visit_scheduling"]);
 
 export function filterLeadAttention(items: LeadOut[]): LeadOut[] {
-  return items
-    .filter((row) => LEAD_ATTENTION_STATUSES.has(row.status) || Boolean(row.next_action?.trim()))
-    .slice(0, 5);
+  return filterLeadAttentionCore(items);
 }

@@ -265,8 +265,23 @@ def _quote_attention(
                 }
             )
         until = _parse_dt(quote.get("valid_until") if isinstance(quote.get("valid_until"), str) else None)
-        if status in {"sent", "viewed"} and until and now <= until <= horizon:
-            expiring.append({**row, "title_he": "פג תוקף בקרוב", "severity": "now"})
+        is_expiring = bool(
+            status in {"sent", "viewed"} and until and now <= until <= horizon
+        )
+        if is_expiring:
+            # Prefer a single entity in status buckets; tag expiring as secondary signal.
+            target = awaiting_us if status == "viewed" else awaiting_customer if status == "sent" else None
+            if target is not None and target:
+                tagged = dict(target[-1])
+                actions = list(tagged.get("actions") or [])
+                if "expiring_soon" not in actions:
+                    actions.append("expiring_soon")
+                tagged["actions"] = actions
+                if status == "viewed":
+                    tagged["severity"] = "now"
+                target[-1] = tagged
+            else:
+                expiring.append({**row, "title_he": "פג תוקף בקרוב", "severity": "now"})
         updated = _parse_dt(quote.get("updated_at") if isinstance(quote.get("updated_at"), str) else None)
         if variant == "sales" and status == "draft" and updated and updated < stale_before:
             stale.append({**row, "title_he": "טיוטה ממתינה", "severity": "info"})

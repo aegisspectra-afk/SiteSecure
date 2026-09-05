@@ -162,11 +162,25 @@ export const he = {
   commandAttention: (count: number) =>
     count === 1 ? "דבר אחד דורש תשומת לב" : `${count} דברים דורשים תשומת לב`,
   commandOpenQuote: "פתח הצעה",
+  commandOpenProject: "פתח פרויקט",
+  commandApprovedWhy: "הלקוח אישר — ממתין ליצירת פרויקט",
   commandAwaitingDays: (days: number) =>
     days <= 0 ? "ממתינה לאישור מהיום" : days === 1 ? "ממתינה לאישור יום אחד" : `ממתינה לאישור ${days} ימים`,
   commandViewedWhy: "הלקוח צפה בהצעה — ממתינה לטיפול",
   commandExpiringWhy: "פג תוקף בקרוב",
   commandStaleWhy: "טיוטה ממתינה להשלמה",
+  commandHeaderAttention: (count: number) =>
+    count === 0 ? "אין דברים דחופים" : count === 1 ? "פריט אחד דורש טיפול" : `${count} דורשים טיפול`,
+  commandHeaderQuotesOpen: (count: number) =>
+    count === 1 ? "הצעה פתוחה אחת" : `${count} הצעות פתוחות`,
+  commandHeaderPipeline: (value: string) => `צנרת ${value}`,
+  commercialPulseTitle: "דופק מסחרי",
+  commercialPulseEmpty: "עדיין אין נתוני הצעות להצגה.",
+  todaySectionEmptyCompact: "אין עבודות מתוזמנות להיום",
+  usageThresholdTitle: "שימוש מתקרב למגבלה",
+  usageThresholdBody: (label: string) => `${label} — מומלץ לבדוק בהגדרות`,
+  attentionShowAll: "הצג הכל →",
+  dashboardFreshnessStale: "הנתונים לא מעודכנים — רעננו את העמוד",
   nextActionKicker: "NEXT ACTION",
   nextActionTitle: "הצעד הבא שלך",
   nextActionInvite: "הזמינו את חבר הצוות הראשון",

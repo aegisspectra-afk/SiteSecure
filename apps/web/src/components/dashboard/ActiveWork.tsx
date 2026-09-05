@@ -10,18 +10,36 @@ function formatTime(value: string | null): string | null {
   return date.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-export function ActiveWork({ items }: { items: DashboardItem[] }) {
-  return (
-    <section className="ops-panel p-5" aria-labelledby="active-work-heading">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.todaySectionKicker}</p>
-          <h2 id="active-work-heading" className="mt-1 text-base font-semibold text-fg">
+export function ActiveWork({
+  items,
+  compactEmpty = false,
+}: {
+  items: DashboardItem[];
+  compactEmpty?: boolean;
+}) {
+  if (!items.length && compactEmpty) {
+    return (
+      <section className="ops-panel px-4 py-3" aria-labelledby="active-work-heading">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="active-work-heading" className="text-sm font-semibold text-fg">
             {he.activeWorkTitle}
           </h2>
-          <p className="mt-1 text-sm text-fg-muted">
-            {items.length ? he.activeWorkCount(items.length) : he.todaySectionKicker}
-          </p>
+          <p className="text-sm text-fg-muted">{he.todaySectionEmptyCompact}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="ops-panel p-4" aria-labelledby="active-work-heading">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="active-work-heading" className="text-base font-semibold text-fg">
+            {he.activeWorkTitle}
+          </h2>
+          {items.length ? (
+            <p className="mt-1 text-sm text-fg-muted">{he.activeWorkCount(items.length)}</p>
+          ) : null}
         </div>
         <Link
           to="/app/today"
@@ -32,19 +50,22 @@ export function ActiveWork({ items }: { items: DashboardItem[] }) {
       </div>
 
       {items.length ? (
-        <ul className="mt-4 divide-y divide-border border-y border-border">
+        <ul className="mt-3 divide-y divide-border border-y border-border">
           {items.map((item) => {
             const time = formatTime(item.scheduled_for);
             return (
-              <li key={item.entity_id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={item.entity_id}
+                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
                   {time ? (
-                    <p className="public-mono text-lg font-semibold tracking-[-0.03em] text-fg" dir="ltr">
+                    <p className="public-mono text-base font-semibold tracking-[-0.03em] text-fg" dir="ltr">
                       {time}
                     </p>
                   ) : null}
-                  <p className="mt-1 truncate text-sm font-medium text-fg">{item.number}</p>
-                  <p className="mt-0.5 text-sm text-fg-muted">{item.site_name || item.customer_name || "—"}</p>
+                  <p className="mt-0.5 truncate text-sm font-medium text-fg">{item.number}</p>
+                  <p className="text-sm text-fg-muted">{item.site_name || item.customer_name || "—"}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <Status label={item.title_he} tone={item.severity === "now" ? "warning" : "info"} />
@@ -62,10 +83,7 @@ export function ActiveWork({ items }: { items: DashboardItem[] }) {
           })}
         </ul>
       ) : (
-        <div className="mt-4 border border-border px-4 py-5">
-          <p className="text-sm font-medium text-fg">{he.activeWorkEmpty}</p>
-          <p className="mt-1 text-sm text-fg-muted">{he.dashboardLead}</p>
-        </div>
+        <p className="mt-3 text-sm text-fg-muted">{he.activeWorkEmpty}</p>
       )}
     </section>
   );

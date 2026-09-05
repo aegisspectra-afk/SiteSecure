@@ -78,10 +78,12 @@ export type SessionMembership = {
   workspace_name: string;
   workspace_status: string;
   role_key: string;
+  workspace_role_key?: string | null;
   technician_code: string | null;
   program_type: string | null;
   plan_key: string;
   features: string[];
+  permissions?: string[];
   is_beta?: boolean;
   beta_program?: string | null;
 };
@@ -526,6 +528,15 @@ export type SystemRecommendation = {
     fetch?: { categories?: number; fetched?: number };
     query_strategy?: string;
   };
+  catalog_readiness?: {
+    empty_catalog?: boolean;
+    camera_structured?: number;
+    nvr_structured?: number;
+    hdd_structured?: number;
+    switch_structured?: number;
+    ready_for_core?: boolean;
+    missing_families?: string[];
+  };
 };
 
 export type QuoteVersionMeta = {
@@ -825,8 +836,40 @@ export type MemberOut = {
   full_name: string;
   email: string | null;
   role_key: string;
+  workspace_role_key?: string | null;
   status: string;
   created_at: string | null;
+};
+
+export type WorkspaceSettingsOut = {
+  workspace_id: string;
+  branding: Record<string, unknown>;
+  quotes: Record<string, unknown>;
+  taxes: Record<string, unknown>;
+  scheduling: Record<string, unknown>;
+  notifications: Record<string, unknown>;
+  localization: Record<string, unknown>;
+};
+
+export type WorkspaceRoleOut = {
+  id: string;
+  key: string;
+  label_he: string;
+  description: string;
+  is_system: boolean;
+  is_locked: boolean;
+  base_role_key: string;
+  grants: string[];
+  users_count: number;
+};
+
+export type PdfDocumentTemplateOut = {
+  id: string;
+  name: string;
+  doc_type: "quote" | "service" | "project";
+  status: "active" | "draft";
+  is_default: boolean;
+  config: Record<string, unknown>;
 };
 
 export type InviteOut = {
@@ -1746,12 +1789,94 @@ export function createApiClient(opts: {
     patchMember: (
       workspaceId: string,
       memberId: string,
-      body: { role_key?: string; status?: "active" | "disabled" },
+      body: { role_key?: string; workspace_role_key?: string; status?: "active" | "disabled" },
     ) =>
       request<MemberOut>(`/api/v1/workspaces/${workspaceId}/members/${memberId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    getWorkspaceSettings: (workspaceId: string) =>
+      request<WorkspaceSettingsOut>(`/api/v1/workspaces/${workspaceId}/settings`),
+    patchWorkspaceSettings: (
+      workspaceId: string,
+      body: Partial<
+        Pick<
+          WorkspaceSettingsOut,
+          "branding" | "quotes" | "taxes" | "scheduling" | "notifications" | "localization"
+        >
+      >,
+    ) =>
+      request<WorkspaceSettingsOut>(`/api/v1/workspaces/${workspaceId}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listWorkspaceRoles: (workspaceId: string) =>
+      request<WorkspaceRoleOut[]>(`/api/v1/workspaces/${workspaceId}/roles`),
+    createWorkspaceRole: (
+      workspaceId: string,
+      body: { label_he: string; description?: string; base_role_key?: string; grants?: string[] },
+    ) =>
+      request<WorkspaceRoleOut>(`/api/v1/workspaces/${workspaceId}/roles`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWorkspaceRole: (
+      workspaceId: string,
+      roleId: string,
+      body: { label_he?: string; description?: string; grants?: string[] },
+    ) =>
+      request<WorkspaceRoleOut>(`/api/v1/workspaces/${workspaceId}/roles/${roleId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listPdfTemplates: (workspaceId: string) =>
+      request<PdfDocumentTemplateOut[]>(`/api/v1/workspaces/${workspaceId}/pdf-templates`),
+    createPdfTemplate: (
+      workspaceId: string,
+      body: {
+        name: string;
+        doc_type?: "quote" | "service" | "project";
+        status?: "active" | "draft";
+        is_default?: boolean;
+        config?: Record<string, unknown>;
+      },
+    ) =>
+      request<PdfDocumentTemplateOut>(`/api/v1/workspaces/${workspaceId}/pdf-templates`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchPdfTemplate: (
+      workspaceId: string,
+      templateId: string,
+      body: {
+        name?: string;
+        status?: "active" | "draft";
+        is_default?: boolean;
+        config?: Record<string, unknown>;
+      },
+    ) =>
+      request<PdfDocumentTemplateOut>(`/api/v1/workspaces/${workspaceId}/pdf-templates/${templateId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    duplicatePdfTemplate: (workspaceId: string, templateId: string) =>
+      request<PdfDocumentTemplateOut>(
+        `/api/v1/workspaces/${workspaceId}/pdf-templates/${templateId}/duplicate`,
+        { method: "POST", body: "{}" },
+      ),
+    previewPdfTemplate: (
+      workspaceId: string,
+      templateId: string,
+      body?: { name?: string; config?: Record<string, unknown> },
+      inline = true,
+    ) => {
+      const q = inline ? "?inline=true" : "?inline=false";
+      return requestBlob(`/api/v1/workspaces/${workspaceId}/pdf-templates/${templateId}/preview${q}`, {
+        method: "POST",
+        body: JSON.stringify(body ?? {}),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
     createInvitation: (workspaceId: string, body: { email: string; role_key?: string }) =>
       request<InviteOut>(`/api/v1/workspaces/${workspaceId}/invitations`, {
         method: "POST",

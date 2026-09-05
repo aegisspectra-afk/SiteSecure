@@ -141,6 +141,22 @@ export function formatReasonHe(reason: CctvReasonCode): string {
     }
     case "COMPONENT_UNRESOLVED":
       return `רכיב לא נפתר: ${roleLabelHe(String(p.role ?? ""))}`;
+    case "CABLE_UNIT_REQUIRES_MANUAL_QTY":
+      return "יחידת הכבל אינה מטר — יש להשלים כמות ידנית";
+    case "CABLE_UNIT_UNKNOWN_ASSUMED_METERS":
+      return "יחידת הכבל לא מאומתת — חושבה כמות במטרים";
+    case "CABLE_NO_METER_UNIT_PRODUCT":
+      return "לא נמצא כבל במחיר למטר — תשתית דורשת השלמה ידנית";
+    case "CATALOG_EMPTY":
+      return "קטלוג CCTV ריק מרכיבים פעילים";
+    case "CATALOG_CORE_INCOMPLETE":
+      return "חסר מידע טכני מאומת ברכיבי ליבה בקטלוג";
+    case "SERVICE_UNRESOLVED":
+      return `שירות לא נפתר: ${roleLabelHe(String(p.role ?? ""))}`;
+    case "CABLE_CATEGORY_MATCH":
+      return `כבל לפי מרחק: ${num(p, "meters") ?? "—"} מ׳`;
+    case "SERVICE_CATEGORY_MATCH":
+      return `שירות לפי קטגוריה: ${roleLabelHe(String(p.role ?? ""))}`;
     case "HDD_BAYS_UNKNOWN":
       return "מספר מפרצי HDD ב־NVR לא ידוע";
     default:

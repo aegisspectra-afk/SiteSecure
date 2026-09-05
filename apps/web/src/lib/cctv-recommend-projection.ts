@@ -16,6 +16,20 @@ export type CctvBuildQuoteLine = {
   optional: boolean;
 };
 
+export function linesFingerprint(lines: CctvBuildQuoteLine[]): string {
+  return lines
+    .map((l) => `${l.role}:${l.productId}:${l.qty}`)
+    .sort()
+    .join("|");
+}
+
+export type PartialApplyRecovery = {
+  sectionId: string;
+  addedRoles: string[];
+  remaining: CctvBuildQuoteLine[];
+  fingerprint: string;
+};
+
 export type ReviewSelectionState = {
   /** role → selected product id (user override among candidates) */
   selectedByRole: Record<string, string>;
@@ -99,12 +113,28 @@ export function canAddRecommendationToQuote(
     lines.push({
       role: c.role,
       productId: picked.product.id,
-      qty: Math.max(1, Number(c.quantity) || 1),
+      qty: Math.max(
+        0.001,
+        Number(
+          (picked as { quantity?: number }).quantity ??
+            c.quantity ??
+            1,
+        ) || 1,
+      ),
       optional: Boolean(c.optional),
     });
   }
   if (!lines.length) return { ok: false, reason: "empty" };
   return { ok: true, lines };
+}
+
+/** Drop roles already inserted during a partial apply. */
+export function remainingLinesAfterPartial(
+  lines: CctvBuildQuoteLine[],
+  addedRoles: string[],
+): CctvBuildQuoteLine[] {
+  const done = new Set(addedRoles);
+  return lines.filter((l) => !done.has(l.role));
 }
 
 export function componentKindLabel(

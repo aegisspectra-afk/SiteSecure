@@ -894,8 +894,12 @@ export const he = {
   settingsNotifyJobOverdue: "עבודה באיחור",
   settingsNotifyTeamInvite: "הזמנת משתמש",
   rbacLead: "מטריצת הרשאות תפעולית — בחרו תפקיד ועדכנו פעולות לפי מודול.",
+  rbacPersistedNote: "שינויים נשמרים בסביבת העבודה ומשפיעים על הרשאות בזמן אמת לאחר שמירה.",
   rbacDemoEditable: "מצב הדגמה: שינויים נשמרים מקומית ואינם משנים את אכיפת ההרשאות בזמן ריצה.",
   rbacReadOnly: "צפייה בלבד — אין הרשאה לעריכת תפקידים.",
+  deactivateUser: "השבתה",
+  activateUser: "הפעלה",
+  actions: "פעולות",
   rbacRolesListAria: "רשימת תפקידים",
   rbacRolesHeading: "תפקידים",
   rbacUsersAssigned: (count: number) =>
@@ -960,8 +964,10 @@ export const he = {
   pdfTemplatePrimaryColor: "צבע ראשי",
   pdfTemplateSecondaryColor: "צבע משני",
   pdfTemplateSections: "בלוקים וסקציות",
-  pdfTemplateDownloadSample: "הורד דוגמה",
+  pdfTemplateDownloadSample: "תצוגה מקדימה PDF",
   pdfTemplateDownloadSoon: "ייצוא PDF לדוגמה יחובר לשרת בשלב הבא.",
+  pdfTemplatePreviewReal: "הורד / פתח PDF לדוגמה",
+  rbacPlanLocked: "עריכת הרשאות ותפקידים מותאמים זמינים בתוכנית Business ומעלה. ניתן לשייך תפקידים קבועים מתוך צוות.",
   pdfTemplateTypes: {
     quote: "הצעת מחיר",
     service: "שירות",
@@ -1265,6 +1271,13 @@ export const he = {
   cpqCctvServerError: "חישוב ההמלצה נכשל. נסו שוב.",
   cpqCctvPartialApply: (added: number, total: number) =>
     `נוספו ${added} מתוך ${total} שורות — בדקו את ההצעה לפני ניסיון חוזר.`,
+  cpqCctvPartialApplyResume: (added: number, total: number, remaining: number) =>
+    `נוספו ${added} מתוך ${total}. נותרו ${remaining} שורות — לחצו «המשך הוספה» בלי לשכפל את מה שכבר נוסף.`,
+  cpqCctvDuplicateBlocked: "המערכת הזו כבר נוספה להצעה בפעולה הקודמת. חשבו מחדש אם צריך מערכת נוספת.",
+  cpqCctvResumeApply: "המשך הוספה",
+  cpqCctvCatalogReadiness: "מוכנות קטלוג",
+  cpqCctvCatalogEmpty: "הקטלוג ריק מרכיבי CCTV — החישוב ההנדסי מוצג, אך אין מוצרים לבחירה.",
+  cpqCctvCatalogIncomplete: "חסר מידע טכני מאומת ברכיבי ליבה. השלימו מפרטים בקטלוג להמלצה מלאה.",
   cpqEmptyTitle: "עדיין אין פריטים בהצעה",
   cpqEmptyBody: "הוסיפו ציוד או שירותים מהקטלוג, או התחילו מבניית מערכת.",
   cpqEmptyBuildTitle: "בנה מערכת",

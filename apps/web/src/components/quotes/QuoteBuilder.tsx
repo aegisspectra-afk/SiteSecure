@@ -27,7 +27,12 @@ import {
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
 import { resolveSystemSectionName } from "../../lib/system-section";
-import type { CctvBuildQuoteLine } from "../../lib/cctv-recommend-projection";
+import {
+  linesFingerprint,
+  remainingLinesAfterPartial,
+  type CctvBuildQuoteLine,
+  type PartialApplyRecovery,
+} from "../../lib/cctv-recommend-projection";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
@@ -186,6 +191,8 @@ export function QuoteBuilder({
   const [applyingTemplatePickId, setApplyingTemplatePickId] = useState<string | null>(null);
   const [buildSystemApplying, setBuildSystemApplying] = useState(false);
   const [buildSystemApplyError, setBuildSystemApplyError] = useState<string | null>(null);
+  const [buildSystemRecovery, setBuildSystemRecovery] = useState<PartialApplyRecovery | null>(null);
+  const [buildSystemLastFingerprint, setBuildSystemLastFingerprint] = useState<string | null>(null);
   const buildSystemApplyLock = useRef(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
@@ -1046,29 +1053,39 @@ export function QuoteBuilder({
     }
   }
 
-  async function applyCctvBuildLines(lines: CctvBuildQuoteLine[]) {
+  async function applyCctvBuildLines(lines: CctvBuildQuoteLine[], opts?: { resume?: PartialApplyRecovery }) {
     if (buildSystemApplyLock.current) return;
+    const fingerprint = linesFingerprint(lines);
+    if (!opts?.resume && buildSystemLastFingerprint === fingerprint) {
+      setBuildSystemApplyError(he.cpqCctvDuplicateBlocked);
+      return;
+    }
     buildSystemApplyLock.current = true;
     setBuildSystemApplying(true);
     setBuildSystemApplyError(null);
-    let added = 0;
+    let addedRoles = [...(opts?.resume?.addedRoles ?? [])];
+    let sectionId = opts?.resume?.sectionId;
+    const work = opts?.resume ? remainingLinesAfterPartial(lines, opts.resume.addedRoles) : lines;
     try {
       const current = await createOnce();
-      const sectionName = resolveSystemSectionName(he.cpqCctvSystemSection, current.sections ?? []);
-      const sortBase = Math.max(0, ...(current.sections ?? []).map((section) => section.sort_order ?? 0));
-      const withSection = await api.createQuoteSection(workspaceId, current.id, {
-        name: sectionName,
-        sort_order: sortBase + 10,
-      });
-      applyRow(withSection);
-      const sectionId =
-        withSection.section?.id ??
-        withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
-        withSection.sections?.[withSection.sections.length - 1]?.id;
       if (!sectionId) {
-        throw new Error(he.quotesError);
+        const sectionName = resolveSystemSectionName(he.cpqCctvSystemSection, current.sections ?? []);
+        const sortBase = Math.max(0, ...(current.sections ?? []).map((section) => section.sort_order ?? 0));
+        const withSection = await api.createQuoteSection(workspaceId, current.id, {
+          name: sectionName,
+          sort_order: sortBase + 10,
+        });
+        applyRow(withSection);
+        sectionId =
+          withSection.section?.id ??
+          withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
+          withSection.sections?.[withSection.sections.length - 1]?.id;
+        if (!sectionId) {
+          throw new Error(he.quotesError);
+        }
       }
-      for (const line of lines) {
+      for (const line of work) {
+        if (addedRoles.includes(line.role)) continue;
         const row = await api.addQuoteItem(workspaceId, current.id, {
           product_id: line.productId,
           item_type: "catalog",
@@ -1077,12 +1094,26 @@ export function QuoteBuilder({
         });
         applyRow(row);
         commitRoute(row.id);
-        added += 1;
+        addedRoles.push(line.role);
       }
+      setBuildSystemRecovery(null);
+      setBuildSystemLastFingerprint(fingerprint);
       setSystemBuilderOpen(false);
     } catch (err) {
-      if (added > 0) {
-        setBuildSystemApplyError(he.cpqCctvPartialApply(added, lines.length));
+      const remaining = remainingLinesAfterPartial(lines, addedRoles);
+      if (addedRoles.length > 0 && remaining.length > 0 && sectionId) {
+        const recovery: PartialApplyRecovery = {
+          sectionId,
+          addedRoles,
+          remaining,
+          fingerprint,
+        };
+        setBuildSystemRecovery(recovery);
+        setBuildSystemApplyError(
+          he.cpqCctvPartialApplyResume(addedRoles.length, lines.length, remaining.length),
+        );
+      } else if (addedRoles.length > 0) {
+        setBuildSystemApplyError(he.cpqCctvPartialApply(addedRoles.length, lines.length));
       } else {
         setBuildSystemApplyError(err instanceof ApiClientError ? err.message : he.quotesError);
       }
@@ -2388,7 +2419,9 @@ export function QuoteBuilder({
         lead={linkedLead}
         applying={buildSystemApplying}
         applyError={buildSystemApplyError}
-        onApply={(lines) => applyCctvBuildLines(lines)}
+        recovery={buildSystemRecovery}
+        onClearRecovery={() => setBuildSystemRecovery(null)}
+        onApply={(lines, opts) => applyCctvBuildLines(lines, opts)}
       />
     </div>
   );

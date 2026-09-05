@@ -31,6 +31,7 @@ import {
   isCandidateSelectable,
   resolveComponentProduct,
   type CctvBuildQuoteLine,
+  type PartialApplyRecovery,
   type ReviewSelectionState,
 } from "../../../lib/cctv-recommend-projection";
 import type { SystemBuilderType } from "../../../lib/system-builder";
@@ -45,7 +46,9 @@ type Props = {
   lead?: LeadOut | null;
   applying?: boolean;
   applyError?: string | null;
-  onApply: (lines: CctvBuildQuoteLine[]) => void | Promise<void>;
+  recovery?: PartialApplyRecovery | null;
+  onApply: (lines: CctvBuildQuoteLine[], opts?: { resume?: PartialApplyRecovery }) => void | Promise<void>;
+  onClearRecovery?: () => void;
 };
 
 export function SystemBuilderDrawer({
@@ -56,7 +59,9 @@ export function SystemBuilderDrawer({
   lead,
   applying = false,
   applyError = null,
+  recovery = null,
   onApply,
+  onClearRecovery,
 }: Props) {
   const [systemType, setSystemType] = useState<SystemBuilderType>("cctv");
   const [step, setStep] = useState<Step>("requirements");
@@ -78,6 +83,7 @@ export function SystemBuilderDrawer({
   });
   const [swapRole, setSwapRole] = useState<string | null>(null);
   const [appliedOnce, setAppliedOnce] = useState(false);
+  const [lastLines, setLastLines] = useState<CctvBuildQuoteLine[] | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +94,7 @@ export function SystemBuilderDrawer({
     setServerError(null);
     setSwapRole(null);
     setAppliedOnce(false);
+    setLastLines(null);
     setSelection({ selectedByRole: {}, removedRoles: new Set() });
     setReq(
       defaultCctvBuildRequirements({
@@ -124,6 +131,9 @@ export function SystemBuilderDrawer({
     setInputError(null);
     setServerError(null);
     setStep("loading");
+    onClearRecovery?.();
+    setAppliedOnce(false);
+    setLastLines(null);
     try {
       const body = requirementsToRecommendBody(req);
       const rec = await api.recommendCctv(workspaceId, body);
@@ -137,13 +147,15 @@ export function SystemBuilderDrawer({
     }
   }
 
-  async function handleAdd() {
-    if (!addGate.ok || applying || appliedOnce) return;
-    setAppliedOnce(true);
+  async function handleAdd(resume?: PartialApplyRecovery | null) {
+    if (!addGate.ok || applying) return;
+    if (appliedOnce && !resume) return;
+    if (!resume) setAppliedOnce(true);
+    setLastLines(addGate.lines);
     try {
-      await onApply(addGate.lines);
+      await onApply(addGate.lines, resume ? { resume } : undefined);
     } catch {
-      setAppliedOnce(false);
+      if (!resume) setAppliedOnce(false);
     }
   }
 
@@ -157,19 +169,32 @@ export function SystemBuilderDrawer({
             setStep("requirements");
             setRecommendation(null);
             setAppliedOnce(false);
+            setLastLines(null);
+            onClearRecovery?.();
           }}
           disabled={applying}
         >
           {he.cpqAdjustPlan}
         </Button>
-        <Button
-          type="button"
-          onClick={() => void handleAdd()}
-          disabled={!addGate.ok || applying || appliedOnce}
-          aria-busy={applying}
-        >
-          {applying ? he.cpqCctvApplying : he.cpqAddPlanToQuote}
-        </Button>
+        {recovery && lastLines ? (
+          <Button
+            type="button"
+            onClick={() => void handleAdd(recovery)}
+            disabled={applying}
+            aria-busy={applying}
+          >
+            {applying ? he.cpqCctvApplying : he.cpqCctvResumeApply}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={() => void handleAdd(null)}
+            disabled={!addGate.ok || applying || appliedOnce}
+            aria-busy={applying}
+          >
+            {applying ? he.cpqCctvApplying : he.cpqAddPlanToQuote}
+          </Button>
+        )}
       </div>
     ) : step === "loading" ? (
       <div className="flex justify-end">
@@ -494,9 +519,26 @@ function RecommendationReview({
   const assumptions = [...(rec.assumptions || []), ...(rec.warnings || [])].filter(
     (r, i, arr) => arr.findIndex((x) => x.code === r.code) === i,
   );
+  const readiness = (rec as { catalog_readiness?: {
+    empty_catalog?: boolean;
+    ready_for_core?: boolean;
+    missing_families?: string[];
+  } }).catalog_readiness;
 
   return (
     <div className="grid gap-4">
+      {readiness?.empty_catalog ? (
+        <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="status">
+          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogReadiness}</p>
+          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCatalogEmpty}</p>
+        </div>
+      ) : readiness && !readiness.ready_for_core ? (
+        <div className="rounded-[var(--radius-control)] border border-border p-3" role="status">
+          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogReadiness}</p>
+          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCatalogIncomplete}</p>
+        </div>
+      ) : null}
+
       <section className="rounded-[var(--radius-control)] border border-border bg-surface-muted/40 p-3">
         <p className="text-sm font-semibold text-fg">
           {he.cpqCctvSummaryTitle(summary.cameraCount)}

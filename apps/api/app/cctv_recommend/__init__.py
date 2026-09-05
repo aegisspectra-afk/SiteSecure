@@ -521,6 +521,18 @@ def resolve_switches(
     }
 
 
+def _cable_unit_is_length(unit: str | None) -> bool | None:
+    """True if unit is meters; False if discrete ea/box; None if unknown."""
+    if not unit:
+        return None
+    u = str(unit).strip().lower()
+    if u in {"m", "meter", "meters", "metre", "metres", "מטר", "מ'", "lm", "מטר רץ"}:
+        return True
+    if u in {"ea", "each", "unit", "pcs", "pc", "יח", "יחידה", "box", "קופסה", "גליל"}:
+        return False
+    return None
+
+
 def resolve_cable(
     *,
     products: list[dict[str, Any]],
@@ -537,26 +549,68 @@ def resolve_cable(
             "quantity": None,
         }
     cables = [p for p in products if p.get("category_key") in CABLE_LEAF_KEYS]
-    cables.sort(key=_rank_key_stable)
-    candidates = [
-        {
-            "product": _product_summary(p),
-            "confidence": "PARTIAL",
-            "compatibility": {},
-            "reason_codes": [{"code": "CABLE_CATEGORY_MATCH", "params": {"meters": meters}}],
-            "quantity": meters,
-        }
-        for p in cables[:MAX_CANDIDATES]
-    ]
+    ranked: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    for p in cables:
+        unit_kind = _cable_unit_is_length(p.get("unit"))
+        if unit_kind is False:
+            # Discrete package — cannot auto-convert meters → boxes without pack size
+            ranked.append(
+                {
+                    "product": _product_summary(p),
+                    "confidence": "PARTIAL",
+                    "compatibility": {"unit": "UNKNOWN"},
+                    "reason_codes": [
+                        {
+                            "code": "CABLE_UNIT_REQUIRES_MANUAL_QTY",
+                            "params": {"meters": meters, "unit": p.get("unit")},
+                        }
+                    ],
+                    "quantity": 1,
+                    "_rank": (2, *_rank_key_stable(p)),
+                }
+            )
+            continue
+        qty = float(meters) if unit_kind is True else float(meters)
+        conf = "STRUCTURED" if unit_kind is True else "PARTIAL"
+        if unit_kind is None:
+            warnings.append(
+                {
+                    "code": "CABLE_UNIT_UNKNOWN_ASSUMED_METERS",
+                    "params": {"productId": p.get("id"), "unit": p.get("unit"), "meters": meters},
+                }
+            )
+        ranked.append(
+            {
+                "product": _product_summary(p),
+                "confidence": conf,
+                "compatibility": {"unit": "PASS" if unit_kind is True else "UNKNOWN"},
+                "reason_codes": [{"code": "CABLE_CATEGORY_MATCH", "params": {"meters": meters, "qty": qty}}],
+                "quantity": qty,
+                "_rank": (0 if unit_kind is True else 1, *_rank_key_stable(p)),
+            }
+        )
+    ranked.sort(key=lambda c: c["_rank"])
+    for c in ranked:
+        c.pop("_rank", None)
+    # Prefer length-priced cable for auto-select; never auto-select discrete pack as meters
+    auto = next((c for c in ranked if c["confidence"] == "STRUCTURED"), None)
+    selected = auto
+    status = "RESOLVED" if selected else ("PARTIAL" if ranked else "UNRESOLVED")
+    if not selected and ranked:
+        warnings.append({"code": "CABLE_NO_METER_UNIT_PRODUCT", "params": {"meters": meters}})
     return {
         "role": "cable",
-        "status": "PARTIAL" if candidates else "UNRESOLVED",
-        "selected": candidates[0] if candidates else None,
-        "candidates": candidates,
-        "warnings": [],
+        "status": status,
+        "selected": selected,
+        "candidates": ranked[:MAX_CANDIDATES],
+        "warnings": warnings,
         "blocking": False,
-        "quantity": meters,
+        "quantity": float(meters) if selected else None,
     }
+
+
+UPS_LEAF_KEYS = frozenset({"ups", "battery", "power_backup", "pdu"})
 
 
 def resolve_service(
@@ -566,12 +620,13 @@ def resolve_service(
     products: list[dict[str, Any]],
     preferred_keys: frozenset[str],
 ) -> dict[str, Any]:
-    pool = [p for p in products if p.get("category_key") in preferred_keys or p.get("kind") == "service"]
-    # Prefer matching leaf keys
-    preferred = [p for p in pool if p.get("category_key") in preferred_keys]
-    use = preferred or [p for p in pool if p.get("is_labor") or p.get("kind") == "service"]
-    use.sort(key=_rank_key_stable)
-    if not use:
+    keys = preferred_keys
+    if role == "ups" and not keys:
+        keys = UPS_LEAF_KEYS
+    preferred = [p for p in products if p.get("category_key") in keys]
+    # Do NOT fall back to arbitrary services/labor — wrong SKU is worse than unresolved
+    preferred.sort(key=_rank_key_stable)
+    if not preferred:
         return {
             "role": role,
             "status": "UNRESOLVED",
@@ -584,16 +639,16 @@ def resolve_service(
     candidates = [
         {
             "product": _product_summary(p),
-            "confidence": "PARTIAL",
-            "compatibility": {},
+            "confidence": "STRUCTURED",
+            "compatibility": {"category": "PASS"},
             "reason_codes": [{"code": "SERVICE_CATEGORY_MATCH", "params": {"role": role, "qty": qty}}],
             "quantity": qty,
         }
-        for p in use[:MAX_CANDIDATES]
+        for p in preferred[:MAX_CANDIDATES]
     ]
     return {
         "role": role,
-        "status": "PARTIAL",
+        "status": "RESOLVED",
         "selected": candidates[0],
         "candidates": candidates,
         "warnings": [],
@@ -608,8 +663,45 @@ SERVICE_ROLE_CATEGORIES = {
     "remote_viewing_setup": frozenset({"labor_remote_view"}),
     "testing": frozenset({"labor_system_setup", "labor_tech_visit"}),
     "commissioning": frozenset({"labor_system_setup"}),
-    "ups": frozenset(),  # usually product, not labor
+    "ups": UPS_LEAF_KEYS,
 }
+
+
+def _structured_count(products: list[dict[str, Any]], keys: frozenset[str], attr_key: str) -> int:
+    n = 0
+    for p in products:
+        if p.get("category_key") not in keys:
+            continue
+        attrs = p.get("attributes") if isinstance(p.get("attributes"), dict) else {}
+        if attrs.get(attr_key) is not None and attrs.get(attr_key) != "":
+            n += 1
+    return n
+
+
+def catalog_readiness(products: list[dict[str, Any]]) -> dict[str, Any]:
+    cameras = _structured_count(products, CAMERA_LEAF_KEYS, "resolution_mp")
+    nvrs = _structured_count(products, NVR_LEAF_KEYS, "channels")
+    hdds = _structured_count(products, HDD_LEAF_KEYS, "capacity_tb")
+    switches = _structured_count(products, SWITCH_LEAF_KEYS, "poe_ports")
+    empty = len(products) == 0
+    return {
+        "empty_catalog": empty,
+        "camera_structured": cameras,
+        "nvr_structured": nvrs,
+        "hdd_structured": hdds,
+        "switch_structured": switches,
+        "ready_for_core": cameras > 0 and nvrs > 0 and hdds > 0,
+        "missing_families": [
+            name
+            for name, count in (
+                ("camera", cameras),
+                ("recorder", nvrs),
+                ("storage", hdds),
+                ("poe_switch", switches),
+            )
+            if count == 0
+        ],
+    }
 
 
 def build_system_recommendation(
@@ -849,6 +941,17 @@ def build_system_recommendation(
     if hdd.get("packing"):
         engineering = {**engineering, "hdd": hdd["packing"]}
 
+    readiness = catalog_readiness(catalog_products)
+    if readiness["empty_catalog"]:
+        warnings.append({"code": "CATALOG_EMPTY", "params": {}})
+    elif not readiness["ready_for_core"]:
+        warnings.append(
+            {
+                "code": "CATALOG_CORE_INCOMPLETE",
+                "params": {"missing": readiness["missing_families"]},
+            }
+        )
+
     return {
         "system_type": "cctv",
         "engine_version": engineering["version"],
@@ -858,7 +961,9 @@ def build_system_recommendation(
             {
                 "role": c["role"],
                 "label": c.get("label") or c["role"],
-                "quantity": c.get("quantity") or (c.get("selected") or {}).get("quantity") or 1,
+                "quantity": c.get("quantity")
+                if c.get("quantity") is not None
+                else ((c.get("selected") or {}).get("quantity") or 1),
                 "technical_requirements": c.get("technical_requirements") or {},
                 "selected_product": (c.get("selected") or {}).get("product"),
                 "selected_confidence": (c.get("selected") or {}).get("confidence"),
@@ -869,6 +974,7 @@ def build_system_recommendation(
                         "confidence": x["confidence"],
                         "compatibility": x.get("compatibility"),
                         "reason_codes": x.get("reason_codes"),
+                        "quantity": x.get("quantity"),
                     }
                     for x in (c.get("candidates") or [])
                 ],
@@ -885,6 +991,7 @@ def build_system_recommendation(
         "unresolved": unresolved,
         "blocking": blocking,
         "status": "BLOCKED" if blocking else "OK",
+        "catalog_readiness": readiness,
         "catalog_stats": {
             "products_examined": len(catalog_products),
             "by_family": {
@@ -892,6 +999,8 @@ def build_system_recommendation(
                 "nvr": sum(1 for p in catalog_products if p.get("category_key") in NVR_LEAF_KEYS),
                 "hdd": sum(1 for p in catalog_products if p.get("category_key") in HDD_LEAF_KEYS),
                 "switch": sum(1 for p in catalog_products if p.get("category_key") in SWITCH_LEAF_KEYS),
+                "cable": sum(1 for p in catalog_products if p.get("category_key") in CABLE_LEAF_KEYS),
+                "labor": sum(1 for p in catalog_products if p.get("category_key") in LABOR_LEAF_KEYS),
             },
         },
     }

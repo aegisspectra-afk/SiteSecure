@@ -10,6 +10,8 @@ import {
   canAddRecommendationToQuote,
   initialReviewSelection,
   isCandidateSelectable,
+  linesFingerprint,
+  remainingLinesAfterPartial,
 } from "../src/lib/cctv-recommend-projection";
 
 function sampleRec(partial: Partial<SystemRecommendation> = {}): SystemRecommendation {
@@ -227,5 +229,18 @@ describe("cctv recommendation review helpers", () => {
     });
     const selection = initialReviewSelection(rec);
     expect(canAddRecommendationToQuote(rec, selection).ok).toBe(false);
+  });
+
+  it("supports partial-apply recovery without duplicating roles", () => {
+    const lines = [
+      { role: "camera", productId: "c1", qty: 4, optional: false },
+      { role: "recorder", productId: "n1", qty: 1, optional: false },
+      { role: "storage", productId: "h1", qty: 2, optional: false },
+    ];
+    expect(remainingLinesAfterPartial(lines, ["camera"]).map((l) => l.role)).toEqual([
+      "recorder",
+      "storage",
+    ]);
+    expect(linesFingerprint(lines)).toBe(linesFingerprint([...lines].reverse()));
   });
 });

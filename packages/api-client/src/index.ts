@@ -867,9 +867,11 @@ export type PdfDocumentTemplateOut = {
   id: string;
   name: string;
   doc_type: "quote" | "service" | "project";
-  status: "active" | "draft";
+  status: "active" | "draft" | "archived";
   is_default: boolean;
   config: Record<string, unknown>;
+  updated_at?: string | null;
+  created_at?: string | null;
 };
 
 export type InviteOut = {
@@ -1836,7 +1838,7 @@ export function createApiClient(opts: {
       body: {
         name: string;
         doc_type?: "quote" | "service" | "project";
-        status?: "active" | "draft";
+        status?: "active" | "draft" | "archived";
         is_default?: boolean;
         config?: Record<string, unknown>;
       },
@@ -1850,7 +1852,7 @@ export function createApiClient(opts: {
       templateId: string,
       body: {
         name?: string;
-        status?: "active" | "draft";
+        status?: "active" | "draft" | "archived";
         is_default?: boolean;
         config?: Record<string, unknown>;
       },

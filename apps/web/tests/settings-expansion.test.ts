@@ -31,9 +31,10 @@ describe("settings production nav", () => {
   it("covers required Hebrew settings sections", () => {
     expect(he.settingsNavGeneral).toBeTruthy();
     expect(he.settingsNavCompany).toBe("פרטי חברה ומיתוג");
-    expect(he.settingsNavPdf).toBe("תבניות PDF");
-    expect(he.settingsNavRoles).toBe("תפקידים והרשאות");
+    expect(he.settingsNavPdf).toBe("תבניות מסמכים");
+    expect(he.pdfTemplatesTitle).toBe("תבניות מסמכים");
     expect(he.pdfTemplatePreviewReal).toBeTruthy();
+    expect(he.settingsNavRoles).toBe("תפקידים והרשאות");
     expect(he.navUsers).toBeTruthy();
     expect(he.navSecurity).toBeTruthy();
   });

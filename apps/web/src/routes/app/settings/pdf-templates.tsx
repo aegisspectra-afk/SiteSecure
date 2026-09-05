@@ -1,72 +1,26 @@
 import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PdfDocumentTemplateOut } from "@site-secure/api-client";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
+import {
+  configToApiPayload,
+  readTemplateConfig,
+  type PdfTemplateStatus,
+  type QuoteTemplateConfig,
+  type StudioSectionId,
+} from "../../../lib/pdf-template-config";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/settings/pdf-templates")({
   component: PdfTemplatesPage,
 });
 
-type PdfConfig = {
-  primaryColor: string;
-  secondaryColor: string;
-  showLogo: boolean;
-  showCompanyAddress: boolean;
-  showPaymentTerms: boolean;
-  showTechnicalNotes: boolean;
-  showCustomerSignature: boolean;
-  showQuoteValidity: boolean;
-  headerCompany: boolean;
-  headerContact: boolean;
-  headerLogo: boolean;
-  bodyCustomerSite: boolean;
-  bodyLineItems: boolean;
-  bodyTotals: boolean;
-  footerPayment: boolean;
-  footerNotes: boolean;
-  footerSignature: boolean;
-  footerPageNumber: boolean;
-  notes: string;
-  paymentTerms: string;
-};
-
-const DEFAULT_CONFIG: PdfConfig = {
-  primaryColor: "#0b6bcb",
-  secondaryColor: "#0f172a",
-  showLogo: true,
-  showCompanyAddress: true,
-  showPaymentTerms: true,
-  showTechnicalNotes: true,
-  showCustomerSignature: true,
-  showQuoteValidity: true,
-  headerCompany: true,
-  headerContact: true,
-  headerLogo: true,
-  bodyCustomerSite: true,
-  bodyLineItems: true,
-  bodyTotals: true,
-  footerPayment: true,
-  footerNotes: true,
-  footerSignature: true,
-  footerPageNumber: true,
-  notes: "",
-  paymentTerms: "שוטף + 30",
-};
-
-function readConfig(tpl: PdfDocumentTemplateOut): PdfConfig {
-  const c = tpl.config ?? {};
-  return {
-    ...DEFAULT_CONFIG,
-    ...Object.fromEntries(
-      Object.keys(DEFAULT_CONFIG).map((key) => [key, (c as Record<string, unknown>)[key] ?? DEFAULT_CONFIG[key as keyof PdfConfig]]),
-    ),
-  } as PdfConfig;
-}
+type MobileTab = "list" | "edit" | "preview";
+type DraftState = { name: string; status: PdfTemplateStatus; config: QuoteTemplateConfig };
 
 function PdfTemplatesPage() {
   return (
@@ -76,14 +30,139 @@ function PdfTemplatesPage() {
   );
 }
 
+function formatUpdatedAt(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  if (sameDay) return `${he.pdfTemplateUpdatedToday} ${time}`;
+  return d.toLocaleString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function sectionSummary(cfg: QuoteTemplateConfig, id: StudioSectionId): string {
+  const bits: string[] = [];
+  if (id === "branding") {
+    if (cfg.useCompanyLogo) bits.push(he.pdfSecBrandLogo);
+    if (cfg.useCompanyColors) bits.push(he.pdfSecBrandColors);
+    if (cfg.overrideColors) bits.push(he.pdfSecBrandOverride);
+  }
+  if (id === "header") {
+    if (cfg.useCompanyLogo) bits.push(he.pdfToggleLogo);
+    if (cfg.headerCompany) bits.push(he.pdfToggleHeaderCompanyShort);
+    if (cfg.showIssuedDate) bits.push(he.pdfToggleIssuedDate);
+  }
+  if (id === "customer") {
+    if (cfg.showCustomer) bits.push(he.pdfToggleShowCustomer);
+    if (cfg.showSite) bits.push(he.pdfToggleShowSite);
+  }
+  if (id === "lines") {
+    if (cfg.showSku) bits.push(he.pdfToggleSku);
+    if (cfg.showQty) bits.push(he.pdfToggleQty);
+  }
+  if (id === "totals") bits.push(he.pdfToggleGrandTotal);
+  if (id === "terms") {
+    if (cfg.showPaymentTerms) bits.push(he.pdfTogglePayment);
+    if (cfg.showTechnicalNotes) bits.push(he.pdfToggleNotes);
+  }
+  if (id === "approval" && cfg.showCustomerSignature) bits.push(he.pdfToggleSignature);
+  if (id === "footer" && cfg.footerPageNumber) bits.push(he.pdfToggleFooterPage);
+  return bits.slice(0, 3).join(" · ") || he.pdfSecEmptySummary;
+}
+
+function Toggle({
+  id,
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="settings-toggle" htmlFor={id}>
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(ev) => onChange(ev.target.checked)}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function CollapsibleSection({
+  id,
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`pdf-studio-card${open ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className="pdf-studio-card-head"
+        aria-expanded={open}
+        aria-controls={`sec-${id}`}
+        onClick={onToggle}
+      >
+        <span className="pdf-studio-card-titles">
+          <span className="pdf-studio-card-title">{title}</span>
+          <span className="pdf-studio-card-summary">{summary}</span>
+        </span>
+        <span className="pdf-studio-card-chevron" aria-hidden>
+          {open ? "⌃" : "⌄"}
+        </span>
+      </button>
+      {open ? (
+        <div id={`sec-${id}`} className="pdf-studio-card-body">
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function PdfTemplatesBody() {
   const { session, api } = useSession();
   const workspaceId = session?.memberships[0]?.workspace_id;
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ name: string; status: "active" | "draft"; config: PdfConfig } | null>(
-    null,
-  );
+  const [draft, setDraft] = useState<DraftState | null>(null);
+  const [baseline, setBaseline] = useState<DraftState | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<Record<StudioSectionId, boolean>>({
+    branding: true,
+    header: false,
+    customer: false,
+    lines: false,
+    totals: false,
+    terms: false,
+    approval: false,
+    footer: false,
+  });
+  const [mobileTab, setMobileTab] = useState<MobileTab>("list");
+  const [zoom, setZoom] = useState(0.75);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewTimer = useRef<number | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const query = useQuery({
     queryKey: ["pdf-templates", workspaceId],
@@ -91,36 +170,76 @@ function PdfTemplatesBody() {
     queryFn: () => api.listPdfTemplates(workspaceId!),
   });
 
+  const companyQ = useQuery({
+    queryKey: ["company-profile", workspaceId],
+    enabled: Boolean(workspaceId),
+    queryFn: () => api.getCompanyProfile(workspaceId!),
+  });
+
   const templates = query.data ?? [];
   const selected = useMemo(
-    () => templates.find((t) => t.id === selectedId) ?? templates[0] ?? null,
+    () => templates.find((t) => t.id === selectedId) ?? templates.find((t) => t.status !== "archived") ?? templates[0] ?? null,
     [templates, selectedId],
   );
+
+  const dirty = useMemo(() => {
+    if (!draft || !baseline) return false;
+    return JSON.stringify(draft) !== JSON.stringify(baseline);
+  }, [draft, baseline]);
 
   useEffect(() => {
     if (!selected) {
       setDraft(null);
+      setBaseline(null);
       return;
     }
     setSelectedId(selected.id);
-    setDraft({
+    const next: DraftState = {
       name: selected.name,
-      status: selected.status,
-      config: readConfig(selected),
-    });
-  }, [selected?.id]);
+      status: selected.status as PdfTemplateStatus,
+      config: readTemplateConfig(selected.config),
+    };
+    setDraft(next);
+    setBaseline(next);
+  }, [selected?.id, selected?.updated_at]);
+
+  useEffect(() => {
+    function onDocClick(ev: MouseEvent) {
+      if (!menuRef.current?.contains(ev.target as Node)) setMenuOpenId(null);
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
 
   const save = useMutation({
     mutationFn: async () => {
       if (!workspaceId || !selected || !draft) return;
       return api.patchPdfTemplate(workspaceId, selected.id, {
         name: draft.name,
-        status: draft.status,
-        config: draft.config,
+        status: draft.status === "archived" ? "archived" : draft.status,
+        config: configToApiPayload(draft.config),
       });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["pdf-templates", workspaceId] });
+      if (draft) setBaseline(draft);
+    },
+  });
+
+  const createTpl = useMutation({
+    mutationFn: () =>
+      api.createPdfTemplate(workspaceId!, {
+        name: he.pdfTemplateNewName,
+        doc_type: "quote",
+        status: "draft",
+        config: configToApiPayload(readTemplateConfig({})),
+      }),
+    onSuccess: async (tpl) => {
+      await queryClient.invalidateQueries({ queryKey: ["pdf-templates", workspaceId] });
+      if (tpl?.id) {
+        setSelectedId(tpl.id);
+        setMobileTab("edit");
+      }
     },
   });
 
@@ -129,6 +248,7 @@ function PdfTemplatesBody() {
     onSuccess: async (tpl) => {
       await queryClient.invalidateQueries({ queryKey: ["pdf-templates", workspaceId] });
       if (tpl?.id) setSelectedId(tpl.id);
+      setMenuOpenId(null);
     },
   });
 
@@ -136,280 +256,534 @@ function PdfTemplatesBody() {
     mutationFn: (id: string) => api.patchPdfTemplate(workspaceId!, id, { is_default: true }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["pdf-templates", workspaceId] });
+      setMenuOpenId(null);
     },
   });
 
-  const previewPdf = useMutation({
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PdfTemplateStatus }) =>
+      api.patchPdfTemplate(workspaceId!, id, { status }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["pdf-templates", workspaceId] });
+      setMenuOpenId(null);
+    },
+  });
+
+  function patchConfig(patch: Partial<QuoteTemplateConfig>) {
+    if (!draft) return;
+    setDraft({ ...draft, config: { ...draft.config, ...patch } });
+  }
+
+  function toggleSection(id: StudioSectionId) {
+    setOpenSections((s) => ({ ...s, [id]: !s[id] }));
+  }
+
+  function discard() {
+    if (baseline) setDraft(baseline);
+  }
+
+  // Live PDF preview (same renderer) — debounced
+  useEffect(() => {
+    if (!workspaceId || !selected || !draft) return;
+    if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(() => {
+      void (async () => {
+        try {
+          setPreviewError(null);
+          const { blob } = await api.previewPdfTemplate(workspaceId, selected.id, {
+            name: draft.name,
+            config: configToApiPayload(draft.config),
+          });
+          const url = URL.createObjectURL(blob);
+          setPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return url;
+          });
+        } catch {
+          setPreviewError(he.pdfTemplatePreviewError);
+        }
+      })();
+    }, 550);
+    return () => {
+      if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    };
+  }, [workspaceId, selected?.id, draft?.name, draft?.config, api]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const openPdf = useMutation({
     mutationFn: async () => {
       if (!workspaceId || !selected || !draft) throw new Error("missing");
       return api.previewPdfTemplate(workspaceId, selected.id, {
         name: draft.name,
-        config: draft.config,
+        config: configToApiPayload(draft.config),
       });
     },
-    onSuccess: ({ blob, filename }) => {
-      downloadAndOpenPdf(blob, filename);
-    },
+    onSuccess: ({ blob, filename }) => downloadAndOpenPdf(blob, filename),
   });
 
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
   if (query.isLoading) return <p className="text-sm text-fg-muted">{he.loading}</p>;
   if (query.isError) return <ErrorState title={he.settingsError} />;
-  if (!selected || !draft) {
+
+  const profile = (companyQ.data?.profile ?? {}) as Record<string, unknown>;
+  const companyName = String(profile.displayName || profile.legalName || "");
+  const hasLogo = Boolean(profile.logoStoragePath || profile.logoUrl);
+  const missingCompany = (companyQ.data?.missing_for_quote?.length ?? 0) > 0 || !companyName;
+  const missingAddress = !profile.addressLine1;
+  const missingBn = !profile.businessNumber;
+
+  function renderMenu(tpl: PdfDocumentTemplateOut) {
+    const open = menuOpenId === tpl.id;
     return (
-      <div className="settings-panel">
-        <PageHeader title={he.settingsNavPdf} description={he.pdfTemplatesLead} />
-        <p className="text-sm text-fg-muted">{he.pdfTemplatesEmpty}</p>
+      <div className="pdf-studio-menu" ref={open ? menuRef : undefined}>
+        <button
+          type="button"
+          className="pdf-studio-menu-btn"
+          aria-label={he.pdfTemplateMoreActions}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={(ev) => {
+            ev.stopPropagation();
+            setMenuOpenId(open ? null : tpl.id);
+          }}
+        >
+          ⋯
+        </button>
+        {open ? (
+          <ul className="pdf-studio-menu-list" role="menu">
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setSelectedId(tpl.id);
+                  setMobileTab("edit");
+                  setMenuOpenId(null);
+                }}
+              >
+                {he.pdfTemplateEdit}
+              </button>
+            </li>
+            <li role="none">
+              <button type="button" role="menuitem" onClick={() => duplicate.mutate(tpl.id)} disabled={duplicate.isPending}>
+                {he.pdfTemplateDuplicate}
+              </button>
+            </li>
+            {tpl.doc_type === "quote" && !tpl.is_default && tpl.status !== "archived" ? (
+              <li role="none">
+                <button type="button" role="menuitem" onClick={() => setDefault.mutate(tpl.id)} disabled={setDefault.isPending}>
+                  {he.pdfTemplateSetDefault}
+                </button>
+              </li>
+            ) : null}
+            {tpl.status === "active" ? (
+              <li role="none">
+                <button type="button" role="menuitem" onClick={() => setStatus.mutate({ id: tpl.id, status: "draft" })}>
+                  {he.pdfTemplateDeactivate}
+                </button>
+              </li>
+            ) : tpl.status === "draft" ? (
+              <li role="none">
+                <button type="button" role="menuitem" onClick={() => setStatus.mutate({ id: tpl.id, status: "active" })}>
+                  {he.pdfTemplateActivate}
+                </button>
+              </li>
+            ) : null}
+            {tpl.status !== "archived" ? (
+              <li role="none">
+                <button type="button" role="menuitem" onClick={() => setStatus.mutate({ id: tpl.id, status: "archived" })}>
+                  {he.pdfTemplateArchive}
+                </button>
+              </li>
+            ) : (
+              <li role="none">
+                <button type="button" role="menuitem" onClick={() => setStatus.mutate({ id: tpl.id, status: "draft" })}>
+                  {he.pdfTemplateRestore}
+                </button>
+              </li>
+            )}
+          </ul>
+        ) : null}
       </div>
     );
   }
 
-  const cfg = draft.config;
+  const listPanel = (
+    <section className="pdf-studio-list" aria-label={he.pdfTemplatesListAria}>
+      <ul className="pdf-studio-items">
+        {templates.map((tpl) => {
+          const active = selected?.id === tpl.id;
+          return (
+            <li key={tpl.id} className={`pdf-studio-item${active ? " is-active" : ""}`}>
+              <button
+                type="button"
+                className="pdf-studio-item-main"
+                onClick={() => {
+                  setSelectedId(tpl.id);
+                  setMobileTab("edit");
+                }}
+                aria-pressed={active}
+              >
+                <span className="pdf-studio-item-name">{tpl.name}</span>
+                <span className="pdf-studio-item-meta">
+                  {he.pdfTemplateTypes[tpl.doc_type]} · {he.pdfTemplateStatuses[tpl.status as PdfTemplateStatus] ?? tpl.status}
+                </span>
+                <span className="pdf-studio-item-flags">
+                  {tpl.is_default ? <span className="pdf-studio-badge">{he.pdfTemplateDefault}</span> : null}
+                  <span className="pdf-studio-updated">{formatUpdatedAt(tpl.updated_at)}</span>
+                </span>
+              </button>
+              {renderMenu(tpl)}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 
-  return (
-    <div className="settings-panel flex flex-col gap-5">
-      <PageHeader title={he.settingsNavPdf} description={he.pdfTemplatesLead} />
-
-      <div className="pdf-tpl-layout">
-        <section className="pdf-tpl-list" aria-label={he.pdfTemplatesListAria}>
-          <h2 className="settings-section-title">{he.pdfTemplatesList}</h2>
-          <ul className="pdf-tpl-items">
-            {templates.map((tpl) => {
-              const active = tpl.id === selected.id;
-              return (
-                <li key={tpl.id}>
-                  <button
-                    type="button"
-                    className={`pdf-tpl-item${active ? " is-active" : ""}`}
-                    onClick={() => setSelectedId(tpl.id)}
-                    aria-pressed={active}
-                  >
-                    <span className="pdf-tpl-item-name">{tpl.name}</span>
-                    <span className="pdf-tpl-item-meta">
-                      {he.pdfTemplateTypes[tpl.doc_type]} · {he.pdfTemplateStatuses[tpl.status]}
-                      {tpl.is_default ? ` · ${he.pdfTemplateDefault}` : ""}
-                    </span>
-                  </button>
-                  <div className="pdf-tpl-item-actions">
-                    <button type="button" className="settings-text-btn" onClick={() => setSelectedId(tpl.id)}>
-                      {he.pdfTemplateEdit}
-                    </button>
-                    <button
-                      type="button"
-                      className="settings-text-btn"
-                      onClick={() => duplicate.mutate(tpl.id)}
-                      disabled={duplicate.isPending}
-                    >
-                      {he.pdfTemplateDuplicate}
-                    </button>
-                    {tpl.doc_type === "quote" ? (
-                      <button
-                        type="button"
-                        className="settings-text-btn"
-                        onClick={() => setDefault.mutate(tpl.id)}
-                        disabled={tpl.is_default || setDefault.isPending}
-                      >
-                        {he.pdfTemplateSetDefault}
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section className="pdf-tpl-editor" aria-labelledby="pdf-editor-heading">
-          <h2 id="pdf-editor-heading" className="settings-section-title">
+  const editorPanel =
+    selected && draft ? (
+      <section className="pdf-studio-editor" aria-labelledby="pdf-editor-heading">
+        <div className="pdf-studio-editor-head">
+          <h2 id="pdf-editor-heading" className="sr-only">
             {he.pdfTemplateEditor}
           </h2>
-          <div className="settings-field-grid">
-            <Input
-              id="pdf-name"
-              label={he.pdfTemplateName}
-              value={draft.name}
-              onChange={(ev) => setDraft({ ...draft, name: ev.target.value })}
-            />
+          <Input
+            id="pdf-name"
+            label={he.pdfTemplateName}
+            value={draft.name}
+            onChange={(ev) => setDraft({ ...draft, name: ev.target.value })}
+          />
+          <div className="settings-field-grid pdf-studio-meta-grid">
+            <label className="settings-field-block">
+              <span className="settings-field-label">{he.pdfTemplateType}</span>
+              <input
+                className="settings-select"
+                value={he.pdfTemplateTypes[selected.doc_type]}
+                readOnly
+                aria-readonly="true"
+                title={he.pdfTemplateTypeLocked}
+              />
+            </label>
             <label className="settings-field-block">
               <span className="settings-field-label">{he.pdfTemplateStatus}</span>
               <select
                 className="settings-select"
                 value={draft.status}
-                onChange={(ev) =>
-                  setDraft({ ...draft, status: ev.target.value as "active" | "draft" })
-                }
+                onChange={(ev) => setDraft({ ...draft, status: ev.target.value as PdfTemplateStatus })}
               >
                 <option value="active">{he.pdfTemplateStatuses.active}</option>
                 <option value="draft">{he.pdfTemplateStatuses.draft}</option>
+                <option value="archived">{he.pdfTemplateStatuses.archived}</option>
               </select>
             </label>
+          </div>
+          {selected.is_default && dirty ? (
+            <p className="settings-banner-warn" role="status">
+              {he.pdfTemplateActiveDirtyHint}
+            </p>
+          ) : null}
+          {missingCompany || missingAddress || missingBn ? (
+            <div className="settings-banner-warn" role="status">
+              <strong>{he.companyMissingForPdf}</strong>
+              <p className="settings-hint">{he.pdfCompanyMissingHint}</p>
+              <Link to="/app/settings/company" className="settings-inline-link">
+                {he.pdfCompleteCompanyCta}
+              </Link>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="pdf-studio-sections">
+          <CollapsibleSection
+            id="branding"
+            title={he.pdfSecBranding}
+            summary={sectionSummary(draft.config, "branding")}
+            open={openSections.branding}
+            onToggle={() => toggleSection("branding")}
+          >
+            <Toggle
+              id="use-logo"
+              label={he.pdfUseCompanyLogo}
+              checked={draft.config.useCompanyLogo}
+              onChange={(v) => patchConfig({ useCompanyLogo: v, showLogo: v, headerLogo: v })}
+            />
+            <div className="pdf-studio-logo-box">
+              {hasLogo ? (
+                <p className="settings-hint">{he.pdfCompanyLogoConfigured}</p>
+              ) : (
+                <p className="settings-hint">{he.pdfNoCompanyLogo}</p>
+              )}
+              <Link to="/app/settings/company" className="settings-inline-link">
+                {he.pdfGotoCompanyBranding}
+              </Link>
+            </div>
+            <Toggle
+              id="use-colors"
+              label={he.pdfUseCompanyColors}
+              checked={draft.config.useCompanyColors && !draft.config.overrideColors}
+              onChange={(v) => patchConfig({ useCompanyColors: true, overrideColors: !v })}
+            />
+            <Toggle
+              id="override-colors"
+              label={he.pdfOverrideColors}
+              checked={draft.config.overrideColors}
+              onChange={(v) => patchConfig({ overrideColors: v, useCompanyColors: !v })}
+            />
+            {draft.config.overrideColors ? (
+              <div className="settings-field-grid">
+                <label className="settings-field-block">
+                  <span className="settings-field-label">{he.pdfTemplatePrimaryColor}</span>
+                  <input
+                    type="color"
+                    className="settings-color"
+                    value={draft.config.primaryColor}
+                    onChange={(ev) => patchConfig({ primaryColor: ev.target.value })}
+                  />
+                </label>
+                <label className="settings-field-block">
+                  <span className="settings-field-label">{he.pdfTemplateSecondaryColor}</span>
+                  <input
+                    type="color"
+                    className="settings-color"
+                    value={draft.config.secondaryColor}
+                    onChange={(ev) => patchConfig({ secondaryColor: ev.target.value })}
+                  />
+                </label>
+              </div>
+            ) : null}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="header"
+            title={he.pdfSecHeader}
+            summary={sectionSummary(draft.config, "header")}
+            open={openSections.header}
+            onToggle={() => toggleSection("header")}
+          >
+            <Toggle id="h-logo" label={he.pdfToggleLogo} checked={draft.config.useCompanyLogo} onChange={(v) => patchConfig({ useCompanyLogo: v, showLogo: v, headerLogo: v })} />
+            <Toggle id="h-co" label={he.pdfToggleHeaderCompanyShort} checked={draft.config.headerCompany} onChange={(v) => patchConfig({ headerCompany: v })} />
+            <Toggle id="h-bn" label={he.pdfToggleBusinessNumber} checked={draft.config.showBusinessNumber} onChange={(v) => patchConfig({ showBusinessNumber: v })} />
+            <Toggle id="h-addr" label={he.pdfToggleAddress} checked={draft.config.showCompanyAddress} onChange={(v) => patchConfig({ showCompanyAddress: v })} />
+            <Toggle id="h-contact" label={he.pdfToggleHeaderContactShort} checked={draft.config.headerContact} onChange={(v) => patchConfig({ headerContact: v })} />
+            <Toggle id="h-date" label={he.pdfToggleIssuedDate} checked={draft.config.showIssuedDate} onChange={(v) => patchConfig({ showIssuedDate: v })} />
+            {selected.doc_type === "quote" ? (
+              <Toggle id="h-valid" label={he.pdfToggleValidity} checked={draft.config.showQuoteValidity} onChange={(v) => patchConfig({ showQuoteValidity: v })} />
+            ) : null}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="customer"
+            title={he.pdfSecCustomer}
+            summary={sectionSummary(draft.config, "customer")}
+            open={openSections.customer}
+            onToggle={() => toggleSection("customer")}
+          >
+            <Toggle
+              id="c-cust"
+              label={he.pdfToggleShowCustomer}
+              checked={draft.config.showCustomer}
+              onChange={(v) => patchConfig({ showCustomer: v, bodyCustomerSite: v || draft.config.showSite })}
+            />
+            <Toggle id="c-contact" label={he.pdfToggleCustomerContact} checked={draft.config.showCustomerContact} onChange={(v) => patchConfig({ showCustomerContact: v })} />
+            <Toggle id="c-bn" label={he.pdfToggleCustomerBn} checked={draft.config.showCustomerBusinessNumber} onChange={(v) => patchConfig({ showCustomerBusinessNumber: v })} />
+            <Toggle
+              id="c-site"
+              label={he.pdfToggleShowSite}
+              checked={draft.config.showSite}
+              onChange={(v) => patchConfig({ showSite: v, bodyCustomerSite: draft.config.showCustomer || v })}
+            />
+            <Toggle id="c-site-addr" label={he.pdfToggleSiteAddress} checked={draft.config.showSiteAddress} onChange={(v) => patchConfig({ showSiteAddress: v })} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="lines"
+            title={he.pdfSecLines}
+            summary={sectionSummary(draft.config, "lines")}
+            open={openSections.lines}
+            onToggle={() => toggleSection("lines")}
+          >
+            <Toggle id="l-sec" label={he.pdfToggleSections} checked={draft.config.showSections} onChange={(v) => patchConfig({ showSections: v })} />
+            <Toggle id="l-sku" label={he.pdfToggleSku} checked={draft.config.showSku} onChange={(v) => patchConfig({ showSku: v })} />
+            <Toggle id="l-qty" label={he.pdfToggleQty} checked={draft.config.showQty} onChange={(v) => patchConfig({ showQty: v })} />
+            <Toggle id="l-unit" label={he.pdfToggleUnitPrice} checked={draft.config.showUnitPrice} onChange={(v) => patchConfig({ showUnitPrice: v })} />
+            <Toggle id="l-disc" label={he.pdfToggleDiscountCol} checked={draft.config.showDiscountCol} onChange={(v) => patchConfig({ showDiscountCol: v })} />
+            <Toggle id="l-total" label={he.pdfToggleLineTotal} checked={true} disabled onChange={() => undefined} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="totals"
+            title={he.pdfSecTotals}
+            summary={sectionSummary(draft.config, "totals")}
+            open={openSections.totals}
+            onToggle={() => toggleSection("totals")}
+          >
+            <Toggle id="t-sub" label={he.pdfToggleSubtotal} checked={draft.config.showSubtotal} onChange={(v) => patchConfig({ showSubtotal: v })} />
+            <Toggle id="t-disc" label={he.pdfToggleDiscountTotal} checked={draft.config.showDiscountTotal} onChange={(v) => patchConfig({ showDiscountTotal: v })} />
+            <Toggle id="t-vat" label={he.pdfToggleVat} checked={draft.config.showVat} onChange={(v) => patchConfig({ showVat: v })} />
+            <Toggle id="t-grand" label={he.pdfToggleGrandTotal} checked={true} disabled onChange={() => undefined} />
+            <p className="settings-hint">{he.pdfTotalsServerHint}</p>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="terms"
+            title={he.pdfSecTerms}
+            summary={sectionSummary(draft.config, "terms")}
+            open={openSections.terms}
+            onToggle={() => toggleSection("terms")}
+          >
+            <Toggle id="tm-pay" label={he.pdfTogglePayment} checked={draft.config.showPaymentTerms} onChange={(v) => patchConfig({ showPaymentTerms: v, footerPayment: v })} />
+            <Toggle id="tm-bank" label={he.pdfToggleBank} checked={draft.config.showBankDetails} onChange={(v) => patchConfig({ showBankDetails: v })} />
+            <Toggle id="tm-notes" label={he.pdfToggleNotes} checked={draft.config.showTechnicalNotes} onChange={(v) => patchConfig({ showTechnicalNotes: v, footerNotes: v })} />
             <label className="settings-field-block">
-              <span className="settings-field-label">{he.pdfTemplateLogo}</span>
-              <input type="file" accept="image/*" className="settings-file" disabled title={he.pdfTemplateLogoSoon} />
-              <span className="settings-field-hint">{he.pdfTemplateLogoSoon}</span>
+              <span className="settings-field-label">{he.settingsPaymentTerms}</span>
+              <textarea
+                className="settings-textarea"
+                rows={2}
+                value={draft.config.paymentTerms}
+                onChange={(ev) => patchConfig({ paymentTerms: ev.target.value })}
+              />
+              <span className="settings-hint">{he.pdfDefaultsInheritanceHint}</span>
             </label>
             <label className="settings-field-block">
-              <span className="settings-field-label">{he.pdfTemplatePrimaryColor}</span>
-              <input
-                type="color"
-                className="settings-color"
-                value={cfg.primaryColor}
-                onChange={(ev) => setDraft({ ...draft, config: { ...cfg, primaryColor: ev.target.value } })}
+              <span className="settings-field-label">{he.settingsPdfNotes}</span>
+              <textarea
+                className="settings-textarea"
+                rows={3}
+                value={draft.config.notes}
+                onChange={(ev) => patchConfig({ notes: ev.target.value })}
               />
             </label>
-            <label className="settings-field-block">
-              <span className="settings-field-label">{he.pdfTemplateSecondaryColor}</span>
-              <input
-                type="color"
-                className="settings-color"
-                value={cfg.secondaryColor}
-                onChange={(ev) => setDraft({ ...draft, config: { ...cfg, secondaryColor: ev.target.value } })}
-              />
-            </label>
-          </div>
+          </CollapsibleSection>
 
-          <div className="pdf-tpl-toggles">
-            <p className="settings-section-title">{he.pdfTemplateSections}</p>
-            {(
-              [
-                ["showLogo", he.pdfToggleLogo],
-                ["showCompanyAddress", he.pdfToggleAddress],
-                ["showPaymentTerms", he.pdfTogglePayment],
-                ["showTechnicalNotes", he.pdfToggleNotes],
-                ["showCustomerSignature", he.pdfToggleSignature],
-                ["showQuoteValidity", he.pdfToggleValidity],
-                ["headerCompany", he.pdfToggleHeaderCompany],
-                ["headerContact", he.pdfToggleHeaderContact],
-                ["headerLogo", he.pdfToggleHeaderLogo],
-                ["bodyCustomerSite", he.pdfToggleBodyCustomer],
-                ["bodyLineItems", he.pdfToggleBodyLines],
-                ["bodyTotals", he.pdfToggleBodyTotals],
-                ["footerPayment", he.pdfToggleFooterPayment],
-                ["footerNotes", he.pdfToggleFooterNotes],
-                ["footerSignature", he.pdfToggleFooterSignature],
-                ["footerPageNumber", he.pdfToggleFooterPage],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={Boolean(cfg[key])}
-                  onChange={(ev) => setDraft({ ...draft, config: { ...cfg, [key]: ev.target.checked } })}
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-
-          <label className="settings-field-block">
-            <span className="settings-field-label">{he.settingsPaymentTerms}</span>
-            <textarea
-              className="settings-textarea"
-              rows={2}
-              value={cfg.paymentTerms}
-              onChange={(ev) => setDraft({ ...draft, config: { ...cfg, paymentTerms: ev.target.value } })}
+          <CollapsibleSection
+            id="approval"
+            title={he.pdfSecApproval}
+            summary={sectionSummary(draft.config, "approval")}
+            open={openSections.approval}
+            onToggle={() => toggleSection("approval")}
+          >
+            <Toggle
+              id="a-sig"
+              label={he.pdfToggleSignature}
+              checked={draft.config.showCustomerSignature}
+              onChange={(v) => patchConfig({ showCustomerSignature: v, footerSignature: v })}
             />
-          </label>
-          <label className="settings-field-block">
-            <span className="settings-field-label">{he.settingsPdfNotes}</span>
-            <textarea
-              className="settings-textarea"
-              rows={3}
-              value={cfg.notes}
-              onChange={(ev) => setDraft({ ...draft, config: { ...cfg, notes: ev.target.value } })}
-            />
-          </label>
+          </CollapsibleSection>
 
-          <Button type="button" variant="primary" className="self-start" loading={save.isPending} onClick={() => save.mutate()}>
-            {he.saveSettings}
-          </Button>
-        </section>
+          <CollapsibleSection
+            id="footer"
+            title={he.pdfSecFooter}
+            summary={sectionSummary(draft.config, "footer")}
+            open={openSections.footer}
+            onToggle={() => toggleSection("footer")}
+          >
+            <Toggle id="f-id" label={he.pdfToggleFooterIdentity} checked={draft.config.footerCompanyIdentity} onChange={(v) => patchConfig({ footerCompanyIdentity: v })} />
+            <Toggle id="f-page" label={he.pdfToggleFooterPage} checked={draft.config.footerPageNumber} onChange={(v) => patchConfig({ footerPageNumber: v })} />
+          </CollapsibleSection>
+        </div>
 
-        <section className="pdf-tpl-preview" aria-label={he.pdfTemplatePreviewAria}>
-          <div className="pdf-tpl-preview-toolbar">
-            <h2 className="settings-section-title">{he.pdfTemplatePreview}</h2>
-            <Button
-              type="button"
-              variant="primary"
-              loading={previewPdf.isPending}
-              onClick={() => previewPdf.mutate()}
-            >
-              {he.pdfTemplatePreviewReal}
+        <div className="pdf-studio-actionbar" role="region" aria-label={he.pdfTemplateSaveBar}>
+          <span className="pdf-studio-dirty" aria-live="polite">
+            {dirty ? he.pdfTemplateUnsaved : he.pdfTemplateSavedClean}
+          </span>
+          <div className="pdf-studio-actionbar-btns">
+            <Button type="button" variant="secondary" disabled={!dirty || save.isPending} onClick={discard}>
+              {he.pdfTemplateDiscard}
+            </Button>
+            <Button type="button" variant="primary" disabled={!dirty} loading={save.isPending} onClick={() => save.mutate()}>
+              {he.pdfTemplateSave}
             </Button>
           </div>
-          <div
-            className="pdf-a4"
-            style={{
-              ["--pdf-accent" as string]: cfg.primaryColor,
-              ["--pdf-ink" as string]: cfg.secondaryColor,
-            }}
+        </div>
+      </section>
+    ) : (
+      <p className="text-sm text-fg-muted">{he.pdfTemplatesEmpty}</p>
+    );
+
+  const previewPanel = (
+    <section className="pdf-studio-preview" aria-label={he.pdfTemplatePreviewAria}>
+      <div className="pdf-studio-preview-toolbar">
+        <h2 className="settings-section-title">{he.pdfTemplatePreview}</h2>
+        <div className="pdf-studio-zoom" role="group" aria-label={he.pdfTemplateZoomAria}>
+          <button type="button" className="settings-text-btn" aria-label={he.pdfTemplateZoomOut} onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}>
+            −
+          </button>
+          <span className="ltr-meta" aria-live="polite">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button type="button" className="settings-text-btn" aria-label={he.pdfTemplateZoomIn} onClick={() => setZoom((z) => Math.min(1.25, +(z + 0.1).toFixed(2)))}>
+            +
+          </button>
+          <button type="button" className="settings-text-btn" onClick={() => setZoom(0.75)}>
+            {he.pdfTemplateFitWidth}
+          </button>
+        </div>
+        <Button type="button" variant="secondary" loading={openPdf.isPending} onClick={() => openPdf.mutate()}>
+          {he.pdfTemplatePreviewReal}
+        </Button>
+      </div>
+      <p className="pdf-studio-demo-badge">{he.pdfDemoDataBadge}</p>
+      {companyName ? (
+        <p className="settings-hint">
+          {he.pdfPreviewUsesCompany}: <strong>{companyName}</strong>
+        </p>
+      ) : (
+        <p className="settings-hint">{he.pdfPreviewCompanyFallback}</p>
+      )}
+      <div className="pdf-studio-preview-stage">
+        <div className="pdf-studio-a4-frame" style={{ transform: `scale(${zoom})` }}>
+          {previewError ? (
+            <p className="text-sm text-danger">{previewError}</p>
+          ) : previewUrl ? (
+            <iframe title={he.pdfTemplatePreview} className="pdf-studio-iframe" src={previewUrl} />
+          ) : (
+            <p className="text-sm text-fg-muted">{he.loading}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="settings-panel pdf-studio">
+      <div className="pdf-studio-page-head">
+        <PageHeader title={he.pdfTemplatesTitle} description={he.pdfTemplatesLead} />
+        <Button type="button" variant="primary" loading={createTpl.isPending} onClick={() => createTpl.mutate()}>
+          {he.pdfTemplateNew}
+        </Button>
+      </div>
+
+      <div className="pdf-studio-mobile-tabs" role="tablist" aria-label={he.pdfStudioTabsAria}>
+        {(
+          [
+            ["list", he.pdfTemplatesList],
+            ["edit", he.pdfTemplateEditor],
+            ["preview", he.pdfTemplatePreview],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mobileTab === id}
+            className={`pdf-studio-tab${mobileTab === id ? " is-active" : ""}`}
+            onClick={() => setMobileTab(id)}
           >
-            <header className="pdf-a4-header">
-              {cfg.headerLogo && cfg.showLogo ? <div className="pdf-a4-logo">{he.brand}</div> : null}
-              <div className="pdf-a4-company">
-                {cfg.headerCompany ? <p className="pdf-a4-company-name">אגיס מערכות</p> : null}
-                {cfg.showCompanyAddress ? <p>רח׳ התעשייה 12, ראשון לציון</p> : null}
-                {cfg.headerContact ? <p className="ltr-meta">03-555-0100 · office@aegis.demo</p> : null}
-              </div>
-            </header>
-            <p className="pdf-a4-title">
-              {selected.doc_type === "quote"
-                ? "הצעת מחיר Q-00124"
-                : selected.doc_type === "service"
-                  ? "דוח שירות S-00018"
-                  : "סיכום פרויקט P-00007"}
-            </p>
-            {cfg.bodyCustomerSite ? (
-              <div className="pdf-a4-block">
-                <p>לקוח: חברת נוף טכנולוגיות בע״מ</p>
-                <p>אתר: קניון הזהב · קומת חניה B2</p>
-                {cfg.showQuoteValidity && selected.doc_type === "quote" ? <p>תוקף הצעה: 14 ימים</p> : null}
-              </div>
-            ) : null}
-            {cfg.bodyLineItems ? (
-              <table className="pdf-a4-table">
-                <thead>
-                  <tr>
-                    <th>פריט</th>
-                    <th>כמות</th>
-                    <th>סכום</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>מצלמת IP 4MP</td>
-                    <td className="ltr-meta">12</td>
-                    <td className="ltr-meta">₪14,400</td>
-                  </tr>
-                  <tr>
-                    <td>NVR 16CH</td>
-                    <td className="ltr-meta">1</td>
-                    <td className="ltr-meta">₪3,900</td>
-                  </tr>
-                </tbody>
-              </table>
-            ) : null}
-            {cfg.bodyTotals ? (
-              <div className="pdf-a4-totals ltr-meta">
-                <p>לפני מע״מ · ₪18,300</p>
-                <p className="pdf-a4-total">סה״כ · ₪21,594</p>
-              </div>
-            ) : null}
-            {cfg.footerPayment && cfg.showPaymentTerms && cfg.paymentTerms ? (
-              <p className="pdf-a4-foot">{cfg.paymentTerms}</p>
-            ) : null}
-            {cfg.footerNotes && cfg.showTechnicalNotes && cfg.notes ? (
-              <p className="pdf-a4-foot">{cfg.notes}</p>
-            ) : null}
-            {cfg.footerSignature && cfg.showCustomerSignature ? (
-              <div className="pdf-a4-sign">
-                <span>חתימת לקוח</span>
-                <span className="pdf-a4-sign-line" />
-              </div>
-            ) : null}
-            {cfg.footerPageNumber ? <p className="pdf-a4-page">1 / 1</p> : null}
-          </div>
-        </section>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="pdf-studio-layout">
+        <div className={`pdf-studio-col pdf-studio-col-list${mobileTab === "list" ? " is-mobile-active" : ""}`}>{listPanel}</div>
+        <div className={`pdf-studio-col pdf-studio-col-edit${mobileTab === "edit" ? " is-mobile-active" : ""}`}>{editorPanel}</div>
+        <div className={`pdf-studio-col pdf-studio-col-preview${mobileTab === "preview" ? " is-mobile-active" : ""}`}>{previewPanel}</div>
       </div>
     </div>
   );

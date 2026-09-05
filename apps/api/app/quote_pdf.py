@@ -188,12 +188,21 @@ def _status_he(status: object) -> str:
 
 
 class QuotePdf(FPDF):
-    def __init__(self, *, brand: str, number: str, footer_bits: str = "", accent: tuple[int, int, int] = ACCENT) -> None:
+    def __init__(
+        self,
+        *,
+        brand: str,
+        number: str,
+        footer_bits: str = "",
+        accent: tuple[int, int, int] = ACCENT,
+        show_page_numbers: bool = True,
+    ) -> None:
         super().__init__(orientation="P", unit="mm", format="A4")
         self._brand = brand
         self._number = number
         self._footer_bits = footer_bits
         self._accent = accent
+        self._show_page_numbers = show_page_numbers
         self.set_auto_page_break(auto=True, margin=18)
         self.set_margins(16, 16, 16)
         regular, bold = _resolve_fonts()
@@ -239,11 +248,18 @@ class QuotePdf(FPDF):
         self.set_font("Doc", size=7.5)
         self.set_text_color(*MUTED)
         self.set_text_shaping(use_shaping_engine=True, direction="rtl")
-        left = self._footer_bits or self._brand
-        self.cell(self.epw * 0.72, 5, text=left, align="R")
-        self.set_text_shaping(False)
-        pages = f"עמוד {self.page_no()} מתוך {{nb}}"
-        self.cell(self.epw * 0.28, 5, text=pages, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        left = self._footer_bits or (self._brand if self._footer_bits != "" else "")
+        width_left = self.epw * 0.72 if self._show_page_numbers else self.epw
+        if left:
+            self.cell(width_left, 5, text=left, align="R")
+        elif self._show_page_numbers:
+            self.cell(width_left, 5, text="", align="R")
+        if self._show_page_numbers:
+            self.set_text_shaping(False)
+            pages = f"עמוד {self.page_no()} מתוך {{nb}}"
+            self.cell(self.epw * 0.28, 5, text=pages, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        else:
+            self.ln(5)
         self.set_text_shaping(use_shaping_engine=True, direction="rtl")
 
 
@@ -375,7 +391,11 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             return default
         return bool(tpl.get(key))
 
-    accent = _hex_rgb(company.get("brand_primary") or tpl.get("primaryColor"), ACCENT)
+    use_company_colors = _flag("useCompanyColors", True) and not _flag("overrideColors", False)
+    if use_company_colors:
+        accent = _hex_rgb(company.get("brand_primary"), ACCENT)
+    else:
+        accent = _hex_rgb(tpl.get("primaryColor") or company.get("brand_primary"), ACCENT)
     accent_soft = (
         min(255, accent[0] + 208),
         min(255, accent[1] + 165),
@@ -402,22 +422,33 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     if site_name and title and site_name == title:
         site_name = ""
 
-    footer_bits = " · ".join(
-        p
-        for p in (
-            legal or brand,
-            (
-                f"{_txt(company.get('business_number_label'))} {_ltr(company.get('business_number'))}"
-                if _txt(company.get("business_number"))
-                else ""
-            ),
-            _txt(company.get("phone")),
-            _txt(company.get("email")),
+    show_footer_id = _flag("footerCompanyIdentity", True)
+    footer_bits = (
+        " · ".join(
+            p
+            for p in (
+                legal or brand,
+                (
+                    f"{_txt(company.get('business_number_label'))} {_ltr(company.get('business_number'))}"
+                    if _txt(company.get("business_number")) and _flag("showBusinessNumber", True)
+                    else ""
+                ),
+                _txt(company.get("phone")) if _flag("headerContact", True) else "",
+                _txt(company.get("email")) if _flag("headerContact", True) else "",
+            )
+            if p
         )
-        if p
+        if show_footer_id
+        else ""
     )
 
-    pdf = QuotePdf(brand=brand, number=number, footer_bits=footer_bits, accent=accent)
+    pdf = QuotePdf(
+        brand=brand,
+        number=number,
+        footer_bits=footer_bits,
+        accent=accent,
+        show_page_numbers=_flag("footerPageNumber", True),
+    )
     pdf.add_page()
     pdf.set_text_color(*INK)
 
@@ -436,7 +467,11 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     pdf.set_text_shaping(False)
     pdf.cell(pdf.epw * 0.42, 6, text=_ltr(number), align="L")
     pdf.set_text_shaping(use_shaping_engine=True, direction="rtl")
-    issued = _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
+    issued = (
+        _date_he(document.get("issued_at") or document.get("sent_at") or document.get("created_at"))
+        if _flag("showIssuedDate", True)
+        else ""
+    )
     until = _date_he(document.get("valid_until")) if _flag("showQuoteValidity", True) else ""
     pdf.set_xy(pdf.l_margin, header_top + 13)
     pdf.set_text_color(*MUTED)
@@ -461,7 +496,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             _font(pdf, size=8)
             pdf.cell(pdf.epw * 0.55, 4, text=legal, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         bn = _txt(company.get("business_number"))
-        if bn:
+        if bn and _flag("showBusinessNumber", True):
             label = _txt(company.get("business_number_label")) or "ח.פ."
             pdf.set_x(company_x)
             pdf.set_text_color(*MUTED)
@@ -502,7 +537,8 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         pdf.set_text_color(*INK)
         _right_text(pdf, title, size=12, bold=True, h=6)
 
-    if customer_name or _txt(customer.get("phone")) or _txt(customer.get("email")):
+    show_customer_block = _flag("bodyCustomerSite", True) and _flag("showCustomer", True)
+    if show_customer_block and (customer_name or _txt(customer.get("phone")) or _txt(customer.get("email"))):
         _ensure_space(pdf, 22)
         pdf.set_text_color(*accent)
         _font(pdf, size=9, bold=True)
@@ -511,25 +547,27 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         if customer_name:
             _right_text(pdf, customer_name, size=11, bold=True, h=5.5)
         cust_bn = _txt(customer.get("tax_id") or customer.get("business_number"))
-        if cust_bn:
+        if cust_bn and _flag("showCustomerBusinessNumber", True):
             _right_text(pdf, f"ח.פ. {_ltr(cust_bn)}", size=8.5, h=4.5)
-        for label, val in (
-            ("איש קשר", customer.get("contact_name")),
-            ("טלפון", customer.get("phone")),
-            ("דוא״ל", customer.get("email")),
-        ):
-            v = _txt(val)
-            if not v:
-                continue
-            if label == "איש קשר":
-                _right_text(pdf, f"{label}: {v}", size=8.5, h=4.5)
-            else:
-                _right_text(pdf, f"{label}: {_ltr(v)}", size=8.5, h=4.5)
+        if _flag("showCustomerContact", True):
+            for label, val in (
+                ("איש קשר", customer.get("contact_name")),
+                ("טלפון", customer.get("phone")),
+                ("דוא״ל", customer.get("email")),
+            ):
+                v = _txt(val)
+                if not v:
+                    continue
+                if label == "איש קשר":
+                    _right_text(pdf, f"{label}: {v}", size=8.5, h=4.5)
+                else:
+                    _right_text(pdf, f"{label}: {_ltr(v)}", size=8.5, h=4.5)
         caddr = _txt(customer.get("address_line"))
         if caddr:
             _right_text(pdf, caddr, size=8.5, h=4.5)
 
-    if site_name or site_addr:
+    show_site_block = _flag("bodyCustomerSite", True) and _flag("showSite", True)
+    if show_site_block and (site_name or (site_addr and _flag("showSiteAddress", True))):
         pdf.ln(1)
         pdf.set_text_color(*accent)
         _font(pdf, size=9, bold=True)
@@ -537,7 +575,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         pdf.set_text_color(*INK)
         if site_name:
             _right_text(pdf, site_name, size=10, bold=True, h=5)
-        if site_addr and site_addr != site_name:
+        if site_addr and site_addr != site_name and _flag("showSiteAddress", True):
             _right_text(pdf, site_addr, size=8.5, h=4.5)
 
     if lead:
@@ -561,171 +599,202 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
 
     _section_label(pdf, "פירוט ההצעה")
 
-    sections = {s["id"]: s for s in (document.get("sections") or []) if isinstance(s, dict) and s.get("id")}
-    by_section: dict[str, list] = {sid: [] for sid in sections}
-    loose: list = []
-    for item in document.get("items") or []:
-        if not isinstance(item, dict):
-            continue
-        sid = item.get("section_id")
-        if sid and sid in by_section:
-            by_section[sid].append(item)
-        else:
-            loose.append(item)
+    if not _flag("bodyLineItems", True):
+        pdf.set_text_color(*MUTED)
+        _right_text(pdf, "שורות הפריטים מוסתרות בתבנית זו.", size=9, h=5)
+    else:
+        sections = {s["id"]: s for s in (document.get("sections") or []) if isinstance(s, dict) and s.get("id")}
+        by_section: dict[str, list] = {sid: [] for sid in sections}
+        loose: list = []
+        for item in document.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            sid = item.get("section_id")
+            if sid and sid in by_section:
+                by_section[sid].append(item)
+            else:
+                loose.append(item)
 
-    show_discount = any(float(i.get("discount") or 0) for i in (document.get("items") or []) if isinstance(i, dict))
+        show_discount = _flag("showDiscountCol", True) and any(
+            float(i.get("discount") or 0) for i in (document.get("items") or []) if isinstance(i, dict)
+        )
+        show_sku = _flag("showSku", True)
+        show_qty = _flag("showQty", True)
+        show_unit = _flag("showUnitPrice", True)
+        show_line_total = _flag("showLineTotal", True)
 
-    def emit_table(rows: list[dict], *, start_index: int) -> int:
-        if not rows:
-            return start_index
-        if show_discount:
-            headers = ("סה״כ", "הנחה", "מחיר", "כמות", "תיאור", "מק״ט", "#")
-            widths = (
-                pdf.epw * 0.13,
-                pdf.epw * 0.08,
-                pdf.epw * 0.12,
-                pdf.epw * 0.08,
-                pdf.epw * 0.34,
-                pdf.epw * 0.17,
-                pdf.epw * 0.08,
-            )
-            aligns = ("R", "C", "R", "C", "R", "L", "C")
-        else:
-            headers = ("סה״כ", "מחיר", "כמות", "תיאור", "מק״ט", "#")
-            widths = (
-                pdf.epw * 0.14,
-                pdf.epw * 0.14,
-                pdf.epw * 0.09,
-                pdf.epw * 0.36,
-                pdf.epw * 0.19,
-                pdf.epw * 0.08,
-            )
-            aligns = ("R", "R", "C", "R", "L", "C")
+        def emit_table(rows: list[dict], *, start_index: int) -> int:
+            if not rows:
+                return start_index
+            headers: list[str] = []
+            widths: list[float] = []
+            aligns: list[str] = []
+            # Build physical LTR columns → visual RTL
+            if show_line_total:
+                headers.append("סה״כ")
+                widths.append(pdf.epw * (0.13 if show_discount else 0.14))
+                aligns.append("R")
+            if show_discount:
+                headers.append("הנחה")
+                widths.append(pdf.epw * 0.08)
+                aligns.append("C")
+            if show_unit:
+                headers.append("מחיר")
+                widths.append(pdf.epw * (0.12 if show_discount else 0.14))
+                aligns.append("R")
+            if show_qty:
+                headers.append("כמות")
+                widths.append(pdf.epw * 0.09)
+                aligns.append("C")
+            headers.append("תיאור")
+            desc_w = pdf.epw - sum(widths) - (pdf.epw * 0.17 if show_sku else 0) - pdf.epw * 0.08
+            widths.append(max(pdf.epw * 0.28, desc_w))
+            aligns.append("R")
+            if show_sku:
+                headers.append("מק״ט")
+                widths.append(pdf.epw * 0.17)
+                aligns.append("L")
+            headers.append("#")
+            widths.append(pdf.epw * 0.08)
+            aligns.append("C")
+            # Normalize widths to epw
+            total_w = sum(widths)
+            if abs(total_w - pdf.epw) > 0.01:
+                widths = [w * pdf.epw / total_w for w in widths]
 
-        _ensure_space(pdf, 22)
-        heading = FontFace(emphasis="BOLD", size_pt=8, color=WHITE, fill_color=accent)
-        with pdf.table(
-            width=pdf.epw,
-            col_widths=widths,
-            text_align=aligns,
-            line_height=5.2,
-            borders_layout="HORIZONTAL_LINES",
-            cell_fill_mode=TableCellFillMode.ROWS,
-            cell_fill_color=SURFACE,
-            first_row_as_headings=True,
-            headings_style=heading,
-        ) as table:
-            head = table.row()
-            for label in headers:
-                head.cell(label)
-            pdf.set_text_color(*INK)
-            idx = start_index
-            for item in rows:
-                itype = _txt(item.get("item_type")).lower()
-                if itype in {"note", "free_text", "freetext"}:
-                    note = table.row()
-                    body = _txt(item.get("description") or item.get("name")) or "—"
-                    prefix = "הערה: " if itype == "note" else ""
-                    note.cell(f"{prefix}{body}", colspan=len(headers))
+            _ensure_space(pdf, 22)
+            heading = FontFace(emphasis="BOLD", size_pt=8, color=WHITE, fill_color=accent)
+            with pdf.table(
+                width=pdf.epw,
+                col_widths=widths,
+                text_align=aligns,
+                line_height=5.2,
+                borders_layout="HORIZONTAL_LINES",
+                cell_fill_mode=TableCellFillMode.ROWS,
+                cell_fill_color=SURFACE,
+                first_row_as_headings=True,
+                headings_style=heading,
+            ) as table:
+                head = table.row()
+                for label in headers:
+                    head.cell(label)
+                pdf.set_text_color(*INK)
+                idx = start_index
+                for item in rows:
+                    itype = _txt(item.get("item_type")).lower()
+                    if itype in {"note", "free_text", "freetext"}:
+                        note = table.row()
+                        body = _txt(item.get("description") or item.get("name")) or "—"
+                        prefix = "הערה: " if itype == "note" else ""
+                        note.cell(f"{prefix}{body}", colspan=len(headers))
+                        continue
+                    idx += 1
+                    cell_desc = _line_description(item)
+                    sku_cell = _sku_ltr(item.get("sku")) if _txt(item.get("sku")) else "—"
+                    _font(pdf, size=8.5)
+                    row = table.row()
+                    if show_line_total:
+                        row.cell(_money_cell(item.get("line_net"), currency))
+                    if show_discount:
+                        disc = item.get("discount")
+                        dtype = str(item.get("discount_type") or "amount").lower()
+                        if float(disc or 0):
+                            disc_s = f"{_qty(disc)}%" if dtype in {"percent", "%"} else _money_cell(disc, currency)
+                        else:
+                            disc_s = "—"
+                        row.cell(disc_s)
+                    if show_unit:
+                        row.cell(_money_cell(item.get("unit_price"), currency))
+                    if show_qty:
+                        row.cell(_qty(item.get("qty")))
+                    row.cell(cell_desc)
+                    if show_sku:
+                        row.cell(sku_cell)
+                    row.cell(_ltr(idx))
+                return idx
+
+        line_no = 0
+        ordered_sections = sorted(
+            sections.values(),
+            key=lambda s: (s.get("sort_order") is None, s.get("sort_order") or 0),
+        )
+        if _flag("showSections", True):
+            for section in ordered_sections:
+                items = by_section.get(section["id"]) or []
+                if not items and not section.get("name"):
                     continue
-                idx += 1
-                cell_desc = _line_description(item)
-                sku_cell = _sku_ltr(item.get("sku")) if _txt(item.get("sku")) else "—"
-                _font(pdf, size=8.5)
-                row = table.row()
-                if show_discount:
-                    disc = item.get("discount")
-                    dtype = str(item.get("discount_type") or "amount").lower()
-                    if float(disc or 0):
-                        disc_s = f"{_qty(disc)}%" if dtype in {"percent", "%"} else _money_cell(disc, currency)
-                    else:
-                        disc_s = "—"
-                    row.cell(_money_cell(item.get("line_net"), currency))
-                    row.cell(disc_s)
-                    row.cell(_money_cell(item.get("unit_price"), currency))
-                    row.cell(_qty(item.get("qty")))
-                    row.cell(cell_desc)
-                    row.cell(sku_cell)
-                    row.cell(_ltr(idx))
-                else:
-                    row.cell(_money_cell(item.get("line_net"), currency))
-                    row.cell(_money_cell(item.get("unit_price"), currency))
-                    row.cell(_qty(item.get("qty")))
-                    row.cell(cell_desc)
-                    row.cell(sku_cell)
-                    row.cell(_ltr(idx))
-            return idx
-
-    line_no = 0
-    ordered_sections = sorted(
-        sections.values(),
-        key=lambda s: (s.get("sort_order") is None, s.get("sort_order") or 0),
-    )
-    for section in ordered_sections:
-        items = by_section.get(section["id"]) or []
-        if not items and not section.get("name"):
-            continue
-        _ensure_space(pdf, 14)
-        pdf.set_text_color(*accent)
-        _right_text(pdf, _txt(section.get("name")) or "סעיף", size=9.5, bold=True, h=5)
-        pdf.set_text_color(*INK)
-        line_no = emit_table(items, start_index=line_no)
-        pdf.ln(0.5)
-    if loose:
-        line_no = emit_table(loose, start_index=line_no)
-
-    _ensure_space(pdf, 38)
-    pdf.ln(2)
-    box_w = min(86.0, pdf.epw * 0.52)
-    box_x = pdf.l_margin + pdf.epw - box_w
-    y = pdf.get_y()
-    rows_data: list[tuple[str, str, bool]] = [
-        ("לפני מע״מ", _money(document.get("subtotal_net"), currency), False),
-    ]
-    disc = document.get("discount_value")
-    if disc:
-        dtype = document.get("discount_type")
-        dlabel = f"{_ltr(disc)}%" if dtype == "percent" else _money(disc, currency)
-        rows_data.append(("הנחה", dlabel, False))
-    vat_pct = document.get("vat_percent")
-    vat_amount = document.get("vat_amount")
-    tax_status = _txt(company.get("tax_status"))
-    show_vat = tax_status not in {"exempt", "zero_rated"} and (
-        vat_amount is None or abs(float(vat_amount or 0)) > 0.004 or bool(vat_pct)
-    )
-    if show_vat:
-        vat_label = f"מע״מ {_ltr(vat_pct)}%" if vat_pct is not None else "מע״מ"
-        rows_data.append((vat_label, _money(vat_amount, currency), False))
-    rows_data.append(
-        ("סה״כ כולל מע״מ" if show_vat else "סה״כ לתשלום", _money(document.get("total_gross"), currency), True)
-    )
-
-    box_h = 7 + len(rows_data) * 6.8 + 3
-    pdf.set_fill_color(*SURFACE)
-    pdf.set_draw_color(*accent)
-    pdf.set_line_width(0.45)
-    pdf.rect(box_x, y, box_w, box_h, style="FD")
-
-    cy = y + 3.5
-    for label, value, emphasize in rows_data:
-        if emphasize:
-            pdf.set_fill_color(*total_bg)
-            pdf.rect(box_x, cy - 1, box_w, 8.5, style="F")
-            pdf.set_text_color(*WHITE)
-            _font(pdf, size=11, bold=True)
+                _ensure_space(pdf, 14)
+                pdf.set_text_color(*accent)
+                _right_text(pdf, _txt(section.get("name")) or "סעיף", size=9.5, bold=True, h=5)
+                pdf.set_text_color(*INK)
+                line_no = emit_table(items, start_index=line_no)
+                pdf.ln(0.5)
+            if loose:
+                line_no = emit_table(loose, start_index=line_no)
         else:
-            pdf.set_text_color(*INK)
-            _font(pdf, size=9, bold=False)
-        pdf.set_xy(box_x + 2, cy)
-        pdf.cell(box_w * 0.48, 5.5, text=label, align="R")
-        pdf.set_xy(box_x + box_w * 0.48, cy)
-        pdf.cell(box_w * 0.48, 5.5, text=value, align="L")
-        cy += 6.5 if not emphasize else 7.5
-    pdf.set_y(y + box_h + 3)
-    pdf.set_text_color(*INK)
+            all_items = []
+            for section in ordered_sections:
+                all_items.extend(by_section.get(section["id"]) or [])
+            all_items.extend(loose)
+            emit_table(all_items, start_index=0)
 
+    # ── Totals (server-authoritative amounts) ───────────────────
+    if _flag("bodyTotals", True):
+        _ensure_space(pdf, 38)
+        pdf.ln(2)
+        box_w = min(86.0, pdf.epw * 0.52)
+        box_x = pdf.l_margin + pdf.epw - box_w
+        y = pdf.get_y()
+        rows_data: list[tuple[str, str, bool]] = []
+        if _flag("showSubtotal", True):
+            rows_data.append(("לפני מע״מ", _money(document.get("subtotal_net"), currency), False))
+        disc = document.get("discount_value")
+        if disc and _flag("showDiscountTotal", True):
+            dtype = document.get("discount_type")
+            dlabel = f"{_ltr(disc)}%" if dtype == "percent" else _money(disc, currency)
+            rows_data.append(("הנחה", dlabel, False))
+        vat_pct = document.get("vat_percent")
+        vat_amount = document.get("vat_amount")
+        tax_status = _txt(company.get("tax_status"))
+        show_vat = _flag("showVat", True) and tax_status not in {"exempt", "zero_rated"} and (
+            vat_amount is None or abs(float(vat_amount or 0)) > 0.004 or bool(vat_pct)
+        )
+        if show_vat:
+            vat_label = f"מע״מ {_ltr(vat_pct)}%" if vat_pct is not None else "מע״מ"
+            rows_data.append((vat_label, _money(vat_amount, currency), False))
+        if _flag("showGrandTotal", True):
+            rows_data.append(
+                ("סה״כ כולל מע״מ" if show_vat else "סה״כ לתשלום", _money(document.get("total_gross"), currency), True)
+            )
+
+        box_h = 7 + len(rows_data) * 6.8 + 3
+        pdf.set_fill_color(*SURFACE)
+        pdf.set_draw_color(*accent)
+        pdf.set_line_width(0.45)
+        pdf.rect(box_x, y, box_w, box_h, style="FD")
+
+        cy = y + 3.5
+        for label, value, emphasize in rows_data:
+            if emphasize:
+                pdf.set_fill_color(*total_bg)
+                pdf.rect(box_x, cy - 1, box_w, 8.5, style="F")
+                pdf.set_text_color(*WHITE)
+                _font(pdf, size=11, bold=True)
+            else:
+                pdf.set_text_color(*INK)
+                _font(pdf, size=9, bold=False)
+            pdf.set_xy(box_x + 2, cy)
+            pdf.cell(box_w * 0.48, 5.5, text=label, align="R")
+            pdf.set_xy(box_x + box_w * 0.48, cy)
+            pdf.cell(box_w * 0.48, 5.5, text=value, align="L")
+            cy += 6.5 if not emphasize else 7.5
+        pdf.set_y(y + box_h + 3)
+        pdf.set_text_color(*INK)
+
+    # Payment block (company profile bank + template showBankDetails)
     payment = company.get("payment") if isinstance(company.get("payment"), dict) else None
-    if payment and company.get("show_bank"):
+    show_bank = _flag("showBankDetails", False) and (company.get("show_bank") or payment)
+    if payment and show_bank:
         bits = []
         if payment.get("bank_name"):
             bits.append(f"בנק: {payment['bank_name']}")

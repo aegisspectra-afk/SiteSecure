@@ -11,8 +11,9 @@ from pydantic import BaseModel, Field
 
 from ..audit import write_audit
 from ..authz.engine import authorize
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import MESSAGES, ApiError
+from ..supabase_service import ServiceClient
 from ..workspace_rbac import (
     SYSTEM_ROLE_META,
     catalog_grant_list,
@@ -585,22 +586,24 @@ class PdfTemplateOut(BaseModel):
     id: str
     name: str
     doc_type: Literal["quote", "service", "project"]
-    status: Literal["active", "draft"]
+    status: Literal["active", "draft", "archived"]
     is_default: bool
     config: dict[str, Any] = Field(default_factory=dict)
+    updated_at: str | None = None
+    created_at: str | None = None
 
 
 class PdfTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     doc_type: Literal["quote", "service", "project"] = "quote"
-    status: Literal["active", "draft"] = "draft"
+    status: Literal["active", "draft", "archived"] = "draft"
     is_default: bool = False
     config: dict[str, Any] = Field(default_factory=dict)
 
 
 class PdfTemplatePatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
-    status: Literal["active", "draft"] | None = None
+    status: Literal["active", "draft", "archived"] | None = None
     is_default: bool | None = None
     config: dict[str, Any] | None = None
 
@@ -613,6 +616,8 @@ def _pdf_out(row: dict) -> PdfTemplateOut:
         status=row["status"],
         is_default=bool(row.get("is_default")),
         config=row.get("config") or {},
+        updated_at=str(row["updated_at"]) if row.get("updated_at") else None,
+        created_at=str(row["created_at"]) if row.get("created_at") else None,
     )
 
 
@@ -693,11 +698,15 @@ def patch_pdf_template(
         patch["name"] = body.name.strip()
     if body.status is not None:
         patch["status"] = body.status
+        if body.status == "archived" and row.get("is_default"):
+            patch["is_default"] = False
     if body.config is not None:
         patch["config"] = {**(row.get("config") or {}), **body.config}
     if body.is_default is True:
         if row["doc_type"] != "quote":
             raise ApiError(400, "VALIDATION_ERROR", "רק תבנית הצעת מחיר יכולה להיות ברירת מחדל")
+        if (body.status or row.get("status")) == "archived":
+            raise ApiError(400, "BUSINESS_RULE", "לא ניתן להגדיר תבנית בארכיון כברירת מחדל")
         client.patch(
             "pdf_document_templates",
             {"is_default": False},
@@ -765,10 +774,13 @@ def preview_pdf_template(
     template_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     body: PdfTemplatePreviewBody | None = None,
     inline: bool = True,
 ):
     """Real sample PDF via the same render_quote_pdf path used by Quotes."""
+    from ..documents.company_profile import company_block_from_profile, normalize_company_profile
+    from ..documents.logo import attach_logo_bytes, resolve_logo_bytes
     from ..pdf_response import pdf_response
     from ..pdf_template_sample import build_sample_quote_document
     from ..quote_pdf import render_quote_pdf
@@ -797,15 +809,23 @@ def preview_pdf_template(
         raw = settings.json()[0].get("branding") or {}
         if isinstance(raw, dict):
             branding = raw
-    ws = client.get("workspaces", params={"id": f"eq.{workspace_id}", "select": "name"})
-    workspace_name = "SITE SECURE"
-    if ws.status_code == 200 and ws.json():
-        workspace_name = ws.json()[0].get("name") or workspace_name
+    ws = client.get("workspaces", params={"id": f"eq.{workspace_id}", "select": "name,country_code"})
+    workspace = ws.json()[0] if ws.status_code == 200 and ws.json() else {"name": ""}
+    workspace_name = workspace.get("name") or "—"
 
     document = build_sample_quote_document(
         template=row,
         branding=branding,
         workspace_name=workspace_name,
     )
+    # Always prefer live Company Profile identity (never invent issuer brand)
+    profile = normalize_company_profile(workspace, branding)
+    document["company"] = company_block_from_profile(profile)
+    document["preview_demo"] = True
+    logo = resolve_logo_bytes(
+        company=document.get("company") if isinstance(document.get("company"), dict) else None,
+        download_fn=svc.storage_download_bytes,
+    )
+    document = attach_logo_bytes(document, logo)
     pdf_bytes, filename = render_quote_pdf(document)
     return pdf_response(pdf_bytes, f"SAMPLE-{filename}", inline=inline)

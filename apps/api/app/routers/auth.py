@@ -79,6 +79,9 @@ def get_session(
                 nested = nested[0] if nested else None
             if not isinstance(nested, dict):
                 continue
+            # Hide disposable / suspended workspaces from the active session list.
+            if str(nested.get("status") or "") != "active":
+                continue
             ent_res = client.rpc("my_workspace_entitlements", {"p_workspace_id": ws_id})
             # Fail closed for UX: never invent catalog base-plan features on resolver failure.
             # Empty features keep nav/actions gated; plan_key stays conservative default.

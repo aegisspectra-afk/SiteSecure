@@ -3,6 +3,7 @@ import {
   type DocumentOut,
   type EquipmentOut,
   type JobOut,
+  type QuoteOut,
   type ServiceCallOut,
   type SystemOut,
   type WarrantyOut,
@@ -16,11 +17,12 @@ import { addressLine } from "../modules/ModuleKit";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
 import { installationStatusLabel } from "../../lib/customer-profile";
+import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { planQuotaMessage } from "../../lib/plan-quota";
 import { quoteCreateSearch } from "../../lib/workflow-context";
 import { useSession } from "../../lib/session";
 
-type SiteTab = "overview" | "systems" | "equipment" | "service" | "documents" | "history" | "field";
+type SiteTab = "overview" | "systems" | "equipment" | "service" | "quotes" | "documents" | "history" | "field";
 
 function systemTypeLabel(type: string): string {
   return he.systemTypes[type as keyof typeof he.systemTypes] ?? type;
@@ -118,6 +120,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   const canEdit = can(roleKey, "sites.edit", features);
   const canUpload = can(roleKey, "documents.upload", features);
   const canCreateQuote = can(roleKey, "quotes.create", features);
+  const canViewQuotes = can(roleKey, "quotes.view", features);
   const canSystems = can(roleKey, "systems.view", features);
   const canEditSystems = can(roleKey, "systems.edit", features);
   const canService = can(roleKey, "service.view", features);
@@ -200,6 +203,12 @@ export function SiteDossier({ siteId }: { siteId: string }) {
     queryKey: ["site-warranties", workspaceId, siteId],
     enabled: Boolean(workspaceId) && canWarranties,
     queryFn: () => api.listWarranties(workspaceId!, { site_id: siteId, limit: 50 }),
+  });
+
+  const quotesQuery = useQuery({
+    queryKey: ["site-quotes", workspaceId, siteId],
+    enabled: Boolean(workspaceId) && canViewQuotes,
+    queryFn: () => api.listQuotes(workspaceId!, { site_id: siteId, limit: 100 }),
   });
 
   const save = useMutation({
@@ -302,6 +311,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   const jobs = jobsQuery.data?.items ?? [];
   const docs = docsQuery.data?.items ?? [];
   const warranties = warrantiesQuery.data?.items ?? [];
+  const siteQuotes = quotesQuery.data?.items ?? [];
 
   const selectedEquip = useMemo(
     () => equipment.find((row) => row.id === selectedEquipId) ?? null,
@@ -316,6 +326,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   const nvrCount = countCategory(equipment, ["nvr", "dvr"]);
   const switchCount = countCategory(equipment, ["switch"]);
   const jobCount = jobs.length;
+  const approvedQuoteCount = siteQuotes.filter((row) => row.status === "approved").length;
 
   const siteHealthAttention =
     status === "inactive" ||
@@ -336,6 +347,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
     { id: "equipment", label: he.siteTabDevices, count: equipment.length },
     { id: "systems", label: he.siteTabSystems, count: systems.length },
     { id: "service", label: he.siteTabService, count: serviceCalls.length },
+    ...(canViewQuotes ? [{ id: "quotes", label: he.siteTabQuotes, count: siteQuotes.length }] : []),
     { id: "documents", label: he.siteTabDocuments, count: docs.length },
     { id: "history", label: he.siteTabHistory, count: history.length },
     { id: "field", label: he.siteTabField },
@@ -784,6 +796,72 @@ export function SiteDossier({ siteId }: { siteId: string }) {
                 ))}
               </ul>
             </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {tab === "quotes" ? (
+        <section className="ops-panel p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.siteQuotesKicker}</p>
+              <p className="mt-2 text-sm text-fg-muted">{he.siteQuotesLead}</p>
+            </div>
+            {canCreateQuote ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  void navigate({
+                    to: "/app/quotes/new",
+                    search: quoteCreateSearch({
+                      customerId: site.customer_id,
+                      siteId: site.id,
+                    }),
+                  })
+                }
+              >
+                {he.newQuote}
+              </Button>
+            ) : null}
+          </div>
+          {quotesQuery.isLoading ? (
+            <p className="mt-4 text-sm text-fg-muted">{he.loading}</p>
+          ) : siteQuotes.length ? (
+            <ul className="mt-4 divide-y divide-border border-y border-border">
+              {siteQuotes.map((row: QuoteOut) => (
+                <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-fg">
+                      <span className="public-mono me-2 text-xs text-fg-muted" dir="ltr">
+                        {row.number}
+                      </span>
+                      {row.title || row.project_name || he.quoteDetailTitle}
+                    </p>
+                    <p className="mt-1 text-xs text-fg-muted">
+                      {[formatMoney(row.total_gross), formatDate(row.updated_at)].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Status label={quoteStatusLabel(row.status)} tone={quoteStatusTone(row.status)} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: row.id } })}
+                    >
+                      {he.siteQuoteOpen}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-fg-muted">{he.siteQuotesEmpty}</p>
+          )}
+          {approvedQuoteCount ? (
+            <p className="mt-3 text-xs text-fg-muted">
+              {he.quoteStatuses.approved}: {approvedQuoteCount}
+            </p>
           ) : null}
         </section>
       ) : null}

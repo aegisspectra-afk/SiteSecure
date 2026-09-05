@@ -7,7 +7,7 @@ import { QuotesWorkspace } from "../../../components/quotes/QuotesWorkspace";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
-import { listStatusParam, type QuoteTab } from "../../../lib/quote-workspace";
+import { listQuotesFilter, type QuoteTab } from "../../../lib/quote-workspace";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/quotes/")({
@@ -50,7 +50,7 @@ function QuotesBody() {
   const [tab, setTab] = useState<QuoteTab>(routeSearch.tab ?? "all");
   const [query, setQuery] = useState("");
   const debouncedSearch = useDebouncedValue(query, 350);
-  const status = listStatusParam(tab);
+  const listFilter = listQuotesFilter(tab);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -67,7 +67,13 @@ function QuotesBody() {
   };
 
   const quotesQuery = useInfiniteQuery({
-    queryKey: ["quotes", workspaceId, debouncedSearch, status ?? "any"],
+    queryKey: [
+      "quotes",
+      workspaceId,
+      debouncedSearch,
+      listFilter.status ?? null,
+      listFilter.exclude_status ?? null,
+    ],
     enabled: Boolean(workspaceId),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
@@ -75,7 +81,8 @@ function QuotesBody() {
     queryFn: ({ pageParam }) =>
       api.listQuotes(workspaceId!, {
         q: debouncedSearch,
-        status,
+        status: listFilter.status,
+        exclude_status: listFilter.exclude_status,
         limit: 50,
         cursor: pageParam,
       }),
@@ -83,18 +90,35 @@ function QuotesBody() {
   });
   const remove = useMutation({
     mutationFn: async (ids: string[]) => {
-      if (!workspaceId) return;
+      if (!workspaceId || !ids.length) return { deleted: 0, failed: 0 };
+      const results = await Promise.allSettled(ids.map((id) => api.deleteQuote(workspaceId, id)));
+      let deleted = 0;
       let failed = 0;
-      for (const id of ids) {
-        try {
-          await api.deleteQuote(workspaceId, id);
-        } catch (err) {
-          if (err instanceof ApiClientError && err.code === "RESOURCE_STATE") continue;
-          failed += 1;
+      const deletedIds: string[] = [];
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          deleted += 1;
+          deletedIds.push(ids[index]!);
+          return;
         }
+        const err = result.reason;
+        if (err instanceof ApiClientError && err.code === "RESOURCE_STATE") return;
+        failed += 1;
+      });
+      if (deletedIds.length) {
+        queryClient.setQueriesData({ queryKey: ["quotes", workspaceId] }, (prev: unknown) => {
+          if (!prev || typeof prev !== "object" || !("pages" in prev)) return prev;
+          const pages = (prev as { pages: Array<{ items: Array<{ id: string }> }> }).pages.map((page) => ({
+            ...page,
+            items: page.items.filter((row) => !deletedIds.includes(row.id)),
+          }));
+          return { ...(prev as object), pages };
+        });
       }
       await queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
       if (failed) throw new Error("delete-failed");
+      if (!deleted && ids.length) throw new Error("delete-blocked");
+      return { deleted, failed };
     },
   });
   const duplicate = useMutation({

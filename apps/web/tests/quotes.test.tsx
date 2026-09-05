@@ -11,6 +11,8 @@ import { he } from "../src/i18n/he";
 import { formatMoney } from "../src/lib/quotes";
 import {
   filterQuotes,
+  listQuotesFilter,
+  listStatusParam,
   quoteDraftGap,
   quoteIsDeletable,
   quotesMarginTotals,
@@ -165,13 +167,15 @@ describe("Quotes workspace", () => {
     expect(screen.getByText("התקנת מערכת מצלמות")).toBeInTheDocument();
     expect(screen.getByText("Q-2026-0002")).toBeInTheDocument();
     expect(screen.getAllByText(he.quotesNoCustomer).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Q-2026-0003")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: new RegExp(he.quotesTabArchive) }));
     expect(screen.getByText("Q-2026-0003")).toBeInTheDocument();
     expect(screen.getByText(he.quotesVersion(2))).toBeInTheDocument();
     expect(screen.getByText(he.quotesKpiDraft)).toBeInTheDocument();
-    expect(screen.getAllByText(he.quoteStatuses.sent).length).toBeGreaterThan(0);
     expect(screen.getByText(he.quotesKpiApproved)).toBeInTheDocument();
     expect(screen.getByText(he.quotesKpiOpenValue)).toBeInTheDocument();
     expect(screen.getByText(he.quotesTabAll)).toBeInTheDocument();
+    expect(screen.getByText(he.quotesTabArchive)).toBeInTheDocument();
     expect(screen.getByLabelText(he.quotesSearchLabel)).toBeInTheDocument();
     expect(screen.getByText(he.quotePipelineTitle)).toBeInTheDocument();
     expect(screen.queryByText(he.kpiViewQuotes)).not.toBeInTheDocument();
@@ -343,6 +347,19 @@ describe("quote workspace helpers", () => {
         "בקרת",
       ).map((row) => row.id),
     ).toEqual(["3"]);
+  });
+
+  it("keeps approved quotes in archive tab only, not the active pipeline", () => {
+    const quotes = [
+      quote({ id: "1", number: "A", status: "draft" }),
+      quote({ id: "2", number: "B", status: "approved" }),
+      quote({ id: "3", number: "C", status: "viewed" }),
+    ];
+    expect(filterQuotes(quotes, "all", "").map((row) => row.id)).toEqual(["1", "3"]);
+    expect(filterQuotes(quotes, "approved", "").map((row) => row.id)).toEqual(["2"]);
+    expect(listQuotesFilter("all")).toEqual({ exclude_status: "approved" });
+    expect(listStatusParam("approved")).toBe("approved");
+    expect(listQuotesFilter("approved")).toEqual({ status: "approved" });
   });
 
   it("hides margin totals when cost fields are absent or only one priced draft exists", () => {

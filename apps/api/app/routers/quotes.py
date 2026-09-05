@@ -897,8 +897,10 @@ def list_quotes(
     cursor: str | None = Query(default=None),
     q: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    exclude_status: str | None = Query(default=None),
     customer_id: str | None = Query(default=None),
     lead_id: str | None = Query(default=None),
+    site_id: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "quotes.view")
@@ -910,19 +912,53 @@ def list_quotes(
         "order": "created_at.desc",
         "limit": str(page_size + 1),
     }
-    if status:
-        params["status"] = f"eq.{status}"
+    if exclude_status:
+        excluded = [part.strip() for part in exclude_status.split(",") if part.strip()]
+        if len(excluded) == 1:
+            status_filter = f"status.neq.{excluded[0]}"
+        elif excluded:
+            status_filter = f"status.not.in.({','.join(excluded)})"
+        else:
+            status_filter = None
+    elif status:
+        statuses = [part.strip() for part in status.split(",") if part.strip()]
+        if len(statuses) == 1:
+            status_filter = f"status.eq.{statuses[0]}"
+        elif statuses:
+            status_filter = f"status.in.({','.join(statuses)})"
+        else:
+            status_filter = None
+    else:
+        status_filter = None
+
     if customer_id:
         params["customer_id"] = f"eq.{customer_id}"
     if lead_id:
         params["lead_id"] = f"eq.{lead_id}"
+    if site_id:
+        params["site_id"] = f"eq.{site_id}"
+
+    search_or = None
     if q:
-        safe = q.replace(",", " ").replace("*", " ").strip()
+        safe = q.replace(",", " ").replace("*", " ").replace("(", " ").replace(")", " ").strip()
         if safe:
-            params["or"] = (
-                f"(number.ilike.*{safe}*,title.ilike.*{safe}*,project_name.ilike.*{safe}*,"
-                f"customers.display_name.ilike.*{safe}*)"
+            # Do not filter nested `customers.display_name` inside `or(...)` — PostgREST
+            # rejects that parse (PGRST100). Number/title/project cover the search box.
+            search_or = (
+                f"(number.ilike.*{safe}*,title.ilike.*{safe}*,project_name.ilike.*{safe}*)"
             )
+
+    # Prefer top-level status + or (supported). Fall back to `and=` only when needed.
+    if status_filter and search_or:
+        _col, _sep, op_value = status_filter.partition(".")
+        params["status"] = op_value
+        params["or"] = search_or
+    elif status_filter:
+        _col, _sep, op_value = status_filter.partition(".")
+        params["status"] = op_value
+    elif search_or:
+        params["or"] = search_or
+
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"

@@ -1227,13 +1227,24 @@ export function createApiClient(opts: {
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
     listQuotes: (
       workspaceId: string,
-      opts: { q?: string; status?: string; customer_id?: string; lead_id?: string; limit?: number; cursor?: string | null } = {},
+      opts: {
+        q?: string;
+        status?: string;
+        exclude_status?: string;
+        customer_id?: string;
+        lead_id?: string;
+        site_id?: string;
+        limit?: number;
+        cursor?: string | null;
+      } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status?.trim()) params.set("status", opts.status.trim());
+      if (opts.exclude_status?.trim()) params.set("exclude_status", opts.exclude_status.trim());
       if (opts.customer_id) params.set("customer_id", opts.customer_id);
       if (opts.lead_id) params.set("lead_id", opts.lead_id);
+      if (opts.site_id) params.set("site_id", opts.site_id);
       if (opts.cursor) params.set("cursor", opts.cursor);
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
     },

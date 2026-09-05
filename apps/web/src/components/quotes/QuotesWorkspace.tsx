@@ -33,7 +33,7 @@ const TABS: { id: QuoteTab; label: string }[] = [
   { id: "all", label: he.quotesTabAll },
   { id: "draft", label: he.quoteStatuses.draft },
   { id: "open", label: he.quotesTabOpen },
-  { id: "approved", label: he.quoteStatuses.approved },
+  { id: "approved", label: he.quotesTabArchive },
   { id: "rejected", label: he.quotesTabRejected },
   { id: "expired", label: he.quoteStatuses.expired },
 ];
@@ -195,7 +195,9 @@ export function QuotesWorkspace({
               </div>
             </div>
             {visible.length === 0 ? (
-              <p className="mt-6 px-2 pb-4 text-sm text-fg-muted">{he.quotesFilterEmpty}</p>
+              <p className="mt-6 px-2 pb-4 text-sm text-fg-muted">
+                {tab === "approved" ? he.quotesArchiveEmpty : he.quotesFilterEmpty}
+              </p>
             ) : (
               <div className="mt-4">
                 {canSelect && selected.length > 0 ? (
@@ -272,7 +274,10 @@ export function QuotesWorkspace({
                   setPendingDelete(null);
                   setSelected([]);
                 })
-                .catch(() => setActionError(he.quotesDeleteError));
+                .catch((err: unknown) => {
+                  const code = err instanceof Error ? err.message : "";
+                  setActionError(code === "delete-blocked" ? he.quotesDeleteApprovedNote : he.quotesDeleteError);
+                });
             }}
           >
             {he.quotesDeleteConfirm}

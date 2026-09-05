@@ -4,6 +4,8 @@ import { quoteConversion } from "./ux-metrics";
 export type QuoteTab = "all" | "draft" | "open" | "approved" | "rejected" | "expired";
 export type QuoteDraftGap = "empty" | "no_customer" | "no_items";
 
+/** Active commercial pipeline — approved quotes live in archive, not here. */
+export const PIPELINE_STATUSES = ["draft", "sent", "viewed", "rejected", "expired", "cancelled"] as const;
 export const OPEN_STATUSES = new Set(["draft", "sent", "viewed"]);
 export const AWAITING_STATUSES = new Set(["sent", "viewed"]);
 export const DELETABLE_QUOTE_STATUSES = new Set([
@@ -32,7 +34,7 @@ export function quoteIsDeletable(status: string): boolean {
 }
 
 export function quoteTabStatuses(tab: QuoteTab): string[] | null {
-  if (tab === "all") return null;
+  if (tab === "all") return [...PIPELINE_STATUSES];
   if (tab === "draft") return ["draft"];
   if (tab === "open") return ["sent", "viewed"];
   if (tab === "approved") return ["approved"];
@@ -41,9 +43,17 @@ export function quoteTabStatuses(tab: QuoteTab): string[] | null {
 }
 
 export function listStatusParam(tab: QuoteTab): string | undefined {
+  const filter = listQuotesFilter(tab);
+  return filter.status;
+}
+
+export function listQuotesFilter(tab: QuoteTab): { status?: string; exclude_status?: string } {
+  // Active pipeline excludes approved (archive). "open" is filtered client-side
+  // from the same pipeline payload (sent + viewed).
+  if (tab === "all" || tab === "open") return { exclude_status: "approved" };
   const statuses = quoteTabStatuses(tab);
-  if (!statuses || statuses.length !== 1) return undefined;
-  return statuses[0];
+  if (!statuses?.length) return {};
+  return { status: statuses[0] };
 }
 
 export function pipelineTabForStatus(status: string): QuoteTab | null {

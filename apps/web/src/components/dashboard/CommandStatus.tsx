@@ -22,7 +22,7 @@ export function CommandStatus({
   return (
     <section
       id="command-attention"
-      className={`ops-attention-card ${count ? "is-active" : "is-quiet"}`}
+      className={`ops-attention-card is-hero ${count ? "is-active" : "is-quiet"}`}
       aria-labelledby="command-heading"
     >
       <div className="ops-attention-head">

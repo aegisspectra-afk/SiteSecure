@@ -5,7 +5,7 @@ import { he } from "../../i18n/he";
 import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
-const MAX_RECENT = 5;
+const MAX_RECENT = 4;
 
 export function RecentQuotes({
   quotes,
@@ -28,7 +28,7 @@ export function RecentQuotes({
     );
     if (embedded) return empty;
     return (
-      <section className="ops-recent-card" aria-labelledby="recent-quotes-heading">
+      <section className="ops-recent-card is-quiet" aria-labelledby="recent-quotes-heading">
         <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}
         </h2>
@@ -70,7 +70,7 @@ export function RecentQuotes({
   }
 
   return (
-    <section className="ops-recent-card" aria-labelledby="recent-quotes-heading">
+    <section className="ops-recent-card is-quiet" aria-labelledby="recent-quotes-heading">
       <div className="ops-section-head">
         <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}

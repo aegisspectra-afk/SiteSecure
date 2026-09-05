@@ -30,13 +30,15 @@ export function ActiveWork({
   }
 
   return (
-    <section className="ops-today-card" aria-labelledby="active-work-heading">
+    <section className="ops-today-card is-dense" aria-labelledby="active-work-heading">
       <div className="ops-section-head">
-        <div>
+        <div className="ops-today-head-main">
           <h2 id="active-work-heading" className="ops-section-title is-secondary">
             {he.activeWorkTitle}
           </h2>
-          {items.length ? <p className="ops-section-sub">{he.activeWorkCount(items.length)}</p> : null}
+          {items.length ? (
+            <span className="ops-section-count">{he.activeWorkCount(items.length)}</span>
+          ) : null}
         </div>
         <Link to="/app/today" className="ops-section-link">
           {he.todayViewAll}
@@ -51,12 +53,19 @@ export function ActiveWork({
             return (
               <li key={item.entity_id} className="ops-today-row">
                 <div className="ops-today-main min-w-0">
-                  {time ? (
-                    <p className="ops-today-time ltr-meta" dir="ltr">
-                      {time}
-                    </p>
-                  ) : null}
-                  <p className="ops-today-title">{item.title_he || item.number}</p>
+                  <p className="ops-today-title">
+                    {time ? (
+                      <>
+                        <span className="ops-today-time ltr-meta" dir="ltr">
+                          {time}
+                        </span>
+                        <span className="ops-today-sep" aria-hidden>
+                          ·
+                        </span>
+                      </>
+                    ) : null}
+                    <span>{item.title_he || item.number}</span>
+                  </p>
                   <p className="ops-today-context">
                     {place}
                     {item.number && item.title_he ? ` · ${item.number}` : null}

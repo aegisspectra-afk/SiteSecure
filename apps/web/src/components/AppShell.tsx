@@ -19,7 +19,7 @@ import { AppBottomNav } from "./AppBottomNav";
 import { FeedbackCenter } from "./FeedbackCenter";
 import { MobileMoreSheet } from "./MobileMoreSheet";
 import { MobileWorkSheet } from "./MobileWorkSheet";
-import { SidebarAccount, SidebarBrand, SidebarExternal, SidebarNav } from "./AppSidebar";
+import { SidebarAccount, SidebarBrand, SidebarNav } from "./AppSidebar";
 import { UserAccountMenu } from "./UserAccountMenu";
 import { WorkspaceSystemStatus } from "./WorkspaceSystemStatus";
 import { Search } from "lucide-react";
@@ -44,11 +44,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const features = membership?.features ?? [];
+  const permissions = membership?.permissions ?? null;
   const roleKey = membership?.role_key;
-  const groups = appNav(roleKey, features);
-  const tabs = bottomNav(roleKey, features);
-  const workItems = mobileWorkNav(roleKey, features);
-  const moreGroups = mobileMoreNav(roleKey, features);
+  const groups = appNav(roleKey, features, permissions);
+  const tabs = bottomNav(roleKey, features, permissions);
+  const workItems = mobileWorkNav(roleKey, features, permissions);
+  const moreGroups = mobileMoreNav(roleKey, features, permissions);
   const displayName = session?.profile?.full_name?.trim() || session?.email || he.brand;
   const workspaceActive = membership?.workspace_status === "active";
   const online = useOnlineStatus();
@@ -64,9 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     email: session?.email,
     roleKey,
     planKey: membership?.plan_key,
-    canSettings: can(roleKey, "workspace.edit", features),
-    canSecurity: canAny(roleKey, ["settings.general", "workspace.edit"], features),
-    canUsers: can(roleKey, "users.view", features),
+    canSettings: can(roleKey, "workspace.edit", features, permissions),
+    canSecurity: canAny(roleKey, ["settings.general", "workspace.edit"], features, permissions),
+    canUsers: can(roleKey, "users.view", features, permissions),
     onSettings: () => void navigate({ to: "/app/settings" }),
     onSecurity: () => void navigate({ to: "/app/settings/security" }),
     onUsers: () => void navigate({ to: "/app/settings/users" }),
@@ -145,13 +146,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="ops-sidebar-scroll">
           <SidebarNav groups={groups} pathname={pathname} collapsed={collapsed} />
         </div>
-        <SidebarExternal collapsed={collapsed} />
         <SidebarAccount {...account} collapsed={collapsed} />
       </aside>
       <div className="ops-content flex min-w-0 flex-1 flex-col">
         <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
-            <p className="ops-topbar-kicker">{he.opsPlatform}</p>
             <p className="ops-topbar-title">{membership?.workspace_name ?? he.brand}</p>
             <p className="ops-topbar-meta">{workspaceActive ? he.workspaceActive : he.workspaceInactive}</p>
           </div>
@@ -203,6 +202,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         pathname={pathname}
         roleKey={roleKey}
         features={features}
+        permissions={permissions}
         workspaceName={membership?.workspace_name}
         planKey={membership?.plan_key}
         workspaceActive={workspaceActive}

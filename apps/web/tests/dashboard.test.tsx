@@ -138,7 +138,7 @@ describe("OpsDashboard", () => {
     render(
       <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} customerCount={0} countsReady />,
     );
-    expect(screen.getByRole("heading", { name: he.dashboardTitleShort })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.dashboardTitleShort })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.activationTitle })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.nextActionTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
@@ -365,6 +365,8 @@ describe("OpsDashboard", () => {
     );
     expect(screen.queryByRole("heading", { name: he.activationTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.commercialPulseTitle })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toBeInTheDocument();
+    expect(screen.queryByText(he.quotePipelineStages.draft)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.usageThresholdTitle })).toBeInTheDocument();
     expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
     expect(screen.queryByText("NPS")).not.toBeInTheDocument();
@@ -698,7 +700,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
   });
 
-  it("V2.1 command header chips and quiet attention copy", () => {
+  it("V2.2 command header chips focus attention and route to quotes", () => {
     render(
       <OpsDashboard
         data={{
@@ -715,12 +717,17 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.commandHeaderAttention(0) })).toHaveAttribute(
       "href",
-      "#command-heading",
+      "#command-attention",
     );
     expect(screen.getByRole("link", { name: he.commandHeaderQuotesOpen(2) })).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: he.commandHeaderPipeline(formatMoney(1500)) }),
     ).toBeInTheDocument();
+    expect(screen.queryByText(he.dashboardTitleShort)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toHaveAttribute(
+      "href",
+      "/app/analytics",
+    );
   });
 });
 

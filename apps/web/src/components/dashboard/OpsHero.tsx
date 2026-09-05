@@ -18,26 +18,27 @@ export function OpsDashHero({
   quoteAction,
   secondaryAction,
   attentionCount = 0,
-  fieldTodayCount = 0,
   quotesOpen = 0,
   pipelineValue = null,
+  showQuoteChips = false,
 }: {
   displayName?: string | null;
   workspaceName?: string | null;
   quoteAction?: boolean;
   secondaryAction?: ReactNode;
   attentionCount?: number;
+  /** @deprecated field chip removed in V2.2 — kept for call-site compatibility */
   fieldTodayCount?: number;
   quotesOpen?: number;
   pipelineValue?: number | null;
+  showQuoteChips?: boolean;
 }) {
   const greeting = dayGreeting();
   const name = displayName?.trim() || null;
 
   return (
-    <header className="ops-dash-hero ops-dash-hero-v21">
+    <header className="ops-dash-hero ops-dash-hero-v22 ops-dash-hero-x">
       <div className="ops-dash-hero-identity min-w-0">
-        <h1 className="sr-only">{he.dashboardTitleShort}</h1>
         <div className="ops-dash-hero-greeting">
           <p className="ops-dash-hero-hello">
             {greeting}
@@ -47,30 +48,23 @@ export function OpsDashHero({
         </div>
         <ul className="ops-dash-hero-chips" aria-label={he.commandHeaderChipsAria}>
           <li>
-            <a href="#command-heading" className="ops-cmd-chip is-attention">
+            <a href="#command-attention" className="ops-cmd-chip is-attention">
               {he.commandHeaderAttention(attentionCount)}
             </a>
           </li>
-          {quotesOpen > 0 ? (
-            <li>
-              <Link to="/app/quotes" className="ops-cmd-chip">
-                {he.commandHeaderQuotesOpen(quotesOpen)}
-              </Link>
-            </li>
-          ) : null}
-          {pipelineValue != null && pipelineValue > 0 ? (
-            <li>
-              <Link to="/app/quotes" className="ops-cmd-chip is-pipeline">
-                {he.commandHeaderPipeline(formatMoney(pipelineValue))}
-              </Link>
-            </li>
-          ) : null}
-          {fieldTodayCount > 0 ? (
-            <li>
-              <Link to="/app/today" className="ops-cmd-chip">
-                {he.dashboardFieldJobsToday(fieldTodayCount)}
-              </Link>
-            </li>
+          {showQuoteChips ? (
+            <>
+              <li>
+                <Link to="/app/quotes" className="ops-cmd-chip">
+                  {he.commandHeaderQuotesOpen(quotesOpen)}
+                </Link>
+              </li>
+              <li>
+                <Link to="/app/quotes" className="ops-cmd-chip is-pipeline">
+                  {he.commandHeaderPipeline(formatMoney(pipelineValue ?? 0))}
+                </Link>
+              </li>
+            </>
           ) : null}
         </ul>
       </div>

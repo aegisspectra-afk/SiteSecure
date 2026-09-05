@@ -240,11 +240,11 @@ describe("dark color system", () => {
     expect(dark).not.toMatch(/--color-bg-1:\s*#0b6bcb/);
   });
 
-  it("maps chrome to nav and popovers to elevated surfaces", () => {
+  it("maps chrome to flat page surfaces and popovers to elevated surfaces", () => {
     const styles = readFileSync(path.resolve(__dirname, "../src/styles.css"), "utf8");
-    expect(styles).toContain("background: var(--color-bg-nav)");
     expect(styles).toContain("background-color: var(--color-bg-2)");
-    expect(styles).toMatch(/\.ops-sidebar\s*\{[^}]*background:\s*var\(--color-bg-nav\)/s);
+    expect(styles).toMatch(/\.ops-sidebar\s*\{[^}]*background:\s*var\(--color-bg\)/s);
     expect(styles).not.toMatch(/\.ops-sidebar\s*\{[^}]*background:\s*var\(--color-bg-1\)/s);
+    expect(styles).toMatch(/\.ops-bottom-nav\s*\{[^}]*background-color:\s*var\(--color-bg-nav\)/s);
   });
 });

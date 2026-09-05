@@ -24,7 +24,7 @@ export function UsageThresholdBanner({
   const first = meters[0];
   return (
     <section
-      className="ops-usage-notice"
+      className="ops-usage-notice is-quiet"
       aria-labelledby="usage-threshold-heading"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">

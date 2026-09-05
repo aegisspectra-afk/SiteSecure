@@ -103,19 +103,18 @@ export function OpsDashboard({
       ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
   const todayItems = data.today.items;
-  const fieldTodayCount = todayItems.filter((item) => item.entity_type === "job").length;
   const showNextAction = !showActivation && Boolean(action) && attentionTotal === 0;
   const showToday = can(roleKey, "jobs.view", features);
   const thresholdMeters = usageThresholdMeters(usage);
   const canManageTeam = Boolean(invite) || can(roleKey, "users.view", features);
 
   return (
-    <div className="ops-dashboard ops-command-center flex flex-col gap-4">
+    <div className="ops-dashboard ops-command-center ops-command-x flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
         quoteAction={Boolean(quoteCta)}
         attentionCount={attentionTotal}
-        fieldTodayCount={fieldTodayCount}
+        showQuoteChips={showQuotes}
         quotesOpen={showQuotes ? (summary?.quotes_open ?? 0) : 0}
         pipelineValue={showQuotes ? (summary?.quotes_open_value ?? null) : null}
         secondaryAction={
@@ -186,11 +185,11 @@ export function ObserveDashboard({
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
 
   return (
-    <div className="ops-dashboard ops-command-center flex flex-col gap-4">
+    <div className="ops-dashboard ops-command-center ops-command-x flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
         attentionCount={attentionTotal}
-        fieldTodayCount={data.today.items.filter((i) => i.entity_type === "job").length}
+        showQuoteChips={showQuotes}
         quotesOpen={showQuotes ? (data.summary?.quotes_open ?? 0) : 0}
         pipelineValue={showQuotes ? (data.summary?.quotes_open_value ?? null) : null}
       />

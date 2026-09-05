@@ -36,14 +36,40 @@ function primaryReason(row: AttentionQueueItem): string {
   return row.item.title_he;
 }
 
-function metaLine(row: AttentionQueueItem): string {
-  const parts: string[] = [primaryReason(row)];
-  const age = relativeAgeLabel(row.item.updated_at);
-  if (age && row.kind !== "quote_awaiting_customer") parts.push(age);
-  for (const signal of row.secondarySignals) {
-    if (signal && !parts.includes(signal)) parts.push(signal);
-  }
-  return parts.join(" · ");
+/** Soft warm tone for items waiting ≥2 calendar days — temperature, not alarm. */
+function isAgingWarm(updatedAt: string | null | undefined): boolean {
+  const days = waitingDays(updatedAt);
+  return days != null && days >= 2;
+}
+
+function AttentionMeta({ row }: { row: AttentionQueueItem }) {
+  const warm = isAgingWarm(row.item.updated_at);
+  const reason = primaryReason(row);
+  const age =
+    row.kind === "quote_awaiting_customer" ? null : relativeAgeLabel(row.item.updated_at);
+  const signals = row.secondarySignals.filter((signal) => signal && signal !== reason && signal !== age);
+
+  return (
+    <p className={`ops-attention-meta${warm ? " is-aging" : ""}`}>
+      <span>{reason}</span>
+      {age ? (
+        <>
+          <span className="ops-attention-meta-sep" aria-hidden>
+            ·
+          </span>
+          <span className={warm ? "ops-attention-age is-warm" : "ops-attention-age"}>{age}</span>
+        </>
+      ) : null}
+      {signals.map((signal) => (
+        <span key={signal}>
+          <span className="ops-attention-meta-sep" aria-hidden>
+            ·
+          </span>
+          <span>{signal}</span>
+        </span>
+      ))}
+    </p>
+  );
 }
 
 function AttentionRow({ row }: { row: AttentionQueueItem }) {
@@ -52,14 +78,13 @@ function AttentionRow({ row }: { row: AttentionQueueItem }) {
   const href = itemHref(item.entity_type, item.entity_id);
   const title = primaryTitle(row);
   const context = item.customer_name || item.site_name || null;
-  const meta = metaLine(row);
 
   const body = (
     <>
       <div className="ops-attention-main min-w-0">
         <p className="ops-attention-title">{title}</p>
         {context ? <p className="ops-attention-context">{context}</p> : null}
-        <p className="ops-attention-meta">{meta}</p>
+        <AttentionMeta row={row} />
       </div>
       <span className="ops-attention-cta">{row.actionLabel}</span>
     </>

@@ -8,6 +8,21 @@ import {
   type AttentionQueueItem,
 } from "../../lib/attention-queue";
 import { itemHref } from "../../lib/home";
+import { relativeAgeLabel } from "../../lib/relative-age";
+
+function primaryTitle(row: AttentionQueueItem): string {
+  const num = row.item.number?.trim();
+  if (row.kind === "quote_awaiting_us") return num ? `${num} · ${he.attentionStateViewed}` : he.attentionStateViewed;
+  if (row.kind === "quote_approved_pending_project") {
+    return num ? `${num} · ${he.attentionStateApproved}` : he.attentionStateApproved;
+  }
+  if (row.kind === "quote_expiring") return num ? `${num} · ${he.attentionStateExpiring}` : he.attentionStateExpiring;
+  if (row.kind === "quote_stale_draft") return num ? `${num} · ${he.attentionStateDraft}` : he.attentionStateDraft;
+  if (row.kind === "quote_awaiting_customer") {
+    return num ? `${num} · ${he.attentionStateWaitingCustomer}` : he.attentionStateWaitingCustomer;
+  }
+  return num || row.item.title_he;
+}
 
 function primaryReason(row: AttentionQueueItem): string {
   if (row.kind === "quote_awaiting_us") return he.commandViewedWhy;
@@ -21,50 +36,42 @@ function primaryReason(row: AttentionQueueItem): string {
   return row.item.title_he;
 }
 
+function metaLine(row: AttentionQueueItem): string {
+  const parts: string[] = [primaryReason(row)];
+  const age = relativeAgeLabel(row.item.updated_at);
+  if (age && row.kind !== "quote_awaiting_customer") parts.push(age);
+  for (const signal of row.secondarySignals) {
+    if (signal && !parts.includes(signal)) parts.push(signal);
+  }
+  return parts.join(" · ");
+}
+
 function AttentionRow({ row }: { row: AttentionQueueItem }) {
   const item = row.item;
   const visual = attentionVisual(row);
   const href = itemHref(item.entity_type, item.entity_id);
-  const reason = primaryReason(row);
-  const context = [item.customer_name, item.site_name].filter(Boolean).join(" · ");
+  const title = primaryTitle(row);
+  const context = item.customer_name || item.site_name || null;
+  const meta = metaLine(row);
 
-  const content = (
+  const body = (
     <>
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className={`ops-attention-dot is-${visual.color}`} aria-hidden />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-fg">
-            {item.number || reason}
-            {context ? (
-              <>
-                <span className="text-fg-muted"> · </span>
-                <span className="font-normal text-fg-muted">{context}</span>
-              </>
-            ) : null}
-          </p>
-          <p className="mt-0.5 text-sm text-fg-muted">{reason}</p>
-          {row.secondarySignals.length ? (
-            <ul className="mt-1 space-y-0.5">
-              {row.secondarySignals.map((signal) => (
-                <li key={signal} className="text-xs text-fg-subtle">
-                  {signal}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+      <div className="ops-attention-main min-w-0">
+        <p className="ops-attention-title">{title}</p>
+        {context ? <p className="ops-attention-context">{context}</p> : null}
+        <p className="ops-attention-meta">{meta}</p>
       </div>
-      <span className="shrink-0 text-sm font-medium text-action">{row.actionLabel}</span>
+      <span className="ops-attention-cta">{row.actionLabel}</span>
     </>
   );
 
-  const className = `ops-attention-row is-${visual.color}`;
+  const className = `ops-attention-row is-${visual.color} is-${visual.urgency}`;
 
   if (href && item.entity_type === "quote") {
     return (
       <li>
         <Link to="/app/quotes/$quoteId" params={{ quoteId: item.entity_id }} className={className}>
-          {content}
+          {body}
         </Link>
       </li>
     );
@@ -73,7 +80,7 @@ function AttentionRow({ row }: { row: AttentionQueueItem }) {
     return (
       <li>
         <Link to="/app/leads/$leadId" params={{ leadId: item.entity_id }} className={className}>
-          {content}
+          {body}
         </Link>
       </li>
     );
@@ -82,7 +89,7 @@ function AttentionRow({ row }: { row: AttentionQueueItem }) {
     return (
       <li>
         <Link to="/app/projects/$projectId" params={{ projectId: item.entity_id }} className={className}>
-          {content}
+          {body}
         </Link>
       </li>
     );
@@ -91,12 +98,12 @@ function AttentionRow({ row }: { row: AttentionQueueItem }) {
     return (
       <li>
         <a href={href} className={className}>
-          {content}
+          {body}
         </a>
       </li>
     );
   }
-  return <li className={className}>{content}</li>;
+  return <li className={className}>{body}</li>;
 }
 
 export function AttentionList({
@@ -113,7 +120,7 @@ export function AttentionList({
   const { items } = attentionQueueLimited(groups, { canCreateProject, limit });
   if (!items.length) return null;
   const body = (
-    <ul className="mt-3 space-y-2">
+    <ul className="ops-attention-list">
       {items.map((row) => (
         <AttentionRow key={`${row.item.entity_type}-${row.item.entity_id}`} row={row} />
       ))}
@@ -121,8 +128,8 @@ export function AttentionList({
   );
   if (!framed) return body;
   return (
-    <section className="ops-panel p-4" aria-labelledby="attention-heading">
-      <h2 id="attention-heading" className="text-lg font-semibold text-fg">
+    <section className="ops-panel ops-attention-card is-active" aria-labelledby="attention-heading">
+      <h2 id="attention-heading" className="ops-section-title">
         {he.attentionTitle}
       </h2>
       {body}

@@ -20,16 +20,16 @@ export function RecentQuotes({
 
   if (!rows.length) {
     const empty = (
-      <div className="mt-3">
+      <div className="ops-recent-empty">
         <p className="text-sm font-medium text-fg">{he.recentQuotesEmptyTitle}</p>
         <p className="mt-1 text-sm text-fg-muted">{he.recentQuotesEmptyBody}</p>
-        {canCreate ? <NewQuoteButton className="mt-4" /> : null}
+        {canCreate ? <NewQuoteButton className="mt-3" /> : null}
       </div>
     );
     if (embedded) return empty;
     return (
-      <section className="ops-card p-4" aria-labelledby="recent-quotes-heading">
-        <h2 id="recent-quotes-heading" className="text-base font-semibold text-fg">
+      <section className="ops-recent-card" aria-labelledby="recent-quotes-heading">
+        <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}
         </h2>
         {empty}
@@ -38,20 +38,20 @@ export function RecentQuotes({
   }
 
   const list = (
-    <ul className="mt-3 divide-y divide-border border-y border-border">
+    <ul className="ops-recent-list">
       {rows.map((quote) => (
         <li key={quote.id}>
           <Link
             to="/app/quotes/$quoteId"
             params={{ quoteId: quote.id }}
-            className="flex flex-wrap items-center justify-between gap-2 py-2.5 transition-colors hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="ops-recent-row"
           >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-fg">
-                {quote.number}
-                <span className="font-normal text-fg-muted"> · {quote.customer_name ?? "—"}</span>
+            <div className="ops-recent-main min-w-0">
+              <p className="ops-recent-customer">{quote.customer_name ?? "—"}</p>
+              <p className="ops-recent-meta">
+                <span className="ops-recent-number ltr-meta">{quote.number}</span>
+                <span className="ops-recent-amount tabular-nums">{formatMoney(quote.total_gross)}</span>
               </p>
-              <p className="mt-0.5 text-sm tabular-nums text-fg-muted">{formatMoney(quote.total_gross)}</p>
             </div>
             <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
           </Link>
@@ -63,22 +63,19 @@ export function RecentQuotes({
   if (embedded) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-fg">{he.recentQuotesTitle}</h3>
+        <h3 className="ops-section-title is-secondary">{he.recentQuotesTitle}</h3>
         {list}
       </div>
     );
   }
 
   return (
-    <section className="ops-card p-4" aria-labelledby="recent-quotes-heading">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="recent-quotes-heading" className="text-base font-semibold text-fg">
+    <section className="ops-recent-card" aria-labelledby="recent-quotes-heading">
+      <div className="ops-section-head">
+        <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}
         </h2>
-        <Link
-          to="/app/quotes"
-          className="text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
+        <Link to="/app/quotes" className="ops-section-link">
           {he.recentQuotesViewAll}
         </Link>
       </div>

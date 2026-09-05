@@ -7,9 +7,9 @@ import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
 function formatOpsDateHeader(now = new Date()): string {
   return new Intl.DateTimeFormat("he-IL", {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
   }).format(now);
 }
 
@@ -33,35 +33,52 @@ export function OpsDashHero({
 }) {
   const greeting = dayGreeting();
   const name = displayName?.trim() || null;
-  const summaryParts: string[] = [he.commandHeaderAttention(attentionCount)];
-  if (fieldTodayCount > 0) summaryParts.push(he.dashboardFieldJobsToday(fieldTodayCount));
-  if (quotesOpen > 0) summaryParts.push(he.commandHeaderQuotesOpen(quotesOpen));
-  if (pipelineValue != null && pipelineValue > 0) {
-    summaryParts.push(he.commandHeaderPipeline(formatMoney(pipelineValue)));
-  }
 
   return (
-    <header className="ops-dash-hero ops-dash-hero-v2">
-      <div className="min-w-0">
-        <p className="text-sm text-fg-muted">
-          {greeting}
-          {name ? `, ${name}` : ""}
-          <span className="text-fg-subtle"> · </span>
-          <span className="ltr-meta" dir="ltr">
-            {formatOpsDateHeader()}
-          </span>
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-fg">{he.dashboardTitleShort}</h1>
-        <p className="mt-2 text-sm text-fg-muted">{summaryParts.join(" · ")}</p>
+    <header className="ops-dash-hero ops-dash-hero-v21">
+      <div className="ops-dash-hero-identity min-w-0">
+        <h1 className="sr-only">{he.dashboardTitleShort}</h1>
+        <div className="ops-dash-hero-greeting">
+          <p className="ops-dash-hero-hello">
+            {greeting}
+            {name ? `, ${name}` : ""}
+          </p>
+          <p className="ops-dash-hero-date">{formatOpsDateHeader()}</p>
+        </div>
+        <ul className="ops-dash-hero-chips" aria-label={he.commandHeaderChipsAria}>
+          <li>
+            <a href="#command-heading" className="ops-cmd-chip is-attention">
+              {he.commandHeaderAttention(attentionCount)}
+            </a>
+          </li>
+          {quotesOpen > 0 ? (
+            <li>
+              <Link to="/app/quotes" className="ops-cmd-chip">
+                {he.commandHeaderQuotesOpen(quotesOpen)}
+              </Link>
+            </li>
+          ) : null}
+          {pipelineValue != null && pipelineValue > 0 ? (
+            <li>
+              <Link to="/app/quotes" className="ops-cmd-chip is-pipeline">
+                {he.commandHeaderPipeline(formatMoney(pipelineValue))}
+              </Link>
+            </li>
+          ) : null}
+          {fieldTodayCount > 0 ? (
+            <li>
+              <Link to="/app/today" className="ops-cmd-chip">
+                {he.dashboardFieldJobsToday(fieldTodayCount)}
+              </Link>
+            </li>
+          ) : null}
+        </ul>
       </div>
       <div className="ops-dash-hero-actions">
         {quoteAction ? <NewQuoteButton /> : null}
         {secondaryAction ??
           (quoteAction ? (
-            <Link
-              to="/app/today"
-              className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-border px-4 text-sm font-medium text-fg-muted transition-colors duration-200 hover:bg-bg-subtle hover:text-fg"
-            >
+            <Link to="/app/today" className="ops-dash-secondary-cta">
               {he.todayViewAll}
             </Link>
           ) : null)}

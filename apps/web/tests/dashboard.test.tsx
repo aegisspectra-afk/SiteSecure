@@ -16,6 +16,7 @@ import { quoteConversion, quotesInPlay, seatTone, seatUtilization } from "../src
 import { liveAdminActions, workspaceSetup } from "../src/lib/workspace-setup";
 import { dashboardStage } from "../src/lib/dashboard-maturity";
 import { waitingDays } from "../src/lib/attention-queue";
+import { formatMoney } from "../src/lib/quotes";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -453,7 +454,7 @@ describe("OpsDashboard", () => {
 
   it("attention rows link to the live quote route", () => {
     render(<AttentionList groups={attentionDash.attention} />);
-    expect(screen.getByText("Q-00012")).toBeInTheDocument();
+    expect(screen.getByText(/Q-00012/)).toBeInTheDocument();
     expect(screen.getByText(he.commandOpenQuote)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/app/quotes/$quoteId");
   });
@@ -544,9 +545,9 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.commandTitleCount(1) })).toBeInTheDocument();
-    expect(screen.getAllByText("Q-00024")).toHaveLength(1);
-    expect(screen.getByText(he.commandViewedWhy)).toBeInTheDocument();
-    expect(screen.getByText(he.commandExpiringWhy)).toBeInTheDocument();
+    expect(screen.getAllByText(/Q-00024/)).toHaveLength(1);
+    expect(screen.getByText(new RegExp(he.commandViewedWhy))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(he.commandExpiringWhy))).toBeInTheDocument();
     expect(screen.getByText(he.commandOpenQuote)).toBeInTheDocument();
   });
 
@@ -691,10 +692,35 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
-    expect(screen.getByText("J-00005")).toBeInTheDocument();
-    expect(screen.getAllByText("DEMO Site A").length).toBeGreaterThan(0);
+    expect(screen.getByText(/J-00005/)).toBeInTheDocument();
+    expect(screen.getAllByText(/DEMO Site A/).length).toBeGreaterThan(0);
     expect(screen.getByText("בביצוע")).toBeInTheDocument();
     expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
+  });
+
+  it("V2.1 command header chips and quiet attention copy", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          summary: { ...emptySummary, quotes_sent: 1, quotes_open: 2, quotes_open_value: 1500 },
+        }}
+        roleKey="owner"
+        features={["quotes", "jobs"]}
+        customerCount={1}
+        countsReady
+        displayName="Ilya"
+      />,
+    );
+    expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.commandHeaderAttention(0) })).toHaveAttribute(
+      "href",
+      "#command-heading",
+    );
+    expect(screen.getByRole("link", { name: he.commandHeaderQuotesOpen(2) })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: he.commandHeaderPipeline(formatMoney(1500)) }),
+    ).toBeInTheDocument();
   });
 });
 

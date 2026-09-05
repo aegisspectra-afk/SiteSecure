@@ -16,9 +16,9 @@ function countFor(summary: DashboardSummary, status: (typeof STATUS_KEYS)[number
 
 function SparklineChart({
   data,
-  height = 52,
-  color = "var(--color-action)",
-  fillColor = "var(--color-action)",
+  height = 36,
+  color = "var(--color-fg-muted)",
+  fillColor = "var(--color-fg-muted)",
   label,
 }: {
   data: number[];
@@ -44,19 +44,20 @@ function SparklineChart({
   const lastY = 100 - ((last - min) / range) * 100;
 
   return (
-    <div className="ops-sparkline" style={{ height }} role="img" aria-label={label}>
+    <div className="ops-sparkline is-secondary" style={{ height }} role="img" aria-label={label}>
       <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-        <polygon points={`0,100 ${points} 100,100`} fill={fillColor} opacity={0.12} />
+        <polygon points={`0,100 ${points} 100,100`} fill={fillColor} opacity={0.06} />
         <polyline
           points={points}
           fill="none"
           stroke={color}
-          strokeWidth="2.5"
+          strokeWidth="1.5"
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
+          opacity={0.7}
         />
-        <circle cx={100} cy={lastY} r="3" fill={color} vectorEffect="non-scaling-stroke" />
+        <circle cx={100} cy={lastY} r="2" fill={color} vectorEffect="non-scaling-stroke" opacity={0.8} />
       </svg>
     </div>
   );
@@ -75,47 +76,43 @@ export function CommercialPulse({
   const hasChart = Boolean(chart && chart.revenue.some((v) => v > 0));
 
   return (
-    <section className="ops-card ops-snapshot ops-snapshot-compact" aria-labelledby="commercial-pulse-heading">
-      <h2 id="commercial-pulse-heading" className="text-base font-semibold text-fg">
+    <section className="ops-commercial-card" aria-labelledby="commercial-pulse-heading">
+      <h2 id="commercial-pulse-heading" className="ops-section-title is-secondary">
         {he.commercialPulseTitle}
       </h2>
 
-      <dl className="ops-snapshot-grid is-compact-v2 mt-3">
-        <div className="ops-metric-tile">
-          <dt className="text-xs text-fg-muted">{he.snapshotOpenValue}</dt>
-          <dd className="mt-1 text-lg font-semibold tracking-tight text-fg tabular-nums">
-            {formatMoney(summary.quotes_open_value ?? 0)}
-          </dd>
+      <dl className="ops-commercial-metrics">
+        <div className="ops-commercial-metric">
+          <dt>{he.snapshotOpenValue}</dt>
+          <dd className="tabular-nums">{formatMoney(summary.quotes_open_value ?? 0)}</dd>
         </div>
-        <div className="ops-metric-tile">
-          <dt className="text-xs text-fg-muted">{he.kpiQuotesOpen}</dt>
-          <dd className="mt-1 text-lg font-semibold text-fg">{open}</dd>
+        <div className="ops-commercial-metric">
+          <dt>{he.kpiQuotesOpen}</dt>
+          <dd className="tabular-nums">{open}</dd>
         </div>
-        <div className="ops-metric-tile">
-          <dt className="text-xs text-fg-muted">{he.snapshotApprovedValue}</dt>
-          <dd className="mt-1 text-lg font-semibold tracking-tight text-fg tabular-nums">
-            {formatMoney(summary.quotes_approved_value ?? 0)}
-          </dd>
+        <div className="ops-commercial-metric">
+          <dt>{he.snapshotApprovedValue}</dt>
+          <dd className="tabular-nums">{formatMoney(summary.quotes_approved_value ?? 0)}</dd>
         </div>
-        <div className="ops-metric-tile">
-          <dt className="text-xs text-fg-muted">{he.kpiConversionLabel}</dt>
-          <dd className="mt-1 text-lg font-semibold text-fg">
+        <div className="ops-commercial-metric">
+          <dt>{he.kpiConversionLabel}</dt>
+          <dd className="tabular-nums">
             {conversion.percent != null && conversion.total >= 1 ? he.uxPercent(conversion.percent) : "—"}
           </dd>
         </div>
       </dl>
 
-      <div className="ops-snapshot-status mt-3" aria-label={he.quotePipelineTitle}>
+      <div className="ops-commercial-status" aria-label={he.quotePipelineTitle}>
         {STATUS_KEYS.map((status) => (
-          <span key={status} className={`ops-snapshot-badge is-${status}`}>
+          <span key={status} className={`ops-status-chip is-${status}`}>
             {he.quotePipelineStages[status]} {countFor(summary, status)}
           </span>
         ))}
       </div>
 
       {hasChart && chart ? (
-        <div className="ops-snapshot-chart mt-4">
-          <div className="mb-1 flex items-center justify-between gap-2 text-xs text-fg-muted">
+        <div className="ops-commercial-chart">
+          <div className="ops-commercial-chart-label">
             <span>{he.businessChartQuoteValueTrend}</span>
             {change != null ? (
               <span className={change > 0 ? "text-success" : "text-danger"}>
@@ -124,15 +121,7 @@ export function CommercialPulse({
               </span>
             ) : null}
           </div>
-          <SparklineChart
-            data={chart.revenue}
-            label={he.businessChartAria(chart.labels_he, chart.revenue)}
-          />
-          <div className="mt-1 flex justify-between gap-1 text-[10px] text-fg-subtle">
-            {chart.labels_he.map((month) => (
-              <span key={month}>{month}</span>
-            ))}
-          </div>
+          <SparklineChart data={chart.revenue} label={he.businessChartAria(chart.labels_he, chart.revenue)} />
         </div>
       ) : null}
     </section>

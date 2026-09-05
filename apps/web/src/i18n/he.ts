@@ -158,7 +158,7 @@ export const he = {
   commandTitle: "דורש תשומת לב",
   commandTitleCount: (count: number) => `דורש תשומת לב (${count})`,
   commandQuiet: "הכול שקט כרגע",
-  commandQuietBody: "אין פעולות דחופות או חריגות.",
+  commandQuietBody: "אין כרגע פריטים שדורשים טיפול",
   commandAttention: (count: number) =>
     count === 1 ? "דבר אחד דורש תשומת לב" : `${count} דברים דורשים תשומת לב`,
   commandOpenQuote: "פתח הצעה",
@@ -174,6 +174,12 @@ export const he = {
   commandHeaderQuotesOpen: (count: number) =>
     count === 1 ? "הצעה פתוחה אחת" : `${count} הצעות פתוחות`,
   commandHeaderPipeline: (value: string) => `צנרת ${value}`,
+  commandHeaderChipsAria: "סיכום תפעולי",
+  attentionStateViewed: "הלקוח צפה",
+  attentionStateApproved: "אושרה",
+  attentionStateExpiring: "פג תוקף בקרוב",
+  attentionStateDraft: "טיוטה",
+  attentionStateWaitingCustomer: "ממתינה ללקוח",
   commercialPulseTitle: "דופק מסחרי",
   commercialPulseEmpty: "עדיין אין נתוני הצעות להצגה.",
   todaySectionEmptyCompact: "אין עבודות מתוזמנות להיום",

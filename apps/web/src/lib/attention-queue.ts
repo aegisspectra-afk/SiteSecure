@@ -207,7 +207,7 @@ export function leadsToAttentionGroups(leads: LeadOut[]): AttentionGroup[] {
     entity_id: lead.id,
     number: leadDisplayTitle(lead),
     title_he: lead.next_action?.trim() || leadRequirementsSummary(lead),
-    customer_name: lead.contact_name || lead.company_name || null,
+    customer_name: lead.contact_name || lead.title || null,
     site_name: null,
     scheduled_for: null,
     severity: lead.priority === "urgent" || lead.priority === "high" ? "now" : "next",

@@ -122,14 +122,14 @@ export function evaluateNvrPoe(opts: {
   if (portsOk === false) {
     reasons.push({
       code: "NVR_POE_PORTS_INSUFFICIENT",
-      params: { poePorts: opts.poePorts, requiredPorts: opts.requiredPorts },
+      params: { poePorts: opts.poePorts ?? null, requiredPorts: opts.requiredPorts },
     });
     return { evaluation: "INSUFFICIENT_PORTS", reasons };
   }
   if (budgetOk === false) {
     reasons.push({
       code: "NVR_POE_BUDGET_INSUFFICIENT",
-      params: { poeBudgetW: opts.poeBudgetW, requiredBudgetW: opts.requiredBudgetW },
+      params: { poeBudgetW: opts.poeBudgetW ?? null, requiredBudgetW: opts.requiredBudgetW },
     });
     return { evaluation: "INSUFFICIENT_BUDGET", reasons };
   }

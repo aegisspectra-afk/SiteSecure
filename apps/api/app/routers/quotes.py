@@ -777,6 +777,7 @@ def _prepare_share_link(
 
 
 def _load_default_pdf_template(client: UserClient, workspace_id: UUID) -> dict | None:
+    """Deterministic quote template: default → active → any non-archived."""
     rows = as_list(
         client.get(
             "pdf_document_templates",
@@ -789,22 +790,25 @@ def _load_default_pdf_template(client: UserClient, workspace_id: UUID) -> dict |
             },
         )
     )
-    if rows:
+    if rows and str(rows[0].get("status") or "") != "archived":
         return rows[0]
-    rows = as_list(
-        client.get(
-            "pdf_document_templates",
-            params={
-                "workspace_id": f"eq.{workspace_id}",
-                "doc_type": "eq.quote",
-                "status": "eq.active",
-                "select": "id,name,config,status",
-                "order": "created_at.asc",
-                "limit": "1",
-            },
+    for status in ("active", "draft"):
+        rows = as_list(
+            client.get(
+                "pdf_document_templates",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "doc_type": "eq.quote",
+                    "status": f"eq.{status}",
+                    "select": "id,name,config,status",
+                    "order": "created_at.asc",
+                    "limit": "1",
+                },
+            )
         )
-    )
-    return rows[0] if rows else None
+        if rows:
+            return rows[0]
+    return None
 
 
 def _document_payload(

@@ -96,14 +96,27 @@ def _money_cell(value: object, currency: str = "ILS") -> str:
     return _money(amount, currency)
 
 
-def _qty(value: object) -> str:
+def _qty_plain(value: object) -> str:
     try:
         amount = float(value or 0)
     except (TypeError, ValueError):
-        return _ltr(value)
+        return _txt(value)
     if amount == int(amount):
-        return _ltr(str(int(amount)))
-    return _ltr(f"{amount:g}")
+        return str(int(amount))
+    return f"{amount:g}"
+
+
+def _qty(value: object) -> str:
+    text = _qty_plain(value)
+    return _ltr(text) if text else ""
+
+
+def _pct(value: object) -> str:
+    """Percent label with sign inside LTR isolate so RTL cells do not render as `%5`."""
+    plain = _qty_plain(value)
+    if not plain:
+        return ""
+    return _ltr(f"{plain}%")
 
 
 def _date_he(value: object) -> str:
@@ -255,8 +268,9 @@ class QuotePdf(FPDF):
         elif self._show_page_numbers:
             self.cell(width_left, 5, text="", align="R")
         if self._show_page_numbers:
-            self.set_text_shaping(False)
-            pages = f"עמוד {self.page_no()} מתוך {{nb}}"
+            # Keep RTL shaping on — disabling it letter-reverses Hebrew ("דומע"/"ךותמ").
+            # Digits + {nb} alias stay LTR via unicode isolates; {nb} must remain literal for FPDF.
+            pages = f"עמוד {_ltr(self.page_no())} מתוך {_ltr('{nb}')}"
             self.cell(self.epw * 0.28, 5, text=pages, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         else:
             self.ln(5)
@@ -699,7 +713,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
                         disc = item.get("discount")
                         dtype = str(item.get("discount_type") or "amount").lower()
                         if float(disc or 0):
-                            disc_s = f"{_qty(disc)}%" if dtype in {"percent", "%"} else _money_cell(disc, currency)
+                            disc_s = _pct(disc) if dtype in {"percent", "%"} else _money_cell(disc, currency)
                         else:
                             disc_s = "—"
                         row.cell(disc_s)
@@ -751,7 +765,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         disc = document.get("discount_value")
         if disc and _flag("showDiscountTotal", True):
             dtype = document.get("discount_type")
-            dlabel = f"{_ltr(disc)}%" if dtype == "percent" else _money(disc, currency)
+            dlabel = _pct(disc) if dtype == "percent" else _money(disc, currency)
             rows_data.append(("הנחה", dlabel, False))
         vat_pct = document.get("vat_percent")
         vat_amount = document.get("vat_amount")
@@ -760,7 +774,7 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
             vat_amount is None or abs(float(vat_amount or 0)) > 0.004 or bool(vat_pct)
         )
         if show_vat:
-            vat_label = f"מע״מ {_ltr(vat_pct)}%" if vat_pct is not None else "מע״מ"
+            vat_label = f"מע״מ {_pct(vat_pct)}" if vat_pct is not None else "מע״מ"
             rows_data.append((vat_label, _money(vat_amount, currency), False))
         if _flag("showGrandTotal", True):
             rows_data.append(
@@ -811,11 +825,12 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
 
     terms_blocks: list[tuple[str, object]] = []
     if _flag("footerPayment", True) and _flag("showPaymentTerms", True):
-        terms_blocks.append(("תנאי תשלום", tpl.get("paymentTerms") or document.get("payment_terms")))
+        # Quote override wins over template default (Workspace→Template→Quote).
+        terms_blocks.append(("תנאי תשלום", document.get("payment_terms") or tpl.get("paymentTerms")))
     terms_blocks.append(("אחריות", document.get("warranty")))
     terms_blocks.append(("תנאים כלליים", document.get("general_terms")))
     if _flag("footerNotes", True) and _flag("showTechnicalNotes", True):
-        terms_blocks.append(("הערות", tpl.get("notes") or document.get("customer_notes")))
+        terms_blocks.append(("הערות", document.get("customer_notes") or tpl.get("notes")))
     terms_blocks = [(t, b) for t, b in terms_blocks if _txt(b)]
 
     approved_at = document.get("approved_at")

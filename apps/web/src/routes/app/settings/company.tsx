@@ -430,7 +430,7 @@ function CompanyBrandingBody() {
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? he.saving : he.save}
           </Button>
-          {saved ? <span className="settings-saved">{he.saved}</span> : null}
+          {saved ? <span className="settings-saved">{he.settingsSaved}</span> : null}
         </div>
       </form>
     </div>

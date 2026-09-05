@@ -46,7 +46,13 @@ export function useSettingsNavItems(): NavItem[] {
     { id: "appearance", to: "/app/settings/appearance", label: he.settingsNavAppearance, visible: allow("workspace.edit") },
     { id: "numbering", to: "/app/settings/numbering", label: he.settingsNavNumbering, visible: allow("workspace.edit") },
     { id: "quotes", to: "/app/settings/quotes", label: he.settingsNavQuotes, visible: allow("workspace.edit") },
-    { id: "pdf", to: "/app/settings/pdf-templates", label: he.settingsNavPdf, visible: allow("workspace.edit") || allow("settings.branding") },
+    {
+      id: "pdf",
+      to: "/app/settings/pdf-templates",
+      label: he.settingsNavPdf,
+      // Page requires workspace.edit — do not advertise for branding-only grants.
+      visible: allow("workspace.edit"),
+    },
     { id: "sites", to: "/app/settings/sites", label: he.settingsNavSites, visible: allow("workspace.edit") },
     { id: "notifications", to: "/app/settings/notifications", label: he.settingsNavNotifications, visible: allow("workspace.edit") },
     { id: "users", to: "/app/settings/users", label: he.navUsers, visible: allow("users.view") },

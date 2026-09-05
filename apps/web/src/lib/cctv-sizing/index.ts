@@ -1,9 +1,9 @@
 /**
- * Task 13B — Pure deterministic CCTV sizing engine.
+ * Task 13B — Pure deterministic CCTV sizing engine (TypeScript reference).
  *
- * Long-term ownership: prefer Python server authority in Task 13C+ (see completion report).
- * This TypeScript module is the V1 reference implementation and remains the source of truth
- * until a server port is explicitly introduced — do not silently duplicate.
+ * AUTHORITATIVE implementation as of Task 13C: Python `app.cctv_sizing`
+ * (`CCTV_SIZING_ENGINE_VERSION = 1`). Keep this module for parity fixtures /
+ * client preview only — do not evolve formulas independently of the Python engine.
  */
 
 export { CCTV_SIZING_ENGINE_VERSION, RECORDER_TIERS, STORAGE_TB_CONVENTION } from "./types";

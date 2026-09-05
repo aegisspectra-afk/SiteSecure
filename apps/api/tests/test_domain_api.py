@@ -43,6 +43,7 @@ def test_openapi_and_health():
         "/api/v1/workspaces/{workspace_id}/catalog/packages",
         "/api/v1/workspaces/{workspace_id}/catalog/products",
         "/api/v1/workspaces/{workspace_id}/catalog/categories",
+        "/api/v1/workspaces/{workspace_id}/cctv/recommend",
         "/api/v1/public/quotes/{token}",
         "/api/v1/public/quotes/{token}/approve",
         "/api/v1/public/quotes/{token}/reject",

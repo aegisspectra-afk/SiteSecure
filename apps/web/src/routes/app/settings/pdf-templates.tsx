@@ -1,11 +1,13 @@
 import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PdfDocumentTemplateOut } from "@site-secure/api-client";
+import { PdfDocumentPreview } from "../../../components/pdf/PdfDocumentPreview";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
+import { clampPdfZoom, formatZoomPercent, stepPdfZoom } from "../../../lib/pdf-preview";
 import {
   configToApiPayload,
   readTemplateConfig,
@@ -159,9 +161,17 @@ function PdfTemplatesBody() {
   });
   const [mobileTab, setMobileTab] = useState<MobileTab>("list");
   const [zoom, setZoom] = useState(0.75);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fitWidth, setFitWidth] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 820px)").matches,
+  );
+  const [effectiveZoom, setEffectiveZoom] = useState(0.75);
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [previewFetching, setPreviewFetching] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewTimer = useRef<number | null>(null);
+  const previewGen = useRef(0);
+  const previewAbort = useRef<AbortController | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const query = useQuery({
@@ -282,41 +292,62 @@ function PdfTemplatesBody() {
     if (baseline) setDraft(baseline);
   }
 
-  // Live PDF preview (same renderer) — debounced
+  const refreshPreview = useCallback(() => {
+    if (!workspaceId || !selected || !draft) return;
+    previewAbort.current?.abort();
+    const ac = new AbortController();
+    previewAbort.current = ac;
+    const gen = ++previewGen.current;
+    setPreviewFetching(true);
+    setPreviewError(null);
+    void (async () => {
+      try {
+        const { blob } = await api.previewPdfTemplate(
+          workspaceId,
+          selected.id,
+          { name: draft.name, config: configToApiPayload(draft.config) },
+          true,
+          ac.signal,
+        );
+        if (gen !== previewGen.current) return;
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        if (gen !== previewGen.current) return;
+        setPdfBytes(buf);
+        setPdfBlob(blob);
+        setPreviewError(null);
+        } catch {
+          if (ac.signal.aborted || gen !== previewGen.current) return;
+          setPreviewError(he.pdfTemplatePreviewError);
+        } finally {
+        if (gen === previewGen.current) setPreviewFetching(false);
+      }
+    })();
+  }, [workspaceId, selected, draft, api]);
+
+  // Live PDF preview (same renderer) — debounced; latest request wins
   useEffect(() => {
     if (!workspaceId || !selected || !draft) return;
     if (previewTimer.current) window.clearTimeout(previewTimer.current);
-    previewTimer.current = window.setTimeout(() => {
-      void (async () => {
-        try {
-          setPreviewError(null);
-          const { blob } = await api.previewPdfTemplate(workspaceId, selected.id, {
-            name: draft.name,
-            config: configToApiPayload(draft.config),
-          });
-          const url = URL.createObjectURL(blob);
-          setPreviewUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return url;
-          });
-        } catch {
-          setPreviewError(he.pdfTemplatePreviewError);
-        }
-      })();
-    }, 550);
+    previewTimer.current = window.setTimeout(() => refreshPreview(), 550);
     return () => {
       if (previewTimer.current) window.clearTimeout(previewTimer.current);
     };
-  }, [workspaceId, selected?.id, draft?.name, draft?.config, api]);
+  }, [workspaceId, selected?.id, draft?.name, draft?.config, refreshPreview]);
 
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewAbort.current?.abort();
+      previewGen.current += 1;
     };
-  }, [previewUrl]);
+  }, []);
+
+  useEffect(() => {
+    if (mobileTab === "preview") setFitWidth(true);
+  }, [mobileTab]);
 
   const openPdf = useMutation({
     mutationFn: async () => {
+      if (pdfBlob) return { blob: pdfBlob, filename: "SITE-SECURE-TEMPLATE-PREVIEW.pdf" };
       if (!workspaceId || !selected || !draft) throw new Error("missing");
       return api.previewPdfTemplate(workspaceId, selected.id, {
         name: draft.name,
@@ -325,6 +356,8 @@ function PdfTemplatesBody() {
     },
     onSuccess: ({ blob, filename }) => downloadAndOpenPdf(blob, filename),
   });
+
+  const onEffectiveScaleChange = useCallback((s: number) => setEffectiveZoom(s), []);
 
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
   if (query.isLoading) return <p className="text-sm text-fg-muted">{he.loading}</p>;
@@ -711,16 +744,39 @@ function PdfTemplatesBody() {
       <div className="pdf-studio-preview-toolbar">
         <h2 className="settings-section-title">{he.pdfTemplatePreview}</h2>
         <div className="pdf-studio-zoom" role="group" aria-label={he.pdfTemplateZoomAria}>
-          <button type="button" className="settings-text-btn" aria-label={he.pdfTemplateZoomOut} onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}>
+          <button
+            type="button"
+            className="settings-text-btn"
+            aria-label={he.pdfTemplateZoomOut}
+            onClick={() => {
+              setFitWidth(false);
+              setZoom((z) => stepPdfZoom(fitWidth ? effectiveZoom : z, -1));
+            }}
+          >
             −
           </button>
           <span className="ltr-meta" aria-live="polite">
-            {Math.round(zoom * 100)}%
+            {formatZoomPercent(fitWidth ? effectiveZoom : zoom)}
           </span>
-          <button type="button" className="settings-text-btn" aria-label={he.pdfTemplateZoomIn} onClick={() => setZoom((z) => Math.min(1.25, +(z + 0.1).toFixed(2)))}>
+          <button
+            type="button"
+            className="settings-text-btn"
+            aria-label={he.pdfTemplateZoomIn}
+            onClick={() => {
+              setFitWidth(false);
+              setZoom((z) => stepPdfZoom(fitWidth ? effectiveZoom : z, 1));
+            }}
+          >
             +
           </button>
-          <button type="button" className="settings-text-btn" onClick={() => setZoom(0.75)}>
+          <button
+            type="button"
+            className={`settings-text-btn${fitWidth ? " is-active" : ""}`}
+            onClick={() => {
+              setFitWidth(true);
+              setZoom(clampPdfZoom(effectiveZoom));
+            }}
+          >
             {he.pdfTemplateFitWidth}
           </button>
         </div>
@@ -728,25 +784,24 @@ function PdfTemplatesBody() {
           {he.pdfTemplatePreviewReal}
         </Button>
       </div>
-      <p className="pdf-studio-demo-badge">{he.pdfDemoDataBadge}</p>
-      {companyName ? (
-        <p className="settings-hint">
-          {he.pdfPreviewUsesCompany}: <strong>{companyName}</strong>
-        </p>
-      ) : (
-        <p className="settings-hint">{he.pdfPreviewCompanyFallback}</p>
-      )}
-      <div className="pdf-studio-preview-stage">
-        <div className="pdf-studio-a4-frame" style={{ transform: `scale(${zoom})` }}>
-          {previewError ? (
-            <p className="text-sm text-danger">{previewError}</p>
-          ) : previewUrl ? (
-            <iframe title={he.pdfTemplatePreview} className="pdf-studio-iframe" src={previewUrl} />
-          ) : (
-            <p className="text-sm text-fg-muted">{he.loading}</p>
-          )}
-        </div>
+      <div className="pdf-studio-demo-meta">
+        <span className="pdf-studio-demo-badge">{he.pdfDemoDataBadge}</span>
+        <span className="pdf-studio-demo-hint">{he.pdfPreviewBrandingHint}</span>
       </div>
+      <PdfDocumentPreview
+        data={pdfBytes}
+        scale={zoom}
+        fitWidth={fitWidth}
+        updating={previewFetching && Boolean(pdfBytes)}
+        fetchError={previewError}
+        title={he.pdfTemplatePreview}
+        preparingLabel={he.pdfPreviewPreparing}
+        errorTitle={he.pdfPreviewRenderError}
+        errorHint={he.pdfPreviewRenderRetryHint}
+        retryLabel={he.pdfPreviewRetry}
+        onRetry={refreshPreview}
+        onEffectiveScaleChange={onEffectiveScaleChange}
+      />
     </section>
   );
 

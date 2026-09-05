@@ -434,6 +434,104 @@ export type CatalogCategory = {
   children?: CatalogCategory[];
 };
 
+export type CatalogImportTargets = {
+  fields: Array<{ key: string; label_he: string }>;
+  duplicate_policies: string[];
+  max_file_bytes: number;
+  pricing_note_he: string;
+  google_sheets_note_he: string;
+  file_lifetime_he: string;
+};
+
+export type CatalogImportSheetMeta = {
+  index: number;
+  name: string;
+  row_count: number;
+  suggested_include: boolean;
+  header_row: number | null;
+  header_confidence: number;
+  headers: Array<string | number | null>;
+  suggested_map: Record<string, string>;
+  suggested_category_key?: string | null;
+  preview_rows: unknown[][];
+};
+
+export type CatalogImportParseResult = {
+  session_id: string;
+  filename: string;
+  format: string;
+  sheet_count: number;
+  sheets: CatalogImportSheetMeta[];
+  expires_in_seconds: number;
+  pricing_note_he?: string;
+};
+
+export type CatalogImportSheetConfig = {
+  sheet_index: number;
+  include: boolean;
+  header_row?: number | null;
+  category_id?: string | null;
+  manufacturer_default?: string | null;
+  unit_default?: string;
+  column_map: Record<string, string>;
+};
+
+export type CatalogImportPreviewIn = {
+  session_id: string;
+  duplicate_policy: "skip" | "update" | "new_only";
+  sheets: CatalogImportSheetConfig[];
+};
+
+export type CatalogImportCommitIn = CatalogImportPreviewIn & { confirm: boolean };
+
+export type CatalogImportPreviewResult = {
+  summary: {
+    detected: number;
+    ready: number;
+    warning: number;
+    blocked: number;
+    duplicates: number;
+    will_create: number;
+    will_update: number;
+    will_skip: number;
+  };
+  sample_rows: Array<{
+    sheet_name?: string;
+    source_row?: number;
+    status: string;
+    warnings: string[];
+    block_reasons: string[];
+    is_duplicate?: boolean;
+    duplicate_action?: string;
+    original?: Record<string, unknown>;
+    product?: CatalogProduct & { attributes?: Record<string, unknown> };
+    provenance?: Record<string, string>;
+  }>;
+  readiness_estimate: CatalogImportReadiness;
+  can_view_cost: boolean;
+};
+
+export type CatalogImportReadiness = {
+  camera_structured: number;
+  nvr_structured: number;
+  hdd_structured: number;
+  switch_structured: number;
+  ready_for_core: boolean;
+  incomplete_technical: number;
+  missing_families: string[];
+};
+
+export type CatalogImportCommitResult = {
+  imported: number;
+  updated: number;
+  skipped: number;
+  failed: Array<{ sku?: string; source_row?: number; sheet_name?: string; reasons: string[] }>;
+  failed_count: number;
+  summary: CatalogImportPreviewResult["summary"];
+  readiness: CatalogImportReadiness;
+  message_he: string;
+};
+
 export type QuotePackage = {
   id: string;
   name: string;
@@ -1762,6 +1860,28 @@ export function createApiClient(opts: {
       }),
     listCatalogCategories: (workspaceId: string) =>
       request<{ items: CatalogCategory[] }>(`/api/v1/workspaces/${workspaceId}/catalog/categories`),
+    catalogImportTargets: (workspaceId: string) =>
+      request<CatalogImportTargets>(`/api/v1/workspaces/${workspaceId}/catalog/import/targets`),
+    catalogImportTemplate: (workspaceId: string) =>
+      requestBlob(`/api/v1/workspaces/${workspaceId}/catalog/import/template`),
+    catalogImportParse: (workspaceId: string, file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return request<CatalogImportParseResult>(`/api/v1/workspaces/${workspaceId}/catalog/import/parse`, {
+        method: "POST",
+        body: fd,
+      });
+    },
+    catalogImportPreview: (workspaceId: string, body: CatalogImportPreviewIn) =>
+      request<CatalogImportPreviewResult>(`/api/v1/workspaces/${workspaceId}/catalog/import/preview`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    catalogImportCommit: (workspaceId: string, body: CatalogImportCommitIn) =>
+      request<CatalogImportCommitResult>(`/api/v1/workspaces/${workspaceId}/catalog/import/commit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     listQuoteTemplates: (workspaceId: string) =>
       request<{ items: QuoteTemplate[] }>(`/api/v1/workspaces/${workspaceId}/catalog/templates`),
     getPublicQuote: (token: string) =>
@@ -1871,12 +1991,14 @@ export function createApiClient(opts: {
       templateId: string,
       body?: { name?: string; config?: Record<string, unknown> },
       inline = true,
+      signal?: AbortSignal,
     ) => {
       const q = inline ? "?inline=true" : "?inline=false";
       return requestBlob(`/api/v1/workspaces/${workspaceId}/pdf-templates/${templateId}/preview${q}`, {
         method: "POST",
         body: JSON.stringify(body ?? {}),
         headers: { "Content-Type": "application/json" },
+        signal,
       });
     },
     getCompanyProfile: (workspaceId: string) =>

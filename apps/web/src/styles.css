@@ -8524,8 +8524,7 @@ html.theme-revealing::view-transition-new(root) {
 }
 
 .pdf-studio-list,
-.pdf-studio-editor,
-.pdf-studio-preview {
+.pdf-studio-editor {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-bg);
@@ -8723,12 +8722,29 @@ html.theme-revealing::view-transition-new(root) {
   color: var(--color-fg-muted);
 }
 
+.pdf-studio-preview {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  padding: 12px;
+  min-height: 420px;
+  max-height: min(78vh, 860px);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .pdf-studio-preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-bottom: 8px;
+  background: var(--color-bg);
 }
 
 .pdf-studio-zoom {
@@ -8736,6 +8752,19 @@ html.theme-revealing::view-transition-new(root) {
   align-items: center;
   gap: 6px;
   font-size: 0.8125rem;
+}
+
+.pdf-studio-zoom .settings-text-btn.is-active {
+  color: var(--color-action);
+  font-weight: 600;
+}
+
+.pdf-studio-demo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .pdf-studio-demo-badge {
@@ -8750,30 +8779,116 @@ html.theme-revealing::view-transition-new(root) {
   color: var(--color-fg-muted);
 }
 
-.pdf-studio-preview-stage {
+.pdf-studio-demo-hint {
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.pdf-preview-root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+}
+
+.pdf-preview-updating {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.pdf-preview-stage {
   overflow: auto;
-  max-height: min(70vh, 720px);
+  flex: 1;
+  min-height: 280px;
   padding: 12px;
-  background: color-mix(in srgb, var(--color-fg) 4%, var(--color-bg));
+  background: color-mix(in srgb, var(--color-fg) 5%, var(--color-bg));
   border-radius: 6px;
   min-width: 0;
 }
 
-.pdf-studio-a4-frame {
-  width: 210mm;
-  height: 297mm;
-  transform-origin: top center;
-  margin-inline: auto;
-  background: #fff;
-  box-shadow: 0 10px 30px color-mix(in srgb, #000 18%, transparent);
-  overflow: hidden;
+.pdf-preview-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
 }
 
-.pdf-studio-iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
+.pdf-preview-page {
   background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 6%, transparent), 0 8px 24px color-mix(in srgb, #000 8%, transparent);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.pdf-preview-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+.pdf-preview-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.pdf-preview-skeleton-page {
+  width: min(100%, 280px);
+  aspect-ratio: 210 / 297;
+  border-radius: 2px;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--color-fg) 6%, #fff) 25%,
+    color-mix(in srgb, var(--color-fg) 10%, #fff) 40%,
+    color-mix(in srgb, var(--color-fg) 6%, #fff) 60%
+  );
+  background-size: 200% 100%;
+  animation: pdf-preview-shimmer 1.2s ease-in-out infinite;
+  border: 1px solid var(--color-border);
+}
+
+.pdf-preview-skeleton-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+}
+
+.pdf-preview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 12px;
+  text-align: center;
+}
+
+.pdf-preview-error-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-danger, #b42318);
+}
+
+.pdf-preview-error-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+}
+
+@keyframes pdf-preview-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .pdf-studio-mobile-tabs {
@@ -8837,10 +8952,13 @@ html.theme-revealing::view-transition-new(root) {
   .pdf-studio-col.is-mobile-active {
     display: flex;
   }
-  .pdf-studio-a4-frame {
-    width: 100%;
-    height: 70vh;
-    transform: none !important;
+  .pdf-studio-preview {
+    max-height: none;
+    min-height: 70vh;
+  }
+  .pdf-preview-stage {
+    max-height: none;
+    min-height: 60vh;
   }
 }
 

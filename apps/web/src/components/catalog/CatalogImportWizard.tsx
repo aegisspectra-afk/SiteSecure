@@ -8,7 +8,7 @@ import {
   type CatalogImportSheetConfig,
 } from "@site-secure/api-client";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 
@@ -88,6 +88,23 @@ export function CatalogImportWizard({
     () => categories.filter((c) => c.parent_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     [categories],
   );
+
+  // If parse finished before categories loaded, backfill suggested leaf ids.
+  useEffect(() => {
+    if (!parsed || !categories.length || !sheets.length) return;
+    setSheets((prev) => {
+      let changed = false;
+      const next = prev.map((s) => {
+        if (s.category_id) return s;
+        const meta = parsed.sheets.find((x) => x.index === s.sheet_index);
+        const id = categoryIdForKey(categories, meta?.suggested_category_key);
+        if (!id) return s;
+        changed = true;
+        return { ...s, category_id: id };
+      });
+      return changed ? next : prev;
+    });
+  }, [categories, parsed, sheets.length]);
 
   const targetsQuery = useQuery({
     queryKey: ["catalog-import-targets", workspaceId],

@@ -279,7 +279,12 @@ function CatalogBody() {
     }
   }
 
-  const isTrulyEmpty = !productsQuery.isLoading && (productsQuery.data?.items?.length ?? 0) === 0 && !q && !filterCategoryId;
+  const isTrulyEmpty =
+    !productsQuery.isLoading &&
+    !productsQuery.isFetching &&
+    (productsQuery.data?.items?.length ?? 0) === 0 &&
+    !q &&
+    !filterCategoryId;
 
   return (
     <div className="flex flex-col gap-6">
@@ -307,7 +312,7 @@ function CatalogBody() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={() => {
-          void queryClient.invalidateQueries({ queryKey: ["catalog-products", workspaceId] });
+          void queryClient.refetchQueries({ queryKey: ["catalog-products", workspaceId] });
         }}
         categories={categories}
       />

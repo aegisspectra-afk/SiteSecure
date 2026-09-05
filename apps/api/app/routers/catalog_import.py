@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..authz.engine import authorize
 from ..authz.guard import require
 from ..catalog_import.engine import (
     classify_duplicates,
@@ -24,14 +23,14 @@ from ..catalog_import.template import build_import_template_bytes
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import ApiError
 from ..identity import actor_id
-from ..rest import as_list, created_or_403, patched_or_403
-from ..routers.catalog import PRODUCT_SELECT, _can_view_cost, _category_index, _load_categories, _strip_cost
+from ..rest import as_list
+from ..routers.catalog import PRODUCT_SELECT, _can_view_cost, _category_index, _load_categories
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/catalog/import", tags=["catalog-import"])
 
 
 def _ctx(client: UserClient, user: dict, workspace_id: UUID):
-    return load_authz_context(client, user=user, workspace_id=workspace_id)
+    return load_authz_context(client, actor_id(user), str(workspace_id))
 
 
 class SheetConfigIn(BaseModel):
@@ -54,6 +53,8 @@ class ImportPreviewIn(BaseModel):
 
 class ImportCommitIn(ImportPreviewIn):
     confirm: bool = False
+    # Test hook: forces mid-transaction failure so the RPC rolls back all writes.
+    test_force_fail: bool = False
 
 
 def _public_sheets(sheets: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -115,6 +116,57 @@ def _run_preview(
     classify_duplicates(candidates, existing, body.duplicate_policy)
     summary = summarize_candidates(candidates)
     return candidates, summary, cat_index
+
+
+def _candidate_rpc_rows(
+    candidates: list[dict[str, Any]],
+    *,
+    can_cost: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build atomic RPC payload. Blocked rows are excluded from the transaction."""
+    rows: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    for c in candidates:
+        action = c.get("duplicate_action")
+        if c["status"] == "blocked":
+            failed.append(
+                {
+                    "sku": (c.get("product") or {}).get("sku"),
+                    "source_row": c.get("source_row"),
+                    "sheet_name": c.get("sheet_name"),
+                    "reasons": c.get("block_reasons") or [],
+                }
+            )
+            continue
+        if action == "skip":
+            rows.append({"action": "skip", "sku": (c.get("product") or {}).get("sku")})
+            continue
+        product = dict(c["product"])
+        if not can_cost:
+            product["cost"] = 0
+        row: dict[str, Any] = {
+            "action": "update" if action == "update" else "create",
+            "sku": product["sku"],
+            "name": product["name"],
+            "description": product.get("description") or "",
+            "unit": product.get("unit") or "unit",
+            "kind": "product",
+            "list_price": product.get("list_price") or 0,
+            "cost": product.get("cost") or 0,
+            "vat_eligible": True,
+            "is_active": True,
+            "manufacturer": product.get("manufacturer"),
+            "model": product.get("model"),
+            "category_id": product.get("category_id"),
+            "attributes": product.get("attributes") or {},
+        }
+        if action == "update":
+            if not c.get("existing_id"):
+                rows.append({"action": "skip", "sku": product.get("sku")})
+                continue
+            row["existing_id"] = c["existing_id"]
+        rows.append(row)
+    return rows, failed
 
 
 @router.get("/targets")
@@ -206,10 +258,9 @@ def preview_import(
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "catalog.edit")
     can_cost = _can_view_cost(ctx)
-    candidates, summary, cat_index = _run_preview(
+    candidates, summary, _cat_index = _run_preview(
         client=client, workspace_id=workspace_id, body=body, can_set_cost=can_cost
     )
-    # Sample up to 40 rows for UI
     sample = []
     for c in candidates[:40]:
         sample.append(
@@ -226,13 +277,12 @@ def preview_import(
                 "provenance": c.get("provenance") or {},
             }
         )
-    # Estimated readiness from products that would be written
     est_products = [
         c["product"]
         for c in candidates
         if c["status"] != "blocked" and c.get("duplicate_action") in {"create", "update"}
     ]
-    readiness = readiness_from_products(est_products, cat_index)
+    readiness = readiness_from_products(est_products, _cat_index)
     return {
         "summary": summary,
         "sample_rows": sample,
@@ -254,96 +304,69 @@ def commit_import(
         raise ApiError(400, "VALIDATION_ERROR", "יש לאשר ייבוא במפורש")
 
     can_cost = _can_view_cost(ctx)
-    # If any sheet maps cost and user cannot view cost → still allow but cost forced 0
     candidates, summary, cat_index = _run_preview(
         client=client, workspace_id=workspace_id, body=body, can_set_cost=can_cost
     )
+    rows, failed = _candidate_rpc_rows(candidates, can_cost=can_cost)
 
-    imported = 0
-    updated = 0
-    skipped = 0
-    failed: list[dict[str, Any]] = []
+    rpc_rows = list(rows)
+    if body.test_force_fail:
+        rpc_rows.append(
+            {
+                "action": "create",
+                "sku": "__FORCE_FAIL__",
+                "name": "__FORCE_FAIL__",
+                "_test_force_fail": True,
+            }
+        )
+
+    if not rpc_rows:
+        get_import_session_store().delete(body.session_id, workspace_id=str(workspace_id))
+        return {
+            "imported": 0,
+            "updated": 0,
+            "skipped": 0,
+            "failed": failed,
+            "failed_count": len(failed),
+            "summary": summary,
+            "readiness": readiness_from_products([], cat_index),
+            "message_he": "לא יובאו מוצרים",
+        }
+
+    res = client.rpc(
+        "catalog_import_commit",
+        {"p_workspace_id": str(workspace_id), "p_rows": rpc_rows},
+    )
+    if res.status_code not in {200, 201}:
+        # Keep session for retry — no partial writes from the RPC.
+        detail = (res.text or "")[:400]
+        raise ApiError(
+            409,
+            "IMPORT_COMMIT_FAILED",
+            "הייבוא נכשל ולא נשמרו שינויים. ניתן לנסות שוב.",
+            details={"status": res.status_code, "detail": detail},
+        )
+
+    result = res.json()
+    if not isinstance(result, dict):
+        result = {}
+    imported = int(result.get("imported") or 0)
+    updated = int(result.get("updated") or 0)
+    skipped = int(result.get("skipped") or 0)
+
+    product_ids = result.get("product_ids") or []
     written_products: list[dict[str, Any]] = []
-
-    for c in candidates:
-        action = c.get("duplicate_action")
-        if c["status"] == "blocked":
-            failed.append(
-                {
-                    "sku": (c.get("product") or {}).get("sku"),
-                    "source_row": c.get("source_row"),
-                    "sheet_name": c.get("sheet_name"),
-                    "reasons": c.get("block_reasons") or [],
-                }
+    if product_ids:
+        written_products = as_list(
+            client.get(
+                "products",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "id": f"in.({','.join(str(i) for i in product_ids)})",
+                    "select": PRODUCT_SELECT,
+                },
             )
-            continue
-        if action == "skip":
-            skipped += 1
-            continue
-        product = dict(c["product"])
-        if not can_cost:
-            product["cost"] = 0
-        try:
-            if action == "update":
-                pid = c.get("existing_id")
-                if not pid:
-                    skipped += 1
-                    continue
-                patch = {
-                    "name": product["name"],
-                    "description": product.get("description") or "",
-                    "unit": product.get("unit") or "unit",
-                    "list_price": product.get("list_price") or 0,
-                    "manufacturer": product.get("manufacturer"),
-                    "model": product.get("model"),
-                    "category_id": product.get("category_id"),
-                    "attributes": product.get("attributes") or {},
-                    "is_active": True,
-                }
-                if can_cost:
-                    patch["cost"] = product.get("cost") or 0
-                row = patched_or_403(
-                    client.patch(
-                        "products",
-                        patch,
-                        params={"id": f"eq.{pid}", "workspace_id": f"eq.{workspace_id}"},
-                    )
-                )
-                updated += 1
-                written_products.append(row if isinstance(row, dict) else product)
-            else:
-                payload = {
-                    "workspace_id": str(workspace_id),
-                    "sku": product["sku"],
-                    "name": product["name"],
-                    "description": product.get("description") or "",
-                    "unit": product.get("unit") or "unit",
-                    "kind": "product",
-                    "list_price": product.get("list_price") or 0,
-                    "cost": (product.get("cost") or 0) if can_cost else 0,
-                    "vat_eligible": True,
-                    "is_labor": False,
-                    "is_active": True,
-                    "manufacturer": product.get("manufacturer"),
-                    "model": product.get("model"),
-                    "attributes": product.get("attributes") or {},
-                }
-                if product.get("category_id"):
-                    payload["category_id"] = product["category_id"]
-                row = created_or_403(client.post("products", payload))
-                if isinstance(row, list):
-                    row = row[0] if row else payload
-                imported += 1
-                written_products.append(row if isinstance(row, dict) else payload)
-        except Exception as exc:  # noqa: BLE001
-            failed.append(
-                {
-                    "sku": product.get("sku"),
-                    "source_row": c.get("source_row"),
-                    "sheet_name": c.get("sheet_name"),
-                    "reasons": [str(exc)[:200]],
-                }
-            )
+        )
 
     readiness = readiness_from_products(written_products, cat_index)
     get_import_session_store().delete(body.session_id, workspace_id=str(workspace_id))
@@ -359,5 +382,5 @@ def commit_import(
         "message_he": f"{imported} מוצרים יובאו"
         + (f", {updated} עודכנו" if updated else "")
         + (f", {skipped} דולגו" if skipped else "")
-        + (f", {len(failed)} נכשלו" if failed else ""),
+        + (f", {len(failed)} נחסמו" if failed else ""),
     }

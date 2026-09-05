@@ -316,6 +316,8 @@ export type QuoteOut = {
   created_at?: string;
   items?: QuoteItemOut[];
   sections?: QuoteSection[];
+  /** Present on some CPQ mutations (e.g. create section). */
+  section?: QuoteSection;
 };
 
 export type QuoteItemOut = {
@@ -437,6 +439,93 @@ export type QuotePackage = {
   category?: string;
   is_active?: boolean;
   item_count?: number;
+};
+
+/** Task 13C/13D — server CCTV recommendation (transient; not a Saved System). */
+export type CctvRecommendIn = {
+  camera_count: number;
+  indoor_count?: number | null;
+  outdoor_count?: number | null;
+  resolution_mp?: number | null;
+  environment?: string | null;
+  form_factor?: string | null;
+  retention_days?: number | null;
+  recording_mode?: string | null;
+  recording_hours_per_day?: number | null;
+  motion_duty_cycle?: number | null;
+  fps?: number | null;
+  codec?: string | null;
+  bitrate_mbps_override?: number | null;
+  poe_required?: boolean | null;
+  architecture_intent?: string | null;
+  expansion_headroom?: number | null;
+  cable_distance_meters?: number | null;
+  remote_viewing?: boolean | null;
+  ups_requested?: boolean | null;
+  installation_requested?: boolean | null;
+  commissioning_requested?: boolean | null;
+  testing_requested?: boolean | null;
+  camera_max_power_w?: number | null;
+  manufacturer_preference?: string | null;
+  storage_overhead?: number | null;
+  poe_headroom?: number | null;
+  allow_engineering_power_default?: boolean | null;
+};
+
+export type CctvReasonCode = { code: string; params?: Record<string, unknown> };
+
+export type CctvRecommendationProduct = {
+  id: string;
+  sku?: string | null;
+  name?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  category_key?: string | null;
+  unit?: string | null;
+  list_price?: number | null;
+  attributes?: Record<string, unknown>;
+};
+
+export type CctvRecommendationCandidate = {
+  product: CctvRecommendationProduct;
+  confidence: "STRUCTURED" | "PARTIAL" | "TEXT_ASSISTED" | "UNRESOLVED";
+  compatibility?: Record<string, string>;
+  reason_codes?: CctvReasonCode[];
+};
+
+export type CctvRecommendationComponent = {
+  role: string;
+  label: string;
+  quantity: number;
+  technical_requirements: Record<string, unknown>;
+  selected_product?: CctvRecommendationProduct | null;
+  selected_confidence?: CctvRecommendationCandidate["confidence"] | null;
+  selected_compatibility?: Record<string, string> | null;
+  candidates: CctvRecommendationCandidate[];
+  resolution_status: "RESOLVED" | "PARTIAL" | "UNRESOLVED" | "MANUAL_REVIEW";
+  reason_codes: CctvReasonCode[];
+  optional: boolean;
+  editable: boolean;
+  blocking: boolean;
+};
+
+export type SystemRecommendation = {
+  system_type: "cctv";
+  engine_version: number;
+  input: Record<string, unknown>;
+  engineering: Record<string, unknown>;
+  components: CctvRecommendationComponent[];
+  warnings: CctvReasonCode[];
+  assumptions: CctvReasonCode[];
+  unresolved: CctvReasonCode[];
+  blocking: boolean;
+  status: "OK" | "BLOCKED" | "INVALID_INPUT";
+  catalog_stats?: {
+    products_examined?: number;
+    by_family?: Record<string, number>;
+    fetch?: { categories?: number; fetched?: number };
+    query_strategy?: string;
+  };
 };
 
 export type QuoteVersionMeta = {
@@ -1562,6 +1651,11 @@ export function createApiClient(opts: {
     ) =>
       request<KnowledgeOut>(`/api/v1/workspaces/${workspaceId}/knowledge/${articleId}`, {
         method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    recommendCctv: (workspaceId: string, body: CctvRecommendIn) =>
+      request<SystemRecommendation>(`/api/v1/workspaces/${workspaceId}/cctv/recommend`, {
+        method: "POST",
         body: JSON.stringify(body),
       }),
     listCatalogProducts: (

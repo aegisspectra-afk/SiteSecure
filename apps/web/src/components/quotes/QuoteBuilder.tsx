@@ -26,8 +26,8 @@ import {
   quoteScopeBreakdown,
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
-import type { SystemBuilderLine } from "../../lib/system-builder";
 import { resolveSystemSectionName } from "../../lib/system-section";
+import type { CctvBuildQuoteLine } from "../../lib/cctv-recommend-projection";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
@@ -184,7 +184,9 @@ export function QuoteBuilder({
   const [templateApplyOpen, setTemplateApplyOpen] = useState(false);
   const [applyingSystemId, setApplyingSystemId] = useState<string | null>(null);
   const [applyingTemplatePickId, setApplyingTemplatePickId] = useState<string | null>(null);
-  const [systemCatalogReady, setSystemCatalogReady] = useState(false);
+  const [buildSystemApplying, setBuildSystemApplying] = useState(false);
+  const [buildSystemApplyError, setBuildSystemApplyError] = useState<string | null>(null);
+  const buildSystemApplyLock = useRef(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -313,13 +315,6 @@ export function QuoteBuilder({
     enabled: canCatalog && quickAddOpen && debouncedQuickCatalogQ.trim().length >= 1,
     queryFn: () => api.listCatalogProducts(workspaceId, { q: debouncedQuickCatalogQ.trim(), limit: 12 }),
   });
-  const systemCatalogQuery = useQuery({
-    queryKey: ["cpq-catalog-system", workspaceId],
-    enabled: canCatalog && systemCatalogReady,
-    queryFn: () => api.listCatalogProducts(workspaceId, { limit: 100 }),
-    staleTime: 60_000,
-  });
-  const requestSystemCatalog = useCallback(() => setSystemCatalogReady(true), []);
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
     enabled: canCrm && Boolean(draft.customer_id),
@@ -545,6 +540,7 @@ export function QuoteBuilder({
         sort_order: sortBase + 10,
       });
       const sectionId =
+        withSection.section?.id ??
         withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
         withSection.sections?.[withSection.sections.length - 1]?.id;
       if (!sectionId) {
@@ -1050,14 +1046,50 @@ export function QuoteBuilder({
     }
   }
 
-  async function addSystemBuilderLines(lines: SystemBuilderLine[]) {
-    for (const line of lines) {
-      if (!line.product) continue;
-      await addItem.mutateAsync({
-        product_id: line.product.id,
-        item_type: line.product.item_type || "catalog",
-        qty: line.qty,
+  async function applyCctvBuildLines(lines: CctvBuildQuoteLine[]) {
+    if (buildSystemApplyLock.current) return;
+    buildSystemApplyLock.current = true;
+    setBuildSystemApplying(true);
+    setBuildSystemApplyError(null);
+    let added = 0;
+    try {
+      const current = await createOnce();
+      const sectionName = resolveSystemSectionName(he.cpqCctvSystemSection, current.sections ?? []);
+      const sortBase = Math.max(0, ...(current.sections ?? []).map((section) => section.sort_order ?? 0));
+      const withSection = await api.createQuoteSection(workspaceId, current.id, {
+        name: sectionName,
+        sort_order: sortBase + 10,
       });
+      applyRow(withSection);
+      const sectionId =
+        withSection.section?.id ??
+        withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
+        withSection.sections?.[withSection.sections.length - 1]?.id;
+      if (!sectionId) {
+        throw new Error(he.quotesError);
+      }
+      for (const line of lines) {
+        const row = await api.addQuoteItem(workspaceId, current.id, {
+          product_id: line.productId,
+          item_type: "catalog",
+          qty: line.qty,
+          section_id: sectionId,
+        });
+        applyRow(row);
+        commitRoute(row.id);
+        added += 1;
+      }
+      setSystemBuilderOpen(false);
+    } catch (err) {
+      if (added > 0) {
+        setBuildSystemApplyError(he.cpqCctvPartialApply(added, lines.length));
+      } else {
+        setBuildSystemApplyError(err instanceof ApiClientError ? err.message : he.quotesError);
+      }
+      throw err;
+    } finally {
+      setBuildSystemApplying(false);
+      buildSystemApplyLock.current = false;
     }
   }
 
@@ -2346,13 +2378,17 @@ export function QuoteBuilder({
 
       <SystemBuilderDrawer
         open={systemBuilderOpen}
-        onClose={() => setSystemBuilderOpen(false)}
+        onClose={() => {
+          if (buildSystemApplying) return;
+          setSystemBuilderOpen(false);
+          setBuildSystemApplyError(null);
+        }}
+        workspaceId={workspaceId}
+        api={api}
         lead={linkedLead}
-        catalog={systemCatalogQuery.data?.items ?? []}
-        currency={currency}
-        catalogLoading={systemCatalogQuery.isFetching}
-        onRequestCatalog={requestSystemCatalog}
-        onAddLines={(lines) => void addSystemBuilderLines(lines)}
+        applying={buildSystemApplying}
+        applyError={buildSystemApplyError}
+        onApply={(lines) => applyCctvBuildLines(lines)}
       />
     </div>
   );

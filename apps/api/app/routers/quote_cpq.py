@@ -55,6 +55,7 @@ def _package_out(row: dict) -> dict:
     return out
 
 
+class SectionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = "סעיף חדש"
     sort_order: int = 0

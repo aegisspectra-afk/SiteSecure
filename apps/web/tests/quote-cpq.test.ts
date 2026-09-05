@@ -177,7 +177,7 @@ describe("system builder", () => {
     expect(input.needsCabling).toBe(true);
   });
 
-  it("does not invent products when catalog is empty", () => {
+  it("legacy keyword matcher remains non-authoritative utility only", () => {
     const plan = buildCctvRecommendation(defaultCctvInputFromLead({ cameraCount: 9 }), []);
     expect(plan.every((line) => !line.configured && line.product == null)).toBe(true);
   });

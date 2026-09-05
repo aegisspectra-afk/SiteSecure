@@ -1,7 +1,27 @@
+/**
+ * LEGACY / NON-AUTHORITATIVE — Task 13B/13D
+ *
+ * The keyword CCTV matcher below must NOT drive Build System recommendations.
+ * Authoritative path (Task 13D):
+ *   SystemBuilderDrawer → POST /cctv/recommend → SystemRecommendation → quote projection
+ *
+ * Retained only so historical unit tests / unrelated imports do not break, and as a
+ * reference for non-CCTV system types that are not implemented yet.
+ * Do not call buildCctvRecommendation from production UI.
+ */
+
 import type { CatalogProduct } from "@site-secure/api-client";
 
-export type SystemBuilderType = "cctv" | "alarm" | "access_control" | "intercom" | "network" | "low_voltage" | "combined";
+export type SystemBuilderType =
+  | "cctv"
+  | "alarm"
+  | "access_control"
+  | "intercom"
+  | "network"
+  | "low_voltage"
+  | "combined";
 
+/** @deprecated Use CctvBuildRequirements from cctv-build-requirements.ts */
 export type CctvBuilderInput = {
   cameraCount: number;
   cameraType: "dome" | "bullet" | "mixed";
@@ -13,6 +33,7 @@ export type CctvBuilderInput = {
   needsRemote: boolean;
 };
 
+/** @deprecated Quote projection uses CctvBuildQuoteLine from cctv-recommend-projection.ts */
 export type SystemBuilderLine = {
   role: string;
   label: string;
@@ -53,8 +74,8 @@ function nvrChannelsForCameras(count: number): number {
 }
 
 /**
- * Build a CCTV recommendation from user input + available catalog.
- * Never invents products or prices — missing matches are "Not configured".
+ * @deprecated LEGACY keyword matcher — not used by SystemBuilderDrawer (Task 13D).
+ * Do not use as authoritative CCTV recommendation.
  */
 export function buildCctvRecommendation(
   input: CctvBuilderInput,
@@ -154,6 +175,7 @@ export function buildCctvRecommendation(
   return lines;
 }
 
+/** @deprecated Prefer defaultCctvBuildRequirements from cctv-build-requirements.ts */
 export function defaultCctvInputFromLead(opts: {
   cameraCount?: number | null;
   recording?: boolean | null;

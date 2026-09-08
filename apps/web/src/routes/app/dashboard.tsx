@@ -1,5 +1,5 @@
 import { Button, ErrorState } from "@site-secure/ui";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { ObserveDashboard, OpsDashboard } from "../../components/dashboard/OpsDashboard";
 import { filterLeadAttention } from "../../components/dashboard/LeadsAttention";
@@ -66,22 +66,27 @@ function DashboardBody({
     queryKey: ["dashboard", workspaceId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.getDashboard(workspaceId!),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
   const usage = useQuery({
     queryKey: ["usage", workspaceId],
     enabled: Boolean(workspaceId) && canTeam,
     queryFn: () => api.getUsage(workspaceId!),
+    staleTime: 60_000,
   });
   const leadAttentionQuery = useQuery({
     queryKey: ["dashboard-lead-next", workspaceId],
     enabled: Boolean(workspaceId) && can(roleKey, "leads.view", features),
     queryFn: () => api.listLeads(workspaceId!, { limit: 20 }),
+    staleTime: 30_000,
   });
   // Roles without usage access still need a real customer existence signal for activation.
   const customersProbe = useQuery({
     queryKey: ["activation-customers", workspaceId],
     enabled: Boolean(workspaceId) && canProbeCustomers && !(canTeam && usage.isSuccess),
     queryFn: () => api.listCustomers(workspaceId!, { limit: 1 }),
+    staleTime: 60_000,
   });
 
   const leadAttention =

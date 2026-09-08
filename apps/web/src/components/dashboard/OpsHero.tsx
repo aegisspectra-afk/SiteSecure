@@ -44,8 +44,8 @@ export function OpsDashHero({
       <div className="ops-dash-hero-identity min-w-0">
         <div className="ops-dash-hero-greeting">
           <p className="ops-dash-hero-hello">
-            {greeting}
-            {name ? `, ${name}` : ""}
+            <span className="ops-dash-hero-hello-text">{greeting}</span>
+            {name ? <span className="ops-dash-hero-name">, {name}</span> : null}
           </p>
           <p className="ops-dash-hero-date">{formatOpsDateHeader()}</p>
         </div>

@@ -119,7 +119,7 @@ export function OpsDashboard({
   const showUsageBanner = thresholdMeters.length > 0 && roleKey !== "sales" && canManageTeam;
 
   return (
-    <div className="ops-dashboard ops-command-center ops-command-x flex flex-col gap-4">
+    <div className="ops-dashboard ops-command-center ops-command-x ops-dashboard-visual flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
         quoteAction={Boolean(quoteCta)}
@@ -193,11 +193,17 @@ export function ObserveDashboard({
 }) {
   const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
   const attentionTotal = attentionEntityCount(data.attention);
+  const attentionQuoteIds = new Set(
+    attentionQueue(data.attention)
+      .filter((row) => row.item.entity_type === "quote")
+      .map((row) => row.item.entity_id),
+  );
+  const recentQuotes = (data.recent_quotes ?? []).filter((quote) => !attentionQuoteIds.has(quote.id));
   const empty =
     data.attention.length === 0 && data.today.items.length === 0 && data.activity.length === 0;
 
   return (
-    <div className="ops-dashboard ops-command-center ops-command-x flex flex-col gap-4">
+    <div className="ops-dashboard ops-command-center ops-command-x ops-dashboard-visual flex flex-col gap-4">
       <OpsDashHero
         displayName={displayName}
         attentionCount={attentionTotal}
@@ -211,7 +217,7 @@ export function ObserveDashboard({
         {showQuotes && data.summary && hasQuoteRecords(data.summary) ? (
           <CommercialPulse summary={data.summary} chart={data.business_chart ?? null} />
         ) : null}
-        {showQuotes ? <RecentQuotes quotes={data.recent_quotes ?? []} canCreate={false} /> : null}
+        {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={false} /> : null}
       </div>
       {empty ? (
         <div className="ops-panel p-4">

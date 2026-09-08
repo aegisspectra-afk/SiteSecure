@@ -55,11 +55,13 @@ export function RecentQuotes({
           >
             <div className="ops-recent-main min-w-0">
               <p className="ops-recent-customer">
-                <span className="ops-recent-number ltr-meta">{quote.number}</span>
+                <span className="ops-recent-number ltr-meta" dir="ltr">
+                  {quote.number}
+                </span>
                 <span className="ops-recent-sep" aria-hidden>
                   ·
                 </span>
-                <span>{recentPrimary(quote)}</span>
+                <span className="ops-recent-primary">{recentPrimary(quote)}</span>
               </p>
               <p className="ops-recent-meta">
                 <span className="ops-recent-amount tabular-nums">{formatMoney(quote.total_gross)}</span>

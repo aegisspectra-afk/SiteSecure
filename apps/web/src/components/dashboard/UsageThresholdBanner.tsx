@@ -22,34 +22,29 @@ export function UsageThresholdBanner({
 }) {
   if (!meters.length) return null;
   const lines = meters.map(usageMeterQuotaLine);
+  const primaryTone = meterTone(meters[0]);
   return (
     <section
-      className="ops-usage-notice is-quiet"
+      className={`ops-usage-notice is-quiet is-${primaryTone}`}
       aria-labelledby="usage-threshold-heading"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="ops-usage-notice-row">
         <div className="min-w-0">
-          <h2 id="usage-threshold-heading" className="text-sm font-semibold text-fg">
+          <h2 id="usage-threshold-heading" className="ops-usage-notice-title">
             {he.usageThresholdTitle}
           </h2>
-          <p className="mt-0.5 text-sm text-fg-muted tabular-nums">{he.usageThresholdBody(lines[0])}</p>
+          <p className="ops-usage-notice-body tabular-nums">{he.usageThresholdBody(lines[0])}</p>
           {lines.length > 1 ? (
-            <p className="mt-1 text-xs text-fg-subtle tabular-nums">{lines.slice(1).join(" · ")}</p>
+            <p className="ops-usage-notice-extra tabular-nums">{lines.slice(1).join(" · ")}</p>
           ) : null}
-          <p className="mt-1 text-xs text-fg-subtle">{he.usageThresholdHint}</p>
+          <p className="ops-usage-notice-hint">{he.usageThresholdHint}</p>
         </div>
         {canManageTeam ? (
-          <Link
-            to="/app/settings/users"
-            className="text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
+          <Link to="/app/settings/users" className="ops-usage-notice-link">
             {he.usageManageUsers}
           </Link>
         ) : (
-          <Link
-            to="/app/settings"
-            className="text-sm font-medium text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
+          <Link to="/app/settings" className="ops-usage-notice-link">
             {he.settingsTitle}
           </Link>
         )}

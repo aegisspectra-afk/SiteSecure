@@ -16,7 +16,7 @@ from ..rest import as_list
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"])
 
-QUOTE_SELECT = "id,number,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross"
+QUOTE_SELECT = "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross"
 JOB_SELECT = (
     "id,number,title,status,customer_id,site_id,scheduled_for,started_at,completed_at,updated_at"
 )
@@ -82,6 +82,7 @@ class RecentQuoteOut(BaseModel):
     id: str
     number: str
     status: str
+    title: str | None = None
     customer_name: str | None = None
     total_gross: float | None = None
     updated_at: str

@@ -26,7 +26,7 @@ export function ActiveWork({
             </h2>
             <p className="ops-today-empty-text">{he.todaySectionEmptyCompact}</p>
           </div>
-          <Link to="/app/today" className="ops-section-link">
+          <Link to="/app/today" className="ops-section-link ops-today-empty-cta">
             {he.todayScheduleCta}
           </Link>
         </div>
@@ -73,13 +73,24 @@ export function ActiveWork({
                   </p>
                   <p className="ops-today-context">
                     {place}
-                    {item.number && item.title_he ? ` · ${item.number}` : null}
+                    {item.number && item.title_he ? (
+                      <>
+                        {" · "}
+                        <span className="ops-today-id ltr-meta" dir="ltr">
+                          {item.number}
+                        </span>
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 {item.entity_type === "job" ? (
-                  <a href={`/app/jobs/${item.entity_id}`} className="ops-attention-cta is-ghost">
+                  <Link
+                    to="/app/jobs/$jobId"
+                    params={{ jobId: item.entity_id }}
+                    className="ops-attention-cta is-ghost"
+                  >
                     {he.todayOpenJob}
-                  </a>
+                  </Link>
                 ) : null}
               </li>
             );

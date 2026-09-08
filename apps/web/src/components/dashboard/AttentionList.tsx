@@ -10,18 +10,13 @@ import {
 import { itemHref } from "../../lib/home";
 import { relativeAgeLabel } from "../../lib/relative-age";
 
-function primaryTitle(row: AttentionQueueItem): string {
-  const num = row.item.number?.trim();
-  if (row.kind === "quote_awaiting_us") return num ? `${num} · ${he.attentionStateViewed}` : he.attentionStateViewed;
-  if (row.kind === "quote_approved_pending_project") {
-    return num ? `${num} · ${he.attentionStateApproved}` : he.attentionStateApproved;
-  }
-  if (row.kind === "quote_expiring") return num ? `${num} · ${he.attentionStateExpiring}` : he.attentionStateExpiring;
-  if (row.kind === "quote_stale_draft") return num ? `${num} · ${he.attentionStateDraft}` : he.attentionStateDraft;
-  if (row.kind === "quote_awaiting_customer") {
-    return num ? `${num} · ${he.attentionStateWaitingCustomer}` : he.attentionStateWaitingCustomer;
-  }
-  return num || row.item.title_he;
+function stateLabel(row: AttentionQueueItem): string {
+  if (row.kind === "quote_awaiting_us") return he.attentionStateViewed;
+  if (row.kind === "quote_approved_pending_project") return he.attentionStateApproved;
+  if (row.kind === "quote_expiring") return he.attentionStateExpiring;
+  if (row.kind === "quote_stale_draft") return he.attentionStateDraft;
+  if (row.kind === "quote_awaiting_customer") return he.attentionStateWaitingCustomer;
+  return row.item.title_he;
 }
 
 function primaryReason(row: AttentionQueueItem): string {
@@ -90,14 +85,27 @@ function AttentionRow({
   const item = row.item;
   const visual = attentionVisual(row);
   const href = itemHref(item.entity_type, item.entity_id);
-  const title = primaryTitle(row);
+  const num = item.number?.trim() || null;
+  const label = stateLabel(row);
   const context = item.customer_name || item.site_name || null;
   const createDirect = canCreateProjectAction(row, canCreateProject) && Boolean(onCreateProject);
 
   const body = (
     <>
       <div className="ops-attention-main min-w-0">
-        <p className="ops-attention-title">{title}</p>
+        <p className="ops-attention-title">
+          {num ? (
+            <span className="ops-attention-id ltr-meta" dir="ltr">
+              {num}
+            </span>
+          ) : null}
+          {num ? (
+            <span className="ops-attention-title-sep" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          <span className="ops-attention-state">{label}</span>
+        </p>
         {context ? <p className="ops-attention-context">{context}</p> : null}
         <AttentionMeta row={row} />
       </div>
@@ -110,11 +118,7 @@ function AttentionRow({
   if (createDirect) {
     return (
       <li>
-        <button
-          type="button"
-          className={className}
-          onClick={() => onCreateProject?.(item)}
-        >
+        <button type="button" className={className} onClick={() => onCreateProject?.(item)}>
           {body}
         </button>
       </li>

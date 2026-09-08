@@ -269,6 +269,52 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.usageTitle })).not.toBeInTheDocument();
   });
 
+  it("hides usage threshold banner for sales role", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          summary: { ...emptySummary, quotes_open: 1, quotes_sent: 1, quotes_open_value: 100 },
+          recent_quotes: [
+            {
+              id: "q1",
+              number: "Q-00001",
+              status: "sent",
+              customer_name: null,
+              total_gross: 100,
+              updated_at: "2026-08-15T12:00:00Z",
+            },
+          ],
+        }}
+        roleKey="sales"
+        features={["settings", "quotes"]}
+        memberCount={1}
+        customerCount={1}
+        countsReady
+        workspaceStatus="active"
+        usage={{
+          workspace_id: "w1",
+          plan_key: "solo",
+          active_members: 1,
+          pending_invites: 0,
+          meters: [
+            {
+              key: "seats_operator",
+              label_he: "משתמשים במשרד",
+              current: 1,
+              limit: 1,
+              unlimited: false,
+              unit: "seats",
+              at_limit: true,
+              occupants: [],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
+  });
+
   it("hides usage entirely when quotas are healthy", () => {
     render(
       <OpsDashboard
@@ -417,7 +463,7 @@ describe("OpsDashboard", () => {
     render(
       <OpsDashboard
         data={emptyDash}
-        roleKey="technician"
+        roleKey="sales"
         features={["crm"]}
         customerCount={0}
         countsReady

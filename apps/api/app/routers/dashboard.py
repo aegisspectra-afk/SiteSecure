@@ -31,6 +31,9 @@ class DashboardItemOut(BaseModel):
     title_he: str
     customer_name: str | None = None
     site_name: str | None = None
+    site_id: str | None = None
+    site_address: str | None = None
+    customer_phone: str | None = None
     scheduled_for: str | None = None
     severity: Literal["now", "next", "info"]
     actions: list[str] = Field(default_factory=list)
@@ -192,16 +195,31 @@ def get_dashboard(
     assignments_reliable = ctx.role_key in {"owner", "administrator", "manager"}
 
     names: dict[str, str] = {}
+    site_addresses: dict[str, str] = {}
+    customer_phones: dict[str, str] = {}
     customer_filter = _in_filter({str(r["customer_id"]) for r in quotes + jobs if r.get("customer_id")})
     site_filter = _in_filter({str(r["site_id"]) for r in quotes + jobs if r.get("site_id")})
     if customer_filter:
         for row in _optional_list(
-            client.get("customers", params={"id": customer_filter, "select": "id,display_name"})
+            client.get("customers", params={"id": customer_filter, "select": "id,display_name,phone"})
         ):
             names[str(row["id"])] = row.get("display_name") or ""
+            phone = (row.get("phone") or "").strip()
+            if phone:
+                customer_phones[str(row["id"])] = phone
     if site_filter:
-        for row in _optional_list(client.get("sites", params={"id": site_filter, "select": "id,name"})):
+        for row in _optional_list(
+            client.get("sites", params={"id": site_filter, "select": "id,name,address"})
+        ):
             names[str(row["id"])] = row.get("name") or ""
+            addr = row.get("address")
+            line = ""
+            if isinstance(addr, dict):
+                line = str(addr.get("line") or addr.get("formatted") or "").strip()
+            elif isinstance(addr, str):
+                line = addr.strip()
+            if line:
+                site_addresses[str(row["id"])] = line
 
     events: list[dict[str, Any]] = []
     if can_quotes_view:
@@ -258,4 +276,16 @@ def get_dashboard(
         assignments_reliable=assignments_reliable,
         project_source_quote_ids=project_source_quote_ids,
     )
+    jobs_by_id = {str(j["id"]): j for j in jobs}
+    for item in payload.get("today", {}).get("items", []):
+        if item.get("entity_type") != "job":
+            continue
+        job = jobs_by_id.get(str(item.get("entity_id") or ""))
+        if not job:
+            continue
+        site_id = str(job["site_id"]) if job.get("site_id") else None
+        customer_id = str(job["customer_id"]) if job.get("customer_id") else None
+        item["site_id"] = site_id
+        item["site_address"] = site_addresses.get(site_id) if site_id else None
+        item["customer_phone"] = customer_phones.get(customer_id) if customer_id else None
     return DashboardOut.model_validate(payload)

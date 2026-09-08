@@ -111,7 +111,7 @@ describe("homeVariant", () => {
     expect(homeVariant("manager")).toBe("ops");
     expect(homeVariant("sales")).toBe("sales");
     expect(homeVariant("technician")).toBe("today");
-    expect(homeVariant("founding_technician")).toBe("today");
+    expect(homeVariant("technician")).toBe("today");
     expect(homeVariant("viewer")).toBe("observe");
   });
 });
@@ -265,7 +265,7 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.usageThresholdTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.usageThresholdBody("משתמשים במשרד"))).toBeInTheDocument();
+    expect(screen.getByText(he.usageThresholdBody("1/1 משתמשים במשרד"))).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.usageTitle })).not.toBeInTheDocument();
   });
 
@@ -417,7 +417,7 @@ describe("OpsDashboard", () => {
     render(
       <OpsDashboard
         data={emptyDash}
-        roleKey="founding_technician"
+        roleKey="technician"
         features={["crm"]}
         customerCount={0}
         countsReady
@@ -1017,20 +1017,30 @@ describe("nextBestAction", () => {
 
 describe("ux metrics", () => {
   it("computes quote conversion only from real quote counts", () => {
-    expect(quoteConversion(emptySummary)).toEqual({ percent: null, approved: 0, total: 0 });
+    expect(quoteConversion(emptySummary)).toEqual({ percent: null, approved: 0, total: 0, showPercent: false });
     expect(
       quoteConversion({
         ...emptySummary,
         quotes_draft: 9,
       }),
-    ).toEqual({ percent: null, approved: 0, total: 9 });
+    ).toEqual({ percent: null, approved: 0, total: 9, showPercent: false });
     expect(
       quoteConversion({
         ...emptySummary,
         quotes_draft: 1,
         quotes_approved: 1,
       }),
-    ).toEqual({ percent: 50, approved: 1, total: 2 });
+    ).toEqual({ percent: 50, approved: 1, total: 2, showPercent: false });
+    expect(
+      quoteConversion({
+        ...emptySummary,
+        quotes_draft: 2,
+        quotes_sent: 1,
+        quotes_viewed: 1,
+        quotes_approved: 3,
+        quotes_rejected: 0,
+      }),
+    ).toEqual({ percent: 43, approved: 3, total: 7, showPercent: true });
     expect(quotesInPlay(emptySummary)).toBe(0);
     expect(quotesInPlay({ ...emptySummary, quotes_draft: 2, quotes_sent: 1 })).toBe(3);
   });

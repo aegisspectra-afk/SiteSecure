@@ -1712,6 +1712,13 @@ body {
   text-decoration: none;
   color: inherit;
   transition: background 120ms ease;
+  width: 100%;
+  background: transparent;
+  border-inline: 0;
+  border-bottom: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
 }
 
 .ops-attention-list > li:first-child .ops-attention-row {
@@ -1943,6 +1950,19 @@ body {
   letter-spacing: -0.02em;
   color: var(--color-fg);
   line-height: 1.2;
+}
+
+.ops-commercial-conversion-sub {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.625rem;
+  font-weight: 400;
+  color: var(--color-fg-subtle);
+}
+
+.ops-recent-sep {
+  opacity: 0.45;
+  margin-inline: 0.15rem;
 }
 
 .ops-commercial-chart {

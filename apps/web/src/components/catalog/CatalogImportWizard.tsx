@@ -7,7 +7,7 @@ import {
   type CatalogImportPreviewResult,
   type CatalogImportSheetConfig,
 } from "@site-secure/api-client";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
 import { createPortal } from "react-dom";
@@ -96,6 +96,7 @@ export function CatalogImportWizard({
   categories: CatalogCategory[];
 }) {
   const { session, api } = useSession();
+  const queryClient = useQueryClient();
   const workspaceId = session?.memberships[0]?.workspace_id;
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -117,10 +118,34 @@ export function CatalogImportWizard({
 
   onCloseRef.current = onClose;
 
-  const leaves = useMemo(
-    () => categories.filter((c) => c.parent_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
-    [categories],
-  );
+  const leaves = useMemo(() => {
+    const child = categories.filter((c) => c.parent_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    if (child.length) return child;
+    // Flat taxonomy fallback (roots only) — still allow mapping after wipe/legacy seed.
+    return categories.filter((c) => !c.parent_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [categories]);
+
+  const included = sheets.filter((s) => s.include);
+  const missingCategorySheets = included.filter((s) => !s.category_id);
+  const mappingBlocked = missingCategorySheets.length > 0 || leaves.length === 0;
+
+  const ensureCats = useMutation({
+    mutationFn: () => api.ensureCatalogDefaults(workspaceId!),
+    onSuccess: async () => {
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ["catalog-categories", workspaceId] });
+    },
+    onError: (err) => {
+      setError(err instanceof ApiClientError ? err.message : he.catalogImportError);
+    },
+  });
+
+  useEffect(() => {
+    if (!open || !workspaceId) return;
+    if (leaves.length > 0) return;
+    ensureCats.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only auto-seed when wizard opens with empty taxonomy
+  }, [open, workspaceId, leaves.length]);
 
   useEffect(() => {
     if (!parsed || !categories.length || !sheets.length) return;
@@ -254,7 +279,6 @@ export function CatalogImportWizard({
     },
   });
 
-  const included = sheets.filter((s) => s.include);
   const mappingSheet = sheets[activeSheet] ?? sheets.find((s) => s.include) ?? sheets[0];
   const mappingMeta = parsed?.sheets.find((s) => s.index === mappingSheet?.sheet_index);
   const currentStep = stepIndex(step);
@@ -335,7 +359,14 @@ export function CatalogImportWizard({
         {step === "mapping" ? (
           <Button
             loading={previewMut.isPending}
-            disabled={included.some((s) => !s.category_id)}
+            disabled={mappingBlocked}
+            title={
+              mappingBlocked
+                ? leaves.length === 0
+                  ? he.catalogImportNeedCategories
+                  : he.catalogImportNeedCategoryPerSheet
+                : undefined
+            }
             onClick={() => previewMut.mutate()}
           >
             {he.catalogImportValidate}
@@ -521,9 +552,46 @@ export function CatalogImportWizard({
 
           {step === "mapping" && mappingSheet && mappingMeta ? (
             <div className="flex flex-col gap-4">
+              {mappingBlocked ? (
+                <aside className="catalog-import-callout catalog-import-callout--warn" role="status">
+                  {leaves.length === 0 ? (
+                    <>
+                      <p className="text-sm font-semibold text-fg">{he.catalogImportNeedCategoriesTitle}</p>
+                      <p className="mt-1 text-sm text-fg-muted">{he.catalogImportNeedCategories}</p>
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          loading={ensureCats.isPending}
+                          onClick={() => ensureCats.mutate()}
+                        >
+                          {he.catalogImportRestoreCategories}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-fg">{he.catalogImportNeedCategoryTitle}</p>
+                      <p className="mt-1 text-sm text-fg-muted">{he.catalogImportNeedCategoryPerSheet}</p>
+                      <ul className="mt-2 list-inside list-disc text-sm text-fg">
+                        {missingCategorySheets.map((s) => {
+                          const meta = parsed!.sheets.find((x) => x.index === s.sheet_index);
+                          return <li key={s.sheet_index}>{meta?.name ?? `גיליון ${s.sheet_index + 1}`}</li>;
+                        })}
+                      </ul>
+                    </>
+                  )}
+                </aside>
+              ) : (
+                <aside className="catalog-import-callout" role="note">
+                  <p className="text-sm text-fg-muted">{he.catalogImportMappingHint}</p>
+                </aside>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 {included.map((s) => {
                   const meta = parsed!.sheets.find((x) => x.index === s.sheet_index)!;
+                  const needsCat = !s.category_id;
                   return (
                     <Button
                       key={s.sheet_index}
@@ -531,6 +599,7 @@ export function CatalogImportWizard({
                       onClick={() => setActiveSheet(sheets.findIndex((x) => x.sheet_index === s.sheet_index))}
                     >
                       {meta.name}
+                      {needsCat ? " · !" : ""}
                     </Button>
                   );
                 })}
@@ -546,11 +615,11 @@ export function CatalogImportWizard({
                 />
                 <Select
                   id="imp-cat"
-                  label={he.catalogImportCategory}
+                  label={`${he.catalogImportCategory}${!mappingSheet.category_id ? ` · ${he.catalogImportRequired}` : ""}`}
                   value={mappingSheet.category_id}
                   onChange={(ev) => updateActive({ category_id: ev.target.value })}
                 >
-                  <option value="">{he.catalogCategoryAll}</option>
+                  <option value="">{he.catalogImportPickCategory}</option>
                   {leaves.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.path || c.name_he}

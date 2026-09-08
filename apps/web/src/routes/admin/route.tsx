@@ -14,6 +14,7 @@ const NAV = [
   { to: "/admin/organizations", labelKey: "adminOrgs" as const, exact: false },
   { to: "/admin/users", labelKey: "adminUsers" as const, exact: false },
   { to: "/admin/feedback", labelKey: "adminFeedback" as const, exact: false },
+  { to: "/admin/audit", labelKey: "adminAudit" as const, exact: false },
   { to: "/admin/flags", labelKey: "adminFlags" as const, exact: false },
   { to: "/admin/beta", labelKey: "adminBeta" as const, exact: false },
 ];

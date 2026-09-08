@@ -1,7 +1,7 @@
 import type { WorkspaceUsage, WorkspaceUsageMeter } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
-import { meterTone } from "../../lib/ux-metrics";
+import { meterTone, usageMeterQuotaLine } from "../../lib/ux-metrics";
 
 /** Meters that need a compact dashboard warning (approaching / at / over limit). */
 export function usageThresholdMeters(usage: WorkspaceUsage | null | undefined): WorkspaceUsageMeter[] {
@@ -21,7 +21,7 @@ export function UsageThresholdBanner({
   canManageTeam?: boolean;
 }) {
   if (!meters.length) return null;
-  const first = meters[0];
+  const lines = meters.map(usageMeterQuotaLine);
   return (
     <section
       className="ops-usage-notice is-quiet"
@@ -32,15 +32,11 @@ export function UsageThresholdBanner({
           <h2 id="usage-threshold-heading" className="text-sm font-semibold text-fg">
             {he.usageThresholdTitle}
           </h2>
-          <p className="mt-0.5 text-sm text-fg-muted">{he.usageThresholdBody(first.label_he)}</p>
-          {meters.length > 1 ? (
-            <p className="mt-1 text-xs text-fg-subtle">
-              {meters
-                .slice(1)
-                .map((m) => m.label_he)
-                .join(" · ")}
-            </p>
+          <p className="mt-0.5 text-sm text-fg-muted tabular-nums">{he.usageThresholdBody(lines[0])}</p>
+          {lines.length > 1 ? (
+            <p className="mt-1 text-xs text-fg-subtle tabular-nums">{lines.slice(1).join(" · ")}</p>
           ) : null}
+          <p className="mt-1 text-xs text-fg-subtle">{he.usageThresholdHint}</p>
         </div>
         {canManageTeam ? (
           <Link

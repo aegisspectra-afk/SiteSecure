@@ -17,6 +17,7 @@ import { planLabel, roleLabelEn } from "../lib/app-nav";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 import { initialsFromName, placeAccountPopover } from "../lib/workspace-header";
 import { BetaBadge } from "./BetaBadge";
+import { FoundingTechnicianBadge } from "./FoundingTechnicianBadge";
 
 function AvatarMark({ initials }: { initials: string }) {
   return (
@@ -69,6 +70,7 @@ export function UserAccountMenu({
   onAdmin,
   isBeta = false,
   isPlatformAdmin = false,
+  recognitionBadges = [],
   variant = "header",
   compact = false,
   showAegisLink = false,
@@ -87,6 +89,7 @@ export function UserAccountMenu({
   onAdmin?: () => void;
   isBeta?: boolean;
   isPlatformAdmin?: boolean;
+  recognitionBadges?: string[];
   variant?: "header" | "sidebar";
   compact?: boolean;
   /** When true, expose the public Aegis site link inside the menu (sidebar footer cleanup). */
@@ -223,6 +226,9 @@ export function UserAccountMenu({
       {!compact ? (
         <span className={cn("min-w-0 flex-col", variant === "sidebar" ? "flex" : "hidden sm:flex")}>
           <span className="max-w-40 truncate text-sm font-medium text-fg">{displayName}</span>
+          {recognitionBadges.includes("founding_technician") ? (
+            <FoundingTechnicianBadge className="mt-0.5 self-start" />
+          ) : null}
           {isBeta ? <BetaBadge className="mt-0.5 self-start" /> : null}
           {variant !== "sidebar" && email ? (
             <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{email}</span>

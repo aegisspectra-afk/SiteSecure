@@ -14,7 +14,6 @@ HOME_VARIANT: dict[str, HomeVariant] = {
     "manager": "ops",
     "sales": "sales",
     "technician": "today",
-    "founding_technician": "today",
     "viewer": "observe",
 }
 
@@ -108,8 +107,9 @@ def _item(
     severity: str,
     actions: list[str] | None = None,
     updated_at: str | None = None,
+    site_id: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    row: dict[str, Any] = {
         "entity_type": entity_type,
         "entity_id": entity_id,
         "number": number,
@@ -121,6 +121,9 @@ def _item(
         "actions": actions or [],
         "updated_at": updated_at,
     }
+    if site_id:
+        row["site_id"] = site_id
+    return row
 
 
 def _group(kind: str, label_he: str, items: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -250,6 +253,7 @@ def _quote_attention(
             scheduled_for=None,
             severity="next",
             updated_at=str(quote["updated_at"]) if quote.get("updated_at") else None,
+            site_id=str(quote["site_id"]) if quote.get("site_id") else None,
         )
         if status == "sent":
             awaiting_customer.append(row)
@@ -502,6 +506,7 @@ def _ops_summary(
                     "id": str(quote["id"]),
                     "number": str(quote.get("number") or ""),
                     "status": str(quote.get("status") or ""),
+                    "title": str(quote.get("title") or "").strip() or None,
                     "customer_name": names.get(str(quote["customer_id"])) if quote.get("customer_id") else None,
                     "total_gross": float(quote["total_gross"]) if quote.get("total_gross") is not None else None,
                     "updated_at": str(quote.get("updated_at") or ""),

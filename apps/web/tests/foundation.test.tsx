@@ -190,11 +190,9 @@ describe("appNav", () => {
     expect(admin).not.toContain("/app/settings/users");
     expect(admin).not.toContain("/app/settings/audit");
 
-    const ft = paths("founding_technician", solo);
-    expect(ft).toContain("/app/today");
-    expect(ft).toContain("/app/customers");
-    expect(ft).toContain("/app/settings");
-    expect(ft).not.toContain("/app/settings/security");
+    const tech = paths("technician", solo);
+    expect(tech).toContain("/app/today");
+    expect(tech).not.toContain("/app/settings/security");
   });
 
   it("bottom nav is a short live spine, not a copied sidebar", () => {
@@ -226,7 +224,7 @@ describe("appNav", () => {
     const ownerMore = bottomNav("owner", solo).find((item) => item.kind === "more");
     expect(ownerMore?.label).toBe(he.navMore);
 
-    expect(kinds("founding_technician", solo)[0]).toBe("/app/today");
+    expect(kinds("technician", solo)[0]).toBe("/app/today");
     expect(kinds("manager", solo)[0]).toBe("/app/dashboard");
     expect(bottomNav("owner", solo).length).toBeLessThanOrEqual(5);
 

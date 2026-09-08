@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..deps import ServiceClient, current_user, service_client
 from ..errors import ApiError, MESSAGES
@@ -140,7 +140,7 @@ def list_users(
         service.get(
             "profiles",
             params={
-                "select": "id,email,full_name,is_platform_admin,created_at",
+                "select": "id,email,full_name,is_platform_admin,recognition_badges,created_at",
                 "order": "created_at.desc",
                 "limit": "200",
             },
@@ -170,10 +170,98 @@ def list_users(
         {
             **row,
             "is_platform_admin": bool(row.get("is_platform_admin")),
+            "recognition_badges": list(row.get("recognition_badges") or []),
             "memberships": by_user.get(row["id"], []),
         }
         for row in profiles
     ]
+
+
+ALLOWED_RECOGNITION_BADGES = frozenset(
+    {"founding_technician", "verified_technician", "early_access", "partner"}
+)
+
+
+class UserBadgesPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    recognition_badges: list[str] = Field(default_factory=list)
+
+
+@router.patch("/users/{user_id}/badges")
+def patch_user_badges(
+    user_id: UUID,
+    body: UserBadgesPatch,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    badges = []
+    for raw in body.recognition_badges:
+        key = str(raw).strip()
+        if key and key in ALLOWED_RECOGNITION_BADGES and key not in badges:
+            badges.append(key)
+    row = patched_or_403(
+        service.patch(
+            "profiles",
+            {"recognition_badges": badges},
+            params={"id": f"eq.{user_id}", "select": "id,email,full_name,is_platform_admin,recognition_badges,created_at"},
+        )
+    )
+    return {
+        **row,
+        "is_platform_admin": bool(row.get("is_platform_admin")),
+        "recognition_badges": list(row.get("recognition_badges") or []),
+        "memberships": [],
+    }
+
+
+@router.get("/audit")
+def list_admin_audit(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    require_platform_admin(service, user["id"])
+    rows = as_list(
+        service.get(
+            "audit_logs",
+            params={
+                "select": "id,workspace_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,workspaces(name)",
+                "order": "created_at.desc",
+                "limit": str(limit),
+            },
+        )
+    )
+    out = []
+    for row in rows:
+        ws = _nested(row.get("workspaces")) or {}
+        out.append(
+            {
+                "id": row["id"],
+                "workspace_id": row["workspace_id"],
+                "workspace_name": ws.get("name"),
+                "actor_user_id": row.get("actor_user_id"),
+                "actor_email": None,
+                "action": row.get("action"),
+                "entity_type": row.get("entity_type"),
+                "entity_id": str(row["entity_id"]) if row.get("entity_id") else None,
+                "created_at": row.get("created_at"),
+                "metadata": row.get("metadata") or {},
+            }
+        )
+    actor_ids = {r["actor_user_id"] for r in out if r.get("actor_user_id")}
+    if actor_ids:
+        profiles = as_list(
+            service.get(
+                "profiles",
+                params={"id": f"in.({','.join(sorted(actor_ids))})", "select": "id,email"},
+            )
+        )
+        email_by_id = {p["id"]: p.get("email") for p in profiles}
+        for row in out:
+            if row.get("actor_user_id"):
+                row["actor_email"] = email_by_id.get(row["actor_user_id"])
+    return out
 
 
 @router.get("/feedback")

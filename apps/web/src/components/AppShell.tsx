@@ -11,6 +11,7 @@ import {
 } from "../lib/app-nav";
 import { can, canAny } from "../lib/can";
 import { useDocumentMeta } from "../lib/document-meta";
+import { displayWorkspaceName } from "../lib/quotes";
 import { useOnlineStatus } from "../lib/use-online-status";
 import { useSession } from "../lib/session";
 import { workspaceSystemChecks } from "../lib/workspace-header";
@@ -74,10 +75,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     onSignOut: () => void signOut(),
     onAdmin: () => void navigate({ to: "/admin" }),
     isBeta: Boolean(membership?.is_beta),
+    recognitionBadges: session?.profile?.recognition_badges ?? [],
     isPlatformAdmin: Boolean(session?.is_platform_admin),
   };
+  const workspaceLabel = displayWorkspaceName(membership?.workspace_name) || he.brand;
   useDocumentMeta({
-    title: `${membership?.workspace_name ?? he.brand} — ${he.homeTitle}`,
+    title: `${workspaceLabel} — ${he.homeTitle}`,
     robots: "noindex, nofollow",
   });
 
@@ -128,7 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const brand = (
     <SidebarBrand
-      workspaceName={membership?.workspace_name}
+      workspaceName={workspaceLabel}
       planKey={membership?.plan_key}
       workspaceActive={workspaceActive}
       collapsed={collapsed}
@@ -151,7 +154,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="ops-content flex min-w-0 flex-1 flex-col">
         <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
-            <p className="ops-topbar-title">{membership?.workspace_name ?? he.brand}</p>
+            <p className="ops-topbar-title">{workspaceLabel}</p>
             <p className="ops-topbar-meta">{workspaceActive ? he.workspaceActive : he.workspaceInactive}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
@@ -203,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         roleKey={roleKey}
         features={features}
         permissions={permissions}
-        workspaceName={membership?.workspace_name}
+        workspaceName={workspaceLabel}
         planKey={membership?.plan_key}
         workspaceActive={workspaceActive}
         displayName={displayName}

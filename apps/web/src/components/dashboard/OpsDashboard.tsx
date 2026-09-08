@@ -8,6 +8,7 @@ import {
 } from "../../lib/activation";
 import {
   attentionEntityCount,
+  attentionQueue,
   filterLeadAttention,
   leadsToAttentionGroups,
 } from "../../lib/attention-queue";
@@ -37,6 +38,7 @@ export function OpsDashboard({
   displayName = null,
   customerCount = null,
   countsReady = true,
+  workspaceId = null,
 }: {
   data: DashboardResponse;
   roleKey: string | undefined;
@@ -50,6 +52,7 @@ export function OpsDashboard({
   workspaceName?: string | null;
   customerCount?: number | null;
   countsReady?: boolean;
+  workspaceId?: string | null;
 }) {
   const quoteCount = quoteCountFromSummary(data.summary);
   const activation = deriveActivation({
@@ -66,7 +69,6 @@ export function OpsDashboard({
     pendingInvites: usage?.pending_invites,
   });
   const summary = data.summary;
-  const recentQuotes = data.recent_quotes ?? [];
   const canCreateQuote = can(roleKey, "quotes.create", features) && hasFeature(features, "quotes");
   const canCreateCustomer = can(roleKey, "crm.create", features) && hasFeature(features, "crm");
   const canCreateProject = can(roleKey, "projects.create", features);
@@ -86,6 +88,12 @@ export function OpsDashboard({
     ...(showActivation ? [] : leadsToAttentionGroups(leadRows)),
   ];
   const attentionTotal = attentionEntityCount(attentionGroups);
+  const attentionQuoteIds = new Set(
+    attentionQueue(attentionGroups)
+      .filter((row) => row.item.entity_type === "quote")
+      .map((row) => row.item.entity_id),
+  );
+  const recentQuotes = (data.recent_quotes ?? []).filter((quote) => !attentionQuoteIds.has(quote.id));
 
   const action = nextBestAction({
     setup,
@@ -107,6 +115,8 @@ export function OpsDashboard({
   const showToday = can(roleKey, "jobs.view", features);
   const thresholdMeters = usageThresholdMeters(usage);
   const canManageTeam = Boolean(invite) || can(roleKey, "users.view", features);
+  // Usage / seats are owner-admin concerns — hide for sales even if meters arrive.
+  const showUsageBanner = thresholdMeters.length > 0 && roleKey !== "sales" && canManageTeam;
 
   return (
     <div className="ops-dashboard ops-command-center ops-command-x flex flex-col gap-4">
@@ -117,6 +127,7 @@ export function OpsDashboard({
         showQuoteChips={showQuotes}
         quotesOpen={showQuotes ? (summary?.quotes_open ?? 0) : 0}
         pipelineValue={showQuotes ? (summary?.quotes_open_value ?? null) : null}
+        showTodayLink={showToday && todayItems.length > 0}
         secondaryAction={
           !quoteCta && invite ? (
             <Link
@@ -143,6 +154,7 @@ export function OpsDashboard({
           attention={attentionGroups}
           canCreateProject={canCreateProject}
           viewAllTo={showQuotes ? "/app/quotes" : "/app/today"}
+          workspaceId={workspaceId}
         />
       ) : null}
 
@@ -150,7 +162,7 @@ export function OpsDashboard({
 
       {showNextAction && action ? <NextBestAction action={action} setupProgress={null} /> : null}
 
-      {thresholdMeters.length ? (
+      {showUsageBanner ? (
         <UsageThresholdBanner meters={thresholdMeters} canManageTeam={canManageTeam} />
       ) : null}
 

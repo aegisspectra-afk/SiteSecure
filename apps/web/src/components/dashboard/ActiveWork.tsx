@@ -20,10 +20,15 @@ export function ActiveWork({
     return (
       <section className="ops-today-card is-empty" aria-labelledby="active-work-heading">
         <div className="ops-today-empty-row">
-          <h2 id="active-work-heading" className="ops-section-title is-secondary">
-            {he.activeWorkTitle}
-          </h2>
-          <p className="ops-today-empty-text">{he.todaySectionEmptyCompact}</p>
+          <div className="min-w-0">
+            <h2 id="active-work-heading" className="ops-section-title is-secondary">
+              {he.activeWorkTitle}
+            </h2>
+            <p className="ops-today-empty-text">{he.todaySectionEmptyCompact}</p>
+          </div>
+          <Link to="/app/today" className="ops-section-link">
+            {he.todayScheduleCta}
+          </Link>
         </div>
       </section>
     );

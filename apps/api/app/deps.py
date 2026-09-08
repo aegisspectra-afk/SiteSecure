@@ -123,7 +123,12 @@ def load_authz_context(
 
     member_row = memberships.json()[0]
     role_key = member_row["role_key"]
+    # Founding Technician is a recognition badge, never an authorization role.
+    if role_key == "founding_technician":
+        role_key = "technician"
     workspace_role_key = member_row.get("workspace_role_key") or role_key
+    if workspace_role_key == "founding_technician":
+        workspace_role_key = "technician"
 
     workspace = client.get(
         "workspaces",

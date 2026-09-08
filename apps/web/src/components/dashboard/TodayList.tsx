@@ -16,6 +16,10 @@ function severityTone(severity: DashboardItem["severity"]): "warning" | "info" |
   return "neutral";
 }
 
+function mapsUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
 export function TodayList({
   items,
   onStart,
@@ -40,6 +44,8 @@ export function TodayList({
           const complete = item.actions.includes("complete") && onComplete;
           const busy = busyId === item.entity_id;
           const isJob = item.entity_type === "job";
+          const phone = item.customer_phone?.trim() || "";
+          const address = item.site_address?.trim() || "";
           return (
             <li key={item.entity_id} className="field-job-card">
               <div className="field-job-card-meta">
@@ -57,18 +63,34 @@ export function TodayList({
                 <p className="public-mono text-[10px] tracking-[0.14em] text-fg-subtle">{he.fieldWhereKicker}</p>
                 <p className="mt-1 text-base font-semibold text-fg">{item.site_name || he.fieldSiteUnknown}</p>
                 {item.customer_name ? <p className="mt-1 text-sm text-fg-muted">{item.customer_name}</p> : null}
+                {address ? (
+                  <p className="mt-1 text-sm text-fg-muted">{address}</p>
+                ) : (
+                  <p className="mt-1 text-xs text-fg-subtle">{he.todayAddressMissing}</p>
+                )}
                 <p className="public-mono mt-2 text-xs text-fg-muted" dir="ltr">
                   {item.number}
                 </p>
               </div>
 
               <div className="field-job-card-actions">
+                {phone ? (
+                  <a className="field-job-open" href={`tel:${phone}`}>
+                    {he.todayCall}
+                  </a>
+                ) : null}
+                {address ? (
+                  <a className="field-job-open" href={mapsUrl(address)} target="_blank" rel="noreferrer">
+                    {he.todayNavigate}
+                  </a>
+                ) : null}
+                {item.site_id ? (
+                  <Link to="/app/sites/$siteId" params={{ siteId: item.site_id }} className="field-job-open">
+                    {he.todayOpenSite}
+                  </Link>
+                ) : null}
                 {isJob ? (
-                  <Link
-                    to="/app/jobs/$jobId"
-                    params={{ jobId: item.entity_id }}
-                    className="field-job-open"
-                  >
+                  <Link to="/app/jobs/$jobId" params={{ jobId: item.entity_id }} className="field-job-open">
                     {he.todayOpenJob}
                   </Link>
                 ) : null}

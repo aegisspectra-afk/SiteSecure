@@ -21,6 +21,7 @@ export function OpsDashHero({
   quotesOpen = 0,
   pipelineValue = null,
   showQuoteChips = false,
+  showTodayLink = false,
 }: {
   displayName?: string | null;
   workspaceName?: string | null;
@@ -32,6 +33,8 @@ export function OpsDashHero({
   quotesOpen?: number;
   pipelineValue?: number | null;
   showQuoteChips?: boolean;
+  /** Show "היום בשטח" only when there is field work today (or explicit secondary). */
+  showTodayLink?: boolean;
 }) {
   const greeting = dayGreeting();
   const name = displayName?.trim() || null;
@@ -71,7 +74,7 @@ export function OpsDashHero({
       <div className="ops-dash-hero-actions">
         {quoteAction ? <NewQuoteButton /> : null}
         {secondaryAction ??
-          (quoteAction ? (
+          (quoteAction && showTodayLink ? (
             <Link to="/app/today" className="ops-dash-secondary-cta">
               {he.todayViewAll}
             </Link>

@@ -178,10 +178,16 @@ export function attentionUrgentCount(groups: AttentionGroup[]): number {
 }
 
 export function attentionVisual(row: AttentionQueueItem): AttentionVisual {
+  const days = waitingDays(row.item.updated_at);
   if (row.kind === "quote_approved_pending_project") {
+    // Long-waiting approved quotes escalate visually.
+    if (days != null && days >= 7) return { color: "red", urgency: "high" };
     return { color: "blue", urgency: "high" };
   }
   if (row.kind === "job_overdue" || row.kind === "quote_expiring" || row.item.severity === "now") {
+    return { color: "red", urgency: "high" };
+  }
+  if (row.kind === "quote_awaiting_customer" && days != null && days >= 7) {
     return { color: "red", urgency: "high" };
   }
   if (row.kind === "quote_stale_draft" || row.kind === "lead_follow_up") {

@@ -16,7 +16,7 @@ describe("catalog entitlements", () => {
   });
 
   it("does not let Solo invite office roles", () => {
-    expect(assignableInviteRoles("solo")).toEqual(["technician", "founding_technician", "viewer"]);
+    expect(assignableInviteRoles("solo")).toEqual(["technician", "viewer"]);
     expect(assignableInviteRoles("business")).toContain("manager");
   });
 

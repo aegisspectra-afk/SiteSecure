@@ -1,18 +1,23 @@
-import type { AttentionGroup } from "@site-secure/api-client";
+import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { he } from "../../i18n/he";
 import { ATTENTION_DISPLAY_LIMIT, attentionEntityCount, attentionQueueLimited } from "../../lib/attention-queue";
 import { AttentionList } from "./AttentionList";
+import { DashboardCreateProjectDialog } from "./DashboardCreateProjectDialog";
 
 export function CommandStatus({
   attention = [],
   canCreateProject = true,
   viewAllTo = "/app/quotes",
+  workspaceId,
 }: {
   attention?: AttentionGroup[];
   canCreateProject?: boolean;
   viewAllTo?: "/app/quotes" | "/app/today" | "/app/leads";
+  workspaceId?: string | null;
 }) {
+  const [projectItem, setProjectItem] = useState<DashboardItem | null>(null);
   const count = attentionEntityCount(attention);
   const { hasMore } = attentionQueueLimited(attention, {
     canCreateProject,
@@ -41,10 +46,22 @@ export function CommandStatus({
           framed={false}
           canCreateProject={canCreateProject}
           limit={ATTENTION_DISPLAY_LIMIT}
+          onCreateProject={
+            canCreateProject && workspaceId
+              ? (item) => setProjectItem(item)
+              : undefined
+          }
         />
       ) : (
         <p className="ops-attention-quiet">{he.commandQuietBody}</p>
       )}
+      {projectItem && workspaceId ? (
+        <DashboardCreateProjectDialog
+          item={projectItem}
+          workspaceId={workspaceId}
+          onClose={() => setProjectItem(null)}
+        />
+      ) : null}
     </section>
   );
 }

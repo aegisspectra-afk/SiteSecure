@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -15,7 +15,7 @@ from ..catalog_attrs import (
     normalize_unit,
     validate_product_attributes,
 )
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import ServiceClient, UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
@@ -400,6 +400,118 @@ def patch_product(
         )
     )
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
+
+
+class BulkPricingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["markup_percent", "multiplier"] = "markup_percent"
+    value: float = Field(gt=0, le=1000)
+    only_missing_list_price: bool = True
+    category_id: str | None = None
+    manufacturer: str | None = Field(default=None, max_length=120)
+    dry_run: bool = False
+    limit: int = Field(default=2000, ge=1, le=5000)
+
+
+@router.post("/catalog/ensure-defaults")
+def ensure_catalog_defaults(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Re-seed category hierarchy + templates (no products). Safe after accidental wipe."""
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "catalog.edit")
+    res = service.post("rpc/seed_workspace_defaults", json={"p_workspace_id": str(workspace_id)})
+    if getattr(res, "status_code", 500) not in {200, 204}:
+        raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשחזר את היררכיית הקטגוריות")
+    rows = _load_categories(client, workspace_id, include_archived=False)
+    leaves = sum(1 for r in rows if r.get("parent_id"))
+    roots = sum(1 for r in rows if not r.get("parent_id"))
+    return {"ok": True, "roots": roots, "leaves": leaves, "categories": len(rows)}
+
+
+@router.post("/catalog/products/bulk-pricing")
+def bulk_pricing(
+    workspace_id: UUID,
+    body: BulkPricingIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Set list_price from cost via markup % or multiplier for many products at once."""
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "catalog.edit")
+    if not _can_view_cost(ctx):
+        raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לעלות / תמחור")
+
+    categories = _load_categories(client, workspace_id, include_archived=True)
+    params: dict[str, str] = {
+        "workspace_id": f"eq.{workspace_id}",
+        "is_active": "eq.true",
+        "select": "id,sku,name,cost,list_price,category_id,manufacturer",
+        "order": "name.asc",
+        "limit": str(body.limit),
+    }
+    if body.category_id:
+        subtree = _subtree_ids(categories, body.category_id)
+        if len(subtree) == 1:
+            params["category_id"] = f"eq.{body.category_id}"
+        else:
+            params["category_id"] = f"in.({','.join(sorted(subtree))})"
+    if body.manufacturer and body.manufacturer.strip():
+        params["manufacturer"] = f"ilike.*{body.manufacturer.strip()}*"
+
+    rows = as_list(client.get("products", params=params))
+    preview: list[dict[str, Any]] = []
+    updated = 0
+    skipped = 0
+    for row in rows:
+        cost = float(row.get("cost") or 0)
+        list_price = float(row.get("list_price") or 0)
+        if cost <= 0:
+            skipped += 1
+            continue
+        if body.only_missing_list_price and list_price > 0:
+            skipped += 1
+            continue
+        if body.mode == "markup_percent":
+            next_price = round(cost * (1 + body.value / 100.0), 2)
+        else:
+            next_price = round(cost * body.value, 2)
+        if next_price < 0:
+            skipped += 1
+            continue
+        entry = {
+            "id": row["id"],
+            "sku": row.get("sku"),
+            "name": row.get("name"),
+            "cost": cost,
+            "list_price_before": list_price,
+            "list_price_after": next_price,
+        }
+        preview.append(entry)
+        if body.dry_run:
+            continue
+        patched_or_403(
+            client.patch(
+                "products",
+                {"list_price": next_price},
+                params={"id": f"eq.{row['id']}", "workspace_id": f"eq.{workspace_id}"},
+            )
+        )
+        updated += 1
+
+    return {
+        "dry_run": body.dry_run,
+        "matched": len(rows),
+        "will_update": len(preview),
+        "updated": updated if not body.dry_run else 0,
+        "skipped": skipped,
+        "sample": preview[:25],
+        "mode": body.mode,
+        "value": body.value,
+    }
 
 
 @router.get("/catalog/templates")

@@ -4,7 +4,7 @@
   "default_plan_key": "solo",
   "seat_buckets": {
     "seats_operator": ["owner", "administrator", "manager", "sales"],
-    "seats_field": ["technician", "founding_technician", "viewer"]
+    "seats_field": ["technician", "viewer"]
   },
   "roles": [
     { "key": "owner", "label_he": "בעלים", "label_en": "Owner", "default_scope": "all", "is_system": true },
@@ -12,7 +12,6 @@
     { "key": "manager", "label_he": "מנהל", "label_en": "Manager", "default_scope": "team", "is_system": true },
     { "key": "sales", "label_he": "מכירות", "label_en": "Sales", "default_scope": "owned", "is_system": true },
     { "key": "technician", "label_he": "טכנאי", "label_en": "Technician", "default_scope": "assigned", "is_system": true },
-    { "key": "founding_technician", "label_he": "טכנאי מייסד", "label_en": "Founding Technician", "default_scope": "assigned", "is_system": true },
     { "key": "viewer", "label_he": "צפייה בלבד", "label_en": "Viewer", "default_scope": "all", "is_system": true }
   ],
   "scopes": ["all", "owned", "assigned", "team"],
@@ -33,7 +32,7 @@
         "quota_quotes": 50,
         "quota_clients": 30
       },
-      "assignable_roles": ["technician", "founding_technician", "viewer"]
+      "assignable_roles": ["technician", "viewer"]
     },
     {
       "key": "business",
@@ -46,7 +45,7 @@
         "quota_quotes": 200,
         "quota_clients": 150
       },
-      "assignable_roles": ["administrator", "manager", "sales", "technician", "founding_technician", "viewer"]
+      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"]
     },
     {
       "key": "enterprise",
@@ -59,7 +58,7 @@
         "quota_quotes": 0,
         "quota_clients": 0
       },
-      "assignable_roles": ["administrator", "manager", "sales", "technician", "founding_technician", "viewer"]
+      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"]
     }
   ],
   "permission_feature": {
@@ -232,23 +231,6 @@
       "documents.view", "documents.upload",
       "warranties.view", "warranties.issue",
       "knowledge.view"
-    ],
-    "founding_technician": [
-      "dashboard.view", "calendar.view", "calendar.edit",
-      "settings.view", "settings.general",
-      "crm.view", "crm.create", "crm.edit",
-      "leads.view",
-      "quotes.view", "quotes.edit", "quotes.export",
-      "catalog.view",
-      "projects.view", "projects.create", "projects.edit", "projects.close",
-      "jobs.view", "jobs.create", "jobs.start", "jobs.complete",
-      "service.view", "service.create", "service.edit", "service.close",
-      "sites.view", "sites.create", "sites.edit",
-      "systems.view", "systems.edit",
-      "documents.view", "documents.upload",
-      "warranties.view", "warranties.issue",
-      "knowledge.view",
-      "reports.view"
     ],
     "viewer": [
       "dashboard.view", "calendar.view",

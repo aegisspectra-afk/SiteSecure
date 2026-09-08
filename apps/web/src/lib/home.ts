@@ -7,7 +7,6 @@ export function homeVariant(roleKey: string | undefined): HomeVariant {
     case "sales":
       return "sales";
     case "technician":
-    case "founding_technician":
       return "today";
     case "viewer":
       return "observe";

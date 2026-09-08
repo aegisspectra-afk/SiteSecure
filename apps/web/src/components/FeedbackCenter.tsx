@@ -6,6 +6,7 @@ import { MessageSquarePlus, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { he } from "../i18n/he";
+import { APP_VERSION } from "../lib/app-version";
 import { useSession } from "../lib/session";
 
 export function FeedbackCenter() {
@@ -37,7 +38,16 @@ export function FeedbackCenter() {
         workspace_id: membership!.workspace_id,
         report_type: reportType,
         title: title.trim(),
-        body: body.trim(),
+        body: [
+          body.trim(),
+          "",
+          `---`,
+          `app_version=${APP_VERSION}`,
+          `route=${pagePath}`,
+          `workspace_id=${membership!.workspace_id}`,
+          `user_id=${session?.user_id ?? ""}`,
+          `role=${membership?.role_key ?? ""}`,
+        ].join("\n"),
         severity,
         page_url: typeof window !== "undefined" ? `${window.location.origin}${pagePath}` : pagePath,
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
@@ -113,8 +123,11 @@ export function FeedbackCenter() {
                     <Select id="feedback-type" label={he.feedbackType} value={reportType} onChange={(ev) => setReportType(ev.target.value as typeof reportType)}>
                       <option value="bug">{he.feedbackTypeBug}</option>
                       <option value="feature">{he.feedbackTypeFeature}</option>
-                      <option value="general">{he.feedbackTypeGeneral}</option>
+                      <option value="general">{he.feedbackClarity}</option>
                     </Select>
+                    <p className="text-xs text-fg-subtle">
+                      {he.feedbackAppVersion}: {APP_VERSION} · {pagePath}
+                    </p>
                     <Select id="feedback-severity" label={he.feedbackSeverity} value={severity} onChange={(ev) => setSeverity(ev.target.value)}>
                       <option value="low">{he.feedbackSeverityLow}</option>
                       <option value="medium">{he.feedbackSeverityMedium}</option>

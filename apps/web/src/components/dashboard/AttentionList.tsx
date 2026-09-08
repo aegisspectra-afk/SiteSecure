@@ -1,4 +1,4 @@
-import type { AttentionGroup } from "@site-secure/api-client";
+import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import {
@@ -72,12 +72,27 @@ function AttentionMeta({ row }: { row: AttentionQueueItem }) {
   );
 }
 
-function AttentionRow({ row }: { row: AttentionQueueItem }) {
+function canCreateProjectAction(row: AttentionQueueItem, canCreateProject: boolean): boolean {
+  if (!canCreateProject) return false;
+  if (row.kind === "quote_approved_pending_project") return true;
+  return (row.item.actions ?? []).includes("create_project");
+}
+
+function AttentionRow({
+  row,
+  canCreateProject,
+  onCreateProject,
+}: {
+  row: AttentionQueueItem;
+  canCreateProject: boolean;
+  onCreateProject?: (item: DashboardItem) => void;
+}) {
   const item = row.item;
   const visual = attentionVisual(row);
   const href = itemHref(item.entity_type, item.entity_id);
   const title = primaryTitle(row);
   const context = item.customer_name || item.site_name || null;
+  const createDirect = canCreateProjectAction(row, canCreateProject) && Boolean(onCreateProject);
 
   const body = (
     <>
@@ -91,6 +106,20 @@ function AttentionRow({ row }: { row: AttentionQueueItem }) {
   );
 
   const className = `ops-attention-row is-${visual.color} is-${visual.urgency}`;
+
+  if (createDirect) {
+    return (
+      <li>
+        <button
+          type="button"
+          className={className}
+          onClick={() => onCreateProject?.(item)}
+        >
+          {body}
+        </button>
+      </li>
+    );
+  }
 
   if (href && item.entity_type === "quote") {
     return (
@@ -136,18 +165,25 @@ export function AttentionList({
   framed = true,
   canCreateProject = true,
   limit,
+  onCreateProject,
 }: {
   groups: AttentionGroup[];
   framed?: boolean;
   canCreateProject?: boolean;
   limit?: number;
+  onCreateProject?: (item: DashboardItem) => void;
 }) {
   const { items } = attentionQueueLimited(groups, { canCreateProject, limit });
   if (!items.length) return null;
   const body = (
     <ul className="ops-attention-list">
       {items.map((row) => (
-        <AttentionRow key={`${row.item.entity_type}-${row.item.entity_id}`} row={row} />
+        <AttentionRow
+          key={`${row.item.entity_type}-${row.item.entity_id}`}
+          row={row}
+          canCreateProject={canCreateProject}
+          onCreateProject={onCreateProject}
+        />
       ))}
     </ul>
   );

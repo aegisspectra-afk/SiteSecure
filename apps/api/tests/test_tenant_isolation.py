@@ -301,7 +301,7 @@ def _new_workspace(token: str, name: str) -> str:
     return res.json()["id"]
 
 
-def test_owner_can_invite_founding_technician(settings, two_tenants):
+def test_owner_cannot_invite_founding_technician_role(settings, two_tenants):
     api = TestClient(app)
     workspace_id = _new_workspace(two_tenants["token_a"], f"FT Invite {uuid.uuid4().hex[:8]}")
     res = api.post(
@@ -309,9 +309,7 @@ def test_owner_can_invite_founding_technician(settings, two_tenants):
         headers={"Authorization": f"Bearer {two_tenants['token_a']}"},
         json={"email": f"ss.phase3.ft.{uuid.uuid4().hex[:8]}@sitesecure.test", "role_key": "founding_technician"},
     )
-    assert res.status_code == 200, res.text
-    assert res.json()["role_key"] == "founding_technician"
-    assert res.json()["token"]
+    assert res.status_code in {400, 403, 422}, res.text
 
 
 def test_invite_defaults_to_technician(settings, two_tenants):

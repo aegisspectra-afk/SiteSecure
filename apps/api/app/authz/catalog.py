@@ -48,7 +48,7 @@ def load_catalog(path: str | None = None) -> dict[str, Any]:
         "seat_buckets",
         {
             "seats_operator": ["owner", "administrator", "manager", "sales"],
-            "seats_field": ["technician", "founding_technician", "viewer"],
+            "seats_field": ["technician", "viewer"],
         },
     )
     return data

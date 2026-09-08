@@ -14,12 +14,20 @@ export function quoteStatusTone(status: string): StatusTone {
 
 export function formatMoney(value: number | null | undefined, currency = "ILS"): string {
   if (value == null || Number.isNaN(value)) return "—";
+  const rounded = Math.round(Number(value) * 100) / 100;
+  const whole = Math.abs(rounded - Math.round(rounded)) < 0.001;
   return new Intl.NumberFormat("he-IL", {
     style: "currency",
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(value);
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
+  }).format(rounded);
+}
+
+/** Normalize Hebrew gershayim / apostrophe artifacts in workspace display names. */
+export function displayWorkspaceName(name: string | null | undefined): string {
+  if (!name) return "";
+  return name.replace(/''/g, "״").replace(/"/g, "״");
 }
 
 export function formatDay(value: string | null | undefined): string {

@@ -1,5 +1,5 @@
 import { ApiClientError } from "@site-secure/api-client";
-import { Select } from "@site-secure/ui";
+import { Button, Select } from "@site-secure/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import {
@@ -115,6 +115,23 @@ function SitesBody() {
       </CreatePanel>
       {listQuery.isLoading ? (
         <EmptyRows message={he.loading} />
+      ) : (listQuery.data?.items ?? []).length === 0 && !q ? (
+        <div className="ops-card flex flex-col items-start gap-3 p-6">
+          <div>
+            <p className="text-base font-semibold text-fg">{he.sitesEmpty}</p>
+            <p className="mt-1 text-sm text-fg-muted">{he.sitesEmptyLead}</p>
+          </div>
+          {canCreate ? (
+            <Button
+              onClick={() => {
+                setCreating(true);
+                setFormError(null);
+              }}
+            >
+              {he.sitesEmptyCta}
+            </Button>
+          ) : null}
+        </div>
       ) : (
         <SimpleEntityTable
           empty={he.sitesEmpty}

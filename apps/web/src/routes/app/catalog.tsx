@@ -10,6 +10,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../components/settings/RequirePermission";
 import { CatalogImportWizard } from "../../components/catalog/CatalogImportWizard";
+import { CatalogBulkPricing } from "../../components/catalog/CatalogBulkPricing";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
 import { formatMoney } from "../../lib/quotes";
@@ -85,6 +86,7 @@ function CatalogBody() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [formError, setFormError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog-categories", workspaceId],
@@ -300,6 +302,11 @@ function CatalogBody() {
               <Button variant="ghost" onClick={() => setImportOpen(true)}>
                 {he.catalogImport}
               </Button>
+              {canViewCost ? (
+                <Button variant="ghost" onClick={() => setBulkOpen((v) => !v)}>
+                  {he.catalogBulkPricing}
+                </Button>
+              ) : null}
               <Button onClick={startCreate} disabled={editingId === "new"}>
                 {he.catalogCreate}
               </Button>
@@ -313,9 +320,20 @@ function CatalogBody() {
         onClose={() => setImportOpen(false)}
         onImported={() => {
           void queryClient.refetchQueries({ queryKey: ["catalog-products", workspaceId] });
+          void queryClient.refetchQueries({ queryKey: ["catalog-categories", workspaceId] });
         }}
         categories={categories}
       />
+
+      {canEdit && canViewCost ? (
+        <CatalogBulkPricing
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          onApplied={() => {
+            void queryClient.refetchQueries({ queryKey: ["catalog-products", workspaceId] });
+          }}
+        />
+      ) : null}
 
       <div className="ops-card flex flex-col gap-4 p-4">
         {isTrulyEmpty && canEdit && !editingId ? (

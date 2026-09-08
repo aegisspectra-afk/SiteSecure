@@ -7,6 +7,13 @@ import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
 const MAX_RECENT = 4;
 
+function recentPrimary(quote: RecentQuote): string {
+  const customer = quote.customer_name?.trim();
+  const title = quote.title?.trim();
+  if (customer && title && customer !== title) return `${customer} · ${title}`;
+  return customer || title || "—";
+}
+
 export function RecentQuotes({
   quotes,
   canCreate = false,
@@ -47,9 +54,14 @@ export function RecentQuotes({
             className="ops-recent-row"
           >
             <div className="ops-recent-main min-w-0">
-              <p className="ops-recent-customer">{quote.customer_name ?? "—"}</p>
-              <p className="ops-recent-meta">
+              <p className="ops-recent-customer">
                 <span className="ops-recent-number ltr-meta">{quote.number}</span>
+                <span className="ops-recent-sep" aria-hidden>
+                  ·
+                </span>
+                <span>{recentPrimary(quote)}</span>
+              </p>
+              <p className="ops-recent-meta">
                 <span className="ops-recent-amount tabular-nums">{formatMoney(quote.total_gross)}</span>
               </p>
             </div>

@@ -24,7 +24,7 @@ from ..errors import MESSAGES, ApiError
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["team"])
 
 ASSIGNABLE_ROLES = frozenset(
-    {"administrator", "manager", "sales", "technician", "founding_technician", "viewer", "owner"}
+    {"administrator", "manager", "sales", "technician", "viewer", "owner"}
 )
 
 

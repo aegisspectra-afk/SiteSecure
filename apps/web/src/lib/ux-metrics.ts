@@ -1,13 +1,17 @@
 import type { DashboardSummary, WorkspaceUsageMeter } from "@site-secure/api-client";
 
 /** Percent = approved / counted quotes. Counted statuses today: draft, sent, viewed, approved, rejected. */
+export const CONVERSION_MIN_SAMPLE = 5;
+
 export function quoteConversion(summary: DashboardSummary | null | undefined): {
   percent: number | null;
   approved: number;
   total: number;
+  /** True when percent is statistically meaningful enough to lead with. */
+  showPercent: boolean;
 } {
   if (!summary) {
-    return { percent: null, approved: 0, total: 0 };
+    return { percent: null, approved: 0, total: 0, showPercent: false };
   }
   const total =
     summary.quotes_draft +
@@ -17,10 +21,12 @@ export function quoteConversion(summary: DashboardSummary | null | undefined): {
     summary.quotes_rejected;
   const progressed =
     summary.quotes_sent + summary.quotes_viewed + summary.quotes_approved + summary.quotes_rejected;
+  const percent = total === 0 || progressed === 0 ? null : Math.round((summary.quotes_approved / total) * 100);
   return {
-    percent: total === 0 || progressed === 0 ? null : Math.round((summary.quotes_approved / total) * 100),
+    percent,
     approved: summary.quotes_approved,
     total,
+    showPercent: percent != null && total >= CONVERSION_MIN_SAMPLE,
   };
 }
 
@@ -86,6 +92,13 @@ export function storageHint(meter: WorkspaceUsageMeter): string {
   if (meter.unit !== "bytes") return `${meter.current} / ${meter.limit}`;
   if (meter.unlimited || meter.limit <= 0) return formatStorageBytes(meter.current);
   return `${formatStorageBytes(meter.current)} / ${formatStorageBytes(meter.limit)}`;
+}
+
+/** Human line for quota banners: "2/3 מושבים" or storage equivalent. */
+export function usageMeterQuotaLine(meter: WorkspaceUsageMeter): string {
+  if (meter.unit === "bytes") return `${meter.label_he}: ${storageHint(meter)}`;
+  if (meter.unlimited || meter.limit <= 0) return `${meter.label_he}: ${meter.current}`;
+  return `${meter.current}/${meter.limit} ${meter.label_he}`;
 }
 
 export function storageNext(meter: WorkspaceUsageMeter): string | undefined {

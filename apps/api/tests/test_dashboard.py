@@ -155,7 +155,7 @@ def test_home_variant_matrix():
     assert home_variant("manager") == "ops"
     assert home_variant("sales") == "sales"
     assert home_variant("technician") == "today"
-    assert home_variant("founding_technician") == "today"
+    assert home_variant("technician") == "today"
     assert home_variant("viewer") == "observe"
 
 
@@ -207,8 +207,8 @@ def test_technician_today_hides_ops_quotes_and_start_is_real_action():
     assert "create_customer" not in assigned["actions"]
 
 
-def test_founding_technician_is_today_not_ops():
-    payload = _build("founding_technician")
+def test_technician_is_today_not_ops():
+    payload = _build("technician")
     assert payload["home_variant"] == "today"
     assert all(g["kind"] != "job_unassigned" for g in payload["attention"])
 

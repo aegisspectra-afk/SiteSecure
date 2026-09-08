@@ -154,6 +154,7 @@ function DashboardBody({
       workspaceName={workspaceName}
       customerCount={customerCount}
       countsReady={countsReady}
+      workspaceId={workspaceId}
     />
   );
 }

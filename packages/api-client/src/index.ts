@@ -97,6 +97,7 @@ export type SessionResponse = {
     phone: string | null;
     locale: string;
     last_workspace_id: string | null;
+    recognition_badges?: string[];
   } | null;
   memberships: SessionMembership[];
   has_workspace: boolean;
@@ -164,6 +165,7 @@ export type AdminUser = {
   email: string | null;
   full_name: string;
   is_platform_admin: boolean;
+  recognition_badges?: string[];
   created_at: string;
   memberships: {
     workspace_id: string;
@@ -188,6 +190,9 @@ export type DashboardItem = {
   title_he: string;
   customer_name: string | null;
   site_name: string | null;
+  site_id?: string | null;
+  site_address?: string | null;
+  customer_phone?: string | null;
   scheduled_for: string | null;
   severity: "now" | "next" | "info";
   actions: string[];
@@ -219,6 +224,7 @@ export type RecentQuote = {
   id: string;
   number: string;
   status: string;
+  title?: string | null;
   customer_name: string | null;
   total_gross: number | null;
   updated_at: string;
@@ -1871,6 +1877,43 @@ export function createApiClient(opts: {
       }),
     listCatalogCategories: (workspaceId: string) =>
       request<{ items: CatalogCategory[] }>(`/api/v1/workspaces/${workspaceId}/catalog/categories`),
+    ensureCatalogDefaults: (workspaceId: string) =>
+      request<{ ok: boolean; roots: number; leaves: number; categories: number }>(
+        `/api/v1/workspaces/${workspaceId}/catalog/ensure-defaults`,
+        { method: "POST", body: "{}" },
+      ),
+    bulkCatalogPricing: (
+      workspaceId: string,
+      body: {
+        mode: "markup_percent" | "multiplier";
+        value: number;
+        only_missing_list_price?: boolean;
+        category_id?: string | null;
+        manufacturer?: string | null;
+        dry_run?: boolean;
+        limit?: number;
+      },
+    ) =>
+      request<{
+        dry_run: boolean;
+        matched: number;
+        will_update: number;
+        updated: number;
+        skipped: number;
+        sample: Array<{
+          id: string;
+          sku: string | null;
+          name: string | null;
+          cost: number;
+          list_price_before: number;
+          list_price_after: number;
+        }>;
+        mode: string;
+        value: number;
+      }>(`/api/v1/workspaces/${workspaceId}/catalog/products/bulk-pricing`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     catalogImportTargets: (workspaceId: string) =>
       request<CatalogImportTargets>(`/api/v1/workspaces/${workspaceId}/catalog/import/targets`),
     catalogImportTemplate: (workspaceId: string) =>
@@ -2107,6 +2150,41 @@ export function createApiClient(opts: {
         body: JSON.stringify(body),
       }),
     adminUsers: () => request<AdminUser[]>("/api/v1/admin/users"),
+    adminPatchUserBadges: (userId: string, body: { recognition_badges: string[] }) =>
+      request<AdminUser>(`/api/v1/admin/users/${userId}/badges`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminAuditLogs: (opts: { limit?: number } = {}) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 100) });
+      return request<
+        Array<{
+          id: string;
+          workspace_id: string;
+          workspace_name?: string | null;
+          actor_user_id?: string | null;
+          actor_email?: string | null;
+          action: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          created_at: string;
+          metadata?: Record<string, unknown>;
+        }>
+      >(`/api/v1/admin/audit?${params}`);
+    },
+    reportClientError: (body: {
+      workspace_id?: string;
+      message: string;
+      stack?: string;
+      page_url?: string;
+      user_agent?: string;
+      app_version?: string;
+      kind?: string;
+    }) =>
+      request<{ ok: boolean }>(`/api/v1/telemetry/client-error`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     adminFeedback: (opts: { status?: string; report_type?: string } = {}) => {
       const params = new URLSearchParams();
       if (opts.status) params.set("status", opts.status);

@@ -14,8 +14,6 @@ export function CommercialPulse({
   const conversion = quoteConversion(summary);
   const open = summary.quotes_open ?? 0;
   const hasChart = Boolean(chart && chart.revenue.some((v) => v > 0));
-  const conversionLabel =
-    conversion.percent != null && conversion.total >= 1 ? he.uxPercent(conversion.percent) : "—";
 
   return (
     <section className="ops-commercial-card is-secondary" aria-labelledby="commercial-pulse-heading">
@@ -45,7 +43,20 @@ export function CommercialPulse({
         </div>
         <div className="ops-commercial-strip-item">
           <dt>{he.kpiConversionLabel}</dt>
-          <dd className="tabular-nums">{conversionLabel}</dd>
+          <dd className="ops-commercial-conversion">
+            {conversion.total === 0 ? (
+              <span className="tabular-nums">—</span>
+            ) : (
+              <>
+                {conversion.showPercent && conversion.percent != null ? (
+                  <span className="tabular-nums">{he.uxPercent(conversion.percent)}</span>
+                ) : null}
+                <span className="ops-commercial-conversion-sub">
+                  {he.kpiConversionSub(conversion.approved, conversion.total)}
+                </span>
+              </>
+            )}
+          </dd>
         </div>
       </dl>
 

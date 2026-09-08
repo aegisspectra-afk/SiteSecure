@@ -18,6 +18,7 @@ class ProfileOut(BaseModel):
     phone: str | None = None
     locale: str = "he"
     last_workspace_id: str | None = None
+    recognition_badges: list[str] = Field(default_factory=list)
 
 
 class MembershipOut(BaseModel):
@@ -129,6 +130,7 @@ def get_session(
             phone=profile_row.get("phone"),
             locale=profile_row.get("locale") or "he",
             last_workspace_id=last_workspace_id,
+            recognition_badges=list(profile_row.get("recognition_badges") or []),
         )
 
     # Prefer last_workspace_id when present (invite accept sets it). Stable sort keeps
@@ -166,6 +168,7 @@ def patch_me(
         phone=row.get("phone"),
         locale=row.get("locale") or "he",
         last_workspace_id=row.get("last_workspace_id"),
+        recognition_badges=list(row.get("recognition_badges") or []),
     )
 
 

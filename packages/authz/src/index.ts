@@ -31,7 +31,7 @@ type PlanRow = {
 const plans = catalog.plans as PlanRow[];
 const seatBuckets = (catalog as { seat_buckets?: Record<string, string[]> }).seat_buckets ?? {
   seats_operator: ["owner", "administrator", "manager", "sales"],
-  seats_field: ["technician", "founding_technician", "viewer"],
+  seats_field: ["technician", "viewer"],
 };
 
 export function defaultPlanKey(): string {
@@ -69,7 +69,7 @@ export function seatBucket(roleKey: string | undefined): SeatLimitKey | null {
 export function assignableInviteRoles(planKey: string | undefined): string[] {
   const fromPlan = getPlan(planKey)?.assignable_roles;
   if (fromPlan?.length) return [...fromPlan];
-  return ["technician", "founding_technician", "viewer"];
+  return ["technician", "viewer"];
 }
 
 /**

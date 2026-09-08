@@ -59,17 +59,12 @@ def test_technician_cannot_admin():
     assert d.allowed is True
 
 
-def test_founding_technician_model():
+def test_founding_technician_is_not_an_authz_role():
+    """Legacy role key has no grants; Founding Technician is badge-only."""
     d = authorize(ctx=_ctx("founding_technician"), action="crm.edit")
+    assert d.allowed is False
+    d = authorize(ctx=_ctx("technician"), action="jobs.complete")
     assert d.allowed is True
-    d = authorize(ctx=_ctx("founding_technician"), action="quotes.view_cost")
-    assert d.allowed is False
-    d = authorize(ctx=_ctx("founding_technician"), action="quotes.send")
-    assert d.allowed is False
-    d = authorize(ctx=_ctx("founding_technician"), action="users.manage")
-    assert d.allowed is False
-    d = authorize(ctx=_ctx("founding_technician"), action="workspace.billing")
-    assert d.allowed is False
 
 
 def test_viewer_readonly():
@@ -106,8 +101,14 @@ def test_solo_cannot_invite_admin():
     assert d.code == "BUSINESS_RULE"
 
 
-def test_solo_can_invite_ft():
+def test_solo_cannot_invite_founding_technician_role():
     d = authorize(ctx=_ctx("owner", plan="solo"), action="users.invite", invite_role="founding_technician")
+    assert d.allowed is False
+    assert d.code == "BUSINESS_RULE"
+
+
+def test_solo_can_invite_technician():
+    d = authorize(ctx=_ctx("owner", plan="solo"), action="users.invite", invite_role="technician")
     assert d.allowed is True
 
 
@@ -250,19 +251,6 @@ FOUNDATION_MATRIX = {
         "roles.manage": False,
         "audit.view": False,
     },
-    "founding_technician": {
-        "dashboard.view": True,
-        "settings.view": True,
-        "settings.general": True,
-        "workspace.edit": False,
-        "workspace.billing": False,
-        "workspace.delete": False,
-        "users.view": False,
-        "users.invite": False,
-        "users.manage": False,
-        "roles.manage": False,
-        "audit.view": False,
-    },
     "viewer": {
         "dashboard.view": True,
         "settings.view": True,
@@ -326,15 +314,6 @@ P0_ACTIONS = {
         "quotes.delete": False,
         "quotes.send": False,
         "quotes.view_cost": False,
-        "catalog.view": True,
-        "catalog.edit": False,
-    },
-    "founding_technician": {
-        "quotes.view": True,
-        "quotes.create": False,
-        "quotes.edit": True,
-        "quotes.delete": False,
-        "quotes.send": False,
         "catalog.view": True,
         "catalog.edit": False,
     },

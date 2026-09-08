@@ -55,7 +55,8 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
 
   return {
     cameraCount,
-    environment: environment || "outdoor",
+    // Unspecified by default — do not invent outdoor when the user has not chosen.
+    environment: environment || "",
     resolutionMp: 4,
     retentionDays: 14,
     recordingMode: lead?.recording === false ? "motion" : "continuous",

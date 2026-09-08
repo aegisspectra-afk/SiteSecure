@@ -33,7 +33,9 @@ function AdminAudit() {
             {(query.data ?? []).map((row) => (
               <tr key={row.id} className="border-t border-border">
                 <td className="ltr-meta py-3 text-fg-muted">{row.created_at}</td>
-                <td className="py-3 text-fg-muted">{row.workspace_name || row.workspace_id}</td>
+                <td className="py-3 text-fg-muted">
+                  {row.source === "platform" ? "platform" : row.workspace_name || row.workspace_id}
+                </td>
                 <td className="py-3 text-fg">{row.action}</td>
                 <td className="py-3 text-fg-muted">
                   {row.entity_type}

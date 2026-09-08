@@ -269,3 +269,140 @@ def test_tenant_isolation_products_must_be_workspace_scoped():
     ids_b = {c.get("selected_product", {}).get("id") for c in rec_b["components"] if c.get("selected_product")}
     assert ids_a.isdisjoint(ids_b)
     assert "b-cam" not in ids_a and "a-cam" not in ids_b
+
+
+def test_null_environment_does_not_reject_unknown_env_cameras():
+    products = [
+        _prod("c1", "cameras_ip", "Cam Unknown Env", {"resolution_mp": 4, "poe": True}),
+        _prod("c2", "cameras_ip", "Cam Outdoor", {"resolution_mp": 4, "environment": "outdoor", "poe": True}),
+    ]
+    r = resolve_cameras(
+        products=products,
+        requested_mp=4,
+        environment=None,
+        form_factor=None,
+        poe_required=True,
+        manufacturer_preference=None,
+    )
+    ids = {c["product"]["id"] for c in r["candidates"]}
+    assert ids == {"c1", "c2"}
+    assert any(w["code"] == "ENVIRONMENT_UNSPECIFIED" for w in r["warnings"])
+    assert r["selected"] is not None
+
+
+def test_explicit_outdoor_unknown_product_env_is_partial_not_verified():
+    products = [
+        _prod("c1", "cameras_ip", "Cam Unknown Env", {"resolution_mp": 4, "poe": True}),
+        _prod("c2", "cameras_ip", "Cam Outdoor", {"resolution_mp": 4, "environment": "outdoor", "poe": True}),
+        _prod("c3", "cameras_ip", "Cam Indoor", {"resolution_mp": 4, "environment": "indoor", "poe": True}),
+    ]
+    r = resolve_cameras(
+        products=products,
+        requested_mp=4,
+        environment="outdoor",
+        form_factor=None,
+        poe_required=True,
+        manufacturer_preference=None,
+    )
+    ids = {c["product"]["id"] for c in r["candidates"]}
+    assert "c1" in ids
+    assert "c2" in ids
+    assert "c3" not in ids
+    unknown = next(c for c in r["candidates"] if c["product"]["id"] == "c1")
+    assert unknown["compatibility"]["environment"] == "UNKNOWN"
+    assert unknown["confidence"] == "PARTIAL"
+    # Verified outdoor ranks above unknown-env
+    assert r["selected"]["product"]["id"] == "c2"
+    assert r["selected"]["confidence"] == "STRUCTURED"
+
+
+def test_explicit_outdoor_only_unknown_env_emits_unverified_warning():
+    products = [
+        _prod("c1", "cameras_ip", "Cam Unknown Env", {"resolution_mp": 4, "poe": True}),
+    ]
+    r = resolve_cameras(
+        products=products,
+        requested_mp=4,
+        environment="outdoor",
+        form_factor=None,
+        poe_required=True,
+        manufacturer_preference=None,
+    )
+    assert r["status"] == "PARTIAL"
+    assert r["selected"]["compatibility"]["environment"] == "UNKNOWN"
+    assert any(w["code"] == "CAMERA_ENVIRONMENT_UNVERIFIED" for w in r["warnings"])
+
+
+def test_partial_catalog_preserves_unresolved_storage_and_switch():
+    products = [
+        _prod("c1", "cameras_ip", "Cam", {"resolution_mp": 4, "poe": True, "max_power_w": 8}),
+        _prod("n1", "nvr", "NVR 8", {"channels": 8, "drive_bays": 2, "max_hdd_tb": 10, "poe_ports": 4, "poe_budget_w": 40}),
+    ]
+    raw = {
+        "camera_count": 4,
+        "resolution_mp": 4,
+        "environment": None,
+        "retention_days": 14,
+        "recording_mode": "continuous",
+        "expansion_headroom": 0.2,
+        "architecture_intent": "prefer_external_switch",
+        "camera_max_power_w": 8,
+    }
+    rec = build_system_recommendation(raw_input=raw, catalog_products=products)
+    by_role = {c["role"]: c for c in rec["components"]}
+    assert by_role["camera"]["resolution_status"] in {"RESOLVED", "PARTIAL"}
+    assert by_role["camera"]["selected_product"]["id"] == "c1"
+    assert by_role["recorder"]["resolution_status"] in {"RESOLVED", "PARTIAL"}
+    assert by_role["storage"]["resolution_status"] == "UNRESOLVED"
+    assert by_role["storage"]["selected_product"] is None
+    assert "poe_switch" in by_role
+    assert by_role["poe_switch"]["resolution_status"] == "UNRESOLVED"
+    assert by_role["poe_switch"]["selected_product"] is None
+    assert rec["status"] == "BLOCKED"
+    # Engineering still present — not collapsed into catalog failure
+    assert rec["engineering"]["storage"]["requiredTbWithOverhead"] is not None
+    assert (rec["engineering"].get("poe") or {}).get("requiredBudgetW") is not None
+    assert (rec["engineering"].get("poeArchitecture") or {}).get("externalSwitchRequired") is True
+
+
+def test_full_catalog_still_resolves_all_core_roles():
+    products = [
+        _prod("c1", "cameras_ip", "Cam", {"resolution_mp": 4, "environment": "outdoor", "poe": True, "max_power_w": 8}),
+        _prod(
+            "n1",
+            "nvr",
+            "NVR 16",
+            {"channels": 16, "drive_bays": 4, "max_hdd_tb": 12, "poe_ports": 16, "poe_budget_w": 200},
+        ),
+        _prod("h1", "hdd_recorders", "HDD 10", {"capacity_tb": 10, "surveillance_grade": True}),
+        _prod("s1", "switch", "SW 16", {"ports": 16, "poe_ports": 16, "poe_budget_w": 200}),
+    ]
+    raw = {
+        "camera_count": 4,
+        "resolution_mp": 4,
+        "environment": "outdoor",
+        "retention_days": 14,
+        "recording_mode": "continuous",
+        "expansion_headroom": 0.2,
+        "architecture_intent": "prefer_external_switch",
+    }
+    rec = build_system_recommendation(raw_input=raw, catalog_products=products)
+    by_role = {c["role"]: c for c in rec["components"]}
+    for role in ("camera", "recorder", "storage", "poe_switch"):
+        assert by_role[role]["selected_product"] is not None, role
+        assert by_role[role]["resolution_status"] in {"RESOLVED", "PARTIAL"}, role
+    assert rec["status"] in {"OK", "PARTIAL"}
+
+
+def test_empty_catalog_does_not_fabricate_products():
+    raw = {
+        "camera_count": 4,
+        "resolution_mp": 4,
+        "environment": None,
+        "retention_days": 14,
+        "recording_mode": "continuous",
+        "expansion_headroom": 0.2,
+    }
+    rec = build_system_recommendation(raw_input=raw, catalog_products=[])
+    assert all(c.get("selected_product") is None for c in rec["components"])
+    assert rec["engineering"]["storage"]["requiredTbWithOverhead"] is not None

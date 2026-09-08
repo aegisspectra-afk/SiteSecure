@@ -3,7 +3,7 @@ import { he } from "../i18n/he";
 
 export function FoundingTechnicianBadge({ className }: { className?: string }) {
   return (
-    <span className={cn("beta-badge", className)} title={he.foundingTechnicianBadge}>
+    <span className={cn("beta-badge", className)} title={he.foundingTechnicianBadgeHint}>
       ★ {he.foundingTechnicianBadge}
     </span>
   );

@@ -159,6 +159,18 @@ export function formatReasonHe(reason: CctvReasonCode): string {
       return `שירות לפי קטגוריה: ${roleLabelHe(String(p.role ?? ""))}`;
     case "HDD_BAYS_UNKNOWN":
       return "מספר מפרצי HDD ב־NVR לא ידוע";
+    case "ENVIRONMENT_UNSPECIFIED":
+      return "סביבת ההתקנה לא צוינה";
+    case "CAMERA_ENVIRONMENT_UNVERIFIED": {
+      const req = String(p.requested ?? "");
+      if (req === "outdoor") {
+        return "התאמת המוצר להתקנת חוץ לא אומתה מנתוני הקטלוג";
+      }
+      if (req === "indoor") {
+        return "התאמת המוצר להתקנת פנים לא אומתה מנתוני הקטלוג";
+      }
+      return "התאמת המוצר לסביבת ההתקנה לא אומתה מנתוני הקטלוג";
+    }
     default:
       break;
   }
@@ -254,6 +266,10 @@ export function compactCompatibilityLines(compat: Record<string, string> | null 
   if (!compat) return [];
   const out: string[] = [];
   for (const [key, value] of Object.entries(compat)) {
+    if (value === "UNKNOWN" && key === "environment") {
+      out.push("סביבה לא אומתה בקטלוג");
+      continue;
+    }
     if (value !== "PASS") continue;
     switch (key) {
       case "channels":
@@ -288,4 +304,53 @@ export function compactCompatibilityLines(compat: Record<string, string> | null 
     }
   }
   return out;
+}
+
+/** Short Hebrew for an unresolved required component (engineering still visible). */
+export function formatUnresolvedRequirementHe(component: CctvRecommendationComponent): string {
+  const t = component.technical_requirements ?? {};
+  const role = component.role;
+  if (role === "storage") {
+    const tb =
+      typeof t.requiredTb === "number"
+        ? t.requiredTb
+        : typeof t.required_tb === "number"
+          ? t.required_tb
+          : typeof t.requiredTbWithOverhead === "number"
+            ? t.requiredTbWithOverhead
+            : null;
+    if (tb != null) return `נדרש ≈${Number(tb).toFixed(1)}TB`;
+    return heUnresolvedFallback(component);
+  }
+  if (role === "poe_switch" || role === "switch") {
+    const ports =
+      typeof t.minPoePorts === "number"
+        ? t.minPoePorts
+        : typeof t.min_poe_ports === "number"
+          ? t.min_poe_ports
+          : null;
+    const w =
+      typeof t.minPoeBudgetW === "number"
+        ? t.minPoeBudgetW
+        : typeof t.minBudgetW === "number"
+          ? t.minBudgetW
+          : typeof t.min_budget_w === "number"
+            ? t.min_budget_w
+            : null;
+    if (ports != null && w != null) return `נדרש ≥${ports} יציאות PoE ו־≥${Math.round(w)}W`;
+    if (w != null) return `נדרש תקציב PoE של ≥${Math.round(w)}W`;
+    if (ports != null) return `נדרש ≥${ports} יציאות PoE`;
+    return heUnresolvedFallback(component);
+  }
+  if (role === "recorder") {
+    const ch = typeof t.minChannels === "number" ? t.minChannels : typeof t.min_channels === "number" ? t.min_channels : null;
+    if (ch != null) return `נדרש לפחות ${ch} ערוצים`;
+  }
+  return heUnresolvedFallback(component);
+}
+
+function heUnresolvedFallback(component: CctvRecommendationComponent): string {
+  const reasons = component.reason_codes ?? [];
+  if (reasons.length) return formatReasonHe(reasons[0]!);
+  return "לא נמצא בקטלוג";
 }

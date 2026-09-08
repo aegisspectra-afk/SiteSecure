@@ -133,8 +133,9 @@ def resolve_cameras(
                 checks["environment"] = "FAIL"
                 ok = False
             else:
+                # Product lacks explicit indoor/outdoor metadata — keep as candidate
+                # with PARTIAL confidence. Do NOT invent environment from IP67/prose.
                 checks["environment"] = "UNKNOWN"
-                ok = False
 
         if form_factor:
             if cam.form_factor is None:
@@ -200,6 +201,15 @@ def resolve_cameras(
     status = "RESOLVED" if selected and selected["confidence"] == "STRUCTURED" else (
         "PARTIAL" if selected else "UNRESOLVED"
     )
+    if selected and (selected.get("compatibility") or {}).get("environment") == "UNKNOWN" and environment:
+        warnings.append(
+            {
+                "code": "CAMERA_ENVIRONMENT_UNVERIFIED",
+                "params": {"requested": environment},
+            }
+        )
+    if not environment:
+        warnings.append({"code": "ENVIRONMENT_UNSPECIFIED", "params": {}})
     return {
         "role": "camera",
         "status": status,
@@ -847,6 +857,7 @@ def build_system_recommendation(
     hdd["label"] = "storage"
     hdd["optional"] = False
     hdd["editable"] = True
+    hdd["technical_requirements"] = {"requiredTb": required_tb}
     hdd["reason_codes"] = [{"code": "ROLE_STORAGE_FROM_RETENTION", "params": {"requiredTb": required_tb}}]
 
     recorder["quantity"] = 1

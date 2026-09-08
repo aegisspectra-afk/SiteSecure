@@ -220,3 +220,15 @@ def test_detect_header_row_prefers_product_headers():
 def test_file_too_large():
     with pytest.raises(ValueError, match="FILE_TOO_LARGE"):
         parse_upload(b"x" * (12 * 1024 * 1024 + 1), filename="big.xlsx")
+
+
+def test_importer_does_not_infer_environment_from_ip67_or_prose():
+    from app.catalog_import.normalize import normalize_environment, normalize_mapped_value
+
+    assert normalize_environment("IP67") == (None, "UNKNOWN")
+    assert normalize_environment("waterproof IP67 enclosure") == (None, "UNKNOWN")
+    assert normalize_environment("עמיד למים IP67") == (None, "UNKNOWN")
+    # Explicit indoor/outdoor tokens still normalize — not IP67-derived
+    assert normalize_environment("חוץ") == ("outdoor", "NORMALIZED")
+    assert normalize_mapped_value("attributes.environment", "IP67")["value"] is None
+    assert normalize_mapped_value("attributes.environment", "")["value"] is None

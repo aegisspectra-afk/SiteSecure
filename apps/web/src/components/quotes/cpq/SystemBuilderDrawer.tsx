@@ -21,6 +21,7 @@ import {
   compactCompatibilityLines,
   confidenceLabelHe,
   formatReasonHe,
+  formatUnresolvedRequirementHe,
   groupComponents,
   roleLabelHe,
 } from "../../../lib/cctv-recommend-copy";
@@ -192,7 +193,11 @@ export function SystemBuilderDrawer({
             disabled={!addGate.ok || applying || appliedOnce}
             aria-busy={applying}
           >
-            {applying ? he.cpqCctvApplying : he.cpqAddPlanToQuote}
+            {applying
+              ? he.cpqCctvApplying
+              : addGate.ok && addGate.incomplete
+                ? he.cpqAddResolvedToQuote
+                : he.cpqAddPlanToQuote}
           </Button>
         )}
       </div>
@@ -270,6 +275,7 @@ export function SystemBuilderDrawer({
             swapRole={swapRole}
             setSwapRole={setSwapRole}
             addBlocked={!addGate.ok}
+            incomplete={addGate.ok && addGate.incomplete}
             applyError={applyError}
           />
         ) : null}
@@ -306,8 +312,9 @@ function RequirementsForm({
           setReq({ ...req, environment: ev.target.value as CctvBuildRequirements["environment"] })
         }
       >
-        <option value="outdoor">{he.leadsReqLocationOutdoor}</option>
+        <option value="">{he.cpqCctvEnvironmentUnspecified}</option>
         <option value="indoor">{he.leadsReqLocationIndoor}</option>
+        <option value="outdoor">{he.leadsReqLocationOutdoor}</option>
         <option value="indoor_outdoor">{he.leadsReqLocationBoth}</option>
       </Select>
       <Select
@@ -502,6 +509,7 @@ function RecommendationReview({
   swapRole,
   setSwapRole,
   addBlocked,
+  incomplete,
   applyError,
 }: {
   rec: SystemRecommendation;
@@ -510,6 +518,7 @@ function RecommendationReview({
   swapRole: string | null;
   setSwapRole: (role: string | null) => void;
   addBlocked: boolean;
+  incomplete: boolean;
   applyError: string | null;
 }) {
   const summary = buildEngineeringSummary(rec);
@@ -524,6 +533,9 @@ function RecommendationReview({
     ready_for_core?: boolean;
     missing_families?: string[];
   } }).catalog_readiness;
+  const unresolvedRequired = rec.components.filter(
+    (c) => c.blocking && !c.optional && !selection.removedRoles.has(c.role) && !resolveComponentProduct(c, selection),
+  );
 
   return (
     <div className="grid gap-4">
@@ -576,6 +588,23 @@ function RecommendationReview({
         <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="alert">
           <p className="text-sm font-semibold text-fg">{he.cpqCctvCannotComplete}</p>
           <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCannotCompleteHint}</p>
+        </div>
+      ) : incomplete ? (
+        <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="alert">
+          <p className="text-sm font-semibold text-fg">{he.cpqCctvIncompleteSystem}</p>
+          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvIncompleteSystemHint}</p>
+          {unresolvedRequired.length ? (
+            <ul className="mt-2 list-disc pr-5 text-xs text-fg-muted">
+              {unresolvedRequired.map((c) => (
+                <li key={c.role}>
+                  {roleLabelHe(c.role)}
+                  {c.technical_requirements && Object.keys(c.technical_requirements).length
+                    ? `: ${formatUnresolvedRequirementHe(c)}`
+                    : ""}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 

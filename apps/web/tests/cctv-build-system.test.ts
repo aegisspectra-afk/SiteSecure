@@ -148,9 +148,11 @@ describe("cctv build requirements", () => {
     const req = defaultCctvBuildRequirements({ cameraCount: 12 });
     req.expansionHeadroomPercent = "20";
     req.manufacturerPreference = "QABrand";
+    expect(req.environment).toBe("");
     expect(validateCctvBuildRequirements(req).ok).toBe(true);
     const body = requirementsToRecommendBody(req);
     expect(body.camera_count).toBe(12);
+    expect(body.environment).toBeNull();
     expect(body.expansion_headroom).toBe(0.2);
     expect(body.manufacturer_preference).toBe("QABrand");
   });
@@ -198,13 +200,14 @@ describe("cctv recommendation review helpers", () => {
     const gate = canAddRecommendationToQuote(rec, selection);
     expect(gate.ok).toBe(true);
     if (gate.ok) {
+      expect(gate.incomplete).toBe(false);
       expect(gate.lines.find((l) => l.role === "camera")?.qty).toBe(12);
       expect(gate.lines.find((l) => l.role === "storage")?.qty).toBe(2);
       expect(gate.lines.some((l) => l.role === "cable")).toBe(false);
     }
   });
 
-  it("blocks add when core recorder is unresolved", () => {
+  it("allows partial apply when storage/recorder catalog gaps remain", () => {
     const rec = sampleRec({
       blocking: true,
       status: "BLOCKED",
@@ -224,11 +227,52 @@ describe("cctv recommendation review helpers", () => {
           resolution_status: "UNRESOLVED",
           blocking: true,
         },
-        sampleRec().components[2],
+        {
+          ...sampleRec().components[2],
+          selected_product: null,
+          selected_confidence: null,
+          candidates: [],
+          resolution_status: "UNRESOLVED",
+          blocking: true,
+        },
       ],
     });
     const selection = initialReviewSelection(rec);
-    expect(canAddRecommendationToQuote(rec, selection).ok).toBe(false);
+    const gate = canAddRecommendationToQuote(rec, selection);
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.incomplete).toBe(true);
+      expect(gate.lines.map((l) => l.role)).toEqual(["camera"]);
+      expect(gate.lines.every((l) => l.productId.startsWith("c"))).toBe(true);
+    }
+  });
+
+  it("blocks add when zero catalog products resolve", () => {
+    const rec = sampleRec({
+      blocking: true,
+      status: "BLOCKED",
+      components: sampleRec().components.map((c) => ({
+        ...c,
+        selected_product: null,
+        selected_confidence: null,
+        candidates: [],
+        resolution_status: "UNRESOLVED",
+        blocking: true,
+      })),
+    });
+    const selection = initialReviewSelection(rec);
+    expect(canAddRecommendationToQuote(rec, selection)).toEqual({ ok: false, reason: "empty" });
+  });
+
+  it("full resolution still applies normally without incomplete flag", () => {
+    const rec = sampleRec();
+    const selection = initialReviewSelection(rec);
+    const gate = canAddRecommendationToQuote(rec, selection);
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.incomplete).toBe(false);
+      expect(gate.lines.map((l) => l.role).sort()).toEqual(["camera", "recorder", "storage"]);
+    }
   });
 
   it("supports partial-apply recovery without duplicating roles", () => {

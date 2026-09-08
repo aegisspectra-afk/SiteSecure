@@ -102,6 +102,7 @@ export type SessionResponse = {
   memberships: SessionMembership[];
   has_workspace: boolean;
   is_platform_admin?: boolean;
+  platform_role?: string | null;
 };
 
 export type WorkspaceOut = {
@@ -160,11 +161,42 @@ export type AdminOrganization = {
   subscription_status?: string | null;
 };
 
+export type BetaParticipantStatus =
+  | "invited"
+  | "registered"
+  | "activated"
+  | "active"
+  | "paused"
+  | "exited";
+
+export type BetaParticipant = {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  cohort: string | null;
+  status: BetaParticipantStatus;
+  invited_at?: string | null;
+  registered_at?: string | null;
+  activated_at?: string | null;
+  joined_at?: string | null;
+  paused_at?: string | null;
+  exited_at?: string | null;
+  internal_note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  email?: string | null;
+  full_name?: string | null;
+  role_key?: string | null;
+  workspace_name?: string | null;
+  recognition_badges?: string[];
+};
+
 export type AdminUser = {
   id: string;
   email: string | null;
   full_name: string;
   is_platform_admin: boolean;
+  platform_role?: string | null;
   recognition_badges?: string[];
   created_at: string;
   memberships: {
@@ -173,6 +205,7 @@ export type AdminUser = {
     role_key: string;
     is_beta?: boolean;
   }[];
+  beta_participations?: BetaParticipant[];
 };
 
 export type AdminSummary = {
@@ -2149,9 +2182,40 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
-    adminUsers: () => request<AdminUser[]>("/api/v1/admin/users"),
-    adminPatchUserBadges: (userId: string, body: { recognition_badges: string[] }) =>
+    adminUsers: (opts: { q?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.q) params.set("q", opts.q);
+      const q = params.toString();
+      return request<AdminUser[]>(`/api/v1/admin/users${q ? `?${q}` : ""}`);
+    },
+    adminPatchUserBadges: (
+      userId: string,
+      body: { recognition_badges: string[]; reason?: string | null },
+    ) =>
       request<AdminUser>(`/api/v1/admin/users/${userId}/badges`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminBetaParticipants: (
+      opts: { status?: string; cohort?: string; badge?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.cohort) params.set("cohort", opts.cohort);
+      if (opts.badge) params.set("badge", opts.badge);
+      const q = params.toString();
+      return request<BetaParticipant[]>(`/api/v1/admin/beta/participants${q ? `?${q}` : ""}`);
+    },
+    adminPatchUserBeta: (
+      userId: string,
+      body: {
+        workspace_id: string;
+        status: BetaParticipantStatus;
+        cohort?: string | null;
+        internal_note?: string | null;
+      },
+    ) =>
+      request<BetaParticipant>(`/api/v1/admin/users/${userId}/beta`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
@@ -2160,10 +2224,12 @@ export function createApiClient(opts: {
       return request<
         Array<{
           id: string;
-          workspace_id: string;
+          source?: string;
+          workspace_id?: string | null;
           workspace_name?: string | null;
           actor_user_id?: string | null;
           actor_email?: string | null;
+          target_user_id?: string | null;
           action: string;
           entity_type?: string | null;
           entity_id?: string | null;

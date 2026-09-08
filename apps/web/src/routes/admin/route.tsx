@@ -13,10 +13,11 @@ const NAV = [
   { to: "/admin", labelKey: "adminTitle" as const, exact: true },
   { to: "/admin/organizations", labelKey: "adminOrgs" as const, exact: false },
   { to: "/admin/users", labelKey: "adminUsers" as const, exact: false },
+  { to: "/admin/beta", labelKey: "adminBeta" as const, exact: false },
+  { to: "/admin/badges", labelKey: "adminBadges" as const, exact: false },
   { to: "/admin/feedback", labelKey: "adminFeedback" as const, exact: false },
   { to: "/admin/audit", labelKey: "adminAudit" as const, exact: false },
   { to: "/admin/flags", labelKey: "adminFlags" as const, exact: false },
-  { to: "/admin/beta", labelKey: "adminBeta" as const, exact: false },
 ];
 
 function AdminLayout() {
@@ -45,6 +46,10 @@ function AdminLayout() {
 
   return (
     <div className="admin-shell">
+      <header className="admin-shell-header border-b border-border px-4 py-3 lg:px-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">{he.adminPlatformTitle}</p>
+        <p className="text-sm text-fg-muted">{session?.email}</p>
+      </header>
       <nav className="admin-nav" aria-label={he.adminNav}>
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -59,7 +64,11 @@ function AdminLayout() {
             </Link>
           );
         })}
-        <Button variant="secondary" className="ms-auto lg:ms-0 lg:mt-auto" onClick={() => void navigate({ to: "/app" })}>
+        <Button
+          variant="secondary"
+          className="ms-auto lg:ms-0 lg:mt-auto"
+          onClick={() => void navigate({ to: "/app/dashboard" })}
+        >
           {he.adminBackApp}
         </Button>
         <Button variant="ghost" onClick={() => void signOut()}>

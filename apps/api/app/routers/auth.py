@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from ..authz.catalog import default_plan_key, load_catalog
 from ..deps import UserClient, current_user, user_client
 from ..errors import ApiError
+from ..platform import platform_role_for
 
 router = APIRouter(prefix="/api/v1", tags=["auth"])
 
@@ -43,6 +44,8 @@ class SessionOut(BaseModel):
     memberships: list[MembershipOut]
     has_workspace: bool
     is_platform_admin: bool = False
+    # V1: true ⇒ platform_super_admin. Never derived from workspace role or badges.
+    platform_role: str | None = None
 
 
 class ProfilePatch(BaseModel):
@@ -139,13 +142,15 @@ def get_session(
         preferred = str(last_workspace_id)
         memberships.sort(key=lambda m: 0 if m.workspace_id == preferred else 1)
 
+    is_admin = bool(profile_row.get("is_platform_admin")) if profile_row else False
     return SessionOut(
         user_id=user_id,
         email=user.get("email"),
         profile=profile,
         memberships=memberships,
         has_workspace=len(memberships) > 0,
-        is_platform_admin=bool(profile_row.get("is_platform_admin")) if profile_row else False,
+        is_platform_admin=is_admin,
+        platform_role=platform_role_for(is_admin),
     )
 
 

@@ -20,6 +20,7 @@ import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
 import { Route as AdminIndexRouteImport } from "./routes/admin/index"
 import { Route as AdminAuditRouteImport } from "./routes/admin/audit"
+import { Route as AdminBadgesRouteImport } from "./routes/admin/badges"
 import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
 import { Route as AdminFeedbackRouteImport } from "./routes/admin/feedback"
 import { Route as AdminFlagsRouteImport } from "./routes/admin/flags"
@@ -120,6 +121,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: "/audit",
   path: "/audit",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBadgesRoute = AdminBadgesRouteImport.update({
+  id: "/badges",
+  path: "/badges",
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminBetaRoute = AdminBetaRouteImport.update({
@@ -366,6 +372,7 @@ export interface FileRoutesByFullPath {
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
@@ -422,6 +429,7 @@ export interface FileRoutesByTo {
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
@@ -482,6 +490,7 @@ export interface FileRoutesById {
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | "/verify-email"
     | "/app/settings"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
@@ -599,6 +609,7 @@ export interface FileRouteTypes {
     | "/reset-password"
     | "/verify-email"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
@@ -658,6 +669,7 @@ export interface FileRouteTypes {
     | "/verify-email"
     | "/app/settings"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
@@ -801,6 +813,13 @@ declare module "@tanstack/react-router" {
       path: "/audit"
       fullPath: "/admin/audit"
       preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/badges": {
+      id: "/admin/badges"
+      path: "/badges"
+      fullPath: "/admin/badges"
+      preLoaderRoute: typeof AdminBadgesRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     "/admin/beta": {
@@ -1130,6 +1149,7 @@ declare module "@tanstack/react-router" {
 
 interface AdminRouteRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminBadgesRoute: typeof AdminBadgesRoute
   AdminBetaRoute: typeof AdminBetaRoute
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminFlagsRoute: typeof AdminFlagsRoute
@@ -1140,6 +1160,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
+  AdminBadgesRoute: AdminBadgesRoute,
   AdminBetaRoute: AdminBetaRoute,
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminFlagsRoute: AdminFlagsRoute,

@@ -83,32 +83,36 @@ export function resolveComponentProduct(
   return null;
 }
 
+export type AddRecommendationGate =
+  | { ok: true; lines: CctvBuildQuoteLine[]; incomplete: boolean }
+  | { ok: false; reason: "blocking" | "empty" };
+
+/**
+ * Apply gate: engineering INVALID_INPUT blocks entirely.
+ * Catalog gaps (unresolved required roles) do NOT block applying resolved
+ * workspace products — incomplete flag stays true for UI warning.
+ * TEXT_ASSISTED never auto-satisfies a required core role.
+ */
 export function canAddRecommendationToQuote(
   rec: SystemRecommendation,
   selection: ReviewSelectionState,
-): { ok: true; lines: CctvBuildQuoteLine[] } | { ok: false; reason: "blocking" | "empty" } {
-  if (rec.blocking || rec.status === "BLOCKED" || rec.status === "INVALID_INPUT") {
-    // Re-evaluate after removals: blocking only for remaining core unresolved without product
-    const coreBlocking = rec.components.some((c) => {
-      if (!c.blocking) return false;
-      if (selection.removedRoles.has(c.role)) return false;
-      if (c.optional) return false;
-      const product = resolveComponentProduct(c, selection);
-      return !product || product.confidence === "TEXT_ASSISTED";
-    });
-    if (coreBlocking) return { ok: false, reason: "blocking" };
+): AddRecommendationGate {
+  if (rec.status === "INVALID_INPUT") {
+    return { ok: false, reason: "blocking" };
   }
 
   const lines: CctvBuildQuoteLine[] = [];
+  let incomplete = false;
   for (const c of rec.components) {
     if (selection.removedRoles.has(c.role)) continue;
     const picked = resolveComponentProduct(c, selection);
     if (!picked) {
-      if (c.blocking && !c.optional) return { ok: false, reason: "blocking" };
+      if (c.blocking && !c.optional) incomplete = true;
       continue;
     }
     if (picked.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional) {
-      return { ok: false, reason: "blocking" };
+      incomplete = true;
+      continue;
     }
     lines.push({
       role: c.role,
@@ -125,7 +129,8 @@ export function canAddRecommendationToQuote(
     });
   }
   if (!lines.length) return { ok: false, reason: "empty" };
-  return { ok: true, lines };
+  if (rec.blocking || rec.status === "BLOCKED") incomplete = true;
+  return { ok: true, lines, incomplete };
 }
 
 /** Drop roles already inserted during a partial apply. */

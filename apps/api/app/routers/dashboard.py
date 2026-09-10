@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Callable, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -13,6 +14,10 @@ from ..dashboard import DEFAULT_WORKSPACE_TZ, build_dashboard
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..identity import actor_id
 from ..rest import as_list
+
+# Cap kept high enough for ops summary buckets, low enough for mobile RTT.
+QUOTE_DASHBOARD_LIMIT = "200"
+JOB_DASHBOARD_LIMIT = "100"
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"])
 
@@ -124,6 +129,21 @@ def _in_filter(ids: set[str]) -> str | None:
     return f"in.({','.join(clean)})"
 
 
+def _run_parallel(jobs: dict[str, Callable[[], Any]]) -> dict[str, Any]:
+    """Run independent PostgREST fetches concurrently (same JWT client; sync HTTP)."""
+    if not jobs:
+        return {}
+    if len(jobs) == 1:
+        key, fn = next(iter(jobs.items()))
+        return {key: fn()}
+    out: dict[str, Any] = {}
+    with ThreadPoolExecutor(max_workers=min(6, len(jobs))) as pool:
+        futures = {pool.submit(fn): key for key, fn in jobs.items()}
+        for fut in as_completed(futures):
+            out[futures[fut]] = fut.result()
+    return out
+
+
 @router.get("/dashboard", response_model=DashboardOut)
 def get_dashboard(
     workspace_id: UUID,
@@ -133,131 +153,138 @@ def get_dashboard(
     ctx = load_authz_context(client, actor_id(user), str(workspace_id))
     require(ctx, "dashboard.view")
 
-    workspace_tz = DEFAULT_WORKSPACE_TZ
-    workspace_rows = _optional_list(
-        client.get(
-            "workspaces",
-            params={"id": f"eq.{workspace_id}", "select": "timezone", "limit": "1"},
-        )
-    )
-    if workspace_rows and workspace_rows[0].get("timezone"):
-        workspace_tz = str(workspace_rows[0]["timezone"])
-
     can_quotes_view = authorize(ctx=ctx, action="quotes.view").allowed
     can_jobs_view = authorize(ctx=ctx, action="jobs.view").allowed
     can_jobs_start = authorize(ctx=ctx, action="jobs.start").allowed
     can_jobs_complete = authorize(ctx=ctx, action="jobs.complete").allowed
+    assignments_reliable = ctx.role_key in {"owner", "administrator", "manager"}
+    ws = str(workspace_id)
 
-    quotes: list[dict[str, Any]] = []
+    phase1: dict[str, Callable[[], Any]] = {
+        "workspace": lambda: _optional_list(
+            client.get("workspaces", params={"id": f"eq.{ws}", "select": "timezone", "limit": "1"})
+        ),
+        "assignments": lambda: _optional_list(
+            client.get(
+                "assignments",
+                params={
+                    "workspace_id": f"eq.{ws}",
+                    "resource_type": "eq.job",
+                    "select": "resource_id,user_id",
+                },
+            )
+        ),
+    }
     if can_quotes_view:
-        quotes = as_list(
+        phase1["quotes"] = lambda: as_list(
             client.get(
                 "quotes",
                 params={
-                    "workspace_id": f"eq.{workspace_id}",
+                    "workspace_id": f"eq.{ws}",
                     "deleted_at": "is.null",
                     "select": QUOTE_SELECT,
-                    "limit": "500",
+                    "limit": QUOTE_DASHBOARD_LIMIT,
                     "order": "updated_at.desc",
                 },
             )
         )
-        for row in quotes:
-            for key in COST_SELECT_FORBIDDEN:
-                row.pop(key, None)
-
-    jobs: list[dict[str, Any]] = []
-    if can_jobs_view:
-        jobs = as_list(
-            client.get(
-                "jobs",
-                params={
-                    "workspace_id": f"eq.{workspace_id}",
-                    "select": JOB_SELECT,
-                    "limit": "100",
-                    "order": "scheduled_for.asc",
-                },
-            )
-        )
-
-    assignment_rows = _optional_list(
-        client.get(
-            "assignments",
-            params={
-                "workspace_id": f"eq.{workspace_id}",
-                "resource_type": "eq.job",
-                "select": "resource_id,user_id",
-            },
-        )
-    )
-    job_assignees: dict[str, set[str]] = {}
-    for row in assignment_rows:
-        job_assignees.setdefault(str(row["resource_id"]), set()).add(str(row["user_id"]))
-    assignments_reliable = ctx.role_key in {"owner", "administrator", "manager"}
-
-    names: dict[str, str] = {}
-    site_addresses: dict[str, str] = {}
-    customer_phones: dict[str, str] = {}
-    customer_filter = _in_filter({str(r["customer_id"]) for r in quotes + jobs if r.get("customer_id")})
-    site_filter = _in_filter({str(r["site_id"]) for r in quotes + jobs if r.get("site_id")})
-    if customer_filter:
-        for row in _optional_list(
-            client.get("customers", params={"id": customer_filter, "select": "id,display_name,phone"})
-        ):
-            names[str(row["id"])] = row.get("display_name") or ""
-            phone = (row.get("phone") or "").strip()
-            if phone:
-                customer_phones[str(row["id"])] = phone
-    if site_filter:
-        for row in _optional_list(
-            client.get("sites", params={"id": site_filter, "select": "id,name,address"})
-        ):
-            names[str(row["id"])] = row.get("name") or ""
-            addr = row.get("address")
-            line = ""
-            if isinstance(addr, dict):
-                line = str(addr.get("line") or addr.get("formatted") or "").strip()
-            elif isinstance(addr, str):
-                line = addr.strip()
-            if line:
-                site_addresses[str(row["id"])] = line
-
-    events: list[dict[str, Any]] = []
-    if can_quotes_view:
-        raw_events = _optional_list(
+        phase1["events"] = lambda: _optional_list(
             client.get(
                 "quote_events",
                 params={
-                    "workspace_id": f"eq.{workspace_id}",
+                    "workspace_id": f"eq.{ws}",
                     "select": "event_type,quote_id,created_at",
                     "order": "created_at.desc",
                     "limit": "8",
                 },
             )
         )
-        quote_numbers = {str(q["id"]): q.get("number") or "" for q in quotes}
-        for event in raw_events:
-            event["quote_number"] = quote_numbers.get(str(event.get("quote_id") or ""), "")
-            events.append(event)
+    if can_jobs_view:
+        phase1["jobs"] = lambda: as_list(
+            client.get(
+                "jobs",
+                params={
+                    "workspace_id": f"eq.{ws}",
+                    "select": JOB_SELECT,
+                    "limit": JOB_DASHBOARD_LIMIT,
+                    "order": "scheduled_for.asc",
+                },
+            )
+        )
 
-    project_source_quote_ids: frozenset[str] = frozenset()
-    if can_quotes_view:
-        approved_ids = {str(q["id"]) for q in quotes if q.get("status") == "approved"}
-        if approved_ids:
-            project_rows = _optional_list(
-                client.get(
-                    "projects",
-                    params={
-                        "workspace_id": f"eq.{workspace_id}",
-                        "source_quote_id": f"in.({','.join(sorted(approved_ids))})",
-                        "select": "source_quote_id",
-                        "limit": "100",
-                    },
-                )
+    batch1 = _run_parallel(phase1)
+    workspace_tz = DEFAULT_WORKSPACE_TZ
+    workspace_rows = batch1.get("workspace") or []
+    if workspace_rows and workspace_rows[0].get("timezone"):
+        workspace_tz = str(workspace_rows[0]["timezone"])
+
+    quotes: list[dict[str, Any]] = list(batch1.get("quotes") or [])
+    for row in quotes:
+        for key in COST_SELECT_FORBIDDEN:
+            row.pop(key, None)
+    jobs: list[dict[str, Any]] = list(batch1.get("jobs") or [])
+    assignment_rows: list[dict[str, Any]] = list(batch1.get("assignments") or [])
+    raw_events: list[dict[str, Any]] = list(batch1.get("events") or [])
+
+    job_assignees: dict[str, set[str]] = {}
+    for row in assignment_rows:
+        job_assignees.setdefault(str(row["resource_id"]), set()).add(str(row["user_id"]))
+
+    names: dict[str, str] = {}
+    site_addresses: dict[str, str] = {}
+    customer_phones: dict[str, str] = {}
+    customer_filter = _in_filter({str(r["customer_id"]) for r in quotes + jobs if r.get("customer_id")})
+    site_filter = _in_filter({str(r["site_id"]) for r in quotes + jobs if r.get("site_id")})
+    approved_ids = {str(q["id"]) for q in quotes if q.get("status") == "approved"} if can_quotes_view else set()
+
+    phase2: dict[str, Callable[[], Any]] = {}
+    if customer_filter:
+        phase2["customers"] = lambda: _optional_list(
+            client.get("customers", params={"id": customer_filter, "select": "id,display_name,phone"})
+        )
+    if site_filter:
+        phase2["sites"] = lambda: _optional_list(
+            client.get("sites", params={"id": site_filter, "select": "id,name,address"})
+        )
+    if approved_ids:
+        phase2["projects"] = lambda: _optional_list(
+            client.get(
+                "projects",
+                params={
+                    "workspace_id": f"eq.{ws}",
+                    "source_quote_id": f"in.({','.join(sorted(approved_ids))})",
+                    "select": "source_quote_id",
+                    "limit": "100",
+                },
             )
-            project_source_quote_ids = frozenset(
-                str(row["source_quote_id"]) for row in project_rows if row.get("source_quote_id")
-            )
+        )
+
+    batch2 = _run_parallel(phase2)
+    for row in batch2.get("customers") or []:
+        names[str(row["id"])] = row.get("display_name") or ""
+        phone = (row.get("phone") or "").strip()
+        if phone:
+            customer_phones[str(row["id"])] = phone
+    for row in batch2.get("sites") or []:
+        names[str(row["id"])] = row.get("name") or ""
+        addr = row.get("address")
+        line = ""
+        if isinstance(addr, dict):
+            line = str(addr.get("line") or addr.get("formatted") or "").strip()
+        elif isinstance(addr, str):
+            line = addr.strip()
+        if line:
+            site_addresses[str(row["id"])] = line
+
+    events: list[dict[str, Any]] = []
+    quote_numbers = {str(q["id"]): q.get("number") or "" for q in quotes}
+    for event in raw_events:
+        event["quote_number"] = quote_numbers.get(str(event.get("quote_id") or ""), "")
+        events.append(event)
+
+    project_source_quote_ids: frozenset[str] = frozenset(
+        str(row["source_quote_id"]) for row in (batch2.get("projects") or []) if row.get("source_quote_id")
+    )
 
     payload = build_dashboard(
         role_key=ctx.role_key,

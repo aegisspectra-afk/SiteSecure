@@ -61,38 +61,46 @@ function CustomersBody() {
     queryKey: ["customers", workspaceId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.listCustomers(workspaceId!, { limit: 100 }),
+    staleTime: 30_000,
   });
+
+  // Enrichment loads after the directory list so first paint is not blocked by 5 extra round-trips.
+  const enrichEnabled = Boolean(workspaceId) && listQuery.isSuccess;
 
   const sitesQuery = useQuery({
     queryKey: ["directory-sites", workspaceId],
-    enabled: Boolean(workspaceId) && canViewSites,
-    queryFn: () => api.listSites(workspaceId!, { limit: 100 }),
+    enabled: enrichEnabled && canViewSites,
+    queryFn: () => api.listSites(workspaceId!, { limit: 50 }),
+    staleTime: 60_000,
   });
 
   const quotesQuery = useQuery({
     queryKey: ["directory-quotes", workspaceId],
-    enabled: Boolean(workspaceId) && canViewQuotes,
-    queryFn: () => api.listQuotes(workspaceId!, { limit: 100 }),
+    enabled: enrichEnabled && canViewQuotes,
+    queryFn: () => api.listQuotes(workspaceId!, { limit: 50 }),
+    staleTime: 60_000,
   });
 
   const projectsQuery = useQuery({
     queryKey: ["directory-projects", workspaceId],
-    enabled: Boolean(workspaceId) && canViewProjects,
-    queryFn: () => api.listProjects(workspaceId!, { limit: 100 }),
+    enabled: enrichEnabled && canViewProjects,
+    queryFn: () => api.listProjects(workspaceId!, { limit: 50 }),
+    staleTime: 60_000,
   });
 
   const serviceQuery = useQuery({
     queryKey: ["directory-service", workspaceId],
-    enabled: Boolean(workspaceId) && canViewService,
-    queryFn: () => api.listServiceCalls(workspaceId!, { limit: 100 }),
+    enabled: enrichEnabled && canViewService,
+    queryFn: () => api.listServiceCalls(workspaceId!, { limit: 50 }),
+    staleTime: 60_000,
   });
 
   const leadsQuery = useQuery({
     queryKey: ["directory-leads", workspaceId],
-    enabled: Boolean(workspaceId) && canViewLeads,
-    queryFn: () => api.listLeads(workspaceId!, { limit: 100 }),
+    enabled: enrichEnabled && canViewLeads,
+    queryFn: () => api.listLeads(workspaceId!, { limit: 50 }),
+    staleTime: 60_000,
   });
-
   const rows = useMemo(
     () =>
       buildCustomerDirectoryRows({

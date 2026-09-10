@@ -115,8 +115,9 @@ export function QuoteHeader({
           <p className="cpq-header-meta cpq-header-meta-desktop" title={metaParts.join(" · ")}>
             {metaParts.join(" · ")}
           </p>
-          <QuoteSaveIndicator saveState={saveState} savedAt={savedAt} dirty={dirty} hasLiveId={hasLiveId} />
-        </div>
+          <div className="cpq-header-save-anchor">
+            <QuoteSaveIndicator saveState={saveState} savedAt={savedAt} dirty={dirty} hasLiveId={hasLiveId} />
+          </div>        </div>
 
         <div className="cpq-stepper-desktop">
           <QuoteStepper active={activeStep} onSelect={onStepSelect} />

@@ -119,25 +119,58 @@ export function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    if (!open) return;
+    const place = () => {
+      const el = trigger.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const menuWidth = Math.max(176, rect.width);
+      const left = Math.min(
+        Math.max(8, rect.right - menuWidth),
+        window.innerWidth - menuWidth - 8,
+      );
+      const top = Math.min(rect.bottom + 4, window.innerHeight - 12);
+      setCoords({ top, left, width: menuWidth });
+    };
+    place();
+    const onDoc = (e: MouseEvent | TouchEvent) => {
+      const t = e.target as Node;
+      if (wrap.current?.contains(t)) return;
+      if (trigger.current?.contains(t)) return;
+      const menu = document.getElementById("ss-dropdown-portal");
+      if (menu?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
+    document.addEventListener("touchstart", onDoc);
     window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     return () => {
       document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("touchstart", onDoc);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
     };
-  }, []);
+  }, [open]);
+
   return (
     <div className="relative" ref={wrap}>
       <button
+        ref={trigger}
         type="button"
-        className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 text-sm hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-focus"
+        className={cn(
+          "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 text-sm hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-focus",
+          open && "bg-bg-subtle ring-2 ring-focus/40",
+        )}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={menuLabel}
@@ -145,17 +178,22 @@ export function Dropdown({
       >
         {label}
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className={cn(
-            "absolute end-0 z-40 mt-1 min-w-44 rounded-[var(--radius-panel)] border border-border bg-bg-2 py-1 shadow-popover",
-            menuClassName,
-          )}
-        >
-          <div onClick={() => setOpen(false)}>{children}</div>
-        </div>
-      ) : null}
+      {open && coords && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              id="ss-dropdown-portal"
+              role="menu"
+              className={cn(
+                "fixed z-[80] max-h-[min(70vh,24rem)] overflow-y-auto rounded-[var(--radius-panel)] border border-border bg-bg-2 py-1 shadow-popover",
+                menuClassName,
+              )}
+              style={{ top: coords.top, left: coords.left, minWidth: coords.width }}
+            >
+              <div onClick={() => setOpen(false)}>{children}</div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

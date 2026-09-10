@@ -80,12 +80,19 @@ type HistoryItem = {
   id: string;
   at: string;
   title: string;
-  kind: "job" | "service";
+  kind: "job" | "service" | "document" | "quote";
   status: string;
-  href?: { to: "/app/jobs/$jobId"; params: { jobId: string } };
+  href?:
+    | { to: "/app/jobs/$jobId"; params: { jobId: string } }
+    | { to: "/app/quotes/$quoteId"; params: { quoteId: string } };
 };
 
-function buildHistory(jobs: JobOut[], serviceCalls: ServiceCallOut[]): HistoryItem[] {
+function buildHistory(
+  jobs: JobOut[],
+  serviceCalls: ServiceCallOut[],
+  documents: DocumentOut[],
+  quotes: QuoteOut[],
+): HistoryItem[] {
   const rows: HistoryItem[] = [
     ...jobs.map((job) => ({
       id: `job-${job.id}`,
@@ -102,6 +109,24 @@ function buildHistory(jobs: JobOut[], serviceCalls: ServiceCallOut[]): HistoryIt
       kind: "service" as const,
       status: call.status,
     })),
+    ...documents.map((doc) => ({
+      id: `doc-${doc.id}`,
+      at: doc.created_at || "",
+      title:
+        doc.kind === "photo"
+          ? he.siteHistoryPhoto(doc.original_filename || doc.id)
+          : he.siteHistoryDocument(doc.original_filename || doc.id),
+      kind: "document" as const,
+      status: doc.kind === "photo" ? "photo" : "document",
+    })),
+    ...quotes.map((quote) => ({
+      id: `quote-${quote.id}`,
+      at: quote.updated_at || quote.created_at || "",
+      title: he.siteHistoryQuote(quote.number || quote.id, quoteStatusLabel(quote.status)),
+      kind: "quote" as const,
+      status: quote.status,
+      href: { to: "/app/quotes/$quoteId" as const, params: { quoteId: quote.id } },
+    })),
   ];
   return rows
     .filter((row) => row.at)
@@ -113,6 +138,9 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const [uploadPhase, setUploadPhase] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
@@ -230,6 +258,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
+      setUploadPhase("uploading");
       const isPhoto = file.type.startsWith("image/");
       const intent = await api.createDocumentUpload(workspaceId!, {
         entity_type: "site",
@@ -244,19 +273,38 @@ export function SiteDossier({ siteId }: { siteId: string }) {
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
-      if (!put.ok) throw new Error(he.sitesError);
+      if (!put.ok) throw new Error(he.sitesUploadFailed);
       await api.completeDocumentUpload(workspaceId!, intent.document_id, {
         byte_size: file.size,
         mime_type: file.type || undefined,
       });
     },
     onSuccess: () => {
+      setUploadPhase("success");
+      setError(null);
       void queryClient.invalidateQueries({ queryKey: ["site-docs", workspaceId, siteId] });
       if (fileRef.current) fileRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
+      window.setTimeout(() => setUploadPhase((p) => (p === "success" ? "idle" : p)), 2500);
     },
-    onError: (err) => setError(planQuotaMessage(err) ?? (err instanceof Error ? err.message : he.sitesError)),
+    onError: (err) => {
+      setUploadPhase("error");
+      setError(planQuotaMessage(err) ?? (err instanceof Error ? err.message : he.sitesError));
+    },
   });
 
+  async function openDocument(docId: string) {
+    if (!workspaceId) return;
+    setOpeningDocId(docId);
+    try {
+      const { url } = await api.getDocumentUrl(workspaceId, docId);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : he.sitesDocOpenFailed);
+    } finally {
+      setOpeningDocId(null);
+    }
+  }
   const createSystem = useMutation({
     mutationFn: () =>
       api.createSystem(workspaceId!, {
@@ -318,7 +366,10 @@ export function SiteDossier({ siteId }: { siteId: string }) {
     [equipment, selectedEquipId],
   );
   const locationGroups = useMemo(() => groupEquipmentByLocation(equipment), [equipment]);
-  const history = useMemo(() => buildHistory(jobs, serviceCalls), [jobs, serviceCalls]);
+  const history = useMemo(
+    () => buildHistory(jobs, serviceCalls, docs, siteQuotes),
+    [jobs, serviceCalls, docs, siteQuotes],
+  );
   const photos = docs.filter((doc) => doc.kind === "photo" || (doc.mime_type ?? "").startsWith("image/"));
   const documentsOnly = docs.filter((doc) => !photos.some((photo) => photo.id === doc.id));
 
@@ -871,6 +922,17 @@ export function SiteDossier({ siteId }: { siteId: string }) {
           {canUpload ? (
             <>
               <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) upload.mutate(file);
+                }}
+              />
+              <input
                 ref={fileRef}
                 type="file"
                 className="sr-only"
@@ -879,9 +941,33 @@ export function SiteDossier({ siteId }: { siteId: string }) {
                   if (file) upload.mutate(file);
                 }}
               />
-              <Button type="button" variant="secondary" loading={upload.isPending} onClick={() => fileRef.current?.click()}>
-                {he.sitesUpload}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  loading={upload.isPending}
+                  onClick={() => cameraRef.current?.click()}
+                >
+                  {he.siteCapturePhoto}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={upload.isPending}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {he.siteUploadFile}
+                </Button>
+              </div>
+              <p className="text-xs text-fg-muted" role="status" aria-live="polite">
+                {uploadPhase === "uploading"
+                  ? he.sitesUploading
+                  : uploadPhase === "success"
+                    ? he.sitesUploadSuccess
+                    : uploadPhase === "error"
+                      ? he.sitesUploadFailed
+                      : he.sitesUploadHint}
+              </p>
             </>
           ) : null}
 
@@ -891,9 +977,16 @@ export function SiteDossier({ siteId }: { siteId: string }) {
               <ul className="mt-3 divide-y divide-border border-y border-border">
                 {photos.map((doc: DocumentOut) => (
                   <li key={doc.id} className="flex items-center gap-2 py-3 text-sm">
-                    <Camera className="size-4 text-fg-muted" aria-hidden />
-                    <span>{doc.original_filename || doc.id}</span>
-                    <span className="ms-auto text-xs text-fg-muted">{formatDate(doc.created_at)}</span>
+                    <Camera className="size-4 shrink-0 text-fg-muted" aria-hidden />
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 truncate text-start font-medium text-fg hover:text-action"
+                      disabled={openingDocId === doc.id}
+                      onClick={() => void openDocument(doc.id)}
+                    >
+                      {doc.original_filename || doc.id}
+                    </button>
+                    <span className="ms-auto shrink-0 text-xs text-fg-muted">{formatDate(doc.created_at)}</span>
                   </li>
                 ))}
               </ul>
@@ -907,9 +1000,16 @@ export function SiteDossier({ siteId }: { siteId: string }) {
             <ul className="mt-3 divide-y divide-border border-y border-border">
               {documentsOnly.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-2 py-3 text-sm">
-                  <FileText className="size-4 text-fg-muted" aria-hidden />
-                  <span>{doc.original_filename || doc.id}</span>
-                  <span className="ms-auto text-xs text-fg-muted">
+                  <FileText className="size-4 shrink-0 text-fg-muted" aria-hidden />
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate text-start font-medium text-fg hover:text-action"
+                    disabled={openingDocId === doc.id}
+                    onClick={() => void openDocument(doc.id)}
+                  >
+                    {doc.original_filename || doc.id}
+                  </button>
+                  <span className="ms-auto shrink-0 text-xs text-fg-muted">
                     {[doc.kind, formatDate(doc.created_at)].filter(Boolean).join(" · ")}
                   </span>
                 </li>
@@ -950,21 +1050,59 @@ export function SiteDossier({ siteId }: { siteId: string }) {
       {tab === "field" ? (
         <section className="ops-panel space-y-4 p-5">
           <p className="text-sm text-fg-muted">{he.siteFieldLead}</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {customerQuery.data?.phone ? (
               <a className="site-field-action" href={`tel:${customerQuery.data.phone}`}>
                 <Phone className="size-4" aria-hidden />
                 {he.siteFieldCall}
               </a>
             ) : null}
+            {canUpload ? (
+              <>
+                <button
+                  type="button"
+                  className="site-field-action"
+                  onClick={() => {
+                    setTab("documents");
+                    window.setTimeout(() => cameraRef.current?.click(), 0);
+                  }}
+                >
+                  <Camera className="size-4" aria-hidden />
+                  {he.siteCapturePhoto}
+                </button>
+                <button
+                  type="button"
+                  className="site-field-action"
+                  onClick={() => {
+                    setTab("documents");
+                    window.setTimeout(() => fileRef.current?.click(), 0);
+                  }}
+                >
+                  <FileText className="size-4" aria-hidden />
+                  {he.siteUploadFile}
+                </button>
+              </>
+            ) : null}
             <button type="button" className="site-field-action" onClick={() => setTab("documents")}>
-              <Camera className="size-4" aria-hidden />
-              {he.siteFieldPhoto}
+              <FileText className="size-4" aria-hidden />
+              {he.siteFieldDocuments}
             </button>
-            <button type="button" className="site-field-action" onClick={() => setTab("service")}>
-              <Wrench className="size-4" aria-hidden />
-              {he.siteFieldService}
-            </button>
+            {canService ? (
+              <>
+                <button
+                  type="button"
+                  className="site-field-action"
+                  onClick={() => void navigate({ to: "/app/service" })}
+                >
+                  <Wrench className="size-4" aria-hidden />
+                  {he.siteFieldReportIssue}
+                </button>
+                <button type="button" className="site-field-action" onClick={() => setTab("service")}>
+                  <Wrench className="size-4" aria-hidden />
+                  {he.siteFieldServiceRecords}
+                </button>
+              </>
+            ) : null}
           </div>
           <div>
             <p className="mb-2 text-sm font-semibold">{he.siteFieldJobs}</p>

@@ -7,6 +7,7 @@
 
 import { ApiClientError, type ApiClient, type LeadOut, type SystemRecommendation } from "@site-secure/api-client";
 import { Button, Input, Select } from "@site-secure/ui";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { QuoteFlowSheet } from "../quote-creation/QuoteFlowSheet";
 import { he } from "../../../i18n/he";
@@ -252,13 +253,10 @@ export function SystemBuilderDrawer({
             {systemType !== "cctv" ? (
               <p className="text-sm text-fg-muted">{he.cpqSystemTypeSoon}</p>
             ) : step === "loading" ? (
-              <p className="text-sm text-fg" role="status" aria-live="polite">
-                {he.cpqCctvPlanning}
-              </p>
+              <CctvBuildProgress />
             ) : (
               <RequirementsForm req={req} setReq={setReq} inputError={inputError} />
             )}
-
             {serverError ? (
               <p className="text-sm text-danger" role="alert">
                 {serverError}
@@ -281,6 +279,30 @@ export function SystemBuilderDrawer({
         ) : null}
       </div>
     </QuoteFlowSheet>
+  );
+}
+
+function CctvBuildProgress() {
+  const stages = [
+    he.cpqCctvStageAnalyze,
+    he.cpqCctvStageStorage,
+    he.cpqCctvStagePoe,
+    he.cpqCctvStageCatalog,
+    he.cpqCctvStageRecommend,
+  ];
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setIndex((value) => (value + 1) % stages.length);
+    }, 900);
+    return () => window.clearInterval(id);
+  }, [stages.length]);
+  return (
+    <div className="flex flex-col items-center gap-3 py-6" role="status" aria-live="polite">
+      <div className="cpq-cctv-progress-ring" aria-hidden />
+      <p className="text-sm font-semibold text-fg">{stages[index]}</p>
+      <p className="text-xs text-fg-muted">{he.cpqCctvPlanningHint}</p>
+    </div>
   );
 }
 
@@ -541,8 +563,19 @@ function RecommendationReview({
     <div className="grid gap-4">
       {readiness?.empty_catalog ? (
         <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="status">
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogReadiness}</p>
+          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogEmptyTitle}</p>
           <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCatalogEmpty}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
+              {he.cpqCctvCatalogPickProduct}
+            </Link>
+            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
+              {he.cpqCctvCatalogAddProduct}
+            </Link>
+            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
+              {he.cpqCctvCatalogImport}
+            </Link>
+          </div>
         </div>
       ) : readiness && !readiness.ready_for_core ? (
         <div className="rounded-[var(--radius-control)] border border-border p-3" role="status">

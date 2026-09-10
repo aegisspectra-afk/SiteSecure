@@ -124,21 +124,30 @@ function QuotesBody() {
   const duplicate = useMutation({
     mutationFn: async (ids: string[]) => {
       if (!workspaceId) return [];
-      const created: string[] = [];
-      for (const id of ids) {
+      const unique = [...new Set(ids)];
+      const created: Awaited<ReturnType<typeof api.duplicateQuote>>[] = [];
+      for (const id of unique) {
         const row = await api.duplicateQuote(workspaceId, id);
-        created.push(row.id);
+        created.push(row);
       }
-      await queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
       return created;
     },
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
+      if (!workspaceId || !created.length) return;
+      queryClient.setQueriesData({ queryKey: ["quotes", workspaceId] }, (prev: unknown) => {
+        if (!prev || typeof prev !== "object" || !("pages" in prev)) return prev;
+        const pages = (prev as { pages: Array<{ items: unknown[] }> }).pages.map((page, index) => {
+          if (index !== 0) return page;
+          return { ...page, items: [...created, ...page.items] };
+        });
+        return { ...(prev as object), pages };
+      });
+      await queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
       if (created.length === 1) {
-        void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: created[0] } });
+        void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: created[0]!.id } });
       }
     },
   });
-
   if (!workspaceId) return <ErrorState title={he.quotesError} />;
   if (quotesQuery.isError) {
     return (

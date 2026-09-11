@@ -175,17 +175,20 @@ export function UsageSnapshot({
   const panelId = useId();
 
   return (
-    <section className={`ops-card p-4${compact ? " ops-usage-compact" : ""}`} aria-labelledby="usage-heading">
+    <section
+      className={`${compact ? "ops-workspace-panel" : "ops-card p-4"}`}
+      aria-labelledby="usage-heading"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="usage-heading" className="text-base font-semibold text-fg">
-          {he.usageTitle}
+        <h2 id="usage-heading" className={compact ? "ops-workspace-title" : "text-base font-semibold text-fg"}>
+          {compact ? he.dashWorkspaceTitle : he.usageTitle}
         </h2>
         {canManageTeam ? (
           <Link
             to="/app/settings/users"
             className="inline-flex min-h-9 items-center rounded-[var(--radius-control)] border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
-            {he.usageManageUsers}
+            {compact ? he.dashWorkspaceManage : he.usageManageUsers}
           </Link>
         ) : null}
       </div>

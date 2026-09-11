@@ -92,6 +92,7 @@ function AttentionRow({
 
   const body = (
     <>
+      <span className={`ops-attention-dot is-${visual.color}`} aria-hidden />
       <div className="ops-attention-main min-w-0">
         <p className="ops-attention-title">
           {num ? (

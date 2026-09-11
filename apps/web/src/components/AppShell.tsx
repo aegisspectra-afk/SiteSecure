@@ -117,6 +117,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useCommandPaletteHotkey(() => setCommandOpen(true));
 
+  useEffect(() => {
+    const onOpen = () => setCommandOpen(true);
+    window.addEventListener("site-secure:open-command-palette", onOpen);
+    return () => window.removeEventListener("site-secure:open-command-palette", onOpen);
+  }, []);
+
   const toggleCollapse = () => {
     setCollapsed((value) => {
       const next = !value;

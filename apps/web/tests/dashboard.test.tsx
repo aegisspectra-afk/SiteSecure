@@ -266,7 +266,8 @@ describe("OpsDashboard", () => {
     );
     expect(screen.getByRole("heading", { name: he.usageThresholdTitle })).toBeInTheDocument();
     expect(screen.getByText(he.usageThresholdBody("1/1 משתמשים במשרד"))).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: he.usageTitle })).not.toBeInTheDocument();
+    // V3: interruptive banner at/over limit; workspace meters remain in secondary panel.
+    expect(screen.getByRole("heading", { name: he.dashWorkspaceTitle })).toBeInTheDocument();
   });
 
   it("hides usage threshold banner for sales role", () => {
@@ -315,7 +316,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
   });
 
-  it("hides usage entirely when quotas are healthy", () => {
+  it("keeps healthy quotas in secondary workspace panel without interruptive banner", () => {
     render(
       <OpsDashboard
         data={{
@@ -347,7 +348,7 @@ describe("OpsDashboard", () => {
         }}
       />,
     );
-    expect(screen.queryByRole("heading", { name: he.usageTitle })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.dashWorkspaceTitle })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
   });
 
@@ -534,7 +535,7 @@ describe("OpsDashboard", () => {
         memberCount={2}
       />,
     );
-    const attentionHeading = screen.getByRole("heading", { name: he.commandTitleCount(1) });
+    const attentionHeading = screen.getByRole("heading", { name: he.dashCommandQueueCount(1) });
     const businessHeading = screen.getByRole("heading", { name: he.commercialPulseTitle });
     expect(
       attentionHeading.compareDocumentPosition(businessHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -592,7 +593,7 @@ describe("OpsDashboard", () => {
         countsReady
       />,
     );
-    expect(screen.getByRole("heading", { name: he.commandTitleCount(1) })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.dashCommandQueueCount(1) })).toBeInTheDocument();
     expect(screen.getAllByText(/Q-00024/)).toHaveLength(1);
     expect(screen.getByText(new RegExp(he.commandViewedWhy))).toBeInTheDocument();
     expect(screen.getByText(new RegExp(he.commandExpiringWhy))).toBeInTheDocument();
@@ -746,7 +747,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText(he.activeWorkEmpty)).not.toBeInTheDocument();
   });
 
-  it("V2.2 command header chips focus attention and route to quotes", () => {
+  it("V3 command header + signal strip focus attention and route to quotes", () => {
     render(
       <OpsDashboard
         data={{
@@ -754,21 +755,23 @@ describe("OpsDashboard", () => {
           summary: { ...emptySummary, quotes_sent: 1, quotes_open: 2, quotes_open_value: 1500 },
         }}
         roleKey="owner"
-        features={["quotes", "jobs"]}
+        features={["quotes", "jobs", "crm", "projects"]}
         customerCount={1}
         countsReady
         displayName="Ilya"
       />,
     );
-    expect(screen.getByText(he.commandQuietBody)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.commandHeaderAttention(0) })).toHaveAttribute(
+    expect(screen.getByText(he.opsOverviewKicker)).toBeInTheDocument();
+    expect(screen.getByText(he.dashStatusQuiet)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: new RegExp(he.dashSignalAttention) })).toHaveAttribute(
       "href",
       "#command-attention",
     );
-    expect(screen.getByRole("link", { name: he.commandHeaderQuotesOpen(2) })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: new RegExp(he.dashSignalQuotes) })).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: he.commandHeaderPipeline(formatMoney(1500)) }),
+      screen.getByRole("link", { name: new RegExp(`${he.dashSignalPipeline}.*${formatMoney(1500)}`) }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.dashCommandQueue })).toBeInTheDocument();
     expect(screen.queryByText(he.dashboardTitleShort)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toHaveAttribute(
       "href",

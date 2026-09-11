@@ -32,7 +32,7 @@ export function CommandStatus({
     >
       <div className="ops-attention-head">
         <h2 id="command-heading" className="ops-section-title is-hero">
-          {count ? he.commandTitleCount(count) : he.commandTitle}
+          {count ? he.dashCommandQueueCount(count) : he.dashCommandQueue}
         </h2>
         {count && hasMore ? (
           <Link to={viewAllTo} className="ops-section-link">

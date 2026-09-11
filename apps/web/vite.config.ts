@@ -38,7 +38,8 @@ export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, "../..");
   const rootEnv = loadEnv(mode, rootDir, "");
   const localEnv = loadEnv(mode, __dirname, "");
-  const env = { ...localEnv, ...rootEnv, ...process.env };
+  // apps/web/.env.local must win over root defaults (e.g. API port).
+  const env = { ...rootEnv, ...localEnv, ...process.env };
   const hosted = process.env.VERCEL === "1";
   if (hosted && /localhost|127\.0\.0\.1/i.test(env.VITE_API_URL ?? "")) {
     env.VITE_API_URL = "";

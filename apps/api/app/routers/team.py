@@ -173,11 +173,26 @@ def workspace_usage(
     billing = authorize(ctx=ctx, action="workspace.billing")
     if not view.allowed and not billing.allowed:
         _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
-    occupancy = fetch_occupancy(client, str(workspace_id))
     workspace_key = str(workspace_id)
-    used_bytes = fetch_storage_used_bytes(client, workspace_key)
-    quotes_count = fetch_quotes_count(client, workspace_key)
-    customers_count = fetch_customers_count(client, workspace_key)
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        fut_occ = pool.submit(fetch_occupancy, client, workspace_key)
+        fut_bytes = pool.submit(fetch_storage_used_bytes, client, workspace_key)
+        fut_quotes = pool.submit(fetch_quotes_count, client, workspace_key)
+        fut_customers = pool.submit(fetch_customers_count, client, workspace_key)
+        occupancy = fut_occ.result()
+        used_bytes = fut_bytes.result()
+        quotes_count = fut_quotes.result()
+        customers_count = fut_customers.result()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        fut_qd = pool.submit(fetch_quotes_detail_he, client, workspace_key)
+        fut_cd = pool.submit(fetch_customers_detail_he, client, workspace_key, customers_count)
+        quotes_detail_he = fut_qd.result()
+        customers_detail_he = fut_cd.result()
+
     meters = [
         UsageMeterOut(**row)
         for row in workspace_meters(
@@ -186,8 +201,8 @@ def workspace_usage(
             used_bytes=used_bytes,
             quotes_count=quotes_count,
             customers_count=customers_count,
-            quotes_detail_he=fetch_quotes_detail_he(client, workspace_key),
-            customers_detail_he=fetch_customers_detail_he(client, workspace_key, customers_count),
+            quotes_detail_he=quotes_detail_he,
+            customers_detail_he=customers_detail_he,
         )
     ]
     return WorkspaceUsageOut(

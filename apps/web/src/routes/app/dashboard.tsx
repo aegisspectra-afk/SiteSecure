@@ -77,14 +77,15 @@ function DashboardBody({
   });
   const leadAttentionQuery = useQuery({
     queryKey: ["dashboard-lead-next", workspaceId],
-    enabled: Boolean(workspaceId) && can(roleKey, "leads.view", features),
+    // Defer until core dashboard settles — leads are secondary attention, not first paint.
+    enabled: Boolean(workspaceId) && can(roleKey, "leads.view", features) && query.isSuccess,
     queryFn: () => api.listLeads(workspaceId!, { limit: 20 }),
     staleTime: 30_000,
   });
-  // Roles without usage access still need a real customer existence signal for activation.
+  // Only probe customers when usage cannot supply quota_clients (non-team, or usage failed).
   const customersProbe = useQuery({
     queryKey: ["activation-customers", workspaceId],
-    enabled: Boolean(workspaceId) && canProbeCustomers && !(canTeam && usage.isSuccess),
+    enabled: Boolean(workspaceId) && canProbeCustomers && (!canTeam || usage.isError),
     queryFn: () => api.listCustomers(workspaceId!, { limit: 1 }),
     staleTime: 60_000,
   });
@@ -96,6 +97,7 @@ function DashboardBody({
   const leadAttentionItems = filterLeadAttention(leadAttentionQuery.data?.items ?? []);
 
   if (!workspaceId) return <ErrorState title={he.dashboardError} />;
+  // Core Dashboard payload gates the skeleton. Secondary surfaces (usage/leads) must not.
   if (query.isLoading) return <DashboardSkeleton />;
   if (query.isError || !query.data) {
     return (
@@ -120,10 +122,14 @@ function DashboardBody({
       countsReady = false;
     } else if (usage.data) {
       customerCount = usage.data.meters.find((m) => m.key === "quota_clients")?.current ?? 0;
-    } else if (customersProbe.isLoading) {
-      countsReady = false;
+    } else if (usage.isError) {
+      if (customersProbe.isLoading) {
+        countsReady = false;
+      } else {
+        customerCount = customersProbe.isError ? 0 : (customersProbe.data?.items.length ?? 0);
+      }
     } else {
-      customerCount = customersProbe.isError ? 0 : (customersProbe.data?.items.length ?? 0);
+      customerCount = 0;
     }
   } else if (canProbeCustomers) {
     if (customersProbe.isLoading) {

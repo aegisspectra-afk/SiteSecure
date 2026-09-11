@@ -104,6 +104,25 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
         catalog = load_catalog()
         return frozenset(catalog["_grants"].get("owner") or catalog["_grants"].get(role_key) or ())
 
+    # Fast path: avoid seed RPC when the role row already has grants.
+    if effective_key:
+        quick = client.get(
+            "workspace_roles",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "key": f"eq.{effective_key}",
+                "select": "key,grants,base_role_key,is_system",
+                "limit": "1",
+            },
+        )
+        if quick.status_code == 200 and quick.json():
+            grants = normalize_grants(quick.json()[0].get("grants"))
+            if grants == ["*"]:
+                catalog = load_catalog()
+                return frozenset(catalog["_grants"].get("owner") or ())
+            if grants:
+                return frozenset(grants)
+
     rows = ensure_workspace_roles(client, workspace_id)
     match = next((r for r in rows if r.get("key") == effective_key), None)
     if match is None and effective_key != role_key:

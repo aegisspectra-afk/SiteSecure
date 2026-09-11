@@ -130,25 +130,41 @@ def load_authz_context(
     if workspace_role_key == "founding_technician":
         workspace_role_key = "technician"
 
-    workspace = client.get(
-        "workspaces",
-        params={"id": f"eq.{workspace_id}", "select": "id,status,name"},
-    )
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _workspace():
+        return client.get(
+            "workspaces",
+            params={"id": f"eq.{workspace_id}", "select": "id,status,name"},
+        )
+
+    def _entitlements():
+        return client.rpc("my_workspace_entitlements", {"p_workspace_id": workspace_id})
+
+    def _assignments():
+        return client.get(
+            "assignments",
+            params={
+                "user_id": f"eq.{user_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "resource_type,resource_id",
+            },
+        )
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        fut_ws = pool.submit(_workspace)
+        fut_ent = pool.submit(_entitlements)
+        fut_asg = pool.submit(_assignments)
+        workspace = fut_ws.result()
+        ent = fut_ent.result()
+        assigned = fut_asg.result()
+
     if workspace.status_code != 200 or not workspace.json():
         raise ApiError(404, "NOT_FOUND", "לא נמצא")
     ws = workspace.json()[0]
 
-    ent = client.rpc("my_workspace_entitlements", {"p_workspace_id": workspace_id})
     plan_key, sub_status, features = parse_entitlements_rpc(ent, workspace_id=workspace_id)
 
-    assigned = client.get(
-        "assignments",
-        params={
-            "user_id": f"eq.{user_id}",
-            "workspace_id": f"eq.{workspace_id}",
-            "select": "resource_type,resource_id",
-        },
-    )
     assigned_ids: frozenset[str] = frozenset()
     if assigned.status_code == 200:
         from .authz.scope import expand_assigned_resource_ids

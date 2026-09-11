@@ -1613,6 +1613,9 @@ body {
 
 .ops-dashboard-v3 {
   max-width: 76rem;
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .ops-cmd-header {
@@ -2623,7 +2626,10 @@ body {
 }
 
 .ops-commercial-apex {
-  margin-inline: -0.1rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ops-commercial-apex .apexcharts-toolbar {

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
 from ..authz.limits import evaluate_storage_limit, raise_plan_limit
+from ..authz.scope import apply_assigned_document_list_filter, empty_assigned_page
 from ..authz.types import ResourceRef
 from ..authz.usage import fetch_storage_used_bytes
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
@@ -100,6 +101,9 @@ def list_documents(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "documents.view")
+    empty = empty_assigned_page(ctx)
+    if empty is not None:
+        return empty
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -114,6 +118,7 @@ def list_documents(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_document_list_filter(ctx, params)
     rows = as_list(client.get("documents", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": page.items, "next_cursor": page.next_cursor}

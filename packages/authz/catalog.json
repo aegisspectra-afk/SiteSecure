@@ -4,7 +4,7 @@
   "default_plan_key": "solo",
   "seat_buckets": {
     "seats_operator": ["owner", "administrator", "manager", "sales"],
-    "seats_field": ["technician", "viewer"]
+    "seats_field": ["technician", "viewer", "founding_technician"]
   },
   "roles": [
     { "key": "owner", "label_he": "בעלים", "label_en": "Owner", "default_scope": "all", "is_system": true },
@@ -221,12 +221,10 @@
       "dashboard.view", "calendar.view", "calendar.edit",
       "settings.view",
       "crm.view",
-      "quotes.view",
-      "catalog.view",
-      "projects.view", "projects.create", "projects.edit", "projects.close",
-      "jobs.view", "jobs.create", "jobs.start", "jobs.complete",
+      "projects.view",
+      "jobs.view", "jobs.start", "jobs.complete",
       "service.view", "service.create", "service.edit", "service.close",
-      "sites.view", "sites.create", "sites.edit",
+      "sites.view", "sites.edit",
       "systems.view", "systems.edit",
       "documents.view", "documents.upload",
       "warranties.view", "warranties.issue",

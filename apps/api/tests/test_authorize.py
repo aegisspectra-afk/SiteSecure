@@ -76,6 +76,17 @@ def test_viewer_readonly():
     assert d.allowed is False
 
 
+def test_technician_field_grants_exclude_commercial():
+    assert authorize(ctx=_ctx("technician"), action="quotes.view").allowed is False
+    assert authorize(ctx=_ctx("technician"), action="catalog.view").allowed is False
+    assert authorize(ctx=_ctx("technician"), action="sites.create").allowed is False
+    assert authorize(ctx=_ctx("technician"), action="jobs.create").allowed is False
+    assert authorize(ctx=_ctx("technician"), action="projects.create").allowed is False
+    assert authorize(ctx=_ctx("technician"), action="jobs.complete").allowed is True
+    assert authorize(ctx=_ctx("technician"), action="crm.view").allowed is True
+    assert authorize(ctx=_ctx("technician"), action="sites.view").allowed is True
+
+
 def test_technician_scope_denied_without_assignment():
     d = authorize(
         ctx=_ctx("technician"),
@@ -308,13 +319,13 @@ P0_ACTIONS = {
         "catalog.edit": False,
     },
     "technician": {
-        "quotes.view": True,
+        "quotes.view": False,
         "quotes.create": False,
         "quotes.edit": False,
         "quotes.delete": False,
         "quotes.send": False,
         "quotes.view_cost": False,
-        "catalog.view": True,
+        "catalog.view": False,
         "catalog.edit": False,
     },
     "viewer": {

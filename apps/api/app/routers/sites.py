@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
+from ..authz.scope import apply_assigned_column_filter, empty_assigned_page
 from ..authz.types import ResourceRef
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
@@ -90,6 +91,9 @@ def list_sites(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "sites.view")
+    empty = empty_assigned_page(ctx)
+    if empty is not None:
+        return empty
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -111,6 +115,7 @@ def list_sites(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_column_filter(ctx, params, column="id")
     rows = as_list(client.get("sites", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": [_out(row).model_dump() for row in page.items], "next_cursor": page.next_cursor}

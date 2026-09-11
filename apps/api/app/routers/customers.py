@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
 from ..authz.limits import evaluate_count_limit, raise_plan_limit
+from ..authz.scope import apply_assigned_column_filter, empty_assigned_page
 from ..authz.types import ResourceRef
 from ..authz.usage import fetch_customers_count
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
@@ -121,6 +122,9 @@ def list_customers(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "crm.view")
+    empty = empty_assigned_page(ctx)
+    if empty is not None:
+        return empty
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -140,6 +144,7 @@ def list_customers(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_column_filter(ctx, params, column="id")
     rows = as_list(client.get("customers", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": [_out(row).model_dump() for row in page.items], "next_cursor": page.next_cursor}
@@ -190,6 +195,7 @@ def get_customer(
             },
         )
     )
+    require(ctx, "crm.view", resource=ResourceRef(type="customer", id=row["id"]))
     return _out(row)
 
 

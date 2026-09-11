@@ -143,11 +143,21 @@ def load_authz_context(
 
     assigned = client.get(
         "assignments",
-        params={"user_id": f"eq.{user_id}", "workspace_id": f"eq.{workspace_id}", "select": "resource_id"},
+        params={
+            "user_id": f"eq.{user_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "resource_type,resource_id",
+        },
     )
-    assigned_ids = frozenset()
+    assigned_ids: frozenset[str] = frozenset()
     if assigned.status_code == 200:
-        assigned_ids = frozenset(row["resource_id"] for row in assigned.json())
+        from .authz.scope import expand_assigned_resource_ids
+
+        assigned_ids = expand_assigned_resource_ids(
+            client,
+            workspace_id,
+            list(assigned.json() or []),
+        )
 
     from .workspace_rbac import resolve_role_grants
 

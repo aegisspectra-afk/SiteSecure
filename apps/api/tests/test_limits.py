@@ -10,7 +10,7 @@ def test_solo_field_seat_blocks_at_catalog_cap():
     d = evaluate_seat_limit(
         plan_key="solo",
         invite_role="technician",
-        occupied_roles=["owner", "technician", "founding_technician", "viewer"],
+        occupied_roles=["owner", "technician", "technician", "viewer"],
     )
     assert d.allowed is False
     assert d.code == "PLAN_LIMIT_REACHED"

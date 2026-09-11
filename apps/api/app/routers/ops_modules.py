@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..audit import write_audit
 from ..authz.guard import require
+from ..authz.scope import apply_assigned_job_list_filter, apply_assigned_project_list_filter, empty_assigned_page
 from ..authz.types import ResourceRef
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import ApiError
@@ -340,6 +341,9 @@ def list_projects(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "projects.view")
+    empty = empty_assigned_page(ctx)
+    if empty is not None:
+        return empty
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -358,6 +362,7 @@ def list_projects(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_project_list_filter(ctx, params)
     rows = as_list(client.get("projects", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": page.items, "next_cursor": page.next_cursor}
@@ -554,6 +559,9 @@ def list_service_calls(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "service.view")
+    empty = empty_assigned_page(ctx)
+    if empty is not None:
+        return empty
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -568,6 +576,7 @@ def list_service_calls(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_job_list_filter(ctx, params)
     rows = as_list(client.get("service_calls", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": page.items, "next_cursor": page.next_cursor}

@@ -347,10 +347,10 @@ def security_center(
 ) -> SecurityCenterOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     _raise_decision(
-        authorize(ctx=ctx, action="settings.view"),
+        authorize(ctx=ctx, action="settings.general"),
         client=client,
         workspace_id=str(workspace_id),
-        action="settings.view",
+        action="settings.general",
     )
     catalog = load_catalog()
     audit_feature = catalog.get("permission_feature", {}).get("audit.view")

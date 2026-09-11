@@ -203,21 +203,34 @@ def complete_upload(
     )
     reserved = max(0, int(existing.get("reserved_bytes") or 0))
     reported = body.byte_size
+    bucket = str(existing["storage_bucket"])
+    path = str(existing["storage_path"])
     storage_size = None
     try:
-        storage_size = svc.storage_object_size(
-            str(existing["storage_bucket"]),
-            str(existing["storage_path"]),
-        )
+        storage_size = svc.storage_object_size(bucket, path)
     except Exception:
         storage_size = None
 
-    # Prefer Storage metadata when available; never trust a client size below it.
-    final_size = reserved
-    if storage_size is not None:
-        final_size = max(storage_size, reported or 0, reserved)
-    elif reported is not None:
-        final_size = max(reported, reserved)
+    # Commit only when the Storage object actually exists. Incomplete uploads may
+    # leave a reservation row (byte_size null); never promote those to visible
+    # attachments based on client-reported size alone.
+    if storage_size is None:
+        _cleanup_failed_upload(
+            svc,
+            client,
+            workspace_id=workspace_id,
+            document_id=str(document_id),
+            bucket=bucket,
+            path=path,
+        )
+        raise ApiError(
+            409,
+            "STORAGE_OBJECT_MISSING",
+            "הקובץ לא נמצא באחסון — יש להעלות מחדש",
+            {"document_id": str(document_id)},
+        )
+
+    final_size = max(storage_size, reported or 0, reserved)
 
     if final_size > reserved:
         # Charge only the growth beyond the reservation (reservation already counted).
@@ -255,8 +268,8 @@ def complete_upload(
                 client,
                 workspace_id=workspace_id,
                 document_id=str(document_id),
-                bucket=str(existing["storage_bucket"]),
-                path=str(existing["storage_path"]),
+                bucket=bucket,
+                path=path,
             )
         raise
     return {
@@ -273,6 +286,7 @@ def document_url(
     document_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "documents.view")
@@ -282,10 +296,21 @@ def document_url(
             params={
                 "id": f"eq.{document_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,storage_bucket,storage_path,entity_type,entity_id",
+                "select": "id,storage_bucket,storage_path,entity_type,entity_id,byte_size",
             },
         )
     )
     require(ctx, "documents.view", resource=_entity_resource(row["entity_type"], row["entity_id"]))
-    url = client.storage_sign_download(row["storage_bucket"], row["storage_path"], expires_in=60)
+    # Incomplete reservations (upload intent without Storage object) are not downloadable.
+    if row.get("byte_size") is None:
+        raise ApiError(409, "STORAGE_OBJECT_MISSING", "הקובץ עדיין לא הושלם או חסר באחסון")
+    bucket = str(row["storage_bucket"])
+    path = str(row["storage_path"])
+    try:
+        size = svc.storage_object_size(bucket, path)
+    except Exception:
+        size = None
+    if size is None:
+        raise ApiError(409, "STORAGE_OBJECT_MISSING", "הקובץ לא נמצא באחסון")
+    url = client.storage_sign_download(bucket, path, expires_in=60)
     return {"url": url, "expires_in": 60}

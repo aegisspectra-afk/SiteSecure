@@ -23,7 +23,8 @@
   "plans": [
     {
       "key": "solo",
-      "label_he": "Solo",
+      "label_he": "Free",
+      "label_en": "Free",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings"],
       "limits": {
         "seats_operator": 1,
@@ -36,7 +37,8 @@
     },
     {
       "key": "business",
-      "label_he": "Business",
+      "label_he": "Pro",
+      "label_en": "Pro",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "reports", "automation", "team", "audit", "api"],
       "limits": {
         "seats_operator": 15,
@@ -50,6 +52,7 @@
     {
       "key": "enterprise",
       "label_he": "Enterprise",
+      "label_en": "Enterprise",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "finance", "accounting_documents", "reports", "automation", "team", "audit", "api", "ai", "branches"],
       "limits": {
         "seats_operator": 0,

@@ -2,6 +2,9 @@ SITE SECURE V2 authorization catalog.
 
 `catalog.json` is the source of grants, plans, feature entitlements, resource limits, seat buckets, and assignable invite roles.
 
+**Plan keys (persisted):** `solo` | `business` | `enterprise`  
+**Public labels (UI):** Free | Pro | Enterprise — via `planLabel()` / `label_he`. Do not authorize by plan name string; use features/capabilities.
+
 Used by:
 
 - Postgres seed (migrations `0008`)

@@ -3,19 +3,24 @@ import {
   defaultPlanKey,
   planHasFeature,
   planLabel,
+  planLabelEn,
   seatLimitReached,
   seatUsage,
 } from "@site-secure/authz";
 
 describe("catalog entitlements", () => {
-  it("defaults self-serve workspaces to solo", () => {
+  it("defaults self-serve workspaces to solo (public label Free)", () => {
     expect(defaultPlanKey()).toBe("solo");
-    expect(planLabel("solo")).toBe("Solo");
+    expect(planLabel("solo")).toBe("Free");
+    expect(planLabel("business")).toBe("Pro");
+    expect(planLabel("enterprise")).toBe("Enterprise");
+    expect(planLabelEn("solo")).toBe("Free");
+    expect(planLabelEn("business")).toBe("Pro");
     expect(planHasFeature("solo", "inventory")).toBe(false);
     expect(planHasFeature("business", "inventory")).toBe(true);
   });
 
-  it("does not let Solo invite office roles", () => {
+  it("does not let Free (solo) invite office roles", () => {
     expect(assignableInviteRoles("solo")).toEqual(["technician", "viewer"]);
     expect(assignableInviteRoles("business")).toContain("manager");
   });

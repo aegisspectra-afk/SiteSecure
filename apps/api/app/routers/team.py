@@ -393,7 +393,7 @@ def security_center(
             key="audit_logging",
             label_he="Audit Logging",
             status="healthy" if audit_in_plan else "not_in_plan",
-            detail_he="צפייה ביומן כלולה בתוכנית" if audit_in_plan else "צפייה ביומן כלולה בתוכנית Business",
+            detail_he="צפייה ביומן כלולה בתוכנית" if audit_in_plan else "צפייה ביומן כלולה בתוכנית Pro",
         ),
         SecuritySignalOut(
             key="api_security",

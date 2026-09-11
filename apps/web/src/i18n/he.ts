@@ -1095,7 +1095,7 @@ export const he = {
   pdfSecEmptySummary: "ללא בחירות",
   pdfDefaultsInheritanceHint: "ברירת מחדל לתבנית — הצעה ספציפית יכולה לדרוס ערכים אלה.",
   pdfTotalsServerHint: "הסכומים מגיעים מחישוב השרת בלבד — התבנית רק מציגה.",
-  rbacPlanLocked: "עריכת הרשאות ותפקידים מותאמים זמינים בתוכנית Business ומעלה. ניתן לשייך תפקידים קבועים מתוך צוות.",
+  rbacPlanLocked: "עריכת הרשאות ותפקידים מותאמים זמינים בתוכנית Pro ומעלה. ניתן לשייך תפקידים קבועים מתוך צוות.",
   pdfTemplateTypes: {
     quote: "הצעת מחיר",
     service: "שירות",
@@ -1148,7 +1148,7 @@ export const he = {
   auditEmpty: "אין עדיין רשומות",
   auditError: "לא ניתן לטעון את היומן",
   auditLockedTitle: "היומן אינו כלול בתוכנית",
-  auditLockedBody: "צפייה ב־Audit כלולה בתוכנית Business. הכתיבה עצמה כבר פעילה.",
+  auditLockedBody: "צפייה ב־Audit כלולה בתוכנית Pro. הכתיבה עצמה כבר פעילה.",
   auditAction: "פעולה",
   auditResult: "תוצאה",
   auditTime: "זמן",

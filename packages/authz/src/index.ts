@@ -23,9 +23,18 @@ export type StorageUsage = {
 type PlanRow = {
   key: string;
   label_he: string;
+  /** Public commercial name (Free / Pro / Enterprise). Keys remain solo/business/enterprise. */
+  label_en?: string;
   features: string[];
   limits: Record<string, number>;
   assignable_roles?: string[];
+};
+
+/** Persisted plan_key → public commercial label. Keys are never renamed here. */
+export const PLAN_PUBLIC_LABELS: Record<string, string> = {
+  solo: "Free",
+  business: "Pro",
+  enterprise: "Enterprise",
 };
 
 const plans = catalog.plans as PlanRow[];
@@ -43,8 +52,23 @@ export function getPlan(planKey: string | undefined): PlanRow | undefined {
   return plans.find((plan) => plan.key === planKey);
 }
 
+/**
+ * Public plan label for UI (Free / Pro / Enterprise).
+ * Persisted keys remain solo / business / enterprise — never gate features on these strings.
+ */
 export function planLabel(planKey: string | undefined): string {
-  return getPlan(planKey)?.label_he ?? planKey ?? "";
+  if (!planKey) return "";
+  const row = getPlan(planKey);
+  if (row?.label_he) return row.label_he;
+  return PLAN_PUBLIC_LABELS[planKey] ?? planKey;
+}
+
+/** English commercial label; falls back to planLabel. */
+export function planLabelEn(planKey: string | undefined): string {
+  if (!planKey) return "";
+  const row = getPlan(planKey);
+  if (row?.label_en) return row.label_en;
+  return PLAN_PUBLIC_LABELS[planKey] ?? planLabel(planKey);
 }
 
 export function planHasFeature(planKey: string | undefined, feature: string): boolean {

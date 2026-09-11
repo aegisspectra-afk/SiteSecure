@@ -494,7 +494,7 @@ def create_workspace_role(
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     _raise(authorize(ctx=ctx, action="roles.manage"))
     if not _plan_allows_custom_rbac(ctx):
-        raise ApiError(403, "FEATURE_NOT_INCLUDED", "תפקידים מותאמים זמינים בתוכנית Business ומעלה")
+        raise ApiError(403, "FEATURE_NOT_INCLUDED", "תפקידים מותאמים זמינים בתוכנית Pro ומעלה")
     ensure_workspace_roles(client, str(workspace_id))
     base = body.base_role_key if body.base_role_key in SYSTEM_ROLE_META else "viewer"
     if base == "owner":
@@ -542,7 +542,7 @@ def patch_workspace_role(
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     _raise(authorize(ctx=ctx, action="roles.manage"))
     if not _plan_allows_custom_rbac(ctx):
-        raise ApiError(403, "FEATURE_NOT_INCLUDED", "עריכת הרשאות זמינה בתוכנית Business ומעלה")
+        raise ApiError(403, "FEATURE_NOT_INCLUDED", "עריכת הרשאות זמינה בתוכנית Pro ומעלה")
     current = client.get(
         "workspace_roles",
         params={"id": f"eq.{role_id}", "workspace_id": f"eq.{workspace_id}", "select": "*"},

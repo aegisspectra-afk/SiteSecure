@@ -59,6 +59,21 @@ def test_technician_cannot_admin():
     assert d.allowed is True
 
 
+def test_strip_technician_commercial_grants_helper():
+    from app.workspace_rbac import strip_technician_commercial_grants
+
+    dirty = ["jobs.view", "quotes.view", "catalog.view", "documents.upload"]
+    cleaned = strip_technician_commercial_grants(dirty, role_key="technician")
+    assert "quotes.view" not in cleaned
+    assert "catalog.view" not in cleaned
+    assert "jobs.view" in cleaned
+    assert "documents.upload" in cleaned
+    # non-technician unchanged
+    sales = strip_technician_commercial_grants(["quotes.view", "catalog.view"], role_key="sales")
+    assert "quotes.view" in sales
+    assert "catalog.view" in sales
+
+
 def test_founding_technician_is_not_an_authz_role():
     """Legacy role key has no grants; Founding Technician is badge-only."""
     d = authorize(ctx=_ctx("founding_technician"), action="crm.edit")

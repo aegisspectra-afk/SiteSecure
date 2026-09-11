@@ -270,7 +270,9 @@ describe("role catalog display", () => {
     expect(roleGranted("technician", "crm.view")).toBe(true);
     expect(roleGranted("technician", "crm.create")).toBe(false);
     expect(roleGranted("technician", "sites.view")).toBe(true);
-    expect(roleGranted("technician", "sites.create")).toBe(true);
+    expect(roleGranted("technician", "sites.create")).toBe(false);
+    expect(roleGranted("technician", "quotes.view")).toBe(false);
+    expect(roleGranted("technician", "catalog.view")).toBe(false);
     expect(roleGranted("technician", "jobs.view")).toBe(true);
     expect(roleGranted("technician", "jobs.assign")).toBe(false);
     expect(roleGranted("technician", "users.view")).toBe(false);

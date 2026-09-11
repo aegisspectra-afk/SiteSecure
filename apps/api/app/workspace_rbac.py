@@ -18,6 +18,44 @@ SYSTEM_ROLE_META = {
     "viewer": {"label_he": "צפייה בלבד", "description": "צפייה בלבד בכל המודולים הפתוחים.", "locked": False},
 }
 
+# Hard deny: technician must never receive commercial Quotes/Catalog visibility,
+# even if a stale workspace_roles.grants row or old API catalog still lists them.
+TECHNICIAN_COMMERCIAL_DENY = frozenset(
+    {
+        "quotes.view",
+        "quotes.create",
+        "quotes.edit",
+        "quotes.delete",
+        "quotes.send",
+        "quotes.approve",
+        "quotes.export",
+        "quotes.view_cost",
+        "quotes.override_price",
+        "catalog.view",
+        "catalog.edit",
+    }
+)
+
+
+def _is_technician_role(role_key: str | None, workspace_role_key: str | None = None, base_role_key: str | None = None) -> bool:
+    keys = {str(x or "").strip() for x in (role_key, workspace_role_key, base_role_key)}
+    return "technician" in keys
+
+
+def strip_technician_commercial_grants(
+    grants: frozenset[str] | list[str],
+    *,
+    role_key: str | None,
+    workspace_role_key: str | None = None,
+    base_role_key: str | None = None,
+) -> frozenset[str]:
+    cleaned = frozenset(grants)
+    if cleaned == frozenset({"*"}):
+        return cleaned
+    if not _is_technician_role(role_key, workspace_role_key, base_role_key):
+        return cleaned
+    return cleaned - TECHNICIAN_COMMERCIAL_DENY
+
 
 def catalog_grant_list(role_key: str) -> list[str]:
     catalog = load_catalog()
@@ -104,6 +142,8 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
         catalog = load_catalog()
         return frozenset(catalog["_grants"].get("owner") or catalog["_grants"].get(role_key) or ())
 
+    base_role_key: str | None = None
+
     # Fast path: avoid seed RPC when the role row already has grants.
     if effective_key:
         quick = client.get(
@@ -116,26 +156,44 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
             },
         )
         if quick.status_code == 200 and quick.json():
-            grants = normalize_grants(quick.json()[0].get("grants"))
+            row = quick.json()[0]
+            base_role_key = row.get("base_role_key")
+            grants = normalize_grants(row.get("grants"))
             if grants == ["*"]:
                 catalog = load_catalog()
                 return frozenset(catalog["_grants"].get("owner") or ())
             if grants:
-                return frozenset(grants)
+                return strip_technician_commercial_grants(
+                    grants,
+                    role_key=role_key,
+                    workspace_role_key=effective_key,
+                    base_role_key=base_role_key,
+                )
 
     rows = ensure_workspace_roles(client, workspace_id)
     match = next((r for r in rows if r.get("key") == effective_key), None)
     if match is None and effective_key != role_key:
         match = next((r for r in rows if r.get("key") == role_key), None)
     if match is not None:
+        base_role_key = match.get("base_role_key")
         grants = normalize_grants(match.get("grants"))
         if grants == ["*"]:
             catalog = load_catalog()
             return frozenset(catalog["_grants"].get("owner") or ())
         if grants:
-            return frozenset(grants)
+            return strip_technician_commercial_grants(
+                grants,
+                role_key=role_key,
+                workspace_role_key=effective_key,
+                base_role_key=base_role_key,
+            )
     catalog = load_catalog()
-    return frozenset(catalog["_grants"].get(role_key) or ())
+    return strip_technician_commercial_grants(
+        catalog["_grants"].get(role_key) or (),
+        role_key=role_key,
+        workspace_role_key=effective_key,
+        base_role_key=base_role_key or role_key,
+    )
 
 
 def find_workspace_role(client: UserClient, workspace_id: str, key: str) -> dict | None:

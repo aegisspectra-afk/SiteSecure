@@ -843,10 +843,12 @@ export type ServiceCallOut = {
   priority: string;
   customer_id: string;
   site_id: string;
+  system_id?: string | null;
   title: string;
   description?: string | null;
   created_at: string;
   updated_at: string;
+  linked_jobs?: { id: string; number: string; title: string; status: string; scheduled_for?: string | null }[];
 };
 
 export type WarrantyOut = {
@@ -1099,6 +1101,14 @@ export type AuthzCatalog = {
   plans: { key: string; label_he: string; features: string[] }[];
 };
 
+export type JobAssigneeOut = {
+  user_id: string;
+  display_name?: string | null;
+  assigned_at?: string | null;
+  assigned_by?: string | null;
+  assigned_by_name?: string | null;
+};
+
 export type JobOut = {
   id: string;
   workspace_id: string;
@@ -1106,16 +1116,22 @@ export type JobOut = {
   title: string;
   kind?: string;
   status: string;
+  priority?: string;
   project_id?: string | null;
   service_call_id?: string | null;
   customer_id?: string;
   site_id?: string;
   scheduled_for?: string | null;
+  scheduled_end?: string | null;
   started_at?: string | null;
+  arrived_at?: string | null;
   completed_at?: string | null;
   completion_notes?: string | null;
+  created_by?: string | null;
   created_at?: string;
   updated_at?: string;
+  assignees?: JobAssigneeOut[];
+  is_assigned?: boolean;
 };
 
 export type JobChecklistItem = {
@@ -1679,6 +1695,8 @@ export function createApiClient(opts: {
         `/api/v1/workspaces/${workspaceId}/service-calls?${params}`,
       );
     },
+    getServiceCall: (workspaceId: string, callId: string) =>
+      request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}`),
     createServiceCall: (
       workspaceId: string,
       body: { title: string; customer_id: string; site_id: string; priority?: string; description?: string },
@@ -1694,6 +1712,15 @@ export function createApiClient(opts: {
     ) =>
       request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}`, {
         method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    createJobFromServiceCall: (
+      workspaceId: string,
+      callId: string,
+      body: { scheduled_for?: string; scheduled_end?: string; title?: string } = {},
+    ) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}/create-job`, {
+        method: "POST",
         body: JSON.stringify(body),
       }),
     listWarranties: (
@@ -1762,12 +1789,13 @@ export function createApiClient(opts: {
       }),
     listJobs: (
       workspaceId: string,
-      opts: { q?: string; status?: string; site_id?: string; limit?: number } = {},
+      opts: { q?: string; status?: string; site_id?: string; service_call_id?: string; limit?: number } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status) params.set("status", opts.status);
       if (opts.site_id) params.set("site_id", opts.site_id);
+      if (opts.service_call_id) params.set("service_call_id", opts.service_call_id);
       return request<{ items: JobOut[] }>(`/api/v1/workspaces/${workspaceId}/jobs?${params}`);
     },
     getJob: (workspaceId: string, jobId: string) =>
@@ -1780,13 +1808,32 @@ export function createApiClient(opts: {
         site_id: string;
         kind?: string;
         scheduled_for?: string;
+        scheduled_end?: string;
         project_id?: string;
+        service_call_id?: string;
+        priority?: string;
       },
     ) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    assignJob: (workspaceId: string, jobId: string, body: { user_id: string }) =>
+      request<{
+        job_id: string;
+        user_id: string;
+        assigned_at?: string | null;
+        assigned_by?: string | null;
+        assignees: JobAssigneeOut[];
+        reassigned: boolean;
+      }>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/assign`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    enRouteJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/en-route`, { method: "POST" }),
+    arrivedJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/arrived`, { method: "POST" }),
     startJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
     completeJob: (workspaceId: string, jobId: string, body: { completion_notes?: string } = {}) =>

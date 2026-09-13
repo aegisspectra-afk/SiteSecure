@@ -30,9 +30,11 @@ QUOTE_LABEL_HE = {
 JOB_LABEL_HE = {
     "scheduled": "מתוכננת",
     "en_route": "בדרך",
+    "arrived": "באתר",
     "in_progress": "בביצוע",
     "completed": "נסגרה",
     "cancelled": "בוטלה",
+    "blocked": "חסומה",
 }
 
 EVENT_LABEL_HE = {
@@ -43,7 +45,7 @@ EVENT_LABEL_HE = {
     "expired": "הצעה פגה",
 }
 
-OPEN_JOB = frozenset({"scheduled", "en_route", "in_progress"})
+OPEN_JOB = frozenset({"scheduled", "en_route", "arrived", "in_progress", "blocked"})
 VANITY_KEYS = frozenset(
     {
         "kpis",
@@ -374,35 +376,49 @@ def _today_jobs(
     today = local_now.date()
     rows: list[dict[str, Any]] = []
     for job in jobs:
-        if job.get("status") in {"completed", "cancelled"}:
+        status = str(job.get("status") or "")
+        if status in {"cancelled"}:
             continue
         when = _parse_dt(job.get("scheduled_for") if isinstance(job.get("scheduled_for"), str) else None)
-        if when:
-            when_local = when.astimezone(tz)
-            if when_local.date() != today and job.get("status") == "scheduled":
+        if status == "completed":
+            completed = _parse_dt(job.get("completed_at") if isinstance(job.get("completed_at"), str) else None)
+            if completed and completed.astimezone(tz).date() != today:
                 continue
-        elif job.get("status") == "scheduled":
+        elif when:
+            when_local = when.astimezone(tz)
+            if when_local.date() != today and status == "scheduled":
+                continue
+        elif status == "scheduled":
             continue
         actions: list[str] = []
-        status = job.get("status")
         if can_jobs_start and status == "scheduled":
+            actions.append("en_route")
+        if can_jobs_start and status == "en_route":
+            actions.append("arrived")
+        if can_jobs_start and status in {"arrived", "en_route"}:
             actions.append("start")
-        if can_jobs_complete and status in {"en_route", "in_progress"}:
+        if can_jobs_complete and status == "in_progress":
             actions.append("complete")
+        if status in {"en_route", "arrived", "in_progress", "blocked"}:
+            severity = "now"
+        elif status == "completed":
+            severity = "info"
+        else:
+            severity = "next"
         rows.append(
             _item(
                 entity_type="job",
                 entity_id=str(job["id"]),
                 number=str(job.get("number") or ""),
-                title_he=JOB_LABEL_HE.get(str(status), "עבודה"),
+                title_he=JOB_LABEL_HE.get(status, "עבודה"),
                 customer_name=names.get(str(job["customer_id"])) if job.get("customer_id") else None,
                 site_name=names.get(str(job["site_id"])) if job.get("site_id") else None,
                 scheduled_for=job.get("scheduled_for"),
-                severity="next" if status == "scheduled" else "now",
+                severity=severity,
                 actions=actions,
             )
         )
-    rows.sort(key=lambda row: row.get("scheduled_for") or "")
+    rows.sort(key=lambda row: (0 if row.get("severity") == "now" else 1 if row.get("severity") == "next" else 2, row.get("scheduled_for") or ""))
     return rows
 
 

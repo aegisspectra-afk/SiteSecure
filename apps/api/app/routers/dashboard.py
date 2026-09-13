@@ -23,7 +23,8 @@ router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"
 
 QUOTE_SELECT = "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross"
 JOB_SELECT = (
-    "id,number,title,status,customer_id,site_id,scheduled_for,started_at,completed_at,updated_at"
+    "id,number,title,status,priority,customer_id,site_id,scheduled_for,scheduled_end,"
+    "started_at,arrived_at,completed_at,updated_at"
 )
 COST_SELECT_FORBIDDEN = ("cost_total", "margin_amount", "margin_percent")
 

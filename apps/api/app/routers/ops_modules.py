@@ -646,6 +646,142 @@ def patch_service_call(
     )
 
 
+@router.get("/service-calls/{call_id}")
+def get_service_call(
+    workspace_id: UUID,
+    call_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "service.view")
+    row = one_or_404(
+        client.get(
+            "service_calls",
+            params={
+                "id": f"eq.{call_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": SERVICE_SELECT,
+            },
+        )
+    )
+    require(
+        ctx,
+        "service.view",
+        resource=ResourceRef(type="service_call", id=row["id"], site_id=row.get("site_id")),
+    )
+    linked = as_list(
+        client.get(
+            "jobs",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "service_call_id": f"eq.{call_id}",
+                "select": "id,number,title,status,scheduled_for,priority,created_at",
+                "order": "created_at.desc",
+                "limit": "20",
+            },
+        )
+    )
+    return {**row, "linked_jobs": linked}
+
+
+class ServiceCallCreateJob(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scheduled_for: str | None = None
+    scheduled_end: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+@router.post("/service-calls/{call_id}/create-job")
+def create_job_from_service_call(
+    workspace_id: UUID,
+    call_id: UUID,
+    body: ServiceCallCreateJob,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    from ..site_timeline import write_site_timeline
+
+    ctx = _ctx(client, user, workspace_id)
+    call = one_or_404(
+        client.get(
+            "service_calls",
+            params={
+                "id": f"eq.{call_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": SERVICE_SELECT,
+            },
+        )
+    )
+    require(
+        ctx,
+        "jobs.create",
+        resource=ResourceRef(type="job", site_id=call.get("site_id")),
+    )
+    title = (body.title or call.get("title") or "עבודת שירות").strip()
+    payload = {
+        "workspace_id": str(workspace_id),
+        "created_by": actor_id(user),
+        "title": title,
+        "kind": "service",
+        "customer_id": call["customer_id"],
+        "site_id": call["site_id"],
+        "service_call_id": str(call_id),
+        "priority": call.get("priority") or "normal",
+    }
+    if body.scheduled_for:
+        payload["scheduled_for"] = body.scheduled_for
+    if body.scheduled_end:
+        payload["scheduled_end"] = body.scheduled_end
+    job = created_or_403(client.post("jobs", payload))
+    # Default service checklist
+    for index, label in enumerate(
+        ("אבחון תקלה", "תיקון / טיפול", "בדיקת תקינות", "תיעוד צילום", "עדכון לקוח")
+    ):
+        try:
+            client.post(
+                "job_checklist_items",
+                {
+                    "workspace_id": str(workspace_id),
+                    "job_id": job["id"],
+                    "label_he": label,
+                    "required": True,
+                    "sort_order": index,
+                },
+            )
+        except Exception:
+            break
+    if call.get("status") == "open":
+        try:
+            client.patch(
+                "service_calls",
+                {"status": "in_progress"},
+                params={"id": f"eq.{call_id}", "workspace_id": f"eq.{workspace_id}"},
+            )
+        except Exception:
+            pass
+    write_audit(
+        client,
+        str(workspace_id),
+        "service_calls.create_job",
+        entity_type="service_call",
+        entity_id=str(call_id),
+        metadata={"job_id": job["id"], "job_number": job.get("number")},
+    )
+    write_site_timeline(
+        client,
+        workspace_id=str(workspace_id),
+        site_id=call.get("site_id"),
+        event_type="service",
+        title=f"קריאת שירות → עבודה {job.get('number') or ''}".strip(),
+        body=title,
+        actor_id=actor_id(user),
+        source_type="job",
+        source_id=job["id"],
+    )
+    return job
+
+
 # ── Warranties ────────────────────────────────────────────────────────────────
 
 

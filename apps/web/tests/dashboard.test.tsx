@@ -811,7 +811,7 @@ describe("TodayHome", () => {
         ],
       },
     };
-    render(<TodayHome data={data} onStart={vi.fn()} onComplete={vi.fn()} busyId={null} />);
+    render(<TodayHome data={data} onAction={vi.fn()} busyId={null} />);
     expect(screen.getByText(he.fieldOpsKicker)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.startJob })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.todayOpenJob })).toBeInTheDocument();
@@ -822,8 +822,7 @@ describe("TodayHome", () => {
     render(
       <TodayHome
         data={{ ...emptyDash, home_variant: "today" }}
-        onStart={vi.fn()}
-        onComplete={vi.fn()}
+        onAction={vi.fn()}
         busyId={null}
       />,
     );

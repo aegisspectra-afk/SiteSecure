@@ -22,7 +22,9 @@ function jobStatusLabel(status: string): string {
 
 function jobStatusTone(status: string): "success" | "warning" | "info" | "neutral" {
   if (status === "completed") return "success";
-  if (status === "in_progress" || status === "en_route") return "warning";
+  if (status === "in_progress" || status === "en_route" || status === "arrived" || status === "blocked") {
+    return "warning";
+  }
   if (status === "scheduled") return "info";
   return "neutral";
 }
@@ -59,15 +61,23 @@ export function FieldJob({ jobId }: { jobId: string }) {
   const canSystems = can(roleKey, "systems.view", features);
   const canStart = can(roleKey, "jobs.start", features);
   const canComplete = can(roleKey, "jobs.complete", features);
+  const canAssign = can(roleKey, "jobs.assign", features);
 
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+  const [assignUserId, setAssignUserId] = useState("");
 
   const jobQuery = useQuery({
     queryKey: ["job", workspaceId, jobId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.getJob(workspaceId!, jobId),
+  });
+
+  const membersQuery = useQuery({
+    queryKey: ["members-assign", workspaceId],
+    enabled: Boolean(workspaceId && canAssign),
+    queryFn: () => api.listMembers(workspaceId!),
   });
 
   const checklistQuery = useQuery({
@@ -90,6 +100,12 @@ export function FieldJob({ jobId }: { jobId: string }) {
     queryFn: () => api.getCustomer(workspaceId!, jobQuery.data!.customer_id!),
   });
 
+  const serviceQuery = useQuery({
+    queryKey: ["job-service-call", workspaceId, jobQuery.data?.service_call_id],
+    enabled: Boolean(workspaceId && jobQuery.data?.service_call_id),
+    queryFn: () => api.getServiceCall(workspaceId!, jobQuery.data!.service_call_id!),
+  });
+
   const equipmentQuery = useQuery({
     queryKey: ["job-equipment", workspaceId, siteId],
     enabled: Boolean(workspaceId && siteId && canSystems),
@@ -102,27 +118,44 @@ export function FieldJob({ jobId }: { jobId: string }) {
     queryFn: () => api.listDocuments(workspaceId!, { entity_type: "site", entity_id: siteId!, limit: 50 }),
   });
 
+  const invalidateJob = () => {
+    setError(null);
+    void queryClient.invalidateQueries({ queryKey: ["job", workspaceId, jobId] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+    if (siteId) void queryClient.invalidateQueries({ queryKey: ["site", workspaceId, siteId] });
+  };
+
+  const enRoute = useMutation({
+    mutationFn: () => api.enRouteJob(workspaceId!, jobId),
+    onSuccess: invalidateJob,
+    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
+  });
+  const arrivedMut = useMutation({
+    mutationFn: () => api.arrivedJob(workspaceId!, jobId),
+    onSuccess: invalidateJob,
+    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
+  });
   const start = useMutation({
     mutationFn: () => api.startJob(workspaceId!, jobId),
-    onSuccess: () => {
-      setError(null);
-      void queryClient.invalidateQueries({ queryKey: ["job", workspaceId, jobId] });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
-    },
+    onSuccess: invalidateJob,
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
   });
 
   const complete = useMutation({
     mutationFn: () => api.completeJob(workspaceId!, jobId, { completion_notes: notes.trim() || undefined }),
     onSuccess: () => {
-      setError(null);
       setCompleting(false);
       setNotes("");
-      void queryClient.invalidateQueries({ queryKey: ["job", workspaceId, jobId] });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
-      if (siteId) {
-        void queryClient.invalidateQueries({ queryKey: ["site", workspaceId, siteId] });
-      }
+      invalidateJob();
+    },
+    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: () => api.assignJob(workspaceId!, jobId, { user_id: assignUserId }),
+    onSuccess: () => {
+      setAssignUserId("");
+      invalidateJob();
     },
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
   });
@@ -180,9 +213,16 @@ export function FieldJob({ jobId }: { jobId: string }) {
     (doc) => doc.kind === "photo" || (doc.mime_type ?? "").startsWith("image/"),
   );
   const scheduled = formatTime(job.scheduled_for);
-  const canStartJob = canStart && (job.status === "scheduled" || job.status === "en_route");
+  const scheduledEnd = formatTime(job.scheduled_end);
+  const assignee = job.assignees?.[0];
+  const canEnRoute = canStart && job.status === "scheduled";
+  const canArrive = canStart && job.status === "en_route";
+  const canStartJob = canStart && (job.status === "arrived" || job.status === "en_route");
   const canCompleteJob = canComplete && job.status === "in_progress";
   const jobDone = job.status === "completed";
+  const techMembers = (membersQuery.data ?? []).filter(
+    (m) => m.status === "active" && (m.role_key === "technician" || m.role_key === "manager"),
+  );
 
   return (
     <div className="field-job">
@@ -217,17 +257,75 @@ export function FieldJob({ jobId }: { jobId: string }) {
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Status label={jobStatusLabel(job.status)} tone={jobStatusTone(job.status)} />
+          {job.priority ? (
+            <Status
+              label={he.jobPriority[job.priority as keyof typeof he.jobPriority] ?? job.priority}
+              tone="neutral"
+            />
+          ) : null}
           {scheduled ? (
             <p className="public-mono text-sm text-fg-muted" dir="ltr">
               {scheduled}
+              {scheduledEnd ? `–${scheduledEnd}` : ""}
             </p>
           ) : null}
         </div>
+        {job.service_call_id ? (
+          <p className="mt-2 text-xs text-fg-muted">
+            {he.fieldJobFromService}
+            {serviceQuery.data?.title ? ` · ${serviceQuery.data.title}` : ""}
+          </p>
+        ) : null}
       </header>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
+      <section className="field-section">
+        <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.assignedTo}</p>
+        <p className="mt-1 text-sm text-fg">
+          {assignee?.display_name || assignee?.user_id || he.unassignedJob}
+        </p>
+        {canAssign && !jobDone ? (
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="min-w-[12rem] flex-1 text-xs text-fg-muted">
+              {assignee ? he.reassignTechnician : he.assignTechnician}
+              <select
+                className="mt-1 w-full rounded-md border border-border bg-bg px-2 py-2 text-sm text-fg"
+                value={assignUserId}
+                onChange={(ev) => setAssignUserId(ev.target.value)}
+              >
+                <option value="">{he.assignTechnician}</option>
+                {techMembers.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.full_name || m.email || m.user_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!assignUserId || !online}
+              loading={assignMut.isPending}
+              onClick={() => assignMut.mutate()}
+            >
+              {assignee ? he.reassignTechnician : he.assignTechnician}
+            </Button>
+          </div>
+        ) : null}
+      </section>
+
       <div className="field-job-primary">
+        {canEnRoute ? (
+          <Button type="button" loading={enRoute.isPending} disabled={!online} onClick={() => enRoute.mutate()}>
+            {he.startRoute}
+          </Button>
+        ) : null}
+        {canArrive ? (
+          <Button type="button" loading={arrivedMut.isPending} disabled={!online} onClick={() => arrivedMut.mutate()}>
+            {he.markArrived}
+          </Button>
+        ) : null}
         {canStartJob ? (
           <Button type="button" loading={start.isPending} disabled={!online} onClick={() => start.mutate()}>
             {he.startJob}

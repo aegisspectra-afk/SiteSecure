@@ -6,13 +6,11 @@ import { TodayList } from "./TodayList";
 
 export function TodayHome({
   data,
-  onStart,
-  onComplete,
+  onAction,
   busyId,
 }: {
   data: DashboardResponse;
-  onStart: (id: string) => void;
-  onComplete: (id: string) => void;
+  onAction: (id: string, action: string) => void;
   busyId: string | null;
 }) {
   const online = useOnlineStatus();
@@ -43,7 +41,7 @@ export function TodayHome({
           <EmptyState title={he.todayEmptyTitle} description={he.todayEmptyBody} />
         </div>
       ) : (
-        <TodayList items={data.today.items} onStart={onStart} onComplete={onComplete} busyId={busyId} />
+        <TodayList items={data.today.items} onAction={onAction} busyId={busyId} />
       )}
     </div>
   );

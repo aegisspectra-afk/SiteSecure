@@ -29,8 +29,17 @@ function TodayPage() {
     queryFn: () => api.getDashboard(workspaceId!),
   });
 
-  const start = useMutation({
-    mutationFn: (jobId: string) => api.startJob(workspaceId!, jobId),
+  const action = useMutation({
+    mutationFn: async ({ jobId, kind }: { jobId: string; kind: string }) => {
+      if (kind === "en_route") return api.enRouteJob(workspaceId!, jobId);
+      if (kind === "arrived") return api.arrivedJob(workspaceId!, jobId);
+      if (kind === "start") return api.startJob(workspaceId!, jobId);
+      if (kind === "complete") {
+        await navigate({ to: "/app/jobs/$jobId", params: { jobId } });
+        return null;
+      }
+      return null;
+    },
     onSettled: () => {
       setBusyId(null);
       void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
@@ -58,13 +67,13 @@ function TodayPage() {
     <TodayHome
       data={query.data}
       busyId={busyId}
-      onStart={(id) => {
+      onAction={(id, kind) => {
+        if (kind === "complete") {
+          void navigate({ to: "/app/jobs/$jobId", params: { jobId: id } });
+          return;
+        }
         setBusyId(id);
-        start.mutate(id);
-      }}
-      onComplete={(id) => {
-        // Field Job owns completion notes / checklist — do not silent-complete from Today.
-        void navigate({ to: "/app/jobs/$jobId", params: { jobId: id } });
+        action.mutate({ jobId: id, kind });
       }}
     />
   );

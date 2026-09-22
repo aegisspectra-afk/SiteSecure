@@ -45,6 +45,7 @@ function ForgotPage() {
   return (
     <AuthLayout
       title={he.forgotTitle}
+      heading={he.forgotTitle}
       description={he.forgotLead}
       footer={
         sent ? undefined : (
@@ -59,31 +60,44 @@ function ForgotPage() {
       }
     >
       {sent ? (
-        <div className="flex flex-col items-center gap-4 px-0 py-4 text-center">
+        <div className="flex flex-col items-center gap-5 px-0 py-2 text-center">
           <LottieAnimation name="sentEmail" size={72} />
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold text-fg">{he.forgotSent}</h2>
-            <p className="max-w-md text-sm text-fg-muted">{he.forgotSentBody}</p>
+            <p className="max-w-md text-sm leading-6 text-fg-muted">{he.forgotSentBody}</p>
           </div>
-          <Button variant="primary" className="h-12" onClick={() => void navigate({ to: "/login" })}>
+          <Button
+            variant="pill"
+            className="auth-cta w-full"
+            onClick={() => void navigate({ to: "/login" })}
+          >
             {he.continueToLogin}
           </Button>
         </div>
       ) : (
-        <AuthForm onSubmit={onSubmit}>
+        <AuthForm onSubmit={onSubmit} className={error || fieldError ? "ss-auth-shake" : undefined}>
           <AuthField
             id="email"
             name="email"
             label={he.email}
             type="email"
             autoComplete="email"
+            appearance="comfortable"
             ltr
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             error={fieldError}
+            disabled={loading}
           />
           {error ? <AuthAlert>{error}</AuthAlert> : null}
-          <Button type="submit" variant="primary" loading={loading} loadingLabel={he.sendingReset} className="auth-cta h-12 w-full">
+          <Button
+            type="submit"
+            variant="pill"
+            loading={loading}
+            loadingLabel={he.sendingReset}
+            disabled={loading}
+            className="auth-cta w-full"
+          >
             {he.forgotPrimary}
           </Button>
         </AuthForm>

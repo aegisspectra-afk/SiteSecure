@@ -1,0 +1,33 @@
+{
+  "web": "https://site-secure-umber.vercel.app",
+  "checks": [
+    {
+      "name": "ui_login",
+      "ok": true,
+      "url": "https://site-secure-umber.vercel.app/app"
+    },
+    {
+      "name": "ui_dashboard_not_blank",
+      "ok": true,
+      "chars": 325,
+      "ms": 4202
+    },
+    {
+      "name": "ui_no_stack_trace",
+      "ok": true
+    },
+    {
+      "name": "ui_logout_to_login",
+      "ok": true,
+      "url": "https://site-secure-umber.vercel.app/login"
+    }
+  ],
+  "timings_ms": {
+    "login_shell": 3418,
+    "login_navigate": 6499,
+    "dashboard_first_paintish": 1698,
+    "dashboard_settle": 4202
+  },
+  "ok": false,
+  "crash": "TimeoutError: page.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('input[type=\"email\"], input[name=\"email\"]')\n"
+}

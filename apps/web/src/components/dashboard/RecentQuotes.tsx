@@ -1,6 +1,7 @@
-import { Status } from "@site-secure/ui";
+import { ActivityRow, Status } from "@site-secure/ui";
 import type { RecentQuote } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
 import { he } from "../../i18n/he";
 import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { relativeAgeLabel } from "../../lib/relative-age";
@@ -47,14 +48,21 @@ export function RecentQuotes({
             params={{ quoteId: quote.id }}
             className="ops-recent-mobile-row"
           >
-            <div className="ops-recent-mobile-top">
-              <span className="ops-recent-number ltr-meta" dir="ltr">
-                {quote.number}
-              </span>
-              <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
-            </div>
-            <p className="ops-recent-mobile-customer">{quote.customer_name?.trim() || quote.title?.trim() || "—"}</p>
-            <p className="ops-recent-mobile-amount tabular-nums">{formatMoney(quote.total_gross)}</p>
+            <ActivityRow
+              leading={<FileText aria-hidden />}
+              title={quote.customer_name?.trim() || quote.title?.trim() || "—"}
+              subtitle={
+                <span className="ops-recent-number ltr-meta" dir="ltr">
+                  {quote.number}
+                </span>
+              }
+              trailing={
+                <>
+                  <span className="ops-recent-mobile-amount tabular-nums">{formatMoney(quote.total_gross)}</span>
+                  <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
+                </>
+              }
+            />
           </Link>
         </li>
       ))}
@@ -118,7 +126,10 @@ export function RecentQuotes({
   }
 
   return (
-    <section className="ops-recent-panel" aria-labelledby="recent-quotes-heading">
+    <section
+      className={`ops-recent-panel${rows.length <= 2 ? " is-compact" : ""}`}
+      aria-labelledby="recent-quotes-heading"
+    >
       <div className="ops-section-head">
         <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}

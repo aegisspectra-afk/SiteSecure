@@ -45,6 +45,7 @@ MESSAGES = {
     "RESOURCE_STATE": "לא ניתן לבצע את הפעולה במצב הנוכחי",
     "BUSINESS_RULE": "הפעולה חסומה לפי כללי התוכנית",
     "NOT_FOUND": "לא נמצא",
+    "CONFLICT_REVISION": "העיצוב עודכן במקביל — רענון נדרש",
     "INVALID_NAME": "שם לא תקין",
     "INVITE_INVALID": "ההזמנה אינה תקפה",
     "INVITE_EXPIRED": "תוקף ההזמנה פג",

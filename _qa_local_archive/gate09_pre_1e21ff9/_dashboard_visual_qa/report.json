@@ -1,0 +1,119 @@
+{
+  "web": "http://127.0.0.1:5173",
+  "api": "http://127.0.0.1:8010",
+  "workspace": "f1f76d59-fd2e-4b27-9586-06f7c89abc9c",
+  "viewports": {
+    "375": {
+      "overflow": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "overflowX": false
+      },
+      "shot": "375.png",
+      "commercial": {
+        "present": true,
+        "className": "ops-commercial-card is-secondary",
+        "padding": "8px 0px",
+        "borderTop": "1px solid rgb(216, 222, 232)",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "0.92",
+        "stripItemCount": 4,
+        "hasChart": true,
+        "title": "דופק מסחרי"
+      }
+    },
+    "390": {
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflowX": false
+      },
+      "shot": "390.png",
+      "commercial": {
+        "present": true,
+        "className": "ops-commercial-card is-secondary",
+        "padding": "8px 0px",
+        "borderTop": "1px solid rgb(216, 222, 232)",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "0.92",
+        "stripItemCount": 4,
+        "hasChart": true,
+        "title": "דופק מסחרי"
+      }
+    },
+    "430": {
+      "overflow": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "overflowX": false
+      },
+      "shot": "430.png",
+      "commercial": {
+        "present": true,
+        "className": "ops-commercial-card is-secondary",
+        "padding": "8px 0px",
+        "borderTop": "1px solid rgb(216, 222, 232)",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "0.92",
+        "stripItemCount": 4,
+        "hasChart": true,
+        "title": "דופק מסחרי"
+      }
+    },
+    "768": {
+      "overflow": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "overflowX": false
+      },
+      "shot": "768.png",
+      "commercial": {
+        "present": true,
+        "className": "ops-commercial-card is-secondary",
+        "padding": "8px 0px",
+        "borderTop": "1px solid rgb(216, 222, 232)",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "0.92",
+        "stripItemCount": 4,
+        "hasChart": true,
+        "title": "דופק מסחרי"
+      }
+    },
+    "1280": {
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "overflowX": false
+      },
+      "shot": "1280.png",
+      "commercial": {
+        "present": true,
+        "className": "ops-commercial-card is-secondary",
+        "padding": "8px 0px",
+        "borderTop": "1px solid rgb(216, 222, 232)",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "0.92",
+        "stripItemCount": 4,
+        "hasChart": true,
+        "title": "דופק מסחרי"
+      }
+    }
+  },
+  "commercial": {
+    "present": true,
+    "className": "ops-commercial-card is-secondary",
+    "padding": "8px 0px",
+    "borderTop": "1px solid rgb(216, 222, 232)",
+    "borderRadius": "0px",
+    "background": "rgba(0, 0, 0, 0)",
+    "opacity": "0.92",
+    "stripItemCount": 4,
+    "hasChart": true,
+    "title": "דופק מסחרי"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "checks": {
+    "light-desktop-1280": {
+      "panelBg": "rgb(248, 250, 252)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0588235 0.0901961 0.164706 / 0.368)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    },
+    "escape_closes": true,
+    "light-tablet-768": {
+      "panelBg": "rgb(248, 250, 252)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0588235 0.0901961 0.164706 / 0.368)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    },
+    "light-mobile-390": {
+      "panelBg": "rgb(248, 250, 252)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0588235 0.0901961 0.164706 / 0.368)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    },
+    "dark-desktop-1280": {
+      "panelBg": "rgb(28, 34, 41)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0431373 0.0509804 0.0627451 / 0.6624)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    },
+    "dark-tablet-768": {
+      "panelBg": "rgb(28, 34, 41)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0431373 0.0509804 0.0627451 / 0.6624)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    },
+    "dark-mobile-390": {
+      "panelBg": "rgb(28, 34, 41)",
+      "panelAlpha": 1,
+      "panelOpacity": 1,
+      "panelOpaque": true,
+      "backdropBg": "color(srgb 0.0431373 0.0509804 0.0627451 / 0.6624)",
+      "hasDropzone": true,
+      "hasStepper": true,
+      "title": "ייבוא קטלוג",
+      "overflowX": false,
+      "rootZ": "70"
+    }
+  },
+  "screenshots": {
+    "light-desktop-1280": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\light-desktop-1280.png",
+    "light-tablet-768": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\light-tablet-768.png",
+    "light-mobile-390": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\light-mobile-390.png",
+    "dark-desktop-1280": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\dark-desktop-1280.png",
+    "dark-tablet-768": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\dark-tablet-768.png",
+    "dark-mobile-390": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15_wizard_ui_qa\\dark-mobile-390.png"
+  },
+  "workspace": "7c684f1d-6757-4689-8caa-6a7c6042c5fe",
+  "web": "http://127.0.0.1:5180",
+  "api": "http://127.0.0.1:8000"
+}

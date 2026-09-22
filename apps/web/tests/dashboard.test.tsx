@@ -9,14 +9,13 @@ import { DashboardSkeleton } from "../src/components/dashboard/DashboardSkeleton
 import { ErrorState } from "@site-secure/ui";
 import { he } from "../src/i18n/he";
 import { can, canAny, canAll } from "../src/lib/can";
-import { dayGreeting } from "../src/lib/greeting";
+import { dayGreeting, dayPeriodFromHour, heroSurface, msUntilNextDayPeriod } from "../src/lib/greeting";
 import { homeVariant, moduleHref, quickActions } from "../src/lib/home";
 import { nextBestAction } from "../src/lib/next-best-action";
 import { quoteConversion, quotesInPlay, seatTone, seatUtilization } from "../src/lib/ux-metrics";
 import { liveAdminActions, workspaceSetup } from "../src/lib/workspace-setup";
 import { dashboardStage } from "../src/lib/dashboard-maturity";
 import { waitingDays } from "../src/lib/attention-queue";
-import { formatMoney } from "../src/lib/quotes";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -134,23 +133,23 @@ describe("module destinations", () => {
 });
 
 describe("OpsDashboard", () => {
-  it("empty state has no fake create CTAs or KPI copy", () => {
+  it("empty low-data workspace: Hero, Quick Actions, Today empty, Setup — no KPI wall", () => {
     render(
-      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes"]} customerCount={0} countsReady />,
+      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes", "jobs"]} customerCount={0} countsReady />,
     );
     expect(screen.queryByRole("heading", { name: he.dashboardTitleShort })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.activationTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.setupPendingLabel })).toBeInTheDocument();
+    expect(screen.getByText(he.activationCompactLead)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.nextActionTitle })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.todayTitle })).toBeInTheDocument();
     expect(screen.getByText(he.todaySectionEmptyCompact)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.recentQuotesTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
+    expect(screen.getByLabelText(he.dashQuickActionsAria)).toBeInTheDocument();
+    // Phase 1B.4.1: no isolated +יצירה — create lives in Quick Actions only.
+    expect(screen.queryByRole("button", { name: he.dashCreate })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.recentQuotesTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.quotePipelineTitle })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(he.dashboardKpiLabel)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationContinue })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "פרויקט חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "קריאת שירות" })).not.toBeInTheDocument();
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
@@ -160,6 +159,15 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText("Authentication")).not.toBeInTheDocument();
     expect(screen.queryByText("Tenant Isolation")).not.toBeInTheDocument();
     expect(screen.queryByText("פתחו את מרכז האבטחה")).not.toBeInTheDocument();
+  });
+
+  it("low-data desktop workbench pairs Today with setup rail", () => {
+    const { container } = render(
+      <OpsDashboard data={emptyDash} roleKey="owner" features={["crm", "quotes", "jobs"]} customerCount={0} countsReady />,
+    );
+    expect(container.querySelector(".ops-command-workbench.is-low-data")).toBeTruthy();
+    expect(container.querySelector(".ops-command-rail .ops-setup-strip.is-panel")).toBeTruthy();
+    expect(container.querySelector(".ops-command-hero.is-composed")).toBeTruthy();
   });
 
   it("does not surface developer security health on the operational dashboard", () => {
@@ -189,9 +197,9 @@ describe("OpsDashboard", () => {
         workspaceStatus="active"
       />,
     );
-    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: "לקוח חדש" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationContinue })).toBeInTheDocument();
+    expect(screen.getByText(he.activationCompactLead)).toBeInTheDocument();
+    // Phase 1B.4: Quick Actions may expose customer create; activation still owns the primary continue CTA.
     expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
   });
 
@@ -207,8 +215,8 @@ describe("OpsDashboard", () => {
     );
     expect(screen.queryByText(he.inviteUser)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: he.newQuoteAction }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: he.activationContinue })).toBeInTheDocument();
+    expect(screen.getByText(he.activationCompactLead)).toBeInTheDocument();
   });
 
   it("shows a compact usage warning only when a meter is near or over limit", () => {
@@ -264,10 +272,10 @@ describe("OpsDashboard", () => {
         }}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.usageThresholdTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.usageThresholdMeterFull("משתמשים במשרד") })).toBeInTheDocument();
     expect(screen.getByText(he.usageThresholdBody("1/1 משתמשים במשרד"))).toBeInTheDocument();
-    // V3: interruptive banner at/over limit; workspace meters remain in secondary panel.
-    expect(screen.getByRole("heading", { name: he.dashWorkspaceTitle })).toBeInTheDocument();
+    // Phase 1B.3: actionable banner only — no full usage wall on Dashboard.
+    expect(screen.queryByRole("heading", { name: he.dashWorkspaceTitle })).not.toBeInTheDocument();
   });
 
   it("hides usage threshold banner for sales role", () => {
@@ -316,7 +324,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
   });
 
-  it("keeps healthy quotas in secondary workspace panel without interruptive banner", () => {
+  it("omits healthy quotas from Dashboard and shows no interruptive banner", () => {
     render(
       <OpsDashboard
         data={{
@@ -348,7 +356,7 @@ describe("OpsDashboard", () => {
         }}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.dashWorkspaceTitle })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.dashWorkspaceTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
   });
 
@@ -414,7 +422,7 @@ describe("OpsDashboard", () => {
     expect(screen.getByRole("heading", { name: he.commercialPulseTitle })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toBeInTheDocument();
     expect(screen.queryByText(he.quotePipelineStages.draft)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.usageThresholdTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.usageThresholdMeterFull("משתמשים במשרד") })).toBeInTheDocument();
     expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
     expect(screen.queryByText("NPS")).not.toBeInTheDocument();
     expect(screen.queryByText(/Margin/i)).not.toBeInTheDocument();
@@ -431,9 +439,10 @@ describe("OpsDashboard", () => {
         memberCount={1}
       />,
     );
-    expect(screen.getByRole("heading", { name: he.activationTitle })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.activationCta })).toBeInTheDocument();
-    expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.setupPendingLabel })).toBeInTheDocument();
+    expect(screen.getByText(he.activationCompactLead)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.activationContinue })).toBeInTheDocument();
+    expect(screen.getByText(he.uxPercent(33))).toBeInTheDocument();
     expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
   });
 
@@ -470,9 +479,11 @@ describe("OpsDashboard", () => {
         countsReady
       />,
     );
-    expect(screen.getByRole("heading", { name: he.activationCreateCustomerTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.setupPendingLabel })).toBeInTheDocument();
+    expect(screen.getByText(he.activationCreateCustomerTitle)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.activationCreateCustomer })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.activationCta })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: he.activationContinue })).not.toBeInTheDocument();
   });
 
   it("hides the setup ring after onboarding steps are actually done", () => {
@@ -488,7 +499,9 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.queryByRole("heading", { name: he.setupTitle })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.activationTitleWithCustomer })).toBeInTheDocument();
+    // Still pre-quote: compact setup strip, not attention queue.
+    expect(screen.getByRole("heading", { name: he.setupPendingLabel })).toBeInTheDocument();
+    expect(screen.getByText(he.activationTitleWithCustomer)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.commandTitle })).not.toBeInTheDocument();
   });
 
@@ -740,7 +753,8 @@ describe("OpsDashboard", () => {
         countsReady
       />,
     );
-    expect(screen.getByRole("heading", { name: he.activeWorkTitle })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.todayTitle })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.dashViewToday })).toBeInTheDocument();
     expect(screen.getByText(/J-00005/)).toBeInTheDocument();
     expect(screen.getAllByText(/DEMO Site A/).length).toBeGreaterThan(0);
     expect(screen.getByText("בביצוע")).toBeInTheDocument();
@@ -761,17 +775,15 @@ describe("OpsDashboard", () => {
         displayName="Ilya"
       />,
     );
-    expect(screen.getByText(he.opsOverviewKicker)).toBeInTheDocument();
-    expect(screen.getByText(he.dashStatusQuiet)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: new RegExp(he.dashSignalAttention) })).toHaveAttribute(
-      "href",
-      "#command-attention",
-    );
-    expect(screen.getByRole("link", { name: new RegExp(he.dashSignalQuotes) })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: new RegExp(`${he.dashSignalPipeline}.*${formatMoney(1500)}`) }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.dashCommandQueue })).toBeInTheDocument();
+    // Phase 1B.3.1: calm once in Hero + compact signal row (not KPI cards / quote links).
+    expect(screen.queryByText(he.opsOverviewKicker)).not.toBeInTheDocument();
+    expect(screen.getByText(he.commandQuiet)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: new RegExp(he.dashSignalAttention) })).not.toBeInTheDocument();
+    expect(screen.getAllByText(he.dashSignalQuotes).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(he.todayTitle).length).toBeGreaterThan(0);
+    expect(screen.queryByText(he.dashSignalPipeline)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: he.commandTitle })).not.toBeInTheDocument();
+    expect(screen.queryByText(he.commandQuietBody)).not.toBeInTheDocument();
     expect(screen.queryByText(he.dashboardTitleShort)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toHaveAttribute(
       "href",
@@ -801,19 +813,23 @@ describe("TodayHome", () => {
             entity_type: "job",
             entity_id: "j1",
             number: "J-00005",
-            title_he: "מתוכננת",
+            title_he: "מצלמה בחנייה",
             customer_name: "לקוח X",
             site_name: "אתר Y",
             scheduled_for: "2026-08-14T09:00:00+00:00",
+            scheduled_end: "2026-08-14T11:00:00+00:00",
+            status: "scheduled",
             severity: "next",
-            actions: ["start"],
+            actions: ["en_route"],
           },
         ],
       },
     };
     render(<TodayHome data={data} onAction={vi.fn()} busyId={null} />);
     expect(screen.getByText(he.fieldOpsKicker)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.startJob })).toBeInTheDocument();
+    expect(screen.getByText("J-00005")).toBeInTheDocument();
+    expect(screen.getByText("מצלמה בחנייה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.startRoute })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: he.todayOpenJob })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "פתח עבודה" })).not.toBeInTheDocument();
   });
@@ -1178,10 +1194,45 @@ describe("attention waiting days", () => {
   });
 });
 
-describe("dayGreeting", () => {
-  it("uses Jerusalem hours", () => {
-    expect(dayGreeting(new Date("2026-08-15T06:00:00+03:00"))).toBe(he.greetingMorning);
-    expect(dayGreeting(new Date("2026-08-15T14:00:00+03:00"))).toBe(he.greetingAfternoon);
-    expect(dayGreeting(new Date("2026-08-15T19:00:00+03:00"))).toBe(he.greetingEvening);
+describe("dayGreeting / dayPeriod / heroSurface", () => {
+  it("uses one local-hour boundary model for greeting and hero", () => {
+    // Exact inclusive-start boundaries (local browser hour)
+    expect(dayPeriodFromHour(4)).toBe("night"); // 04:59 band
+    expect(dayPeriodFromHour(5)).toBe("morning");
+    expect(dayPeriodFromHour(11)).toBe("morning"); // 11:59 band
+    expect(dayPeriodFromHour(12)).toBe("afternoon");
+    expect(dayPeriodFromHour(17)).toBe("afternoon"); // 17:59 band
+    expect(dayPeriodFromHour(18)).toBe("evening");
+    expect(dayPeriodFromHour(21)).toBe("evening"); // 21:59 band
+    expect(dayPeriodFromHour(22)).toBe("night");
+
+    expect(dayGreeting(new Date(2026, 7, 15, 6))).toBe(he.greetingMorning);
+    expect(dayGreeting(new Date(2026, 7, 15, 14))).toBe(he.greetingAfternoon);
+    expect(dayGreeting(new Date(2026, 7, 15, 17, 0))).toBe("אחר הצהריים טובים");
+    expect(dayGreeting(new Date(2026, 7, 15, 17, 30))).toBe("אחר הצהריים טובים");
+    expect(dayGreeting(new Date(2026, 7, 15, 18, 0))).toBe("ערב טוב");
+    expect(dayGreeting(new Date(2026, 7, 15, 19))).toBe(he.greetingEvening);
+    expect(dayGreeting(new Date(2026, 7, 15, 22))).toBe(he.greetingNight);
+
+    expect(heroSurface("light", "morning")).toBe("light-day");
+    expect(heroSurface("light", "afternoon")).toBe("light-day");
+    expect(heroSurface("light", "evening")).toBe("dark-evening");
+    expect(heroSurface("light", "night")).toBe("dark-night");
+    expect(heroSurface("dark", "morning")).toBe("dark-day");
+    expect(heroSurface("dark", "afternoon")).toBe("dark-day");
+    expect(heroSurface("dark", "evening")).toBe("dark-evening");
+    expect(heroSurface("dark", "night")).toBe("dark-night");
+  });
+
+  it("schedules the next period boundary without sub-minute polling", () => {
+    const morning = new Date(2026, 7, 15, 10, 30, 0);
+    const ms = msUntilNextDayPeriod(morning);
+    const expected = new Date(2026, 7, 15, 12, 0, 0).getTime() - morning.getTime();
+    expect(ms).toBe(expected);
+
+    const lateAfternoon = new Date(2026, 7, 15, 17, 30, 0);
+    expect(msUntilNextDayPeriod(lateAfternoon)).toBe(
+      new Date(2026, 7, 15, 18, 0, 0).getTime() - lateAfternoon.getTime(),
+    );
   });
 });

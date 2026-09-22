@@ -1,0 +1,107 @@
+{
+  "qa_ids": {
+    "customers": [
+      "81e043d0-f719-4ec6-acb6-551493bb109f",
+      "042852be-2905-42dc-9bd6-b9e1b01d3101"
+    ],
+    "sites": [
+      "186ef4b6-36ea-4329-8f30-68f98b2ed401",
+      "d1c4e087-003c-4173-b527-0c2d62bdc563"
+    ],
+    "quotes": [
+      "2afcead4-48cc-4c87-a6e8-f67c4a95c353",
+      "a8347154-5aeb-4ea1-a1e9-f9dd8087d718",
+      "62dd850e-da08-407e-aa18-e6e069971120",
+      "4943d7a9-de07-40c6-b3d4-0ff0dd96cf74",
+      "e5d9aac3-268d-40ab-b923-70d28b32217a"
+    ],
+    "projects": [
+      "c8a24cec-c5c1-4119-945a-cf5708493136",
+      "958872c9-3187-462e-af97-ddf8e9b96a57"
+    ]
+  },
+  "results": {
+    "Draft -> Send": {
+      "result": "PASS",
+      "evidence": "status=sent v=1 token=yes",
+      "quote_id": "2afcead4-48cc-4c87-a6e8-f67c4a95c353",
+      "public_url": "http://localhost:5173/q/bRT4w46VVdrUg3Rxhm599YXjYrrZD6zaC3Mly_qaohE"
+    },
+    "Public customer view": {
+      "result": "PASS",
+      "evidence": "http=200 number=Q-00038 items=1 can_approve=True"
+    },
+    "Public no internal leak": {
+      "result": "PASS",
+      "evidence": "keys_ok cost/margin absent"
+    },
+    "Viewed polling (API)": {
+      "result": "PASS",
+      "evidence": "public_get=200 quote_status=viewed viewed_at=2026-08-31T15:15:53.367712+00:00"
+    },
+    "Public approval": {
+      "result": "PASS",
+      "evidence": "http=200 approved_name=QA Signer Task12"
+    },
+    "Approved internal state": {
+      "result": "PASS",
+      "evidence": "status=approved v=1 at=2026-08-31T15:16:04.756036+00:00"
+    },
+    "Approved -> Project": {
+      "result": "PASS",
+      "evidence": "http=200 project_id=c8a24cec-c5c1-4119-945a-cf5708493136 site=186ef4b6-36ea-4329-8f30-68f98b2ed401",
+      "project_id": "c8a24cec-c5c1-4119-945a-cf5708493136"
+    },
+    "Open linked Project": {
+      "result": "PASS",
+      "evidence": "count=1 id=c8a24cec-c5c1-4119-945a-cf5708493136"
+    },
+    "Duplicate protection": {
+      "result": "FAIL",
+      "evidence": "http=409 details=None"
+    },
+    "Approved without site": {
+      "result": "PASS",
+      "evidence": "status=approved site_id=None",
+      "quote_id": "a8347154-5aeb-4ea1-a1e9-f9dd8087d718"
+    },
+    "Invalid site rejection": {
+      "result": "PASS",
+      "evidence": "other_customer_site http=400 code=None msg="
+    },
+    "Site attach + Project": {
+      "result": "PASS",
+      "evidence": "http=200 quote.site=186ef4b6-36ea-4329-8f30-68f98b2ed401 project.site=186ef4b6-36ea-4329-8f30-68f98b2ed401"
+    },
+    "Customer rejection": {
+      "result": "PASS",
+      "evidence": "http=200 reason=המחיר גבוה מדי ל-QA",
+      "quote_id": "62dd850e-da08-407e-aa18-e6e069971120"
+    },
+    "Revision (pre)": {
+      "result": "PASS",
+      "evidence": "token ok v=1"
+    },
+    "Revision": {
+      "result": "PASS",
+      "evidence": "http=200 new_status=draft v=2 cleared_approved=True"
+    },
+    "Superseded token": {
+      "result": "PASS",
+      "evidence": "status=superseded can_approve=False"
+    },
+    "Old token approve blocked": {
+      "result": "PASS",
+      "evidence": "http=403 state=None"
+    },
+    "Current quote not wrongly approved": {
+      "result": "PASS",
+      "evidence": "status=draft"
+    },
+    "Project scope metadata-only": {
+      "result": "PASS",
+      "evidence": "project has source_quote_id, no items field"
+    }
+  },
+  "cleanup_note": "QA data retained for inspection; prefix QA Task12"
+}

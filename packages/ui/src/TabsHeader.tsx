@@ -50,20 +50,29 @@ export function PageHeader({
   description,
   action,
   eyebrow,
+  appearance = "default",
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   eyebrow?: string;
+  appearance?: "default" | "display";
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex flex-col gap-1">
+    <div className="ss-page-header mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
         {eyebrow ? (
-          <p className="text-sm font-medium text-fg-muted">{eyebrow}</p>
+          <p className="text-sm font-medium tracking-[0.01em] text-fg-muted">{eyebrow}</p>
         ) : null}
-        <h1 className="text-2xl font-semibold leading-tight text-fg">{title}</h1>
-        {description ? <p className="text-sm text-fg-muted">{description}</p> : null}
+        <h1
+          className={cn(
+            "font-semibold leading-tight tracking-[-0.03em] text-fg",
+            appearance === "display" ? "text-[1.75rem] sm:text-2xl" : "text-2xl",
+          )}
+        >
+          {title}
+        </h1>
+        {description ? <p className="text-sm leading-6 text-fg-muted">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

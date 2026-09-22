@@ -1,6 +1,6 @@
 import { Button } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
-import { Menu, MoreHorizontal } from "lucide-react";
+import { ArrowRight, Menu, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { he } from "../../../i18n/he";
 import { QuoteStepper } from "./QuoteStepper";
@@ -78,46 +78,50 @@ export function QuoteHeader({
   showMobileMenuButton?: boolean;
   className?: string;
 }) {
-  const metaParts = [
-    quoteNumber,
-    statusLabel,
-    version ? `v${version}` : null,
-    customerName,
-    siteName,
-  ].filter(Boolean);
+  const contextHint = [customerName, siteName].filter(Boolean).join(" · ");
 
   return (
-    <header className={`cpq-builder-header cpq-builder-header-compact sticky top-0 z-20 ${className ?? ""}`}>
+    <header className={`cpq-builder-header cpq-builder-header-compact cpq-header-kai ${className ?? ""}`}>
       <div className="cpq-header-row">
         <div className="cpq-header-start">
           <h1 className="sr-only">{he.cpqHeaderTitle(quoteNumber || "")}</h1>
+
           <nav className="cpq-breadcrumb cpq-breadcrumb-desktop" aria-label="breadcrumb">
             <Link to="/app/quotes" className="cpq-breadcrumb-link">
               {he.cpqBreadcrumbQuotes}
             </Link>
-            {quoteNumber ? (
-              <>
-                <span className="cpq-breadcrumb-sep" aria-hidden>
-                  /
-                </span>
-                <span className="cpq-breadcrumb-current ltr-meta">{quoteNumber}</span>
-              </>
-            ) : null}
           </nav>
+
           <Link to="/app/quotes" className="cpq-header-back" aria-label={he.cpqBreadcrumbQuotes}>
-            ←
+            <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
           </Link>
+
+          <div className="cpq-header-identity-desktop">
+            <div className="cpq-header-title-stack">
+              <p className="cpq-header-quote-kicker">{he.quoteDetailTitle}</p>
+              <p className={`cpq-header-quote-title${quoteNumber ? " ltr-meta" : ""}`}>
+                {quoteNumber ? `#${quoteNumber}` : he.cpqHeaderUntitled}
+              </p>
+            </div>
+            <div className="cpq-header-secondary">
+              <span className="cpq-header-status-chip">{statusLabel}</span>
+              {version ? <span className="cpq-header-version-chip ltr-meta">v{version}</span> : null}
+              {contextHint ? <span className="cpq-header-context-hint">{contextHint}</span> : null}
+            </div>
+          </div>
+
           <div className="cpq-header-mobile-identity">
-            {quoteNumber ? <span className="cpq-header-mobile-number ltr-meta">{quoteNumber}</span> : null}
+            <div className="cpq-header-mobile-title-stack">
+              <span className="cpq-header-mobile-title">{he.quoteDetailTitle}</span>
+              {quoteNumber ? <span className="cpq-header-mobile-number ltr-meta">#{quoteNumber}</span> : null}
+            </div>
             <span className="cpq-header-status-pill">{statusLabel}</span>
             {version ? <span className="cpq-header-version-pill ltr-meta">v{version}</span> : null}
           </div>
-          <p className="cpq-header-meta cpq-header-meta-desktop" title={metaParts.join(" · ")}>
-            {metaParts.join(" · ")}
-          </p>
           <div className="cpq-header-save-anchor">
             <QuoteSaveIndicator saveState={saveState} savedAt={savedAt} dirty={dirty} hasLiveId={hasLiveId} />
-          </div>        </div>
+          </div>
+        </div>
 
         <div className="cpq-stepper-desktop">
           <QuoteStepper active={activeStep} onSelect={onStepSelect} />
@@ -125,7 +129,7 @@ export function QuoteHeader({
 
         <div className="cpq-header-actions cpq-header-actions-desktop">
           {canEdit ? (
-            <Button variant="secondary" loading={savePending} disabled={saveDisabled} onClick={onSave}>
+            <Button variant="ghost" loading={savePending} disabled={saveDisabled} onClick={onSave}>
               {he.save}
             </Button>
           ) : null}
@@ -134,6 +138,7 @@ export function QuoteHeader({
           </Button>
           {primaryCtaLabel ? (
             <Button
+              className="cpq-header-primary-cta"
               variant={primaryCtaVariant}
               disabled={primaryCtaDisabled}
               title={primaryCtaTitle}

@@ -21,7 +21,7 @@ export function DashboardSignalStrip({
     <nav className="ops-signal-strip" aria-label={he.commandHeaderChipsAria}>
       <a
         href="#command-attention"
-        className={`ops-signal${attentionCount > 0 ? " is-attention" : ""}`}
+        className={`ops-signal is-hero${attentionCount > 0 ? " is-attention" : ""}`}
       >
         <span className="ops-signal-label">{he.dashSignalAttention}</span>
         <span className="ops-signal-value tabular-nums">{attentionCount}</span>

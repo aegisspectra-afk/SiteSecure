@@ -50,6 +50,54 @@ function PrimitiveGallery() {
           שלח הצעת מחיר
         </Button>
       </Card>
+      <section className="flex flex-col gap-6" dir="rtl">
+        <PageHeader title="Premium Mobile Foundation" description="Phase 1A opt-in primitives — not production data" />
+        <Card appearance="premium" className="flex flex-col gap-4">
+          <h2 className="text-base font-semibold text-fg">כפתור pill</h2>
+          <Button variant="pill">שמור והמשך</Button>
+          <Button variant="pill" loading loadingLabel="שומר…">
+            שמור והמשך
+          </Button>
+          <Button variant="pill" disabled>
+            שמור והמשך
+          </Button>
+        </Card>
+        <Card appearance="premium" className="flex flex-col gap-4">
+          <h2 className="text-base font-semibold text-fg">שדה נוח</h2>
+          <Input id="premium-customer" label="שם לקוח" appearance="comfortable" defaultValue="קריאת שירות חדשה" />
+          <Input id="premium-site" label="כתובת אתר" appearance="comfortable" />
+          <Input id="premium-error" label="שם לקוח" appearance="comfortable" error="שדה חובה" />
+        </Card>
+        <Card appearance="premium" className="flex flex-wrap items-center gap-3">
+          <Badge>דחוף</Badge>
+          <Status label="בטיפול" tone="info" />
+        </Card>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-fg">ניווט נייד — תצוגה</h2>
+          <nav className="ops-bottom-nav ops-bottom-nav-preview" aria-label="תצוגת ניווט">
+            <span className="ops-bottom-nav-slot">
+              <span className="ops-bottom-nav-item is-active">
+                <span>היום</span>
+              </span>
+            </span>
+            <span className="ops-bottom-nav-slot">
+              <span className="ops-bottom-nav-item">
+                <span>לקוחות</span>
+              </span>
+            </span>
+            <span className="ops-bottom-nav-slot">
+              <span className="ops-bottom-nav-item">
+                <span>אתרים</span>
+              </span>
+            </span>
+            <span className="ops-bottom-nav-slot">
+              <span className="ops-bottom-nav-item">
+                <span>עוד</span>
+              </span>
+            </span>
+          </nav>
+        </div>
+      </section>
       <Input id="demo" label="שם מלא" />
       <Input id="demo-password" label="סיסמה" revealable />
       <div className="flex gap-4">

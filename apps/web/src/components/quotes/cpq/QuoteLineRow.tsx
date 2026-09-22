@@ -170,10 +170,63 @@ export const QuoteLineRow = memo(function QuoteLineRow({
   const override = isPriceOverride(item);
   const listPrice = catalogListPrice(item);
   const lineTotal = previewLineNet(item, draft);
+  const isNote = item.item_type === "note";
+  const isLabor = item.item_type === "labor";
+
+  if (isNote) {
+    return (
+      <div className="cpq-line-row cpq-line-row-note cpq-line-row-kai grid gap-2 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 flex-col gap-1">
+          <Input
+            id={`item-desc-${item.id}`}
+            label={he.quoteAddNote}
+            value={draft.description}
+            disabled={!canEdit}
+            onFocus={() => handleFocus("description")}
+            onBlur={() => handleBlur("description")}
+            onChange={(e) => updateField("description", e.target.value)}
+          />
+          {persistError ? (
+            <span className="text-xs text-danger" role="alert">
+              {persistError}
+            </span>
+          ) : null}
+          {savedFlash ? <span className="cpq-line-saved">{he.cpqLineSaved}</span> : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          {canEdit ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={he.cpqMoveUp}
+                disabled={globalIndex <= 0}
+                onClick={() => onReorder(item.id, "up")}
+              >
+                <ArrowUp className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={he.cpqMoveDown}
+                disabled={globalIndex >= rowCount - 1}
+                onClick={() => onReorder(item.id, "down")}
+              >
+                <ArrowDown className="size-4" />
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => onDelete(item.id)}>
+                {he.quoteDeleteItem}
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="cpq-line-row grid gap-2 rounded-[var(--radius-control)] border border-border p-3 sm:grid-cols-[6.5rem_minmax(0,1fr)_5rem_7rem_5.5rem_auto]"
+      className="cpq-line-row cpq-line-row-kai grid gap-2 p-3 sm:grid-cols-[6.5rem_minmax(0,1fr)_5rem_7rem_5.5rem_auto]"
     >
       <Input
         id={`item-sku-${item.id}`}
@@ -196,6 +249,9 @@ export const QuoteLineRow = memo(function QuoteLineRow({
           onChange={(e) => updateField("description", e.target.value)}
         />
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">
+          {isLabor ? (
+            <span className="rounded border border-border px-1.5 py-0.5">{he.quoteLaborBadge}</span>
+          ) : null}
           {item.package_name ? (
             <span className="rounded border border-border px-1.5 py-0.5">
               {he.cpqPackageBadge}: {item.package_name}
@@ -245,8 +301,13 @@ export const QuoteLineRow = memo(function QuoteLineRow({
         onBlur={() => handleBlur("discount")}
         onChange={(e) => updateField("discount", e.target.value)}
       />
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="text-sm font-medium">{formatMoney(lineTotal, currency)}</span>
+      <div className="cpq-line-total-cell">
+        <div className="cpq-line-total-stack">
+          <span className="cpq-line-total-label">{he.cpqLineTotal}</span>
+          <span className="cpq-line-total ltr-meta" dir="ltr">
+            {formatMoney(lineTotal, currency)}
+          </span>
+        </div>
         {savedFlash ? <span className="cpq-line-saved">{he.cpqLineSaved}</span> : null}
         {persistError ? (
           <span className="text-xs text-danger" role="alert">
@@ -254,7 +315,7 @@ export const QuoteLineRow = memo(function QuoteLineRow({
           </span>
         ) : null}
         {canEdit ? (
-          <>
+          <div className="cpq-line-actions">
             <Button
               type="button"
               variant="ghost"
@@ -276,7 +337,7 @@ export const QuoteLineRow = memo(function QuoteLineRow({
             <Button type="button" variant="ghost" onClick={() => onDelete(item.id)}>
               {he.quoteDeleteItem}
             </Button>
-          </>
+          </div>
         ) : null}
       </div>
     </div>

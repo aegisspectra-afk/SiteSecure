@@ -161,7 +161,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
             <p className="ops-topbar-title">{workspaceLabel}</p>
-            <p className="ops-topbar-meta">{workspaceActive ? he.workspaceActive : he.workspaceInactive}</p>
+            {!workspaceActive ? (
+              <p className="ops-topbar-meta">{he.workspaceInactive}</p>
+            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button

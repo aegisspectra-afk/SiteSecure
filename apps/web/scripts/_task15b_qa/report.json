@@ -1,0 +1,37 @@
+{
+  "web": "http://127.0.0.1:5180",
+  "api": "http://127.0.0.1:8000",
+  "health": {
+    "ok": true,
+    "service": "site-secure-api"
+  },
+  "workspace": "7c684f1d-6757-4689-8caa-6a7c6042c5fe",
+  "checks": {
+    "empty_import": true,
+    "empty_manual": true,
+    "empty_template": true,
+    "empty_copy": false,
+    "parse_status": 200,
+    "preview_status": 200,
+    "confirm_label": "ייבא 1 מוצרים",
+    "commit_status": 200,
+    "product_visible": false,
+    "api_product_count": 1,
+    "api_product_sku": "QA-on2gnh",
+    "product_persisted": true,
+    "mobile_overflow": {
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": false
+    },
+    "targets_status": 200,
+    "template_status": 200,
+    "template_pk": true
+  },
+  "screenshots": {
+    "empty": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15b_qa\\desktop-1280-empty.png",
+    "import": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15b_qa\\desktop-1280-import.png",
+    "catalog": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15b_qa\\desktop-1280-catalog.png",
+    "mobile": "C:\\Users\\shimd\\OneDrive\\Desktop\\אגיס מערכות\\SiteSecureV1\\apps\\web\\scripts\\_task15b_qa\\mobile-390.png"
+  }
+}

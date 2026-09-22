@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="en"><head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050308">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title></title>
+    <link rel="stylesheet" href="/src/style.css">
+  </head>
+  <body>
+    <div id="app" aria-hidden="true">
+      <canvas id="scene" data-engine="three.js r172" width="1280" height="800"></canvas>
+      <div id="fallback" hidden="">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <radialGradient id="heartGlow" cx="50%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#ffb6c8" stop-opacity="0.95"></stop>
+              <stop offset="45%" stop-color="#ff4d6d" stop-opacity="0.9"></stop>
+              <stop offset="100%" stop-color="#7a1028" stop-opacity="0.75"></stop>
+            </radialGradient>
+            <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2.4" result="blur"></feGaussianBlur>
+              <feMerge>
+                <feMergeNode in="blur"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M50 88 C22 68 8 48 8 32 C8 18 18 10 30 10 C38 10 45 14 50 22 C55 14 62 10 70 10 C82 10 92 18 92 32 C92 48 78 68 50 88 Z" fill="url(#heartGlow)" filter="url(#softGlow)"></path>
+        </svg>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js?t=1788623558390"></script>
+  
+
+</body></html>

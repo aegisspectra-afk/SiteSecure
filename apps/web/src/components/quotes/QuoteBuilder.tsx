@@ -76,7 +76,14 @@ import {
 import { QuoteSidebar } from "./workspace/QuoteSidebar";
 import { QuoteSidebarPanel } from "./workspace/QuoteSidebarPanel";
 import { UnifiedReadiness } from "./workspace/UnifiedReadiness";
-import type { QuoteWorkspaceStep } from "./workspace/types";
+import { QuoteStagePanel } from "./workspace/QuoteStagePanel";
+import {
+  adjacentQuoteWorkspaceStep,
+  initialQuoteWorkspaceStep,
+  quoteWorkspaceStepIndex,
+  type QuoteWorkspaceStep,
+  QUOTE_WORKSPACE_STEPS,
+} from "./workspace/types";
 
 const HISTORY_LIMIT = 40;
 
@@ -205,10 +212,17 @@ export function QuoteBuilder({
   const [whatsappPrompt, setWhatsappPrompt] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [replacingCustomer, setReplacingCustomer] = useState(false);
+  /** Mobile/desktop progressive disclosure for customer pick — presentation only. */
+  const [customerEntryMode, setCustomerEntryMode] = useState<"choose" | "search" | "create">(() =>
+    quote.customer_id ? "choose" : "choose",
+  );
   const [workspaceTab, setWorkspaceTab] = useState<"quote" | "profit" | "checks" | "history">("quote");
-  const [activeStep, setActiveStep] = useState<QuoteWorkspaceStep>("items");
+  const [activeStep, setActiveStep] = useState<QuoteWorkspaceStep>(() =>
+    initialQuoteWorkspaceStep(quote.items?.length ?? 0),
+  );
   const [detailsExpanded, setDetailsExpanded] = useState(() => !quote.customer_id);
-  const [contextAccordionOpen, setContextAccordionOpen] = useState(() => !quote.customer_id);
+  /** Mobile-only accordion; desktop always shows context body via CSS. Default closed for compact mobile. */
+  const [contextAccordionOpen, setContextAccordionOpen] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileAddOpen, setMobileAddOpen] = useState(false);
@@ -217,6 +231,7 @@ export function QuoteBuilder({
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [quickCatalogQ, setQuickCatalogQ] = useState("");
+  const [quickCatalogKind, setQuickCatalogKind] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(quote.id ? Date.now() : null);
   const [siteMismatchPending, setSiteMismatchPending] = useState<{
     id: string;
@@ -318,9 +333,17 @@ export function QuoteBuilder({
   });
   const debouncedQuickCatalogQ = useDebouncedValue(quickCatalogQ, 280);
   const quickCatalogQuery = useQuery({
-    queryKey: ["cpq-catalog-quick", workspaceId, debouncedQuickCatalogQ],
-    enabled: canCatalog && quickAddOpen && debouncedQuickCatalogQ.trim().length >= 1,
-    queryFn: () => api.listCatalogProducts(workspaceId, { q: debouncedQuickCatalogQ.trim(), limit: 12 }),
+    queryKey: ["cpq-catalog-quick", workspaceId, debouncedQuickCatalogQ, quickCatalogKind],
+    enabled:
+      canCatalog &&
+      quickAddOpen &&
+      (debouncedQuickCatalogQ.trim().length >= 1 || quickCatalogKind === "service"),
+    queryFn: () =>
+      api.listCatalogProducts(workspaceId, {
+        q: debouncedQuickCatalogQ.trim() || undefined,
+        kind: quickCatalogKind || undefined,
+        limit: 12,
+      }),
   });
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
@@ -617,13 +640,20 @@ export function QuoteBuilder({
       body,
     }: {
       sectionId: string;
-      body: { name?: string; collapsed?: boolean; sort_order?: number };
+      body: {
+        name?: string;
+        collapsed?: boolean;
+        sort_order?: number;
+        discount_type?: string;
+        discount_value?: number;
+      };
     }) => {
       const current = await createOnce();
       const row = await api.patchQuoteSection(workspaceId, current.id, sectionId, body);
       applyRow(row);
       return row;
     },
+    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
   const persistSectionName = useCallback(
     async (sectionId: string, name: string) => {
@@ -875,6 +905,7 @@ export function QuoteBuilder({
     updateDraft({ customer_id: next.id, site_id: clearSite ? "" : draft.site_id });
     setCustomerLabel(next.name);
     setReplacingCustomer(false);
+    setCustomerEntryMode("choose");
     setSiteMismatchPending(null);
   }
 
@@ -1202,43 +1233,80 @@ export function QuoteBuilder({
 
   function handleQuickAddAction(id: QuickAddActionId) {
     if (id === "free") {
+      setQuickCatalogKind(null);
       addItem.mutate({ item_type: "free", description: "", qty: 1, unit_price: 0 });
       return;
     }
+    if (id === "note") {
+      setQuickCatalogKind(null);
+      addItem.mutate({ item_type: "note", description: "", qty: 1, unit_price: 0 });
+      return;
+    }
+    if (id === "service") {
+      setQuickCatalogKind("service");
+      setQuickCatalogQ("");
+      setQuickAddOpen(true);
+      return;
+    }
     if (id === "section") {
+      setQuickCatalogKind(null);
       addSection.mutate();
       return;
     }
     if (id === "system") {
+      setQuickCatalogKind(null);
       setSystemBuilderOpen(true);
       return;
     }
     if (id === "catalog") {
+      setQuickCatalogKind(null);
       window.setTimeout(() => document.getElementById("catalog-search")?.focus(), 40);
       return;
     }
     if (id === "template") {
+      setQuickCatalogKind(null);
       setTemplatesReady(true);
       setTemplateApplyOpen(true);
       return;
     }
     if (id === "addSystem") {
+      setQuickCatalogKind(null);
       setSystemPickerOpen(true);
     }
   }
 
   function handleMobileAddPick(action: QuoteMobileAddAction) {
     setMobileAddOpen(false);
-    if (action === "item") {
+    if (action === "catalog") {
+      setQuickCatalogKind(null);
       setQuickAddOpen(true);
       return;
     }
-    if (action === "system") {
-      setSystemPickerOpen(true);
+    if (action === "free") {
+      addItem.mutate({ item_type: "free", description: "", qty: 1, unit_price: 0 });
+      return;
+    }
+    if (action === "service") {
+      setQuickCatalogKind("service");
+      setQuickCatalogQ("");
+      setQuickAddOpen(true);
+      return;
+    }
+    if (action === "note") {
+      addItem.mutate({ item_type: "note", description: "", qty: 1, unit_price: 0 });
       return;
     }
     if (action === "section") {
       addSection.mutate();
+      return;
+    }
+    if (action === "template") {
+      setTemplatesReady(true);
+      setTemplateApplyOpen(true);
+      return;
+    }
+    if (action === "system") {
+      setSystemPickerOpen(true);
       return;
     }
     if (action === "buildSystem") {
@@ -1267,22 +1335,25 @@ export function QuoteBuilder({
   }
 
   function goToStep(step: QuoteWorkspaceStep) {
+    // Presentation only — never save / createOnce / mutate server.
     setActiveStep(step);
     if (step === "details") {
       setDetailsExpanded(true);
-      scrollToZone("cpq-zone-details");
-      return;
+      setContextAccordionOpen(true);
     }
-    if (step === "items") {
-      scrollToZone("quote-items");
-      return;
-    }
-    if (step === "pricing") {
+    if (step === "review") {
+      setTermsOpen(true);
+      setWorkspaceTab("checks");
+    } else if (step === "pricing") {
       setWorkspaceTab("quote");
-      scrollToZone("cpq-summary-anchor");
-      return;
+    } else if (step === "items") {
+      setWorkspaceTab("quote");
     }
-    focusValidation();
+  }
+
+  function goAdjacentStage(direction: -1 | 1) {
+    const next = adjacentQuoteWorkspaceStep(activeStep, direction);
+    if (next) goToStep(next);
   }
 
   async function goCustomerView() {
@@ -1306,29 +1377,28 @@ export function QuoteBuilder({
       "lead_id",
       "title",
       "valid_until",
-      "payment_terms",
       "template_id",
       "project_name",
     ]);
+    const termsFields = new Set(["payment_terms", "warranty", "general_terms", "customer_notes"]);
     if (detailFields.has(field)) {
+      goToStep("details");
       setDetailsExpanded(true);
       setContextAccordionOpen(true);
+    } else if (termsFields.has(field)) {
+      goToStep("review");
     }
     if (field === "items") {
-      setActiveStep("items");
-      scrollToZone("quote-items");
+      goToStep("items");
       return;
     }
-    goToQuoteField(field);
+    window.setTimeout(() => goToQuoteField(field), 40);
   }
 
   function focusValidation() {
-    setActiveStep("review");
+    goToStep("review");
     setWorkspaceTab("checks");
     setMobileSheetOpen(true);
-    window.setTimeout(() => {
-      document.getElementById("cpq-validation")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 50);
   }
 
   async function startSendFlow() {
@@ -1630,8 +1700,11 @@ export function QuoteBuilder({
       </div>
     ) : null;
 
+  const showFullSummaryRail = activeStep === "pricing" || activeStep === "review";
+  const showSidebarSubmit = activeStep === "review" && live.status === "draft" && canSend;
+
   const sidebarSubmitFooter =
-    workspaceTab !== "profit" && live.status === "draft" && canSend ? (
+    showSidebarSubmit ? (
       <div className="cpq-submit-block">
         <Button
           className="cpq-submit-primary"
@@ -1658,7 +1731,7 @@ export function QuoteBuilder({
         </>
       ) : (
         <>
-          {workspaceTab === "quote" || workspaceTab === "profit" || workspaceTab === "checks" ? (
+          {showFullSummaryRail ? (
             <QuoteSummaryAside
               currency={currency}
               vatPercent={vatPercent}
@@ -1666,6 +1739,7 @@ export function QuoteBuilder({
               vatAmount={live.vat_amount}
               totalGross={live.total_gross}
               discountAmount={live.quote_discount_amount}
+              sectionDiscountAmount={live.section_discount_amount}
               canViewCost={canViewCost}
               costTotal={live.cost_total}
               marginAmount={live.margin_amount}
@@ -1683,23 +1757,38 @@ export function QuoteBuilder({
               showProfitability={workspaceTab === "profit"}
               totalsOnly={workspaceTab === "profit"}
             />
-          ) : null}
-
-          {workspaceTab !== "profit" ? (
-            <div id="cpq-validation">
-              <UnifiedReadiness
-                percent={readiness.percent}
-                items={readinessItems}
-                canSend={canSendNow}
-                highlightIssues={readinessHighlight}
-                showDetails={workspaceTab === "checks"}
-                onSelectItem={(item) => focusReadinessField(item.field)}
-              />
-            </div>
-          ) : null}
+          ) : (
+            <section className="cpq-summary-compact" aria-label={he.cpqStageCompactTotal}>
+              <span className="cpq-summary-compact-label">{he.cpqStageCompactTotal}</span>
+              <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
+                {formatMoney(live.total_gross, currency)}
+              </span>
+            </section>
+          )}
         </>
       )}
     </QuoteSidebarPanel>
+  );
+
+  const stageNavFooter = (
+    <div className="cpq-stage-nav-footer">
+      <Button
+        type="button"
+        variant="ghost"
+        disabled={!adjacentQuoteWorkspaceStep(activeStep, -1)}
+        onClick={() => goAdjacentStage(-1)}
+      >
+        {he.cpqStageBack}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!adjacentQuoteWorkspaceStep(activeStep, 1)}
+        onClick={() => goAdjacentStage(1)}
+      >
+        {he.cpqStageNext}
+      </Button>
+    </div>
   );
 
   return (
@@ -1736,7 +1825,9 @@ export function QuoteBuilder({
         }
         primaryCtaVariant={
           lifecyclePrimary.kind === "send"
-            ? "ghost"
+            ? activeStep === "review"
+              ? undefined
+              : "ghost"
             : lifecyclePrimary.kind === "show_link" || lifecyclePrimary.kind === "show_activity"
               ? "secondary"
               : lifecyclePrimary.kind === "cancelled" || lifecyclePrimary.kind === "approved"
@@ -1881,6 +1972,22 @@ export function QuoteBuilder({
           />
         ) : null}
 
+        <div className="cpq-stage-mobile-chrome lg:hidden" aria-live="polite">
+          <p className="cpq-stage-mobile-index">
+            {he.cpqStageOf(quoteWorkspaceStepIndex(activeStep) + 1, QUOTE_WORKSPACE_STEPS.length)}
+          </p>
+          <p className="cpq-stage-mobile-title">
+            {activeStep === "details"
+              ? he.cpqWorkflowDetails
+              : activeStep === "items"
+                ? he.cpqWorkflowContent
+                : activeStep === "pricing"
+                  ? he.cpqWorkflowPricing
+                  : he.cpqStepReview}
+          </p>
+        </div>
+
+        <QuoteStagePanel step="details" activeStep={activeStep} className="cpq-stage-details">
         <QuoteContextBar
           expanded={detailsExpanded || replacingCustomer || !draft.customer_id}
           onToggle={() => setDetailsExpanded((v) => !v)}
@@ -1894,7 +2001,10 @@ export function QuoteBuilder({
           validUntil={draft.valid_until || null}
           projectName={draft.project_name || live.project_name || null}
           canChangeCustomer={canEdit && Boolean(draft.customer_id)}
-          onChangeCustomer={() => setReplacingCustomer(true)}
+          onChangeCustomer={() => {
+            setReplacingCustomer(true);
+            setCustomerEntryMode("choose");
+          }}
         >
         <section id="cpq-zone-details" className="cpq-zone-context flex flex-col gap-4">
           <p id="quote-company" tabIndex={-1} className="sr-only">
@@ -1912,6 +2022,7 @@ export function QuoteBuilder({
                 canChange={canEdit}
                 onChange={() => {
                   setReplacingCustomer(true);
+                  setCustomerEntryMode("choose");
                 }}
                 canCreateSite={canEdit && canSitesCreate && !draft.site_id}
                 onCreateSite={() => {
@@ -1957,58 +2068,129 @@ export function QuoteBuilder({
                 }
               />
             ) : (
-              <div className="flex flex-col gap-3">
-                {!draft.customer_id ? <QuoteContextCard unassigned /> : null}
-                {replacingCustomer ? (
+              <div className="cpq-customer-entry flex flex-col gap-3">
+                {!draft.customer_id && customerEntryMode === "choose" ? (
+                  <QuoteContextCard unassigned />
+                ) : null}
+                {replacingCustomer && customerEntryMode === "choose" ? (
                   <p className="text-sm font-semibold text-fg">{he.quoteCustomerPickerTitle}</p>
                 ) : null}
-                <p className="text-xs text-fg-muted">{he.quoteCustomerPickerHint}</p>
-                <CustomerSelector
-                  onPick={(customer) => {
-                    pickCustomer({ id: customer.id, name: customer.name });
-                  }}
-                  onBack={() => {
-                    if (draft.customer_id) {
-                      setReplacingCustomer(false);
-                    }
-                  }}
-                  onCreateNew={
-                    canCrmCreate
-                      ? () => {
+
+                {customerEntryMode === "choose" ? (
+                  <div className="cpq-customer-mode-chooser" role="group" aria-label={he.quoteCustomer}>
+                    <button
+                      type="button"
+                      className="cpq-customer-mode-btn"
+                      onClick={() => setCustomerEntryMode("search")}
+                    >
+                      {he.workflowExistingCustomer}
+                    </button>
+                    {canCrmCreate ? (
+                      <button
+                        type="button"
+                        className="cpq-customer-mode-btn is-secondary"
+                        onClick={() => {
+                          setCustomerEntryMode("create");
                           window.setTimeout(() => document.getElementById("new-customer-name")?.focus(), 50);
+                        }}
+                      >
+                        {he.workflowNewCustomer}
+                      </button>
+                    ) : null}
+                    {replacingCustomer && draft.customer_id ? (
+                      <button
+                        type="button"
+                        className="cpq-customer-mode-back"
+                        onClick={() => {
+                          setReplacingCustomer(false);
+                          setCustomerEntryMode("choose");
+                        }}
+                      >
+                        {he.workflowBack}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {customerEntryMode === "search" ? (
+                  <>
+                    <p className="text-xs text-fg-muted">{he.quoteCustomerPickerHint}</p>
+                    <CustomerSelector
+                      onPick={(customer) => {
+                        pickCustomer({ id: customer.id, name: customer.name });
+                      }}
+                      onBack={() => {
+                        if (draft.customer_id && replacingCustomer) {
+                          setReplacingCustomer(false);
+                          setCustomerEntryMode("choose");
+                        } else {
+                          setCustomerEntryMode("choose");
                         }
-                      : undefined
-                  }
-                />
+                      }}
+                      onCreateNew={
+                        canCrmCreate
+                          ? () => {
+                              setCustomerEntryMode("create");
+                              window.setTimeout(() => document.getElementById("new-customer-name")?.focus(), 50);
+                            }
+                          : undefined
+                      }
+                    />
+                  </>
+                ) : null}
+
+                {customerEntryMode === "create" && canEdit && canCrmCreate ? (
+                  <div className="cpq-customer-create-panel flex flex-col gap-3">
+                    <p className="text-sm font-semibold text-fg">{he.workflowNewCustomer}</p>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                      <Input
+                        id="new-customer-name"
+                        label={he.quoteCustomerName}
+                        value={newCustomer.display_name}
+                        onChange={(ev) => setNewCustomer((p) => ({ ...p, display_name: ev.target.value }))}
+                      />
+                      <Input
+                        id="new-customer-phone"
+                        label={he.quoteCustomerCreatePhone}
+                        value={newCustomer.phone}
+                        onChange={(ev) => setNewCustomer((p) => ({ ...p, phone: ev.target.value }))}
+                      />
+                      <Input
+                        id="new-customer-email"
+                        label={he.quoteCustomerEmail}
+                        value={newCustomer.email}
+                        onChange={(ev) => setNewCustomer((p) => ({ ...p, email: ev.target.value }))}
+                      />
+                      <Button
+                        variant="secondary"
+                        disabled={!newCustomer.display_name.trim()}
+                        onClick={async () => {
+                          try {
+                            const created = await api.createCustomer(workspaceId, {
+                              display_name: newCustomer.display_name.trim(),
+                              email: newCustomer.email.trim() || undefined,
+                              phone: newCustomer.phone.trim() || undefined,
+                            });
+                            setNewCustomer({ display_name: "", email: "", phone: "" });
+                            pickCustomer({ id: created.id, name: created.display_name });
+                          } catch (err) {
+                            setFormError(
+                              planQuotaMessage(err) ??
+                                (err instanceof ApiClientError ? err.message : he.customersError),
+                            );
+                          }
+                        }}
+                      >
+                        {he.quoteCustomerCreate}
+                      </Button>
+                    </div>
+                    <button type="button" className="cpq-customer-mode-back" onClick={() => setCustomerEntryMode("choose")}>
+                      {he.workflowBack}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             )
-          ) : null}
-
-          {canEdit && canCrmCreate && (!draft.customer_id || replacingCustomer) ? (
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
-              <Input id="new-customer-name" label={he.quoteCustomerName} value={newCustomer.display_name} onChange={(ev) => setNewCustomer((p) => ({ ...p, display_name: ev.target.value }))} />
-              <Input id="new-customer-phone" label={he.quoteCustomerCreatePhone} value={newCustomer.phone} onChange={(ev) => setNewCustomer((p) => ({ ...p, phone: ev.target.value }))} />
-              <Input id="new-customer-email" label={he.quoteCustomerEmail} value={newCustomer.email} onChange={(ev) => setNewCustomer((p) => ({ ...p, email: ev.target.value }))} />
-              <Button
-                variant="secondary"
-                disabled={!newCustomer.display_name.trim()}
-                onClick={async () => {
-                  try {
-                    const created = await api.createCustomer(workspaceId, {
-                      display_name: newCustomer.display_name.trim(),
-                      email: newCustomer.email.trim() || undefined,
-                      phone: newCustomer.phone.trim() || undefined,
-                    });
-                    setNewCustomer({ display_name: "", email: "", phone: "" });
-                    pickCustomer({ id: created.id, name: created.display_name });
-                  } catch (err) {
-                    setFormError(planQuotaMessage(err) ?? (err instanceof ApiClientError ? err.message : he.customersError));
-                  }
-                }}
-              >
-                {he.quoteCustomerCreate}
-              </Button>
-            </div>
           ) : null}
 
           {canLeads ? (
@@ -2098,25 +2280,6 @@ export function QuoteBuilder({
             ) : null}
           </div>
 
-          <div className="cpq-disclosure">
-            <Button type="button" variant="ghost" onClick={() => setTermsOpen((v) => !v)}>
-              {termsOpen ? "▾" : "▸"} {he.cpqAdvancedTerms}
-            </Button>
-            {termsOpen ? (
-              <div className="mt-3 grid gap-3">
-                <Textarea id="payment_terms" label={he.quotePaymentTerms} value={draft.payment_terms} disabled={!canEdit} onChange={(ev) => updateDraft({ payment_terms: ev.target.value })} />
-                <Textarea id="warranty" label={he.quoteWarranty} value={draft.warranty} disabled={!canEdit} onChange={(ev) => updateDraft({ warranty: ev.target.value })} />
-                <Textarea id="general_terms" label={he.quoteGeneralTerms} value={draft.general_terms} disabled={!canEdit} onChange={(ev) => updateDraft({ general_terms: ev.target.value })} />
-                <Textarea id="customer_notes" label={he.quoteNotesCombined} value={draft.customer_notes} disabled={!canEdit} onChange={(ev) => updateDraft({ customer_notes: ev.target.value })} />
-                <Textarea id="internal_notes" label={he.quoteInternalNotes} value={draft.internal_notes} disabled={!canEdit} onChange={(ev) => updateDraft({ internal_notes: ev.target.value })} />
-              </div>
-            ) : (
-              <p id="payment_terms" tabIndex={-1} className="sr-only">
-                {draft.payment_terms}
-              </p>
-            )}
-          </div>
-
           {canCatalog ? (
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-0 flex-1">
@@ -2202,7 +2365,14 @@ export function QuoteBuilder({
             disabled={!canEdit}
           />
         ) : null}
+        {stageNavFooter}
+        </QuoteStagePanel>
 
+        <QuoteStagePanel
+          step={["items", "pricing"]}
+          activeStep={activeStep}
+          className={`cpq-stage-composition${activeStep === "pricing" ? " is-pricing-emphasis" : " is-planning-emphasis"}`}
+        >
         <QuoteLinesPanel
           items={items}
           sections={live.sections ?? []}
@@ -2220,6 +2390,11 @@ export function QuoteBuilder({
           onOpenQuickAdd={canEdit ? () => setQuickAddOpen(true) : undefined}
           onAddSection={canEdit ? () => addSection.mutate() : undefined}
           onRenameSection={persistSectionName}
+          onPatchSectionDiscount={
+            canEdit
+              ? (sectionId, body) => patchSection.mutate({ sectionId, body })
+              : undefined
+          }
           onToggleSection={(sectionId, collapsed) => patchSection.mutate({ sectionId, body: { collapsed } })}
           onDuplicateSection={(sectionId) => duplicateSection.mutate(sectionId)}
           onDeleteSection={(sectionId) => deleteSection.mutate(sectionId)}
@@ -2228,6 +2403,61 @@ export function QuoteBuilder({
           onDelete={handleDeleteItem}
           onReorder={handleReorderItem}
         />
+        {stageNavFooter}
+        </QuoteStagePanel>
+
+        <QuoteStagePanel step="review" activeStep={activeStep} className="cpq-stage-review">
+          <section className="cpq-content-panel cpq-content-kai flex flex-col gap-4 p-5" aria-label={he.cpqStepReview}>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-fg">{he.cpqStepReview}</h2>
+              <p className="mt-1 text-sm text-fg-muted">{he.cpqSubmitReviewHint}</p>
+            </div>
+            <div className="grid gap-3">
+              <Textarea id="payment_terms" label={he.quotePaymentTerms} value={draft.payment_terms} disabled={!canEdit} onChange={(ev) => updateDraft({ payment_terms: ev.target.value })} />
+              <Textarea id="warranty" label={he.quoteWarranty} value={draft.warranty} disabled={!canEdit} onChange={(ev) => updateDraft({ warranty: ev.target.value })} />
+              <Textarea id="general_terms" label={he.quoteGeneralTerms} value={draft.general_terms} disabled={!canEdit} onChange={(ev) => updateDraft({ general_terms: ev.target.value })} />
+              <Textarea id="customer_notes" label={he.quoteNotesCombined} value={draft.customer_notes} disabled={!canEdit} onChange={(ev) => updateDraft({ customer_notes: ev.target.value })} />
+              <Textarea id="internal_notes" label={he.quoteInternalNotes} value={draft.internal_notes} disabled={!canEdit} onChange={(ev) => updateDraft({ internal_notes: ev.target.value })} />
+            </div>
+            <div id="cpq-validation" className="flex flex-col gap-3">
+              <UnifiedReadiness
+                percent={readiness.percent}
+                items={readinessItems}
+                canSend={canSendNow}
+                highlightIssues={readinessHighlight}
+                showDetails
+                onSelectItem={(item) => focusReadinessField(item.field)}
+              />
+              {!isDesktopLayout ? (
+                <>
+                  <section className="cpq-summary-compact" aria-label={he.cpqStageCompactTotal}>
+                    <span className="cpq-summary-compact-label">{he.cpqStageCompactTotal}</span>
+                    <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
+                      {formatMoney(live.total_gross, currency)}
+                    </span>
+                  </section>
+                  {sidebarSubmitFooter}
+                </>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" disabled={!live.id && !draftHasContent(draft)} onClick={() => void goCustomerView()}>
+                {he.cpqCustomerView}
+              </Button>
+              {live.status === "draft" && canSend ? (
+                <Button
+                  type="button"
+                  disabled={!canSendNow}
+                  title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
+                  onClick={() => void startSendFlow()}
+                >
+                  {he.cpqSendForApproval}
+                </Button>
+              ) : null}
+            </div>
+          </section>
+          {stageNavFooter}
+        </QuoteStagePanel>
       </div>
 
       {isDesktopLayout ? (
@@ -2260,7 +2490,11 @@ export function QuoteBuilder({
               setMobileMenuOpen(false);
               setMobileAddOpen(true);
             }}
-            primaryCtaLabel={primaryCtaLabel}
+            primaryCtaLabel={
+              lifecyclePrimary.kind === "send" && primaryCtaLabel
+                ? he.cpqSendForApprovalShort
+                : primaryCtaLabel
+            }
             primaryCtaDisabled={primaryCtaDisabled}
             primaryCtaLoading={
               lifecyclePrimary.kind === "revise"
@@ -2313,7 +2547,11 @@ export function QuoteBuilder({
 
       <QuoteQuickAdd
         open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
+        onClose={() => {
+          setQuickAddOpen(false);
+          setQuickCatalogKind(null);
+          setQuickCatalogQ("");
+        }}
         onAction={handleQuickAddAction}
         catalogResults={(quickCatalogQuery.data?.items ?? []).map((p) => ({
           id: p.id,
@@ -2322,16 +2560,20 @@ export function QuoteBuilder({
           selling_price: p.selling_price ?? p.list_price,
           category_path: p.category_path,
           manufacturer: p.manufacturer,
+          kind: p.kind,
         }))}
         catalogLoading={quickCatalogQuery.isFetching}
         onCatalogQuery={setQuickCatalogQ}
+        catalogKind={quickCatalogKind}
         onPickCatalog={(productId) => {
           const product = quickCatalogQuery.data?.items.find((p) => p.id === productId);
+          const isService = product?.kind === "service" || quickCatalogKind === "service";
           addItem.mutate({
             product_id: productId,
-            item_type: product?.item_type || "catalog",
+            item_type: isService ? "labor" : product?.item_type || "catalog",
             qty: 1,
           });
+          setQuickCatalogKind(null);
         }}
         canCatalog={canCatalog}
         canSystem={canEdit && canCatalog}
@@ -2415,6 +2657,12 @@ export function QuoteBuilder({
           setBuildSystemApplyError(null);
         }}
         workspaceId={workspaceId}
+        quoteId={live.id || null}
+        ensureQuoteId={async () => {
+          const row = await createOnce();
+          commitRoute(row.id);
+          return row.id;
+        }}
         api={api}
         lead={linkedLead}
         applying={buildSystemApplying}
@@ -2422,6 +2670,14 @@ export function QuoteBuilder({
         recovery={buildSystemRecovery}
         onClearRecovery={() => setBuildSystemRecovery(null)}
         onApply={(lines, opts) => applyCctvBuildLines(lines, opts)}
+        onAppliedQuote={(quote) => {
+          applyRow(quote);
+          commitRoute(quote.id);
+          setBuildSystemRecovery(null);
+          setBuildSystemApplyError(null);
+          setBuildSystemLastFingerprint(null);
+          setSystemBuilderOpen(false);
+        }}
       />
     </div>
   );

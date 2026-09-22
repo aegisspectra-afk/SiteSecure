@@ -46,3 +46,21 @@ def test_cancel_from_open_states():
 def test_open_job_set_includes_arrived():
     assert "arrived" in OPEN_JOB_STATUSES
     assert "blocked" in OPEN_JOB_STATUSES
+
+
+def test_invalid_complete_from_en_route():
+    with pytest.raises(ApiError) as exc:
+        assert_transition("complete", "en_route")
+    assert exc.value.code == "BUSINESS_RULE"
+
+
+def test_invalid_arrived_from_scheduled():
+    with pytest.raises(ApiError) as exc:
+        assert_transition("arrived", "scheduled")
+    assert exc.value.code == "BUSINESS_RULE"
+
+
+def test_invalid_start_from_completed():
+    with pytest.raises(ApiError) as exc:
+        assert_transition("start", "completed")
+    assert exc.value.code == "BUSINESS_RULE"

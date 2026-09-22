@@ -1,5 +1,7 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useRouterState } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import {
+  applyDocumentTheme,
   readThemeMode,
   resolveTheme,
   startThemeRuntime,
@@ -31,6 +33,10 @@ export function useTheme() {
 }
 
 export function ThemeRuntime() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   useEffect(() => startThemeRuntime(), []);
+  useLayoutEffect(() => {
+    applyDocumentTheme(readThemeMode(), pathname);
+  }, [pathname]);
   return null;
 }

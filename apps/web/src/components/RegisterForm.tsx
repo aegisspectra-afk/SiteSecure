@@ -51,12 +51,17 @@ export function RegisterForm({
   }
 
   return (
-    <AuthForm onSubmit={handleSubmit} aria-busy={busy || undefined}>
+    <AuthForm
+      onSubmit={handleSubmit}
+      aria-busy={busy || undefined}
+      className={error || Object.keys(fieldErrors).length ? "ss-auth-shake" : undefined}
+    >
       <AuthField
         id="fullName"
         name="fullName"
         label={he.fullName}
         autoComplete="name"
+        appearance="comfortable"
         value={fullName}
         onChange={(ev) => setFullName(ev.target.value)}
         error={fieldErrors.fullName}
@@ -68,6 +73,7 @@ export function RegisterForm({
         label={he.email}
         type="email"
         autoComplete="email"
+        appearance="comfortable"
         ltr
         value={email}
         onChange={(ev) => setEmail(ev.target.value)}
@@ -79,6 +85,7 @@ export function RegisterForm({
         name="password"
         label={he.password}
         autoComplete="new-password"
+        appearance="comfortable"
         value={password}
         onChange={(ev) => setPassword(ev.target.value)}
         error={fieldErrors.password}
@@ -90,6 +97,7 @@ export function RegisterForm({
         name="confirm"
         label={he.passwordConfirm}
         autoComplete="new-password"
+        appearance="comfortable"
         value={confirm}
         onChange={(ev) => setConfirm(ev.target.value)}
         error={fieldErrors.confirm}
@@ -98,11 +106,11 @@ export function RegisterForm({
       {error ? <AuthAlert>{error}</AuthAlert> : null}
       <Button
         type="submit"
-        variant="primary"
+        variant="pill"
         loading={busy}
         loadingLabel={he.creatingAccount}
         disabled={busy}
-        className="auth-cta mt-2 h-12 w-full"
+        className="auth-cta mt-2 w-full"
       >
         {he.registerPrimary}
       </Button>

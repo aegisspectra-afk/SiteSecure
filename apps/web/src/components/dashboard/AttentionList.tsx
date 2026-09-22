@@ -1,3 +1,4 @@
+import { ActivityRow } from "@site-secure/ui";
 import type { AttentionGroup, DashboardItem } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
@@ -91,10 +92,10 @@ function AttentionRow({
   const createDirect = canCreateProjectAction(row, canCreateProject) && Boolean(onCreateProject);
 
   const body = (
-    <>
-      <span className={`ops-attention-dot is-${visual.color}`} aria-hidden />
-      <div className="ops-attention-main min-w-0">
-        <p className="ops-attention-title">
+    <ActivityRow
+      leading={<span className={`ops-attention-dot is-${visual.color}`} aria-hidden />}
+      title={
+        <>
           {num ? (
             <span className="ops-attention-id ltr-meta" dir="ltr">
               {num}
@@ -106,12 +107,12 @@ function AttentionRow({
             </span>
           ) : null}
           <span className="ops-attention-state">{label}</span>
-        </p>
-        {context ? <p className="ops-attention-context">{context}</p> : null}
-        <AttentionMeta row={row} />
-      </div>
-      <span className="ops-attention-cta">{row.actionLabel}</span>
-    </>
+        </>
+      }
+      subtitle={context}
+      meta={<AttentionMeta row={row} />}
+      trailing={<span className="ops-attention-cta">{row.actionLabel}</span>}
+    />
   );
 
   const className = `ops-attention-row is-${visual.color} is-${visual.urgency}`;

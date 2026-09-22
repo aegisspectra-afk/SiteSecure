@@ -1,0 +1,9 @@
+{
+  "dash_ok": true,
+  "admin_ok": true,
+  "admin_denied": false,
+  "back_visible": true,
+  "after_back": "http://localhost:5173/app/dashboard",
+  "platform_role": "platform_super_admin",
+  "is_platform_admin": true
+}

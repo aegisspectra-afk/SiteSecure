@@ -121,6 +121,54 @@ def test_technician_scope_assigned_job():
     assert d.allowed is True
 
 
+def test_technician_field_start_from_arrived():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.start",
+        resource=ResourceRef(type="job", id="job-9", state="arrived"),
+    )
+    assert d.allowed is True
+
+
+def test_technician_cannot_complete_from_scheduled():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.complete",
+        resource=ResourceRef(type="job", id="job-9", state="scheduled"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+
+
+def test_technician_cannot_assign():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.assign",
+        resource=ResourceRef(type="job", id="job-9", state="scheduled"),
+    )
+    assert d.allowed is False
+    assert d.code == "PERMISSION_DENIED"
+
+
+def test_technician_cannot_start_completed_job():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.start",
+        resource=ResourceRef(type="job", id="job-9", state="completed"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+
+
+def test_manager_can_assign():
+    d = authorize(
+        ctx=_ctx("manager"),
+        action="jobs.assign",
+        resource=ResourceRef(type="job", id="job-9", state="scheduled"),
+    )
+    assert d.allowed is True
+
+
 def test_solo_cannot_invite_admin():
     d = authorize(ctx=_ctx("owner", plan="solo"), action="users.invite", invite_role="administrator")
     assert d.allowed is False

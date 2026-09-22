@@ -186,25 +186,9 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     if mark_viewed and not superseded:
         status = quote.get("status")
         now = datetime.now(UTC).isoformat()
-        if status == "draft":
-            # First customer open of a shared draft proves delivery — promote to sent.
-            res = svc.patch(
-                "quotes",
-                {"status": "sent", "sent_at": now},
-                params={
-                    "id": f"eq.{quote['id']}",
-                    "workspace_id": f"eq.{quote['workspace_id']}",
-                    "status": "eq.draft",
-                },
-            )
-            rows = as_list(res) if res.status_code == 200 else []
-            if rows:
-                quote = rows[0]
-                _event(svc, quote, "sent", {"version": access_version, "source": "public_first_open"})
-                _audit(svc, quote, "quotes.send_public", {"version": access_version, "source": "public_first_open"})
-            else:
-                quote = _load_quote(svc, access)
-            status = quote.get("status")
+        # A3: Draft Share is VIEW only — never promote draft → sent/viewed on open.
+        # Formal publication remains staff POST /send only.
+        # Legitimate tracking: formally sent → viewed on customer open.
         if status == "sent":
             res = svc.patch(
                 "quotes",

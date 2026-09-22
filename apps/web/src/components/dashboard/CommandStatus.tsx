@@ -24,37 +24,48 @@ export function CommandStatus({
     limit: ATTENTION_DISPLAY_LIMIT,
   });
 
+  if (!count) {
+    return (
+      <section
+        id="command-attention"
+        className="ops-attention-calm"
+        aria-labelledby="command-heading"
+      >
+        <h2 id="command-heading" className="ops-attention-calm-title">
+          {he.commandTitle}
+        </h2>
+        <p className="ops-attention-calm-body" role="status">
+          {he.commandQuietBody}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section
       id="command-attention"
-      className={`ops-attention-card is-hero ${count ? "is-active" : "is-quiet"}`}
+      className="ops-attention-card is-hero is-active"
       aria-labelledby="command-heading"
     >
       <div className="ops-attention-head">
         <h2 id="command-heading" className="ops-section-title is-hero">
-          {count ? he.dashCommandQueueCount(count) : he.dashCommandQueue}
+          {he.dashCommandQueueCount(count)}
         </h2>
-        {count && hasMore ? (
+        {hasMore ? (
           <Link to={viewAllTo} className="ops-section-link">
             {he.attentionShowAll}
           </Link>
         ) : null}
       </div>
-      {count ? (
-        <AttentionList
-          groups={attention}
-          framed={false}
-          canCreateProject={canCreateProject}
-          limit={ATTENTION_DISPLAY_LIMIT}
-          onCreateProject={
-            canCreateProject && workspaceId
-              ? (item) => setProjectItem(item)
-              : undefined
-          }
-        />
-      ) : (
-        <p className="ops-attention-quiet">{he.commandQuietBody}</p>
-      )}
+      <AttentionList
+        groups={attention}
+        framed={false}
+        canCreateProject={canCreateProject}
+        limit={ATTENTION_DISPLAY_LIMIT}
+        onCreateProject={
+          canCreateProject && workspaceId ? (item) => setProjectItem(item) : undefined
+        }
+      />
       {projectItem && workspaceId ? (
         <DashboardCreateProjectDialog
           item={projectItem}

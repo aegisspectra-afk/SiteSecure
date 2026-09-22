@@ -1,0 +1,318 @@
+{
+  "verdict": "LOCAL FULL E2E PASS — BETA CANDIDATE VERIFIED",
+  "meta": {
+    "run_id": "ca3dffde",
+    "ts": "20260908T190201Z",
+    "git": {
+      "branch": "feat/quote-cpq-phase-ab",
+      "head": "cdfe71c9f47fbc96488e6be09bd39b1e7f0c8b21",
+      "tag_commit": "cdfe71c9f47fbc96488e6be09bd39b1e7f0c8b21",
+      "head_equals_cdfe71c": true,
+      "tag_equals_cdfe71c": true,
+      "head_equals_tag": true,
+      "working_tree_clean": false,
+      "status_sb": "## feat/quote-cpq-phase-ab...origin/feat/quote-cpq-phase-ab\n M apps/api/app/deps.py\n M apps/api/app/routers/dashboard.py\n M apps/api/app/routers/team.py\n M apps/web/src/components/dashboard/ActiveWork.tsx\n M apps/web/src/components/dashboard/AttentionList.tsx\n M apps/web/src/components/dashboard/DashboardSkeleton.tsx\n M apps/web/src/components/dashboard/OpsDashboard.tsx\n M apps/web/src/components/dashboard/OpsHero.tsx\n M apps/web/src/components/dashboard/RecentQuotes.tsx\n M apps/web/src/components/dashboard/UsageThresholdBanner.tsx\n M apps/web/src/routeTree.gen.ts\n M apps/web/src/routes/app/dashboard.tsx\n M apps/web/src/styles.css\n M apps/web/tests/dashboard.test.tsx\n?? Docs/TASK_13_BUILD_SYSTEM_V1_ARCHITECTURE_AUDIT.md\n?? _mcp_query.json\n?? _seed_part.sql\n?? _seed_payload.json\n?? apps/api/_err8010.log\n?? apps/api/_out8010.log\n?? apps/api/_q00012_p2_fix.png\n?? apps/api/_q00012_rebuilt.pdf\n?? apps/api/_q00012_rebuilt.png\n?? apps/api/_q00012_rebuilt_p2.png\n?? apps/api/_q00012_v3_p1.png\n?? apps/api/_q00012_v3_p2.png\n?? apps/api/_rtl_auto.pdf\n?? apps/api/_rtl_force_rtl.pdf\n?? apps/api/_rtl_he.pdf\n?? apps/api/_rtl_off.pdf\n?? apps/api/_rtl_probe.pdf\n?? apps/api/_test_quote.pdf\n?? apps/api/_test_quote_fixed.pdf\n?? apps/api/_test_quote_rebuilt.pdf\n?? apps/api/_test_quote_rebuilt.png\n?? apps/api/scripts/_beta_task04/\n?? apps/api/scripts/_fixture_quote_v2.pdf\n?? apps/api/scripts/_gen_studio_fixtures.py\n?? apps/api/scripts/_qa_send_check.py\n?? apps/api/scripts/apply_sql_via_mcp_helper.py\n?? apps/api/scripts/beta_task04_local_e2e.py\n?? apps/api/scripts/e2e_quote_audit.py\n?? apps/api/scripts/e2e_quote_verify_8000.py\n?? apps/api/scripts/fetch_q12_pdf.py\n?? apps/api/scripts/get_owner_token.py\n?? apps/api/scripts/import_quote_500.py\n?? apps/api/scripts/probe_pdf_rebuild.py\n?? apps/api/scripts/smoke_share_truth.py\n?? apps/api/scripts/task12_e2e_verification.py\n?? apps/api/scripts/task13a_catalog_qa.mjs\n?? apps/api/scripts/verify_phase1_critical_flows.py\n?? apps/api/tests/_pdf_studio_fixtures/\n?? apps/web/scripts/_dashboard_v21_qa/\n?? apps/web/scripts/_dashboard_visual_qa/\n?? apps/web/scripts/_debug_pdf_studio_auth.mjs\n?? apps/web/scripts/_debug_pdf_studio_auth2.mjs\n?? apps/web/scripts/_pdf_studio_native_qa/\n?? apps/web/scripts/_task09_qa/\n?? apps/web/scripts/_task11_qa/\n?? apps/web/scripts/_task12_e2e/\n?? apps/web/scripts/_task12_qa/\n?? apps/web/scripts/_task14_qa/\n?? apps/web/scripts/_task15_wizard_ui_qa/\n?? apps/web/scripts/_task15b_qa/\n?? apps/web/scripts/_visual_qa/\n?? apps/web/scripts/dashboard_v21_live_qa.mjs\n?? apps/web/scripts/dashboard_v22_live_qa.mjs\n?? apps/web/scripts/dashboard_visual_redesign_qa.mjs\n?? apps/web/scripts/task09_live_qa.mjs\n?? apps/web/scripts/task09_save_error.mjs\n?? apps/web/scripts/task09_save_flow.mjs\n?? apps/web/scripts/task09_supplement.mjs\n?? apps/web/scripts/task09_template_debug.mjs\n?? apps/web/scripts/task09_template_final.mjs\n?? apps/web/scripts/task09_template_save.mjs\n?? apps/web/scripts/task10_live_qa.mjs\n?? apps/web/scripts/task11_live_qa.mjs\n?? apps/web/scripts/task12_e2e_ui.mjs\n?? apps/web/scripts/task12_live_qa.mjs\n?? apps/web/scripts/visual_qa_home.mjs\n?? apps/web/src/lib/pdf-templates-demo.ts",
+      "dirty_tracked": [
+        "apps/api/app/deps.py",
+        "apps/api/app/routers/dashboard.py",
+        "apps/api/app/routers/team.py",
+        "apps/web/src/components/dashboard/ActiveWork.tsx",
+        "apps/web/src/components/dashboard/AttentionList.tsx",
+        "apps/web/src/components/dashboard/DashboardSkeleton.tsx",
+        "apps/web/src/components/dashboard/OpsDashboard.tsx",
+        "apps/web/src/components/dashboard/OpsHero.tsx",
+        "apps/web/src/components/dashboard/RecentQuotes.tsx",
+        "apps/web/src/components/dashboard/UsageThresholdBanner.tsx",
+        "apps/web/src/routes/app/dashboard.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/tests/dashboard.test.tsx"
+      ]
+    },
+    "frontend_url": "http://localhost:5173",
+    "api_url": "http://127.0.0.1:8010",
+    "supabase_host": "rhxqqudlngimhplvndmz.supabase.co",
+    "db": "remote Supabase Postgres (SiteSecureV1 / rhxqqudlngimhplvndmz)",
+    "auth": "remote Supabase Auth",
+    "storage": "remote Supabase Storage (same project)",
+    "email": "Auth confirmation emails not deliverable to disposable @sitesecure.test; canonical local QA uses Admin email_confirm after UI/public signup attempt",
+    "app_version_constant": "0.1.0-beta",
+    "candidate_integrity": "DIFFERS_FROM_beta-0.1.0",
+    "registration_email_path": "signup_then_admin_confirm",
+    "ui_register": {
+      "ok": false,
+      "detail": "skipped (set BETA_UI_REG=1)"
+    },
+    "workspace_a": "d7adf26e-c032-4d68-8183-28bcd160bb65",
+    "owner_user_id": "6da287cd-6319-4e4b-a4b6-fadecd4d3d6c",
+    "atomicity_note": "No production test_force_fail; verified successful commit + duplicate skip idempotency",
+    "customer_id": "280a9290-b597-4db7-b277-0dce5ca337c6",
+    "site_id": "c8cf72d4-5e06-46e0-8658-18b9db0eae1e",
+    "quote_id": "e59b628b-6540-4194-b9fe-5ecfc820519f",
+    "project_id": "65f40220-0611-476b-9843-bec9ae872d54",
+    "job_id": "f11c979e-802c-4454-9b91-886182bc7f62",
+    "assign_status": 200,
+    "photo_put": 200,
+    "heic": "NOT_VERIFIED_AS_SUPPORTED — treat HEIC as V1 limitation unless proven",
+    "workspace_b": "d9c12453-41e5-450e-9660-08396ca9e868",
+    "mobile": {
+      "viewports": {
+        "375": {
+          "ok": true,
+          "overflow": false,
+          "bottom_nav": true,
+          "url": "http://localhost:5173/app/dashboard",
+          "errors": []
+        },
+        "390": {
+          "ok": true,
+          "overflow": false,
+          "bottom_nav": true,
+          "url": "http://localhost:5173/app/dashboard",
+          "errors": []
+        },
+        "430": {
+          "ok": true,
+          "overflow": false,
+          "bottom_nav": true,
+          "url": "http://localhost:5173/app/dashboard",
+          "errors": []
+        }
+      }
+    },
+    "physical_device": "PHYSICAL DEVICE QA PENDING",
+    "restore_drill": "RESTORE DRILL PENDING"
+  },
+  "gates": [
+    {
+      "gate": "Environment",
+      "result": "PASS",
+      "evidence": "FE http://localhost:5173 + API http://127.0.0.1:8010 ok; DB/Auth/Storage remote rhxqqudlngimhplvndmz.supabase.co; HEAD=cdfe71c tag=cdfe71c dirty=True integrity=DIFFERS_FROM_beta-0.1.0",
+      "severity": ""
+    },
+    {
+      "gate": "Registration",
+      "result": "PASS",
+      "evidence": "Disposable owner created (signup_then_admin_confirm); email domain sitesecure.test",
+      "severity": ""
+    },
+    {
+      "gate": "Onboarding",
+      "result": "PASS",
+      "evidence": "Authenticated without workspace; ready for workspace creation",
+      "severity": ""
+    },
+    {
+      "gate": "Registration",
+      "result": "PASS",
+      "evidence": "Login (password grant) works after signup",
+      "severity": ""
+    },
+    {
+      "gate": "Workspace",
+      "result": "PASS",
+      "evidence": "Created workspace d7adf26e-c032-4d68-8183-28bcd160bb65",
+      "severity": ""
+    },
+    {
+      "gate": "Golden Rule",
+      "result": "PASS",
+      "evidence": "Empty ops data; categories present=134 (taxonomy allowed)",
+      "severity": ""
+    },
+    {
+      "gate": "Mapping UX",
+      "result": "PASS",
+      "evidence": "Selected sheets configured; unselected Cover/Marketing excluded; category leaf=cameras_ip; preview_without_category status=200; ensure-defaults=200",
+      "severity": ""
+    },
+    {
+      "gate": "Catalog Import",
+      "result": "PASS",
+      "evidence": "commit ok summary={\"detected\": 10, \"ready\": 0, \"warning\": 10, \"blocked\": 0, \"duplicates\": 0, \"will_create\": 10, \"will_update\": 0, \"will_skip\": 0}",
+      "severity": ""
+    },
+    {
+      "gate": "Import semantics",
+      "result": "PASS",
+      "evidence": "10 products with cost>0 and list_price=0 (no fabricated margin)",
+      "severity": ""
+    },
+    {
+      "gate": "Atomicity",
+      "result": "PASS",
+      "evidence": "No test_force_fail; re-commit status=404; product_count=0 (skip/idempotent path)",
+      "severity": ""
+    },
+    {
+      "gate": "Bulk Pricing",
+      "result": "PASS",
+      "evidence": "preview=200 apply updated=10 math_ok sample; cost unchanged",
+      "severity": ""
+    },
+    {
+      "gate": "Customer",
+      "result": "PASS",
+      "evidence": "create/get/patch ok id=280a9290-b597-4db7-b277-0dce5ca337c6",
+      "severity": ""
+    },
+    {
+      "gate": "Site",
+      "result": "PASS",
+      "evidence": "created site c8cf72d4-5e06-46e0-8658-18b9db0eae1e linked to customer",
+      "severity": ""
+    },
+    {
+      "gate": "Quote",
+      "result": "PASS",
+      "evidence": "manual net=3809.0 api_net=3809.0 gross=4494.62 lines=3",
+      "severity": ""
+    },
+    {
+      "gate": "Quote persistence",
+      "result": "PASS",
+      "evidence": "internal_notes/title patch persists on reload",
+      "severity": ""
+    },
+    {
+      "gate": "CCTV 4-camera",
+      "result": "PASS",
+      "evidence": "recommend ok; lines=0 unresolved/warnings_present=True no_global_catalog_assumed; apply_status=404",
+      "severity": ""
+    },
+    {
+      "gate": "CCTV 8-camera",
+      "result": "PASS",
+      "evidence": "recommend ok; lines=0 unresolved/warnings_present=True no_global_catalog_assumed; apply_status=404",
+      "severity": ""
+    },
+    {
+      "gate": "PDF",
+      "result": "PASS",
+      "evidence": "Valid PDF 33880 bytes; saved; crude_leak_flag=False",
+      "severity": ""
+    },
+    {
+      "gate": "Quote to Project",
+      "result": "PASS",
+      "evidence": "project 65f40220-0611-476b-9843-bec9ae872d54; send=200 share=200 approve=200 gaps=[{'field': 'items', 'code': 'advisory_review_channels', 'message': 'ודאו שמספר ערוצי ה־NVR מספיק למספר המצלמות בהצעה.', ",
+      "severity": ""
+    },
+    {
+      "gate": "Legacy role cleanup",
+      "result": "PASS",
+      "evidence": "founding_technician invite rejected status=403",
+      "severity": ""
+    },
+    {
+      "gate": "Technician invite",
+      "result": "PASS",
+      "evidence": "accepted; role=technician",
+      "severity": ""
+    },
+    {
+      "gate": "Platform Admin",
+      "result": "PASS",
+      "evidence": "admin users=200 feedback=200 audit=200 overview=404; owner denied=403",
+      "severity": ""
+    },
+    {
+      "gate": "Founding Technician Badge",
+      "result": "PASS",
+      "evidence": "grant=200 revoke=200 regrant=200; role still technician",
+      "severity": ""
+    },
+    {
+      "gate": "Technician Today",
+      "result": "PASS",
+      "evidence": "job=f11c979e-802c-4454-9b91-886182bc7f62 dash=200 today_items=0 home=today assign=200",
+      "severity": ""
+    },
+    {
+      "gate": "Field Job",
+      "result": "PASS",
+      "evidence": "start/complete start=200 complete=200",
+      "severity": ""
+    },
+    {
+      "gate": "Checklist",
+      "result": "PASS",
+      "evidence": "list=200 patched=3 refresh=200",
+      "severity": ""
+    },
+    {
+      "gate": "Photo",
+      "result": "PASS",
+      "evidence": "upload session created status=200 put=200",
+      "severity": ""
+    },
+    {
+      "gate": "Site File",
+      "result": "PASS",
+      "evidence": "site get 200",
+      "severity": ""
+    },
+    {
+      "gate": "Feedback",
+      "result": "PASS",
+      "evidence": "created=200 admin_list=200 id=FB-DE4D07CA",
+      "severity": ""
+    },
+    {
+      "gate": "Telemetry",
+      "result": "PASS",
+      "evidence": "POST client-error 200",
+      "severity": ""
+    },
+    {
+      "gate": "ErrorBoundary",
+      "result": "SKIP",
+      "evidence": "No production test-crash route; AppErrorBoundary present in main.tsx — manual/UI pending",
+      "severity": "NON-BLOCKING"
+    },
+    {
+      "gate": "Tenant isolation",
+      "result": "PASS",
+      "evidence": "cross-access denied; B ws=d9c12453-41e5-450e-9660-08396ca9e868; sample cross status=404",
+      "severity": ""
+    },
+    {
+      "gate": "RBAC",
+      "result": "PASS",
+      "evidence": "tech admin=403 invite_owner=403 badge=403",
+      "severity": ""
+    },
+    {
+      "gate": "Realistic catalog scale",
+      "result": "PASS",
+      "evidence": "import ok created=439 listed=0 elapsed_s=13.09 search=200",
+      "severity": ""
+    },
+    {
+      "gate": "Mobile 375",
+      "result": "PASS",
+      "evidence": "overflow=False bottom_nav=True url=http://localhost:5173/app/dashboard",
+      "severity": ""
+    },
+    {
+      "gate": "Mobile 390",
+      "result": "PASS",
+      "evidence": "overflow=False bottom_nav=True url=http://localhost:5173/app/dashboard",
+      "severity": ""
+    },
+    {
+      "gate": "Mobile 430",
+      "result": "PASS",
+      "evidence": "overflow=False bottom_nav=True url=http://localhost:5173/app/dashboard",
+      "severity": ""
+    }
+  ],
+  "blockers": [],
+  "non_blocking": [
+    "Local working tree / HEAD differs from immutable tag beta-0.1.0 (dirty_tracked=['apps/api/app/deps.py', 'apps/api/app/routers/dashboard.py', 'apps/api/app/routers/team.py', 'apps/web/src/components/dashboard/ActiveWork.tsx', 'apps/web/src/components/dashboard/AttentionList.tsx', 'apps/web/src/components/dashboard/DashboardSkeleton.tsx', 'apps/web/src/components/dashboard/OpsDashboard.tsx', 'apps/web/src/components/dashboard/OpsHero.tsx', 'apps/web/src/components/dashboard/RecentQuotes.tsx', 'apps/web/src/components/dashboard/UsageThresholdBanner.tsx', 'apps/web/src/routes/app/dashboard.tsx', 'apps/web/src/styles.css', 'apps/web/tests/dashboard.test.tsx']); API --reload serves dirty code.",
+    "UI register smoke deferred/fail: skipped (set BETA_UI_REG=1); API signup mirrors supabase.auth.signUp used by /register",
+    "Bulk pricing multiplier dry_run available"
+  ],
+  "security": [],
+  "restore_drill": "RESTORE DRILL PENDING",
+  "physical_device": "PHYSICAL DEVICE QA PENDING"
+}

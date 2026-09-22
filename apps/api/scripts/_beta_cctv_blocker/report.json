@@ -1,0 +1,649 @@
+{
+  "ok": true,
+  "failures": [],
+  "scenarios": {
+    "env_null_4": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "RESOLVED",
+          "selected": "32323682442",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "32323301380",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "ENVIRONMENT_UNSPECIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_CORE_INCOMPLETE"
+      ],
+      "eng_storage_tb": 2.90304,
+      "eng_nvr": 8
+    },
+    "env_outdoor_4": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "PARTIAL",
+          "selected": "32323682442",
+          "confidence": "PARTIAL",
+          "candidates": 3,
+          "env_check": "UNKNOWN"
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "32323301380",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "CAMERA_ENVIRONMENT_UNVERIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_CORE_INCOMPLETE"
+      ],
+      "eng_storage_tb": 2.90304,
+      "eng_nvr": 8
+    },
+    "cams_4": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "RESOLVED",
+          "selected": "32323682442",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "32323301380",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "ENVIRONMENT_UNSPECIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_CORE_INCOMPLETE"
+      ],
+      "eng_storage_tb": 2.90304,
+      "eng_nvr": 8,
+      "resolved_line_roles": [
+        "camera",
+        "recorder"
+      ]
+    },
+    "cams_4_apply": {
+      "quote_id": "d6d84bdd-0e51-47f7-8a07-fe0357d4690b",
+      "applied": [
+        {
+          "role": "camera",
+          "sku": "32323682442",
+          "status": 200
+        },
+        {
+          "role": "recorder",
+          "sku": "32323301380",
+          "status": 200
+        }
+      ],
+      "items": 2,
+      "refresh_items": 2,
+      "skus": [
+        "32323682442",
+        "32323301380"
+      ]
+    },
+    "cams_8": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "RESOLVED",
+          "selected": "32323682442",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "32323301316",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "ENVIRONMENT_UNSPECIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_CORE_INCOMPLETE"
+      ],
+      "eng_storage_tb": 5.80608,
+      "eng_nvr": 16,
+      "resolved_line_roles": [
+        "camera",
+        "recorder"
+      ]
+    },
+    "cams_8_apply": {
+      "quote_id": "eaa47d62-d851-4753-b168-190fc2f04561",
+      "applied": [
+        {
+          "role": "camera",
+          "sku": "32323682442",
+          "status": 200
+        },
+        {
+          "role": "recorder",
+          "sku": "32323301316",
+          "status": 200
+        }
+      ],
+      "items": 2,
+      "refresh_items": 2,
+      "skus": [
+        "32323682442",
+        "32323301316"
+      ]
+    },
+    "cams_16": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "RESOLVED",
+          "selected": "32323682442",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "32323302032",
+          "confidence": "STRUCTURED",
+          "candidates": 3,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "ENVIRONMENT_UNSPECIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_CORE_INCOMPLETE"
+      ],
+      "eng_storage_tb": 11.61216,
+      "eng_nvr": 32,
+      "resolved_line_roles": [
+        "camera",
+        "recorder"
+      ]
+    },
+    "cams_16_apply": {
+      "quote_id": "df17d00d-8ee7-4d34-8c91-24e5cca83ad8",
+      "applied": [
+        {
+          "role": "camera",
+          "sku": "32323682442",
+          "status": 200
+        },
+        {
+          "role": "recorder",
+          "sku": "32323302032",
+          "status": 200
+        }
+      ],
+      "items": 2,
+      "refresh_items": 2,
+      "skus": [
+        "32323682442",
+        "32323302032"
+      ]
+    },
+    "empty_catalog": {
+      "status": "BLOCKED",
+      "blocking": true,
+      "roles": {
+        "camera": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "ENVIRONMENT_UNSPECIFIED",
+        "HDD_OPTIONS_EMPTY",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "CATALOG_EMPTY"
+      ],
+      "eng_storage_tb": 2.90304,
+      "eng_nvr": 4
+    },
+    "full_catalog": {
+      "status": "OK",
+      "blocking": false,
+      "roles": {
+        "camera": {
+          "resolution": "RESOLVED",
+          "selected": "FULL-CAM-4",
+          "confidence": "STRUCTURED",
+          "candidates": 1,
+          "env_check": "PASS"
+        },
+        "recorder": {
+          "resolution": "RESOLVED",
+          "selected": "FULL-NVR-16",
+          "confidence": "STRUCTURED",
+          "candidates": 1,
+          "env_check": null
+        },
+        "storage": {
+          "resolution": "RESOLVED",
+          "selected": "FULL-HDD-10",
+          "confidence": "STRUCTURED",
+          "candidates": 1,
+          "env_check": null
+        },
+        "poe_switch": {
+          "resolution": "RESOLVED",
+          "selected": "FULL-SW-16",
+          "confidence": "STRUCTURED",
+          "candidates": 1,
+          "env_check": null
+        },
+        "cable": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "camera_install": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "recorder_setup": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        },
+        "testing": {
+          "resolution": "UNRESOLVED",
+          "selected": null,
+          "confidence": null,
+          "candidates": 0,
+          "env_check": null
+        }
+      },
+      "warnings": [
+        "STORAGE_BITRATE_DEFAULTED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "CABLE_DISTANCE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED",
+        "SERVICE_UNRESOLVED"
+      ],
+      "eng_storage_tb": 2.90304,
+      "eng_nvr": 4,
+      "resolved_line_roles": [
+        "camera",
+        "recorder",
+        "storage",
+        "poe_switch"
+      ]
+    },
+    "full_catalog_apply": {
+      "quote_id": "1e926497-cb44-4c25-adc0-0751820a483b",
+      "applied": [
+        {
+          "role": "camera",
+          "sku": "FULL-CAM-4",
+          "status": 200
+        },
+        {
+          "role": "recorder",
+          "sku": "FULL-NVR-16",
+          "status": 200
+        },
+        {
+          "role": "storage",
+          "sku": "FULL-HDD-10",
+          "status": 200
+        },
+        {
+          "role": "poe_switch",
+          "sku": "FULL-SW-16",
+          "status": 200
+        }
+      ],
+      "items": 4,
+      "refresh_items": 4,
+      "skus": [
+        "FULL-CAM-4",
+        "FULL-NVR-16",
+        "FULL-HDD-10",
+        "FULL-SW-16"
+      ]
+    }
+  },
+  "beres_workspace": "df73bd3b-6e7d-41ca-abae-5033435ee4da",
+  "beres_email": "beta.gate08.f8d8a465@sitesecure.test",
+  "import": {
+    "reused_gate08_workspace": true,
+    "workbook_outside_git": true,
+    "product_total": 58
+  }
+}

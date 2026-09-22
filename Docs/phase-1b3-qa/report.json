@@ -1,0 +1,152 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    {
+      "name": "dash-390-light-live",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-390-light-live.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-390-dark",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "file": "Docs/phase-1b3-qa/dash-390-dark.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-1440-light-live",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-1440-light-live.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-1440-dark",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "file": "Docs/phase-1b3-qa/dash-1440-dark.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-360-light",
+      "width": 360,
+      "height": 800,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-360-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-430-light",
+      "width": 430,
+      "height": 932,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-430-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-768-light",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-768-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-1280-light",
+      "width": 1280,
+      "height": 800,
+      "theme": "light",
+      "file": "Docs/phase-1b3-qa/dash-1280-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night",
+      "noHeroSearchField": true,
+      "noUsageWall": true
+    },
+    {
+      "name": "dash-390-light-day",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "surface": "light-day",
+      "period": "morning",
+      "file": "Docs/phase-1b3-qa/dash-390-light-day.png",
+      "ok": true,
+      "forced": true
+    },
+    {
+      "name": "dash-390-light-night",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "surface": "dark-night",
+      "period": "night",
+      "file": "Docs/phase-1b3-qa/dash-390-light-night.png",
+      "ok": true,
+      "forced": true
+    },
+    {
+      "name": "dash-1440-light-day",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "surface": "light-day",
+      "period": "morning",
+      "file": "Docs/phase-1b3-qa/dash-1440-light-day.png",
+      "ok": true,
+      "forced": true
+    },
+    {
+      "name": "dash-1440-light-night",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "surface": "dark-night",
+      "period": "night",
+      "file": "Docs/phase-1b3-qa/dash-1440-light-night.png",
+      "ok": true,
+      "forced": true
+    }
+  ],
+  "audit": {
+    "firstViewportNotes": "Hero greeting/state/actions + start of Attention/Today",
+    "noHeroSearchField": true,
+    "noUsageWall": true,
+    "hasSetupOrQuotaOrAttention": true
+  }
+}

@@ -1,0 +1,119 @@
+INFO:     Started server process [18132]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspace_memberships?user_id=eq.8421d004-c62b-444a-9dd4-3cde964fb2db&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&status=eq.active&select=role_key%2Ctechnician_code%2Cprogram_type%2Cstatus "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspaces?id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cstatus%2Cname "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/rpc/my_workspace_entitlements "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/assignments?user_id=eq.8421d004-c62b-444a-9dd4-3cde964fb2db&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=resource_id "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quotes?id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cworkspace_id%2Cnumber%2Cstatus%2Ccustomer_id%2Csite_id%2Clead_id%2Cowner_user_id%2Ccurrency%2Cvat_percent%2Cdiscount_type%2Cdiscount_value%2Csubtotal_net%2Cvat_amount%2Ctotal_gross%2Ccost_total%2Cmargin_amount%2Cmargin_percent%2Cvalid_until%2Cpayment_terms%2Ccustomer_notes%2Cinternal_notes%2Ctitle%2Cproject_name%2Cproject_address%2Csummary%2Ckey_points%2Cwarranty%2Cgeneral_terms%2Ctemplate_id%2Cversion%2Csent_at%2Cviewed_at%2Capproved_at%2Crejected_at%2Capproved_name%2Crejection_reason%2Cmargin_override_reason%2Cmargin_override_by%2Cmargin_override_at%2Crevise_reason%2Ccreated_at%2Cupdated_at%2Ccustomers%28display_name%29%2Csites%28name%29 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quote_items?quote_id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cquote_id%2Cproduct_id%2Citem_type%2Cdescription%2Cqty%2Cunit_price%2Ccost%2Cdiscount%2Cdiscount_type%2Cline_net%2Csort_order%2Csku%2Cname%2Cunit%2Ccatalog_snapshot%2Csection_id%2Cpackage_instance_id%2Cpackage_id%2Cpackage_name&order=sort_order.asc "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspaces?id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cname%2Cvat_percent "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/customers?id=eq.529e9343-fb01-484b-86a8-506c9e8c9a96&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cdisplay_name%2Cemail%2Cphone%2Cbilling_address "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quote_sections?quote_id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cquote_id%2Cname%2Csort_order%2Cdiscount_type%2Cdiscount_value%2Ccollapsed%2Ccreated_at%2Cupdated_at&order=sort_order.asc "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspace_settings?workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=quotes%2Ctaxes%2Cbranding "HTTP/1.1 200 OK"
+INFO:site-secure:request
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspace_memberships?user_id=eq.8421d004-c62b-444a-9dd4-3cde964fb2db&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&status=eq.active&select=role_key%2Ctechnician_code%2Cprogram_type%2Cstatus "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspaces?id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cstatus%2Cname "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/rpc/my_workspace_entitlements "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/assignments?user_id=eq.8421d004-c62b-444a-9dd4-3cde964fb2db&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=resource_id "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quotes?id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cworkspace_id%2Cnumber%2Cstatus%2Ccustomer_id%2Csite_id%2Clead_id%2Cowner_user_id%2Ccurrency%2Cvat_percent%2Cdiscount_type%2Cdiscount_value%2Csubtotal_net%2Cvat_amount%2Ctotal_gross%2Ccost_total%2Cmargin_amount%2Cmargin_percent%2Cvalid_until%2Cpayment_terms%2Ccustomer_notes%2Cinternal_notes%2Ctitle%2Cproject_name%2Cproject_address%2Csummary%2Ckey_points%2Cwarranty%2Cgeneral_terms%2Ctemplate_id%2Cversion%2Csent_at%2Cviewed_at%2Capproved_at%2Crejected_at%2Capproved_name%2Crejection_reason%2Cmargin_override_reason%2Cmargin_override_by%2Cmargin_override_at%2Crevise_reason%2Ccreated_at%2Cupdated_at%2Ccustomers%28display_name%29%2Csites%28name%29 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quote_items?quote_id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cquote_id%2Cproduct_id%2Citem_type%2Cdescription%2Cqty%2Cunit_price%2Ccost%2Cdiscount%2Cdiscount_type%2Cline_net%2Csort_order%2Csku%2Cname%2Cunit%2Ccatalog_snapshot%2Csection_id%2Cpackage_instance_id%2Cpackage_id%2Cpackage_name&order=sort_order.asc "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspaces?id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cname%2Cvat_percent "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/customers?id=eq.529e9343-fb01-484b-86a8-506c9e8c9a96&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cdisplay_name%2Cemail%2Cphone%2Cbilling_address "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/quote_sections?quote_id=eq.9d2f1103-7c02-437a-af9e-f680bc8f8b32&workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=id%2Cquote_id%2Cname%2Csort_order%2Cdiscount_type%2Cdiscount_value%2Ccollapsed%2Ccreated_at%2Cupdated_at&order=sort_order.asc "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://rhxqqudlngimhplvndmz.supabase.co/rest/v1/workspace_settings?workspace_id=eq.f1f76d59-fd2e-4b27-9586-06f7c89abc9c&select=quotes%2Ctaxes%2Cbranding "HTTP/1.1 200 OK"
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\OneDrive\Desktop\אגיס מערכות\SiteSecureV1\apps\api\app\main.py", line 77, in request_context
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\OneDrive\Desktop\אגיס מערכות\SiteSecureV1\apps\api\app\routers\quote_cpq.py", line 839, in quote_pdf
+    pdf_bytes, filename = render_quote_pdf(document)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\OneDrive\Desktop\אגיס מערכות\SiteSecureV1\apps\api\app\quote_pdf.py", line 129, in render_quote_pdf
+    pdf.multi_cell(0, 5, text=summary, align="R")
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fpdf\fpdf.py", line 288, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fpdf\deprecation.py", line 36, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fpdf\fpdf.py", line 5063, in multi_cell
+    text_line = multi_line_break.get_line()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shimd\AppData\Local\Programs\Python\Python312\Lib\site-packages\fpdf\line_break.py", line 864, in get_line
+    raise FPDFException(
+fpdf.errors.FPDFException: Not enough horizontal space to render a single character

@@ -1,5 +1,5 @@
 import type { CustomerOut, SiteOut } from "@site-secure/api-client";
-import { Button, Input, Status } from "@site-secure/ui";
+import { ActivityRow, Button, Input, Status, Table, TBody, TD, TH, THead, TR } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -210,33 +210,118 @@ export function CustomerAvatar({ name }: { name: string }) {
   );
 }
 
+function customerContactLine(customer: CustomerDirectoryRow): ReactNode {
+  const parts: ReactNode[] = [];
+  parts.push(<span key="type">{customerTypeLabel(customer.type)}</span>);
+  if (customer.phone) {
+    parts.push(
+      <span key="phone" className="ltr-meta" dir="ltr">
+        {customer.phone}
+      </span>,
+    );
+  }
+  if (customer.email) {
+    parts.push(
+      <span key="email" className="ltr-meta" dir="ltr">
+        {customer.email}
+      </span>,
+    );
+  }
+  return (
+    <span className="customer-dir-row-contact-inline">
+      {parts.map((part, index) => (
+        <span key={index} className="customer-dir-row-contact-part">
+          {index > 0 ? <span aria-hidden> · </span> : null}
+          {part}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function CustomerRow({ customer }: { customer: CustomerDirectoryRow }) {
   return (
     <Link to="/app/customers/$customerId" params={{ customerId: customer.id }} className="customer-dir-row">
-      <CustomerAvatar name={customer.display_name} />
-      <div className="customer-dir-row-main">
-        <div className="customer-dir-row-top">
-          <p className="customer-dir-row-name">{customer.display_name}</p>
-          <Status label={customerStatusLabel(customer.status)} tone={customerStatusTone(customer.status)} />
-        </div>
-        <p className="customer-dir-row-type">{customerTypeLabel(customer.type)}</p>
-        <div className="customer-dir-row-contact">
-          {customer.phone ? (
-            <span dir="ltr">{customer.phone}</span>
-          ) : null}
-          {customer.email ? (
-            <span dir="ltr">{customer.email}</span>
-          ) : null}
-        </div>
-        <p className="customer-dir-row-meta">{formatCustomerMeta(customer.counts)}</p>
-        {customer.counts.leadsNeedingAttention > 0 ? (
-          <p className="customer-dir-row-lead">
-            {he.customerDirectoryLeadNeedsAttention(customer.counts.leadsNeedingAttention)}
-          </p>
-        ) : null}
-      </div>
-      <ChevronLeft className="customer-dir-row-chevron" aria-hidden />
+      <ActivityRow
+        leading={<span aria-hidden>{customerInitials(customer.display_name)}</span>}
+        title={customer.display_name}
+        subtitle={customerContactLine(customer)}
+        meta={
+          <>
+            <span>{formatCustomerMeta(customer.counts)}</span>
+            {customer.counts.leadsNeedingAttention > 0 ? (
+              <span className="customer-dir-row-lead">
+                {he.customerDirectoryLeadNeedsAttention(customer.counts.leadsNeedingAttention)}
+              </span>
+            ) : null}
+          </>
+        }
+        trailing={
+          <>
+            <Status label={customerStatusLabel(customer.status)} tone={customerStatusTone(customer.status)} />
+            <ChevronLeft className="customer-dir-row-chevron" aria-hidden />
+          </>
+        }
+      />
     </Link>
+  );
+}
+
+export function CustomerDirectoryDesktopTable({ rows }: { rows: CustomerDirectoryRow[] }) {
+  return (
+    <div className="customer-dir-desktop-table">
+      <Table>
+        <THead>
+          <TR>
+            <TH>{he.name}</TH>
+            <TH>{he.phone}</TH>
+            <TH>{he.email}</TH>
+            <TH>{he.status}</TH>
+            <TH>{he.overviewTitle}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map((customer) => (
+            <TR key={customer.id}>
+              <TD>
+                <Link
+                  to="/app/customers/$customerId"
+                  params={{ customerId: customer.id }}
+                  className="font-medium text-fg hover:underline"
+                >
+                  {customer.display_name}
+                </Link>
+                <p className="mt-0.5 text-xs text-fg-muted">{customerTypeLabel(customer.type)}</p>
+              </TD>
+              <TD>
+                {customer.phone ? (
+                  <span className="ltr-meta" dir="ltr">
+                    {customer.phone}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </TD>
+              <TD>
+                {customer.email ? (
+                  <span className="ltr-meta" dir="ltr">
+                    {customer.email}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </TD>
+              <TD>
+                <Status label={customerStatusLabel(customer.status)} tone={customerStatusTone(customer.status)} />
+              </TD>
+              <TD>
+                <span className="text-xs text-fg-muted">{formatCustomerMeta(customer.counts)}</span>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+    </div>
   );
 }
 
@@ -354,10 +439,13 @@ export function CustomerDirectoryList({
   }
   if (!rows.length) return <CustomerDirectoryEmpty canCreate={canCreate} onCreate={onCreate} />;
   return (
-    <div className="customer-dir-list">
-      {rows.map((customer) => (
-        <CustomerRow key={customer.id} customer={customer} />
-      ))}
+    <div className="customer-dir-results">
+      <div className="customer-dir-list">
+        {rows.map((customer) => (
+          <CustomerRow key={customer.id} customer={customer} />
+        ))}
+      </div>
+      <CustomerDirectoryDesktopTable rows={rows} />
     </div>
   );
 }

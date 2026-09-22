@@ -599,7 +599,7 @@ export function CustomerProfile({
         <span className="customer-360-crumb-current">{customer.display_name}</span>
       </nav>
 
-      <header className="customer-360-header">
+      <header className="customer-360-header ops-card">
         <div className="customer-360-hero">
           <div className="customer-360-avatar" aria-hidden>
             <User className="size-6" strokeWidth={1.75} />

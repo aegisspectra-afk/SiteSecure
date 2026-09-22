@@ -1,14 +1,23 @@
 /**
  * Task 13D — Build System V1 product integration.
+ * R2: durable CCTV Design persistence + hydration (no Apply/REPLACE).
  *
  * Flow: requirements → POST /cctv/recommend → review → quote projection.
  * CCTV sizing is server-authoritative. Do not call legacy keyword matching here.
  */
 
-import { ApiClientError, type ApiClient, type LeadOut, type SystemRecommendation } from "@site-secure/api-client";
+import {
+  ApiClientError,
+  type ApiClient,
+  type LeadOut,
+  type QuoteOut,
+  type SystemDesign,
+  type SystemDesignApplyDiverged,
+  type SystemRecommendation,
+} from "@site-secure/api-client";
 import { Button, Input, Select } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QuoteFlowSheet } from "../quote-creation/QuoteFlowSheet";
 import { he } from "../../../i18n/he";
 import {
@@ -17,6 +26,17 @@ import {
   validateCctvBuildRequirements,
   type CctvBuildRequirements,
 } from "../../../lib/cctv-build-requirements";
+import {
+  componentsFromRecommendation,
+  designHasRecommendation,
+  mergeSelectionAfterRecalculate,
+  pickActiveCctvDesign,
+  recommendationFromDesign,
+  recommendationMetaFromRec,
+  requirementsFromDesign,
+  requirementsToDesignDoc,
+  selectionFromDesign,
+} from "../../../lib/cctv-design-persistence";
 import {
   buildEngineeringSummary,
   compactCompatibilityLines,
@@ -44,40 +64,56 @@ type Props = {
   open: boolean;
   onClose: () => void;
   workspaceId: string;
+  /** Live quote id when known; persistence waits until a Quote exists. */
+  quoteId?: string | null;
+  /** Ensure a Quote row exists before first Design persist (createOnce). */
+  ensureQuoteId?: () => Promise<string>;
   api: ApiClient;
   lead?: LeadOut | null;
   applying?: boolean;
   applyError?: string | null;
   recovery?: PartialApplyRecovery | null;
+  /** Legacy sequential addQuoteItem — only when no durable Design exists. */
   onApply: (lines: CctvBuildQuoteLine[], opts?: { resume?: PartialApplyRecovery }) => void | Promise<void>;
+  /** After successful atomic Design Apply — authoritative Quote. */
+  onAppliedQuote?: (quote: QuoteOut) => void | Promise<void>;
   onClearRecovery?: () => void;
 };
+
+function leadDefaults(lead?: LeadOut | null): CctvBuildRequirements {
+  return defaultCctvBuildRequirements({
+    cameraCount: lead?.requirements?.camera_count,
+    recording: lead?.requirements?.recording,
+    remoteViewing: lead?.requirements?.remote_viewing,
+    infrastructure: lead?.requirements?.infrastructure,
+    location: lead?.requirements?.location,
+  });
+}
 
 export function SystemBuilderDrawer({
   open,
   onClose,
   workspaceId,
+  quoteId = null,
+  ensureQuoteId,
   api,
   lead,
   applying = false,
   applyError = null,
   recovery = null,
   onApply,
+  onAppliedQuote,
   onClearRecovery,
 }: Props) {
   const [systemType, setSystemType] = useState<SystemBuilderType>("cctv");
   const [step, setStep] = useState<Step>("requirements");
-  const [req, setReq] = useState<CctvBuildRequirements>(() =>
-    defaultCctvBuildRequirements({
-      cameraCount: lead?.requirements?.camera_count,
-      recording: lead?.requirements?.recording,
-      remoteViewing: lead?.requirements?.remote_viewing,
-      infrastructure: lead?.requirements?.infrastructure,
-      location: lead?.requirements?.location,
-    }),
-  );
+  const [req, setReq] = useState<CctvBuildRequirements>(() => leadDefaults(lead));
   const [inputError, setInputError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [persistError, setPersistError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [hydrating, setHydrating] = useState(false);
+  const [needsReviewHint, setNeedsReviewHint] = useState(false);
   const [recommendation, setRecommendation] = useState<SystemRecommendation | null>(null);
   const [selection, setSelection] = useState<ReviewSelectionState>({
     selectedByRole: {},
@@ -86,36 +122,216 @@ export function SystemBuilderDrawer({
   const [swapRole, setSwapRole] = useState<string | null>(null);
   const [appliedOnce, setAppliedOnce] = useState(false);
   const [lastLines, setLastLines] = useState<CctvBuildQuoteLine[] | null>(null);
+  const [localApplying, setLocalApplying] = useState(false);
+  const [localApplyError, setLocalApplyError] = useState<string | null>(null);
+  const [divergence, setDivergence] = useState<SystemDesignApplyDiverged | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    setStep("requirements");
-    setSystemType("cctv");
-    setRecommendation(null);
-    setInputError(null);
-    setServerError(null);
-    setSwapRole(null);
-    setAppliedOnce(false);
-    setLastLines(null);
-    setSelection({ selectedByRole: {}, removedRoles: new Set() });
-    setReq(
-      defaultCctvBuildRequirements({
-        cameraCount: lead?.requirements?.camera_count,
-        recording: lead?.requirements?.recording,
-        remoteViewing: lead?.requirements?.remote_viewing,
-        infrastructure: lead?.requirements?.infrastructure,
-        location: lead?.requirements?.location,
-      }),
-    );
-  }, [open, lead]);
+  const designRef = useRef<SystemDesign | null>(null);
+  const revisionRef = useRef(1);
+  const hydratingRef = useRef(false);
+  const selectionPersistTimer = useRef<number | null>(null);
+  const openGen = useRef(0);
 
   const addGate = useMemo(() => {
     if (!recommendation) return { ok: false as const, reason: "empty" as const };
     return canAddRecommendationToQuote(recommendation, selection);
   }, [recommendation, selection]);
 
+  function adoptDesign(design: SystemDesign) {
+    designRef.current = design;
+    revisionRef.current = Number(design.revision) || 1;
+  }
+
+  function applyHydratedDesign(design: SystemDesign) {
+    adoptDesign(design);
+    setReq(requirementsFromDesign(design));
+    const rec = recommendationFromDesign(design);
+    if (rec && designHasRecommendation(design)) {
+      setRecommendation(rec);
+      setSelection(selectionFromDesign(design));
+      setStep("review");
+      setNeedsReviewHint((design.components ?? []).some((c) => c.needs_review));
+    } else {
+      setRecommendation(null);
+      setSelection({ selectedByRole: {}, removedRoles: new Set() });
+      setStep("requirements");
+      setNeedsReviewHint(false);
+    }
+  }
+
+  async function reloadDesignFromServer() {
+    const id = designRef.current?.id;
+    if (!id) return;
+    setConflict(false);
+    setPersistError(null);
+    try {
+      const design = await api.getSystemDesign(workspaceId, id);
+      hydratingRef.current = true;
+      applyHydratedDesign(design);
+    } catch (err) {
+      setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignLoadError);
+    } finally {
+      hydratingRef.current = false;
+    }
+  }
+
+  async function ensureDesign(quote: string, requirements: CctvBuildRequirements): Promise<SystemDesign> {
+    const listed = await api.listSystemDesigns(workspaceId, quote);
+    const existing = pickActiveCctvDesign(listed.items);
+    if (existing) {
+      adoptDesign(existing);
+      return existing;
+    }
+    const created = await api.createSystemDesign(workspaceId, quote, {
+      engine_type: "cctv",
+      engine_version: 1,
+      requirements: requirementsToDesignDoc(requirements) as unknown as Record<string, unknown>,
+    });
+    // Re-list to prefer earliest if a race created duplicates (no unique constraint by design).
+    const again = await api.listSystemDesigns(workspaceId, quote);
+    const winner = pickActiveCctvDesign(again.items) ?? created;
+    adoptDesign(winner);
+    return winner;
+  }
+
+  async function patchDesign(body: Parameters<ApiClient["patchSystemDesign"]>[2]): Promise<SystemDesign | null> {
+    const current = designRef.current;
+    if (!current) return null;
+    try {
+      const next = await api.patchSystemDesign(workspaceId, current.id, {
+        ...body,
+        revision: revisionRef.current,
+      });
+      adoptDesign(next);
+      setConflict(false);
+      setPersistError(null);
+      return next;
+    } catch (err) {
+      if (err instanceof ApiClientError && (err.status === 409 || err.code === "CONFLICT_REVISION")) {
+        setConflict(true);
+        setPersistError(he.cpqCctvDesignConflict);
+        return null;
+      }
+      setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignSaveError);
+      return null;
+    }
+  }
+
+  async function persistRecommendationState(
+    rec: SystemRecommendation,
+    nextSelection: ReviewSelectionState,
+    requirements: CctvBuildRequirements,
+    needsReviewRoles: Set<string>,
+  ) {
+    let quote = quoteId;
+    if (!quote) {
+      if (!ensureQuoteId) return;
+      quote = await ensureQuoteId();
+    }
+    await ensureDesign(quote, requirements);
+    const calculatedAt = new Date().toISOString();
+    await patchDesign({
+      revision: revisionRef.current,
+      requirements: requirementsToDesignDoc(requirements) as unknown as Record<string, unknown>,
+      engineering_result: rec.engineering ?? {},
+      recommendation_meta: recommendationMetaFromRec(rec),
+      lifecycle_status: "calculated",
+      engine_version: Number(rec.engine_version) || 1,
+      calculated_at: calculatedAt,
+      components: componentsFromRecommendation(rec, nextSelection, needsReviewRoles),
+      components_replace: true,
+    });
+  }
+
+  function schedulePersistSelection(next: ReviewSelectionState) {
+    if (hydratingRef.current || conflict || !designRef.current || !recommendation) return;
+    if (selectionPersistTimer.current) window.clearTimeout(selectionPersistTimer.current);
+    selectionPersistTimer.current = window.setTimeout(() => {
+      void patchDesign({
+        revision: revisionRef.current,
+        components: componentsFromRecommendation(recommendation, next),
+        components_replace: true,
+      });
+    }, 400);
+  }
+
+  function updateSelection(next: ReviewSelectionState) {
+    setSelection(next);
+    schedulePersistSelection(next);
+  }
+
+  // Open / hydrate — no empty Design creation on mere open.
+  useEffect(() => {
+    if (!open) return;
+    const gen = ++openGen.current;
+    setSystemType("cctv");
+    setInputError(null);
+    setServerError(null);
+    setPersistError(null);
+    setConflict(false);
+    setSwapRole(null);
+    setAppliedOnce(false);
+    setLastLines(null);
+    setNeedsReviewHint(false);
+    setDivergence(null);
+    setLocalApplyError(null);
+    setLocalApplying(false);
+    designRef.current = null;
+    revisionRef.current = 1;
+
+    let cancelled = false;
+    async function hydrate() {
+      if (!quoteId) {
+        setReq(leadDefaults(lead));
+        setRecommendation(null);
+        setSelection({ selectedByRole: {}, removedRoles: new Set() });
+        setStep("requirements");
+        return;
+      }
+      setHydrating(true);
+      hydratingRef.current = true;
+      try {
+        const listed = await api.listSystemDesigns(workspaceId, quoteId);
+        if (cancelled || openGen.current !== gen) return;
+        const existing = pickActiveCctvDesign(listed.items);
+        if (existing) {
+          const fresh = await api.getSystemDesign(workspaceId, existing.id);
+          if (cancelled || openGen.current !== gen) return;
+          applyHydratedDesign(fresh);
+        } else {
+          setReq(leadDefaults(lead));
+          setRecommendation(null);
+          setSelection({ selectedByRole: {}, removedRoles: new Set() });
+          setStep("requirements");
+        }
+      } catch (err) {
+        if (cancelled || openGen.current !== gen) return;
+        setReq(leadDefaults(lead));
+        setRecommendation(null);
+        setSelection({ selectedByRole: {}, removedRoles: new Set() });
+        setStep("requirements");
+        setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignLoadError);
+      } finally {
+        if (!cancelled && openGen.current === gen) {
+          setHydrating(false);
+          hydratingRef.current = false;
+        }
+      }
+    }
+    void hydrate();
+    return () => {
+      cancelled = true;
+      if (selectionPersistTimer.current) window.clearTimeout(selectionPersistTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open/quote gate
+  }, [open, quoteId, workspaceId, api, lead]);
+
   async function calculate() {
     if (systemType !== "cctv") return;
+    if (conflict) {
+      setPersistError(he.cpqCctvDesignConflict);
+      return;
+    }
     const validation = validateCctvBuildRequirements(req);
     if (!validation.ok) {
       setInputError(
@@ -132,16 +348,26 @@ export function SystemBuilderDrawer({
     }
     setInputError(null);
     setServerError(null);
+    setPersistError(null);
     setStep("loading");
     onClearRecovery?.();
     setAppliedOnce(false);
     setLastLines(null);
+    const priorSelection = selection;
     try {
       const body = requirementsToRecommendBody(req);
       const rec = await api.recommendCctv(workspaceId, body);
+      const merged = mergeSelectionAfterRecalculate(rec, priorSelection);
       setRecommendation(rec);
-      setSelection(initialReviewSelection(rec));
+      setSelection(merged.selection);
+      setNeedsReviewHint(merged.needsReviewRoles.size > 0);
       setStep("review");
+      // Persist after successful recommend — failure must not erase local review state.
+      try {
+        await persistRecommendationState(rec, merged.selection, req, merged.needsReviewRoles);
+      } catch (err) {
+        setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignSaveError);
+      }
     } catch (err) {
       setRecommendation(null);
       setStep("requirements");
@@ -149,17 +375,78 @@ export function SystemBuilderDrawer({
     }
   }
 
-  async function handleAdd(resume?: PartialApplyRecovery | null) {
-    if (!addGate.ok || applying) return;
-    if (appliedOnce && !resume) return;
-    if (!resume) setAppliedOnce(true);
+  async function handleAdd(resume?: PartialApplyRecovery | null, confirmationToken?: string | null) {
+    if (!addGate.ok || applying || localApplying) return;
+    if (appliedOnce && !resume && !confirmationToken && !divergence) return;
+    if (!resume && !confirmationToken) setAppliedOnce(true);
     setLastLines(addGate.lines);
+    setLocalApplyError(null);
+
+    const design = designRef.current;
+    if (design) {
+      // Durable atomic Apply — Design → RPC (no sequential addQuoteItem).
+      setLocalApplying(true);
+      try {
+        // Persist latest selection before apply so server sees current choices.
+        if (recommendation) {
+          try {
+            await persistRecommendationState(recommendation, selection, req, new Set());
+          } catch {
+            // Apply still uses server Design state from last successful persist.
+          }
+        }
+        const fresh = designRef.current ?? design;
+        const result = await api.applySystemDesign(workspaceId, fresh.id, {
+          revision: fresh.revision,
+          confirmation_token: confirmationToken ?? undefined,
+          section_name: he.cpqCctvSystemSection,
+        });
+        designRef.current = result.design;
+        setDivergence(null);
+        setLocalApplyError(null);
+        onClearRecovery?.();
+        if (onAppliedQuote) {
+          await onAppliedQuote(result.quote);
+        }
+      } catch (err) {
+        if (err instanceof ApiClientError && err.code === "DESIGN_APPLY_DIVERGED") {
+          const details = err.details as SystemDesignApplyDiverged;
+          if (details?.confirmation_token) {
+            setDivergence(details);
+            setLocalApplyError(he.cpqCctvApplyDiverged);
+            setAppliedOnce(false);
+            return;
+          }
+        }
+        if (err instanceof ApiClientError && err.code === "CONFLICT_REVISION") {
+          setConflict(true);
+          setAppliedOnce(false);
+          return;
+        }
+        if (err instanceof ApiClientError && err.code === "CONFIRMATION_STALE") {
+          setDivergence(null);
+          setLocalApplyError(he.cpqCctvApplyConfirmStale);
+          setAppliedOnce(false);
+          return;
+        }
+        setLocalApplyError(err instanceof ApiClientError ? err.message : he.quotesError);
+        if (!resume && !confirmationToken) setAppliedOnce(false);
+      } finally {
+        setLocalApplying(false);
+      }
+      return;
+    }
+
+    // Legacy fallback: no durable Design yet (pre-persist / failed persist).
     try {
       await onApply(addGate.lines, resume ? { resume } : undefined);
     } catch {
       if (!resume) setAppliedOnce(false);
     }
   }
+
+  const busy = applying || localApplying;
+  const shownApplyError = localApplyError || applyError;
 
   const footer =
     step === "review" && recommendation ? (
@@ -172,29 +459,54 @@ export function SystemBuilderDrawer({
             setRecommendation(null);
             setAppliedOnce(false);
             setLastLines(null);
+            setDivergence(null);
+            setLocalApplyError(null);
             onClearRecovery?.();
           }}
-          disabled={applying}
+          disabled={busy || conflict}
         >
           {he.cpqAdjustPlan}
         </Button>
-        {recovery && lastLines ? (
+        {divergence ? (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setDivergence(null);
+                setLocalApplyError(null);
+                setAppliedOnce(false);
+              }}
+              disabled={busy}
+            >
+              {he.cancel}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleAdd(null, divergence.confirmation_token)}
+              disabled={busy || conflict}
+              aria-busy={busy}
+            >
+              {busy ? he.cpqCctvApplying : he.cpqCctvConfirmReplace}
+            </Button>
+          </>
+        ) : recovery && lastLines ? (
           <Button
             type="button"
             onClick={() => void handleAdd(recovery)}
-            disabled={applying}
-            aria-busy={applying}
+            disabled={busy || conflict}
+            aria-busy={busy}
           >
-            {applying ? he.cpqCctvApplying : he.cpqCctvResumeApply}
+            {busy ? he.cpqCctvApplying : he.cpqCctvResumeApply}
           </Button>
         ) : (
           <Button
             type="button"
             onClick={() => void handleAdd(null)}
-            disabled={!addGate.ok || applying || appliedOnce}
-            aria-busy={applying}
+            disabled={!addGate.ok || busy || appliedOnce || conflict}
+            aria-busy={busy}
           >
-            {applying
+            {busy
               ? he.cpqCctvApplying
               : addGate.ok && addGate.incomplete
                 ? he.cpqAddResolvedToQuote
@@ -202,10 +514,10 @@ export function SystemBuilderDrawer({
           </Button>
         )}
       </div>
-    ) : step === "loading" ? (
+    ) : step === "loading" || hydrating ? (
       <div className="flex justify-end">
         <Button type="button" variant="secondary" disabled>
-          {he.cpqCctvPlanning}
+          {hydrating ? he.cpqCctvDesignHydrating : he.cpqCctvPlanning}
         </Button>
       </div>
     ) : (
@@ -213,7 +525,11 @@ export function SystemBuilderDrawer({
         <Button type="button" variant="secondary" onClick={onClose}>
           {he.cancel}
         </Button>
-        <Button type="button" disabled={systemType !== "cctv"} onClick={() => void calculate()}>
+        <Button
+          type="button"
+          disabled={systemType !== "cctv" || conflict}
+          onClick={() => void calculate()}
+        >
           {he.cpqCctvCalculate}
         </Button>
       </div>
@@ -223,7 +539,7 @@ export function SystemBuilderDrawer({
     <QuoteFlowSheet
       open={open}
       onClose={() => {
-        if (applying) return;
+        if (busy) return;
         onClose();
       }}
       title={he.cpqBuildSystem}
@@ -232,28 +548,56 @@ export function SystemBuilderDrawer({
       footer={footer}
     >
       <div className="grid gap-4">
-        {step === "requirements" || step === "loading" ? (
+        {conflict ? (
+          <div className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm" role="alert">
+            <p className="text-danger">{he.cpqCctvDesignConflict}</p>
+            <Button type="button" className="mt-2" variant="secondary" onClick={() => void reloadDesignFromServer()}>
+              {he.cpqCctvDesignReload}
+            </Button>
+          </div>
+        ) : null}
+        {persistError && !conflict ? (
+          <p className="text-sm text-danger" role="alert">
+            {persistError}
+          </p>
+        ) : null}
+        {needsReviewHint && step === "review" ? (
+          <p className="text-sm text-fg-muted" role="status">
+            {he.cpqCctvNeedsReviewHint}
+          </p>
+        ) : null}
+        {divergence && step === "review" ? (
+          <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm" role="alert">
+            <p className="font-medium text-fg">{he.cpqCctvApplyDivergedTitle}</p>
+            <p className="mt-1 text-fg-muted">{he.cpqCctvApplyDivergedBody}</p>
+            <ul className="mt-2 list-disc space-y-1 pe-5 text-fg-muted">
+              {divergence.diverged.map((d) => (
+                <li key={d.component_id}>
+                  {roleLabelHe(d.role_key)}:{" "}
+                  {d.kind === "MISSING"
+                    ? he.cpqCctvApplyDivergedMissing
+                    : he.cpqCctvApplyDivergedChanged}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-fg-muted">{he.cpqCctvApplyDivergedReplaceHint}</p>
+          </div>
+        ) : null}
+
+        {step === "requirements" || step === "loading" || hydrating ? (
           <>
             <Select
               id="cpq-system-type"
               label={he.cpqSystemType}
-              value={systemType}
-              onChange={(ev) => setSystemType(ev.target.value as SystemBuilderType)}
-              disabled={step === "loading"}
+              value="cctv"
+              onChange={() => setSystemType("cctv")}
+              disabled={step === "loading" || hydrating}
             >
               <option value="cctv">{he.leadServiceTypes.cctv}</option>
-              <option value="alarm">{he.leadServiceTypes.alarm}</option>
-              <option value="access_control">{he.leadServiceTypes.access_control}</option>
-              <option value="intercom">{he.leadServiceTypes.intercom}</option>
-              <option value="network">{he.cpqSystemNetwork}</option>
-              <option value="low_voltage">{he.leadServiceTypes.low_voltage}</option>
-              <option value="combined">{he.cpqSystemCombined}</option>
             </Select>
 
-            {systemType !== "cctv" ? (
-              <p className="text-sm text-fg-muted">{he.cpqSystemTypeSoon}</p>
-            ) : step === "loading" ? (
-              <CctvBuildProgress />
+            {step === "loading" || hydrating ? (
+              <CctvBuildProgress label={hydrating ? he.cpqCctvDesignHydrating : undefined} />
             ) : (
               <RequirementsForm req={req} setReq={setReq} inputError={inputError} />
             )}
@@ -265,16 +609,16 @@ export function SystemBuilderDrawer({
           </>
         ) : null}
 
-        {step === "review" && recommendation ? (
+        {step === "review" && recommendation && !hydrating ? (
           <RecommendationReview
             rec={recommendation}
             selection={selection}
-            setSelection={setSelection}
+            setSelection={updateSelection}
             swapRole={swapRole}
             setSwapRole={setSwapRole}
-            addBlocked={!addGate.ok}
+            addBlocked={!addGate.ok || conflict}
             incomplete={addGate.ok && addGate.incomplete}
-            applyError={applyError}
+            applyError={shownApplyError}
           />
         ) : null}
       </div>
@@ -282,7 +626,7 @@ export function SystemBuilderDrawer({
   );
 }
 
-function CctvBuildProgress() {
+function CctvBuildProgress({ label }: { label?: string }) {
   const stages = [
     he.cpqCctvStageAnalyze,
     he.cpqCctvStageStorage,
@@ -292,15 +636,16 @@ function CctvBuildProgress() {
   ];
   const [index, setIndex] = useState(0);
   useEffect(() => {
+    if (label) return;
     const id = window.setInterval(() => {
       setIndex((value) => (value + 1) % stages.length);
     }, 900);
     return () => window.clearInterval(id);
-  }, [stages.length]);
+  }, [stages.length, label]);
   return (
     <div className="flex flex-col items-center gap-3 py-6" role="status" aria-live="polite">
       <div className="cpq-cctv-progress-ring" aria-hidden />
-      <p className="text-sm font-semibold text-fg">{stages[index]}</p>
+      <p className="text-sm font-semibold text-fg">{label ?? stages[index]}</p>
       <p className="text-xs text-fg-muted">{he.cpqCctvPlanningHint}</p>
     </div>
   );

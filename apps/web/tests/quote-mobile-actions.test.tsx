@@ -148,45 +148,84 @@ describe("Quote mobile actions", () => {
     vi.restoreAllMocks();
   });
 
-  it("surfaces send, preview, and add directly on mobile", () => {
+  it("keeps send on the compact dock; preview and add live in overflow", () => {
     renderBuilder(quote({ validation: { can_send: false, gaps: [{ field: "title", code: "title", message: "x" }] } }));
     const toolbar = mobileToolbar();
-    expect(within(toolbar).getByRole("button", { name: he.cpqSendForApproval })).toBeInTheDocument();
-    expect(within(toolbar).getByRole("button", { name: he.quotePreviewPrimary })).toBeInTheDocument();
-    expect(within(toolbar).getByRole("button", { name: he.cpqAddCommand })).toBeInTheDocument();
+    expect(within(toolbar).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeInTheDocument();
+    expect(within(toolbar).queryByRole("button", { name: he.cpqCustomerView })).not.toBeInTheDocument();
+    expect(within(toolbar).queryByRole("button", { name: he.cpqAddCommand })).not.toBeInTheDocument();
+    openMobileOverflow();
+    expect(screen.getByRole("menuitem", { name: he.cpqCustomerView })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: he.cpqAddCommand })).toBeInTheDocument();
   });
 
   it("disables send when quote is not ready", () => {
     renderBuilder(quote({ validation: { can_send: false, gaps: [{ field: "title", code: "title", message: "x" }] } }));
-    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApproval })).toBeDisabled();
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeDisabled();
   });
 
   it("enables send when quote is ready", () => {
     renderBuilder(quote());
-    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApproval })).toBeEnabled();
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeEnabled();
   });
 
-  it("opens add menu with item, system, section, and build system", () => {
+  it("opens add menu with unified composition taxonomy", () => {
     renderBuilder(quote());
-    fireEvent.click(within(mobileToolbar()).getByRole("button", { name: he.cpqAddCommand }));
+    openMobileOverflow();
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqAddCommand }));
     const menu = screen.getByRole("menu", { name: he.cpqMobileAddMenuAria });
     expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddItem })).toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddSystem })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddFree })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddService })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddNote })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddSection })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddTemplate })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: he.cpqMobileAddSystem })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: he.cpqBuildSystem })).toBeInTheDocument();
   });
 
   it("opens system picker from mobile add menu", async () => {
     renderBuilder(quote());
-    fireEvent.click(within(mobileToolbar()).getByRole("button", { name: he.cpqAddCommand }));
+    openMobileOverflow();
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqAddCommand }));
     fireEvent.click(screen.getByRole("menuitem", { name: he.cpqMobileAddSystem }));
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
     expect(screen.getByRole("dialog", { name: he.cpqAddSystemTitle })).toBeInTheDocument();
   });
 
-  it("preview action is reachable from mobile toolbar", () => {
+  it("adds a note line from mobile add menu via existing item contract", async () => {
+    api.addQuoteItem.mockResolvedValueOnce({
+      ...quote(),
+      items: [
+        ...(quote().items ?? []),
+        {
+          id: "note-1",
+          quote_id: "q1",
+          description: "",
+          qty: 1,
+          unit_price: 0,
+          line_net: 0,
+          item_type: "note",
+        },
+      ],
+    });
     renderBuilder(quote());
-    fireEvent.click(within(mobileToolbar()).getByRole("button", { name: he.quotePreviewPrimary }));
+    openMobileOverflow();
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqAddCommand }));
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqMobileAddNote }));
+    await waitFor(() =>
+      expect(api.addQuoteItem).toHaveBeenCalledWith(
+        "ws",
+        "q1",
+        expect.objectContaining({ item_type: "note", unit_price: 0 }),
+      ),
+    );
+  });
+
+  it("preview action is reachable from mobile overflow", () => {
+    renderBuilder(quote());
+    openMobileOverflow();
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqCustomerView }));
     expect(navigate).toHaveBeenCalledWith({
       to: "/app/quotes/$quoteId/preview",
       params: { quoteId: "q1" },
@@ -210,6 +249,6 @@ describe("Quote mobile actions", () => {
     renderBuilder(quote());
     expect(screen.queryByRole("toolbar", { name: he.cpqMobileActionsBarAria })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: he.cpqMoreActionsAria })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: he.cpqSendForApproval }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole("button", { name: he.cpqSendForApproval }).length).toBeGreaterThanOrEqual(1);
   });
 });

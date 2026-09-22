@@ -1,0 +1,161 @@
+{
+  "matrix": [
+    {
+      "test": "/admin same app",
+      "result": "PASS",
+      "evidence": "admin route uses SessionProvider pattern"
+    },
+    {
+      "test": "same login/session",
+      "result": "PASS",
+      "evidence": "shared useSession"
+    },
+    {
+      "test": "no service role in browser",
+      "result": "PASS",
+      "evidence": "hits=[]"
+    },
+    {
+      "test": "Platform Super Admin access",
+      "result": "PASS",
+      "evidence": "status=200 admin=True role=platform_super_admin"
+    },
+    {
+      "test": "Platform Super Admin API",
+      "result": "PASS",
+      "evidence": "summary=200"
+    },
+    {
+      "test": "workspace create",
+      "result": "PASS",
+      "evidence": "ws=8c2a0a6e-cffd-4bd9-b332-ee94aef0d94f status=200"
+    },
+    {
+      "test": "normal owner denied",
+      "result": "PASS",
+      "evidence": "status=403"
+    },
+    {
+      "test": "technician membership",
+      "result": "PASS",
+      "evidence": "status=201 body=[{\"id\":\"db76dea0-4afe-4418-80b9-d1d459e540c9\",\"workspace_id\":\"8c2a0a6e-cffd-4bd9-b332-ee94aef0d94f\",\"user_id\":\"fd16c20d-"
+    },
+    {
+      "test": "technician denied",
+      "result": "PASS",
+      "evidence": "status=403"
+    },
+    {
+      "test": "Beta active",
+      "result": "PASS",
+      "evidence": "status=200 body={\"id\":\"54f7196e-a954-4d05-b70b-3027a9a17f09\",\"user_id\":\"fd16c20d-2cce-44a2-8c64-abd6a92632c5\",\"workspace_id\":\"8c2a0a6e-cffd-4bd9-b332-ee94aef0d94f\",\"cohort\":\"Founding Technicians — 2026\",\"status\":\"act"
+    },
+    {
+      "test": "Beta does not change role",
+      "result": "PASS",
+      "evidence": "role=technician"
+    },
+    {
+      "test": "Founding badge grant",
+      "result": "PASS",
+      "evidence": "status=200"
+    },
+    {
+      "test": "badge visible (session)",
+      "result": "PASS",
+      "evidence": "badges=['founding_technician']"
+    },
+    {
+      "test": "badge does not change role",
+      "result": "PASS",
+      "evidence": "role=technician"
+    },
+    {
+      "test": "badge holder denied Admin",
+      "result": "PASS",
+      "evidence": "technician+badge still 403"
+    },
+    {
+      "test": "Beta participant denied Admin",
+      "result": "PASS",
+      "evidence": "beta user still 403"
+    },
+    {
+      "test": "legacy founding role blocked",
+      "result": "PASS",
+      "evidence": "status=403 body={\"error\":{\"code\":\"BUSINESS_RULE\",\"message\":\"הפעולה חסומה לפי כללי התוכנית\",\"details\":{\"reason\":\"role_not_assignable\",\"invite_role\":\"founding_technician\"}}}"
+    },
+    {
+      "test": "self-promotion rejected",
+      "result": "PASS",
+      "evidence": "patch_me=400"
+    },
+    {
+      "test": "self badge via admin API rejected",
+      "result": "PASS",
+      "evidence": "status=403"
+    },
+    {
+      "test": "self beta via admin API rejected",
+      "result": "PASS",
+      "evidence": "status=403"
+    },
+    {
+      "test": "Beta pause",
+      "result": "PASS",
+      "evidence": "status=200"
+    },
+    {
+      "test": "Beta exit",
+      "result": "PASS",
+      "evidence": "status=200"
+    },
+    {
+      "test": "Beta pause/exit does not change role",
+      "result": "PASS",
+      "evidence": "role=[{'role_key': 'technician'}]"
+    },
+    {
+      "test": "badge revoke",
+      "result": "PASS",
+      "evidence": "status=200"
+    },
+    {
+      "test": "audit grant",
+      "result": "PASS",
+      "evidence": "actions_sample=['badge_revoked', 'beta_participant_exited', 'beta_participant_paused', 'users.invite', 'badge_granted', 'beta_participant_activated', 'projects.create_from_quote', 'quotes.approve', 'quotes.share_link', 'quotes.send', 'workspace.create', 'workspace.create']"
+    },
+    {
+      "test": "audit revoke",
+      "result": "PASS",
+      "evidence": "has_revoked=True"
+    },
+    {
+      "test": "audit Beta change",
+      "result": "PASS",
+      "evidence": "beta_actions=['beta_participant_exited', 'beta_participant_paused', 'beta_participant_activated']"
+    },
+    {
+      "test": "workspace RBAC still works",
+      "result": "PASS",
+      "evidence": "catalog=200"
+    },
+    {
+      "test": "/app session after /admin",
+      "result": "PASS",
+      "evidence": "status=200"
+    },
+    {
+      "test": "Back to SITE SECURE works",
+      "result": "PASS",
+      "evidence": "i18n+navigate /app/dashboard"
+    },
+    {
+      "test": "cross-workspace mutation rejected",
+      "result": "PASS",
+      "evidence": "non-admin cannot patch beta"
+    }
+  ],
+  "blockers": [],
+  "verdict": "PLATFORM ADMIN + BETA PARTICIPANT MODEL — CLOSED AND VERIFIED"
+}

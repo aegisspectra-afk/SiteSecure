@@ -1,0 +1,30 @@
+{
+  "web": "https://site-secure-umber.vercel.app",
+  "ok": true,
+  "failures": [],
+  "viewports": {
+    "360": {
+      "overflow": false,
+      "hasLogin": true,
+      "pageErrors": []
+    },
+    "375": {
+      "overflow": false,
+      "hasLogin": true,
+      "pageErrors": []
+    },
+    "390": {
+      "overflow": false,
+      "hasLogin": true,
+      "pageErrors": []
+    },
+    "430": {
+      "overflow": false,
+      "hasLogin": true,
+      "pageErrors": []
+    }
+  },
+  "pages": {
+    "home_snip": "דלגו לתוכן\nSITE SECURE\n\nSITE SECURE / SECURITY OPERATIONS PLATFORM\n\nSECURITY OPERATIONS\nFOR THE REAL WORLD.\n\nThe operating platform for modern security companies.\n\nFrom the office to the field — customers, sites, technicians, projects and devices connected in one operational system.\n\nמערכת ההפעלה לח"
+  }
+}

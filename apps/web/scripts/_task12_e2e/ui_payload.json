@@ -1,0 +1,11 @@
+{
+  "web": "http://localhost:5174",
+  "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjdhOTNlMWI5LTZjM2UtNDBjMS04NjQ5LTNlMWJlOWI0YmNmNCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3JoeHFxdWRsbmdpbWhwbHZuZG16LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI4NDIxZDAwNC1jNjJiLTQ0NGEtOWRkNC0zY2RlOTY0ZmIyZGIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg4MTkyNzQ5LCJpYXQiOjE3ODgxODkxNDksImVtYWlsIjoiYWVnaXNzcGVjdHJhQGdtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJhZWdpc3NwZWN0cmFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImZ1bGxfbmFtZSI6ImlseWEga2VybmVyIiwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiI4NDIxZDAwNC1jNjJiLTQ0NGEtOWRkNC0zY2RlOTY0ZmIyZGIifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJvdHAiLCJ0aW1lc3RhbXAiOjE3ODgxODkxNDl9XSwic2Vzc2lvbl9pZCI6ImM4NTE1NTA4LWQ3NjgtNDk5Ny1iN2YxLTcwZDk2NDgzMDc3OSIsImlzX2Fub255bW91cyI6ZmFsc2V9.1bdsYX6ZM6_9wD5wmiFUcSkjFUVLLOnOcq6sl1nILuoLW1n3lQ-1pJT4R-Q12Ywb09dUxa4O522VrxrfeQxiRQ",
+  "quotes": {
+    "sent": "e5d9aac3-268d-40ab-b923-70d28b32217a",
+    "approved_with_project": "2afcead4-48cc-4c87-a6e8-f67c4a95c353",
+    "rejected": "62dd850e-da08-407e-aa18-e6e069971120",
+    "draft_check": "4943d7a9-de07-40c6-b3d4-0ff0dd96cf74"
+  },
+  "project_id": "c8a24cec-c5c1-4119-945a-cf5708493136"
+}

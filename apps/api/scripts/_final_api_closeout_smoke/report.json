@@ -1,0 +1,74 @@
+{
+  "api": "https://site-secure-api-staging.onrender.com",
+  "web": "https://site-secure-umber.vercel.app",
+  "checks": [
+    {
+      "name": "web_016",
+      "ok": true,
+      "versions": [
+        "0.1.6-beta"
+      ],
+      "asset": "/assets/index-CKkTq_u7.js"
+    },
+    {
+      "name": "api_health",
+      "ok": true
+    },
+    {
+      "name": "tech_quotes_403",
+      "ok": true,
+      "status": 403,
+      "leak": true
+    },
+    {
+      "name": "tech_catalog_403",
+      "ok": true,
+      "status": 403,
+      "leak": true
+    },
+    {
+      "name": "tech_quote_detail_403",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_quote_create_403",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_jobs_200",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "tech_sites_200",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "tech_assigned_photo",
+      "ok": true,
+      "complete": 200,
+      "url": 200
+    },
+    {
+      "name": "owner_quotes",
+      "ok": true
+    },
+    {
+      "name": "owner_catalog",
+      "ok": true
+    },
+    {
+      "name": "owner_customers",
+      "ok": true
+    },
+    {
+      "name": "cross_ws_deny",
+      "ok": true,
+      "status": 404
+    }
+  ],
+  "ok": true
+}

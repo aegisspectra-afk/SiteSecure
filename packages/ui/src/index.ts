@@ -1,8 +1,16 @@
 export { Button, type ButtonProps, type ButtonVariant } from "./Button";
 export { cn } from "./cn";
 export { Checkbox, Radio, Switch } from "./Controls";
-export { Badge, Card, Status, type StatusTone } from "./Display";
-export { FieldShell, Input, Select, Textarea, type InputProps } from "./Field";
+export { ActivityRow } from "./ActivityRow";
+export { Badge, Card, Status, type CardAppearance, type StatusTone } from "./Display";
+export {
+  FieldShell,
+  Input,
+  Select,
+  Textarea,
+  type FieldAppearance,
+  type InputProps,
+} from "./Field";
 export { EmptyState, ErrorState, LoadingBlock, Skeleton, SuccessState } from "./Feedback";
 export {
   Drawer,

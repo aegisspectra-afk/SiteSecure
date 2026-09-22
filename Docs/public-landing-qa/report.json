@@ -1,0 +1,102 @@
+{
+  "shots": [
+    {
+      "name": "390",
+      "overflowX": false,
+      "hasFocal": true,
+      "hasSegment": true,
+      "hasDossier": true,
+      "hasRows": 30,
+      "hasNumbers": false,
+      "explore": "/#site-file",
+      "concept": true
+    },
+    {
+      "name": "430",
+      "overflowX": false,
+      "hasFocal": true,
+      "hasSegment": true,
+      "hasDossier": true,
+      "hasRows": 30,
+      "hasNumbers": false,
+      "explore": "/#site-file",
+      "concept": true
+    },
+    {
+      "name": "768",
+      "overflowX": false,
+      "hasFocal": true,
+      "hasSegment": true,
+      "hasDossier": true,
+      "hasRows": 30,
+      "hasNumbers": false,
+      "explore": "/#site-file",
+      "concept": true
+    },
+    {
+      "name": "1280",
+      "overflowX": false,
+      "hasFocal": true,
+      "hasSegment": true,
+      "hasDossier": true,
+      "hasRows": 30,
+      "hasNumbers": false,
+      "explore": "/#site-file",
+      "concept": true
+    },
+    {
+      "name": "1440",
+      "overflowX": false,
+      "hasFocal": true,
+      "hasSegment": true,
+      "hasDossier": true,
+      "hasRows": 30,
+      "hasNumbers": false,
+      "explore": "/#site-file",
+      "concept": true
+    }
+  ],
+  "overflow": [
+    {
+      "vp": "390",
+      "overflowX": false
+    },
+    {
+      "vp": "430",
+      "overflowX": false
+    },
+    {
+      "vp": "768",
+      "overflowX": false
+    },
+    {
+      "vp": "1280",
+      "overflowX": false
+    },
+    {
+      "vp": "1440",
+      "overflowX": false
+    }
+  ],
+  "anchors": {
+    "pain": true,
+    "site-file": true,
+    "twin": true,
+    "operations": true,
+    "field": true,
+    "intelligence": true,
+    "security": true,
+    "pilot": true
+  },
+  "hasNumbers": false,
+  "patterns": {
+    "overflowX": false,
+    "hasFocal": true,
+    "hasSegment": true,
+    "hasDossier": true,
+    "hasRows": 30,
+    "hasNumbers": false,
+    "explore": "/#site-file",
+    "concept": true
+  }
+}

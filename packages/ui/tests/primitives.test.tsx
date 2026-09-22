@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { ActivityRow } from "../src/ActivityRow";
 import { Button } from "../src/Button";
 import { Checkbox } from "../src/Controls";
 import { Input } from "../src/Field";
@@ -98,5 +99,21 @@ describe("Input", () => {
     expect(field).toHaveAttribute("type", "text");
     fireEvent.click(screen.getByRole("button", { name: "הסתר סיסמה" }));
     expect(field).toHaveAttribute("type", "password");
+  });
+});
+
+describe("ActivityRow", () => {
+  it("renders title, subtitle and trailing without domain logic", () => {
+    render(
+      <ActivityRow
+        leading={<span aria-hidden>◆</span>}
+        title="אתר גולדה"
+        subtitle="התקנת מצלמות"
+        trailing="09:30"
+      />,
+    );
+    expect(screen.getByText("אתר גולדה")).toBeInTheDocument();
+    expect(screen.getByText("התקנת מצלמות")).toBeInTheDocument();
+    expect(screen.getByText("09:30")).toBeInTheDocument();
   });
 });

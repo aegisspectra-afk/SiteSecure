@@ -227,7 +227,9 @@ export type DashboardItem = {
   site_address?: string | null;
   customer_phone?: string | null;
   scheduled_for: string | null;
-  severity: "now" | "next" | "info";
+  scheduled_end?: string | null;
+  status?: string | null;
+  severity: "now" | "next" | "later" | "info";
   actions: string[];
   updated_at?: string | null;
 };
@@ -676,6 +678,140 @@ export type SystemRecommendation = {
   };
 };
 
+/** Durable System Design (R1 persistence / R2 CCTV hydration). */
+export type SystemDesignComponent = {
+  id: string;
+  workspace_id: string;
+  design_id: string;
+  role_key: string;
+  label: string;
+  quantity: number;
+  optional: boolean;
+  blocking: boolean;
+  removed: boolean;
+  resolution_status?: string | null;
+  technical_requirements?: Record<string, unknown>;
+  candidates?: unknown[];
+  engine_preferred_product_id?: string | null;
+  user_selected_product_id?: string | null;
+  selection_origin: "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED";
+  reason_codes?: unknown[];
+  needs_review: boolean;
+  quote_item_id?: string | null;
+  applied_product_id?: string | null;
+  applied_qty?: number | null;
+  applied_output_fingerprint?: string | null;
+  last_apply_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SystemDesign = {
+  id: string;
+  workspace_id: string;
+  quote_id: string;
+  site_id?: string | null;
+  engine_type: string;
+  engine_version: number;
+  lifecycle_status: "draft" | "calculated" | "applied";
+  requirements: Record<string, unknown>;
+  engineering_result?: Record<string, unknown> | null;
+  recommendation_meta?: Record<string, unknown> | null;
+  calculated_at?: string | null;
+  last_applied_at?: string | null;
+  current_apply_id?: string | null;
+  apply_fingerprint?: string | null;
+  revision: number;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  components: SystemDesignComponent[];
+};
+
+export type SystemDesignComponentIn = {
+  id?: string | null;
+  role_key: string;
+  label?: string;
+  quantity?: number;
+  optional?: boolean;
+  blocking?: boolean;
+  removed?: boolean;
+  resolution_status?: string | null;
+  technical_requirements?: Record<string, unknown>;
+  candidates?: unknown[];
+  engine_preferred_product_id?: string | null;
+  user_selected_product_id?: string | null;
+  selection_origin?: "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED";
+  reason_codes?: unknown[];
+  needs_review?: boolean;
+  quote_item_id?: string | null;
+  applied_product_id?: string | null;
+  applied_qty?: number | null;
+  applied_output_fingerprint?: string | null;
+  last_apply_id?: string | null;
+};
+
+export type SystemDesignCreateIn = {
+  engine_type?: string;
+  engine_version?: number;
+  requirements?: Record<string, unknown>;
+  site_id?: string | null;
+};
+
+export type SystemDesignPatchIn = {
+  revision: number;
+  requirements?: Record<string, unknown>;
+  engineering_result?: Record<string, unknown> | null;
+  recommendation_meta?: Record<string, unknown> | null;
+  lifecycle_status?: "draft" | "calculated" | "applied";
+  engine_version?: number;
+  calculated_at?: string | null;
+  site_id?: string | null;
+  components?: SystemDesignComponentIn[];
+  components_replace?: boolean;
+};
+
+export type SystemDesignApplyIn = {
+  revision: number;
+  confirmation_token?: string | null;
+  section_name?: string | null;
+};
+
+export type SystemDesignApplyDiverged = {
+  design_id: string;
+  revision: number;
+  confirmation_required: true;
+  confirmation_token: string;
+  confirmation_expires_at: string;
+  diverged: Array<{
+    component_id: string;
+    role_key: string;
+    kind: "CHANGED" | "MISSING" | "UNEXPECTED";
+    applied: { product_id?: string | null; qty?: number | null; fingerprint?: string };
+    current: {
+      quote_item_id?: string;
+      product_id?: string | null;
+      qty?: number;
+      fingerprint?: string;
+    } | null;
+  }>;
+  proposed: Array<{
+    component_id: string;
+    role_key: string;
+    product_id: string;
+    qty: number;
+    optional: boolean;
+  }>;
+  untouched_manual_item_count?: number;
+};
+
+export type SystemDesignApplyResult = {
+  ok: boolean;
+  apply_id: string;
+  design: SystemDesign;
+  quote: QuoteOut;
+};
+
 export type QuoteVersionMeta = {
   id: string;
   version: number;
@@ -839,6 +975,7 @@ export type ProjectOut = {
 export type ServiceCallOut = {
   id: string;
   workspace_id: string;
+  number?: string;
   status: string;
   priority: string;
   customer_id: string;
@@ -846,6 +983,8 @@ export type ServiceCallOut = {
   system_id?: string | null;
   title: string;
   description?: string | null;
+  customer_name?: string | null;
+  site_name?: string | null;
   created_at: string;
   updated_at: string;
   linked_jobs?: { id: string; number: string; title: string; status: string; scheduled_for?: string | null }[];
@@ -1898,6 +2037,34 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    listSystemDesigns: (workspaceId: string, quoteId: string) =>
+      request<{ items: SystemDesign[] }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/system-designs`,
+      ),
+    createSystemDesign: (workspaceId: string, quoteId: string, body: SystemDesignCreateIn) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/system-designs`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSystemDesign: (workspaceId: string, designId: string) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`),
+    patchSystemDesign: (workspaceId: string, designId: string, body: SystemDesignPatchIn) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteSystemDesign: (workspaceId: string, designId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`, {
+        method: "DELETE",
+      }),
+    applySystemDesign: (workspaceId: string, designId: string, body: SystemDesignApplyIn) =>
+      request<SystemDesignApplyResult>(
+        `/api/v1/workspaces/${workspaceId}/system-designs/${designId}/apply`,
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
     listCatalogProducts: (
       workspaceId: string,
       opts: { q?: string; kind?: string; category_id?: string; limit?: number; include_inactive?: boolean; active?: boolean } = {},

@@ -2,7 +2,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { he } from "../../../i18n/he";
 
-export type QuoteMobileAddAction = "item" | "system" | "section" | "buildSystem";
+/** Unified composition taxonomy — progressive disclosure from the existing Add dock control. */
+export type QuoteMobileAddAction =
+  | "catalog"
+  | "free"
+  | "service"
+  | "note"
+  | "section"
+  | "template"
+  | "system"
+  | "buildSystem";
 
 export function QuoteMobileAddMenu({
   open,
@@ -35,9 +44,13 @@ export function QuoteMobileAddMenu({
   if (!open || !mounted || typeof document === "undefined" || !canEdit) return null;
 
   const items: Array<{ id: QuoteMobileAddAction; label: string; show: boolean }> = [
-    { id: "item", label: he.cpqMobileAddItem, show: true },
-    { id: "system", label: he.cpqMobileAddSystem, show: true },
+    { id: "catalog", label: he.cpqMobileAddItem, show: true },
+    { id: "free", label: he.cpqMobileAddFree, show: true },
+    { id: "service", label: he.cpqMobileAddService, show: canCatalog },
+    { id: "note", label: he.cpqMobileAddNote, show: true },
     { id: "section", label: he.cpqMobileAddSection, show: true },
+    { id: "template", label: he.cpqMobileAddTemplate, show: canCatalog },
+    { id: "system", label: he.cpqMobileAddSystem, show: canCatalog },
     { id: "buildSystem", label: he.cpqBuildSystem, show: canCatalog },
   ];
 

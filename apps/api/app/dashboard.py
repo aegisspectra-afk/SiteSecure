@@ -60,7 +60,7 @@ VANITY_KEYS = frozenset(
 )
 
 ATTENTION_CAP = 5
-TODAY_CAP = 12
+TODAY_CAP = 24
 ACTIVITY_CAP = 8
 
 
@@ -110,6 +110,8 @@ def _item(
     actions: list[str] | None = None,
     updated_at: str | None = None,
     site_id: str | None = None,
+    scheduled_end: str | None = None,
+    status: str | None = None,
 ) -> dict[str, Any]:
     row: dict[str, Any] = {
         "entity_type": entity_type,
@@ -125,6 +127,10 @@ def _item(
     }
     if site_id:
         row["site_id"] = site_id
+    if scheduled_end:
+        row["scheduled_end"] = scheduled_end
+    if status:
+        row["status"] = status
     return row
 
 
@@ -395,7 +401,7 @@ def _today_jobs(
             actions.append("en_route")
         if can_jobs_start and status == "en_route":
             actions.append("arrived")
-        if can_jobs_start and status in {"arrived", "en_route"}:
+        if can_jobs_start and status == "arrived":
             actions.append("start")
         if can_jobs_complete and status == "in_progress":
             actions.append("complete")
@@ -410,15 +416,32 @@ def _today_jobs(
                 entity_type="job",
                 entity_id=str(job["id"]),
                 number=str(job.get("number") or ""),
-                title_he=JOB_LABEL_HE.get(status, "עבודה"),
+                title_he=str(job.get("title") or JOB_LABEL_HE.get(status, "עבודה")),
                 customer_name=names.get(str(job["customer_id"])) if job.get("customer_id") else None,
                 site_name=names.get(str(job["site_id"])) if job.get("site_id") else None,
                 scheduled_for=job.get("scheduled_for"),
+                scheduled_end=job.get("scheduled_end"),
+                status=status,
                 severity=severity,
                 actions=actions,
             )
         )
-    rows.sort(key=lambda row: (0 if row.get("severity") == "now" else 1 if row.get("severity") == "next" else 2, row.get("scheduled_for") or ""))
+    upcoming = [row for row in rows if row.get("severity") == "next"]
+    upcoming.sort(key=lambda row: row.get("scheduled_for") or "")
+    for extra in upcoming[1:]:
+        extra["severity"] = "later"
+    rows.sort(
+        key=lambda row: (
+            0
+            if row.get("severity") == "now"
+            else 1
+            if row.get("severity") == "next"
+            else 2
+            if row.get("severity") == "later"
+            else 3,
+            row.get("scheduled_for") or "",
+        )
+    )
     return rows
 
 

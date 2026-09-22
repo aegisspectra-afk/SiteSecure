@@ -1,0 +1,42 @@
+{
+  "checks": [
+    {
+      "name": "tech_commercial_quote_data_visible",
+      "ok": false,
+      "detail": "technician can read quote list/detail with pricing"
+    }
+  ],
+  "tech_id": "83b09bd8-d752-4730-8bc6-ee77cc1161a3",
+  "tech_quotes_count": 1,
+  "tech_quote_detail_status": 403,
+  "tech_quote_has_items": false,
+  "tech_quote_unit_prices": [],
+  "tech_catalog_count": 1,
+  "tech_catalog_prices": [
+    99.0
+  ],
+  "document_durability": {
+    "ok": true,
+    "document_id": "8631229b-90d1-4601-abcf-94a172be1c02",
+    "classification": "HEALTHY",
+    "complete": 200,
+    "url": 200,
+    "info": 200
+  },
+  "photo": {
+    "ok": true,
+    "document_id": "716ae170-d867-4440-8c6b-8b6bd431c384"
+  },
+  "site_assign": {
+    "status": 201,
+    "body": "[{\"id\":\"24f71157-0347-4953-b5af-12b7ab0fc014\",\"workspace_id\":\"637dac16-d083-4b6d-9faa-37b470c0a3ed\",\"user_id\":\"83b09bd8-d752-4730-8bc6-ee77cc1161a3\",\"resource_t"
+  },
+  "tech_field_photo_after_site_assign": {
+    "ok": true,
+    "complete": 200,
+    "url": 200
+  },
+  "tech_catalog_create": {
+    "status": 403
+  }
+}

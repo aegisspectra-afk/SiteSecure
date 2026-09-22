@@ -30,6 +30,7 @@ function LoginPage() {
     heading: he.loginLead,
     description: he.loginDescription,
     variant: "login" as const,
+    tone: "premium" as const,
   };
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

@@ -1,0 +1,358 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "notes": [
+    "PASS P0 390: no text behind nav; content clears dock",
+    "PASS 390 summary dismiss occlusion",
+    "PASS P0 360: clears dock/nav",
+    "PASS P0 375: clears dock/nav",
+    "PASS P0 430: clears dock/nav"
+  ],
+  "geometry": [
+    {
+      "name": "flagship-390-top-light",
+      "scrollTop": 0,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 1521,
+      "clearanceAboveDock": -829,
+      "textBehindNavCount": 2,
+      "textBehindNav": [
+        {
+          "t": "▸ פרטי פרויקט נוספים",
+          "top": 793,
+          "bottom": 837
+        },
+        {
+          "t": "▸ פרטי פרויקט נוספים",
+          "top": 805,
+          "bottom": 825
+        }
+      ],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-customer-light",
+      "scrollTop": 116,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 1405,
+      "clearanceAboveDock": -713,
+      "textBehindNavCount": 4,
+      "textBehindNav": [
+        {
+          "t": "▸ תנאים ומסמכים",
+          "top": 744,
+          "bottom": 788
+        },
+        {
+          "t": "▸ תנאים ומסמכים",
+          "top": 756,
+          "bottom": 776
+        },
+        {
+          "t": "תבנית הצעה",
+          "top": 804,
+          "bottom": 823
+        },
+        {
+          "t": "החל תבנית",
+          "top": 831,
+          "bottom": 875
+        }
+      ],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-mid-light",
+      "scrollTop": 735,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 786,
+      "clearanceAboveDock": -94,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-items-light",
+      "scrollTop": 735,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 786,
+      "clearanceAboveDock": -94,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-bottom-light",
+      "scrollTop": 858,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 663,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-summary-open-light",
+      "scrollTop": 858,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 663,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-summary-closed-after-light",
+      "scrollTop": 858,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 663,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-390-bottom-dark",
+      "scrollTop": 858,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 692,
+        "bottom": 758,
+        "height": 66,
+        "bg": "rgb(23, 28, 34)"
+      },
+      "nav": {
+        "top": 766,
+        "bottom": 834,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 663,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 692
+    },
+    {
+      "name": "flagship-360-bottom-light",
+      "scrollTop": 902,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 648,
+        "bottom": 714,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 722,
+        "bottom": 790,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 619,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 648
+    },
+    {
+      "name": "flagship-375-bottom-light",
+      "scrollTop": 890,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 660,
+        "bottom": 726,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 734,
+        "bottom": 802,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 631,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 660
+    },
+    {
+      "name": "flagship-430-bottom-light",
+      "scrollTop": 749,
+      "mainPadBottom": "164px",
+      "clearanceToken": "calc(\r\n      4.125rem + 8px + calc(\r\n      68px + 10px + 0px\r\n    ) + 0.75rem\r\n    )",
+      "dock": {
+        "top": 780,
+        "bottom": 846,
+        "height": 66,
+        "bg": "rgb(255, 255, 255)"
+      },
+      "nav": {
+        "top": 854,
+        "bottom": 922,
+        "height": 68
+      },
+      "gap": 8,
+      "lastContentBottom": 751,
+      "clearanceAboveDock": 29,
+      "textBehindNavCount": 0,
+      "textBehindNav": [],
+      "bandTop": 780
+    }
+  ],
+  "shots": [
+    {
+      "name": "flagship-390-top-light"
+    },
+    {
+      "name": "flagship-390-customer-light"
+    },
+    {
+      "name": "flagship-390-mid-light"
+    },
+    {
+      "name": "flagship-390-items-light"
+    },
+    {
+      "name": "flagship-390-bottom-light"
+    },
+    {
+      "name": "flagship-390-summary-open-light"
+    },
+    {
+      "name": "flagship-390-summary-closed-after-light"
+    },
+    {
+      "name": "flagship-390-bottom-dark",
+      "theme": "dark"
+    },
+    {
+      "name": "flagship-360-bottom-light",
+      "width": 360,
+      "height": 800
+    },
+    {
+      "name": "flagship-375-bottom-light",
+      "width": 375,
+      "height": 812
+    },
+    {
+      "name": "flagship-430-bottom-light",
+      "width": 430,
+      "height": 932
+    },
+    {
+      "name": "flagship-1280-light",
+      "width": 1280,
+      "height": 800,
+      "theme": "light"
+    },
+    {
+      "name": "flagship-1440-light",
+      "width": 1440,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "flagship-1440-dark",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    }
+  ]
+}

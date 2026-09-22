@@ -1,0 +1,411 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    {
+      "name": "quote-mobile-390-top-light",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": 89,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": 85,
+          "bottom": 169,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 0
+    },
+    {
+      "name": "quote-mobile-390-mid-light",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": -454,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": -458,
+          "bottom": -374,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 543
+    },
+    {
+      "name": "quote-mobile-390-bottom-light",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": -945,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": -949,
+          "bottom": -865,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 1034
+    },
+    {
+      "name": "quote-mobile-390-top-dark",
+      "theme": "dark"
+    },
+    {
+      "name": "quote-mobile-360-light",
+      "width": 360,
+      "height": 800
+    },
+    {
+      "name": "quote-mobile-375-light",
+      "width": 375,
+      "height": 812
+    },
+    {
+      "name": "quote-mobile-430-light",
+      "width": 430,
+      "height": 932
+    },
+    {
+      "name": "quote-tablet-768-light",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "quote-desktop-1280-light",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "quote-desktop-1440-light",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "stickyAudit": [
+    {
+      "scroll": "top",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": 89,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": 85,
+          "bottom": 169,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 0
+    },
+    {
+      "scroll": "mid",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": -454,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": -458,
+          "bottom": -374,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 543
+    },
+    {
+      "scroll": "bottom",
+      "unsaved": [
+        {
+          "text": "טרם נשמרה",
+          "position": "static",
+          "headerPosition": "relative",
+          "top": -945,
+          "height": 23,
+          "width": 85
+        }
+      ],
+      "layers": [
+        {
+          "sel": ".ops-topbar, .ops-app-header, header.ops-shell-header",
+          "position": "static",
+          "display": "flex",
+          "top": 0,
+          "bottom": 69,
+          "height": 69,
+          "z": "auto"
+        },
+        {
+          "sel": ".cpq-builder-header",
+          "position": "relative",
+          "display": "flex",
+          "top": -949,
+          "bottom": -865,
+          "height": 84,
+          "z": "1"
+        },
+        {
+          "sel": ".quote-builder-actions",
+          "position": "fixed",
+          "display": "flex",
+          "top": 714,
+          "bottom": 784,
+          "height": 70,
+          "z": "45"
+        },
+        {
+          "sel": ".ops-bottom-nav",
+          "position": "fixed",
+          "display": "flex",
+          "top": 766,
+          "bottom": 834,
+          "height": 68,
+          "z": "40"
+        },
+        {
+          "sel": ".cpq-mobile-sheet",
+          "position": "fixed",
+          "display": "none",
+          "top": 0,
+          "bottom": 0,
+          "height": 0,
+          "z": "39"
+        }
+      ],
+      "scrollY": 1034
+    }
+  ],
+  "notes": [
+    "PASS: unsaved indicator does not travel as a large sticky band"
+  ]
+}

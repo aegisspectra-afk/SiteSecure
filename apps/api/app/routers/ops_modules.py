@@ -542,9 +542,48 @@ class ServiceCallPatch(BaseModel):
 
 
 SERVICE_SELECT = (
-    "id,workspace_id,status,priority,customer_id,site_id,system_id,"
+    "id,workspace_id,number,status,priority,customer_id,site_id,system_id,"
     "title,description,created_by,created_at,updated_at"
 )
+
+
+def _enrich_service_rows(client: UserClient, workspace_id: UUID, rows: list[dict]) -> list[dict]:
+    customer_ids = {str(r["customer_id"]) for r in rows if r.get("customer_id")}
+    site_ids = {str(r["site_id"]) for r in rows if r.get("site_id")}
+    names: dict[str, str] = {}
+    if customer_ids:
+        for row in as_list(
+            client.get(
+                "customers",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "id": f"in.({','.join(sorted(customer_ids))})",
+                    "select": "id,display_name",
+                },
+            )
+        ):
+            names[str(row["id"])] = str(row.get("display_name") or "")
+    if site_ids:
+        for row in as_list(
+            client.get(
+                "sites",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "id": f"in.({','.join(sorted(site_ids))})",
+                    "select": "id,name",
+                },
+            )
+        ):
+            names[str(row["id"])] = str(row.get("name") or "")
+    out: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        cid = str(row["customer_id"]) if row.get("customer_id") else None
+        sid = str(row["site_id"]) if row.get("site_id") else None
+        item["customer_name"] = names.get(cid) if cid else None
+        item["site_name"] = names.get(sid) if sid else None
+        out.append(item)
+    return out
 
 
 @router.get("/service-calls")
@@ -579,7 +618,7 @@ def list_service_calls(
     apply_assigned_job_list_filter(ctx, params)
     rows = as_list(client.get("service_calls", params=params))
     page = page_from_rows(rows, page_size)
-    return {"items": page.items, "next_cursor": page.next_cursor}
+    return {"items": _enrich_service_rows(client, workspace_id, page.items), "next_cursor": page.next_cursor}
 
 
 @router.post("/service-calls")
@@ -682,7 +721,8 @@ def get_service_call(
             },
         )
     )
-    return {**row, "linked_jobs": linked}
+    enriched = _enrich_service_rows(client, workspace_id, [row])[0]
+    return {**enriched, "linked_jobs": linked}
 
 
 class ServiceCallCreateJob(BaseModel):
@@ -773,7 +813,7 @@ def create_job_from_service_call(
         workspace_id=str(workspace_id),
         site_id=call.get("site_id"),
         event_type="service",
-        title=f"קריאת שירות → עבודה {job.get('number') or ''}".strip(),
+        title=f"{call.get('number') or 'קריאת שירות'} → עבודה {job.get('number') or ''}".strip(),
         body=title,
         actor_id=actor_id(user),
         source_type="job",

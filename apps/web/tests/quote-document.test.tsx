@@ -61,4 +61,51 @@ describe("QuoteDocument", () => {
     expect(screen.getByText(/10,030/)).toBeTruthy();
     expect(screen.getByText(/40%/)).toBeTruthy();
   });
+
+  it("renders note lines without prices in the customer document", () => {
+    render(
+      <QuoteDocument
+        quote={{
+          id: "q1",
+          number: "Q-00012",
+          version: 1,
+          status: "sent",
+          superseded: false,
+          title: "מערכת מצלמות",
+          currency: "ILS",
+          vat_percent: 18,
+          subtotal_net: 1000,
+          vat_amount: 180,
+          total_gross: 1180,
+          company: { name: "אגיס מערכות", brand_name: "אגיס מערכות" },
+          customer: { display_name: "לקוח" },
+          site: { name: "אתר", address: {} },
+          sections: [],
+          items: [
+            {
+              id: "i1",
+              quote_id: "q1",
+              description: "מצלמה",
+              qty: 1,
+              unit_price: 1000,
+              line_net: 1000,
+              item_type: "catalog",
+            },
+            {
+              id: "n1",
+              quote_id: "q1",
+              description: "כולל אחריות יצרן",
+              qty: 1,
+              unit_price: 0,
+              line_net: 0,
+              item_type: "note",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("כולל אחריות יצרן")).toBeTruthy();
+    expect(screen.getByText(/1,180/)).toBeTruthy();
+  });
 });

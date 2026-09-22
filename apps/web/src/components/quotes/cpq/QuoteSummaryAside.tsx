@@ -9,6 +9,7 @@ export function QuoteSummaryAside({
   vatAmount,
   totalGross,
   discountAmount,
+  sectionDiscountAmount,
   canViewCost,
   costTotal,
   marginAmount,
@@ -32,6 +33,7 @@ export function QuoteSummaryAside({
   vatAmount?: number | null;
   totalGross?: number | null;
   discountAmount?: number | null;
+  sectionDiscountAmount?: number | null;
   canViewCost: boolean;
   costTotal?: number | null;
   marginAmount?: number | null;
@@ -64,11 +66,10 @@ export function QuoteSummaryAside({
   return (
     <>
       {showTotals ? (
-        <section className="cpq-summary-card flex flex-col gap-3 p-4" aria-labelledby="cpq-summary-heading">
-          <p id="cpq-summary-heading" className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">
-            {he.cpqQuoteSummaryKicker}
+        <section className="cpq-summary-card cpq-summary-kai flex flex-col gap-3 p-4" aria-labelledby="cpq-summary-heading">
+          <p id="cpq-summary-heading" className="text-sm font-semibold text-fg">
+            {he.cpqQuoteSummary}
           </p>
-          <p className="text-sm font-semibold text-fg">{he.cpqQuoteSummary}</p>
 
           {showScope ? (
             <div className="cpq-summary-scope">
@@ -83,17 +84,24 @@ export function QuoteSummaryAside({
 
           <div className="cpq-summary-rules">
             <PriceLine label={he.quoteSubtotalBeforeVat} value={formatMoney(subtotalNet, currency)} />
+            {sectionDiscountAmount != null && sectionDiscountAmount > 0 ? (
+              <PriceLine label={he.cpqSectionDiscount} value={`−${formatMoney(sectionDiscountAmount, currency)}`} />
+            ) : null}
             {discountAmount != null && discountAmount > 0 ? (
               <PriceLine label={he.cpqQuoteDiscount} value={`−${formatMoney(discountAmount, currency)}`} />
             ) : null}
             <PriceLine label={he.quoteTaxHint(vatPercent)} value={formatMoney(vatAmount, currency)} />
           </div>
 
+          <div className="cpq-summary-divider" aria-hidden />
+
           <div className="cpq-summary-total">
-            <span className="text-sm text-fg-muted">{he.quoteTotalDue}</span>
-            <div className="text-end">
-              <p className="text-2xl font-semibold tracking-tight text-fg">{formatMoney(totalGross, currency)}</p>
-              <p className="text-xs text-fg-muted">{he.cpqTotalIncludesVat}</p>
+            <span className="cpq-summary-total-label">{he.quoteTotalDue}</span>
+            <div className="cpq-summary-total-end">
+              <p className="cpq-summary-total-value ltr-meta" dir="ltr">
+                {formatMoney(totalGross, currency)}
+              </p>
+              <p className="cpq-summary-total-hint">{he.cpqTotalIncludesVat}</p>
             </div>
           </div>
 
@@ -176,9 +184,9 @@ function marginStatusLabel(status: string) {
 
 function PriceLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="text-fg-muted">{label}</span>
-      <span className={strong ? "text-lg font-semibold tracking-tight text-fg" : "font-medium ltr-meta"} dir="ltr">
+    <div className={`cpq-price-line${strong ? " is-strong" : ""}`}>
+      <span className="cpq-price-line-label">{label}</span>
+      <span className="cpq-price-line-value ltr-meta" dir="ltr">
         {value}
       </span>
     </div>

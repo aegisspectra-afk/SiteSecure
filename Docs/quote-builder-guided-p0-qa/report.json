@@ -1,0 +1,103 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "quoteId": "c79b9091-6200-454e-b0f9-c7dee78007f6",
+  "shots": [
+    "desktop-1440-details-light",
+    "desktop-1440-items-light",
+    "desktop-1440-pricing-light",
+    "desktop-1440-review-light",
+    "desktop-1440-items-dark",
+    "desktop-1440-pricing-dark",
+    "desktop-1280-details-light",
+    "narrow-1100-pricing-light",
+    "mobile-390-details-light",
+    "mobile-390-items-light",
+    "mobile-390-pricing-light",
+    "mobile-390-review-light",
+    "mobile-360-details-light",
+    "mobile-360-items-light",
+    "mobile-360-pricing-light",
+    "mobile-360-review-light",
+    "mobile-390-review-dark",
+    "desktop-1440-new-details-light"
+  ],
+  "notes": [
+    {
+      "view": "desktop-1440",
+      "stage": "details",
+      "activePanels": 1,
+      "inactivePanels": 2
+    },
+    {
+      "view": "desktop-1440",
+      "stage": "items",
+      "activePanels": 1,
+      "inactivePanels": 2
+    },
+    {
+      "view": "desktop-1440",
+      "stage": "pricing",
+      "activePanels": 1,
+      "inactivePanels": 2
+    },
+    {
+      "view": "desktop-1440",
+      "stage": "review",
+      "activePanels": 1,
+      "inactivePanels": 2
+    },
+    {
+      "view": "mobile-390",
+      "stage": "details",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-390",
+      "stage": "items",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-390",
+      "stage": "pricing",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-390",
+      "stage": "review",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-360",
+      "stage": "details",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-360",
+      "stage": "items",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-360",
+      "stage": "pricing",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "mobile-360",
+      "stage": "review",
+      "dockH": 69.203125,
+      "pad": "168px"
+    },
+    {
+      "view": "new-empty",
+      "initialStage": "פרטי ההצעה"
+    }
+  ]
+}

@@ -57,9 +57,19 @@
 
   --radius-control: 6px;
   --radius-panel: 8px;
+  --radius-comfortable: 14px;
+  --radius-premium: 22px;
+  --radius-pill: 999px;
 
   --shadow-card: 0 1px 0 rgb(15 23 42 / 4%);
   --shadow-popover: 0 8px 24px rgb(15 23 42 / 10%);
+  --shadow-premium: 0 1px 2px rgb(15 23 42 / 6%);
+
+  --color-premium-canvas: #f6f5f3;
+  --color-premium-surface: #ffffff;
+  --color-premium-hairline: #ededed;
+  --color-premium-nav: #0e0e0e;
+  --color-premium-puck: #ffffff;
 
   /* Base 4px so Tailwind p-1=4, p-2=8, p-3=12, p-4=16, p-6=24, p-8=32, p-12=48, p-16=64 */
   --spacing: 4px;
@@ -75,6 +85,18 @@
   --space-32: 32px;
   --space-48: 48px;
   --space-64: 64px;
+  --premium-control-height: 54px;
+  --premium-cta-height: 58px;
+  --premium-gutter: clamp(16px, 5.5vw, 24px);
+  --premium-nav-height: 68px;
+  --premium-nav-puck: 52px;
+  --motion-press: 200ms;
+  --motion-nav: 440ms;
+  --motion-enter: 420ms;
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --radius-comfortable: 14px;
+  --radius-premium: 22px;
+  --radius-pill: 999px;
 }
 
 /* Product dark: graphite layers aligned with SITE SECURE public DNA. Not neon. */
@@ -110,6 +132,17 @@
   --shadow-popover: 0 12px 32px rgb(0 0 0 / 42%);
 }
 
+/* Path-scoped html canvas for public/auth. Does not set html.dark (that would force /app). */
+html.ss-brand-dark {
+  background: #070b12;
+  color-scheme: dark;
+}
+
+html.ss-brand-dark body {
+  background: #070b12;
+  color: #e8eef6;
+}
+
 /* Auth-only dark console. Does not convert the rest of the product to dark mode. */
 .auth-root {
   color-scheme: dark;
@@ -130,6 +163,33 @@
   --color-danger-fg: #070b12;
   --color-success: #3dbe8c;
   --shadow-card: none;
+  --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
+}
+
+/*
+  Premium auth family sits ON the existing dark SITE SECURE canvas.
+  --color-premium-canvas (#F6F5F3) remains an unused experimental token and must not paint auth.
+*/
+.auth-premium.auth-root {
+  color-scheme: dark;
+  --color-action: #0b6bcb;
+  --color-action-hover: #1c7dd9;
+  --color-action-active: #095aa9;
+  --color-action-fg: #ffffff;
+  --color-fg: var(--color-auth-fg);
+  --color-fg-muted: #a8b6c8;
+  --color-fg-subtle: #8b9bb0;
+  --color-border: #2c3b52;
+  --color-bg: var(--color-auth-surface);
+  --color-bg-subtle: var(--color-auth-elevated);
+  --color-bg-0: var(--color-auth-bg);
+  --color-bg-1: #101826;
+  --color-bg-2: #151e2c;
+  --color-focus: var(--color-auth-accent-soft);
+  --color-danger: #f97066;
+  --color-danger-fg: #070b12;
+  --color-success: #3dbe8c;
+  --shadow-card: 0 18px 48px rgb(0 0 0 / 32%), 0 0 0 1px rgb(11 107 203 / 12%);
   --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
 }
 

@@ -35,9 +35,10 @@ export function VerifyEmailPanel({
         {email ? (
           <Button
             type="button"
-            variant="primary"
+            variant="pill"
             loading={loading}
-            className="auth-cta h-12 w-full"
+            disabled={loading}
+            className="auth-cta w-full"
             onClick={() => void onResend()}
           >
             {he.verifyResend}

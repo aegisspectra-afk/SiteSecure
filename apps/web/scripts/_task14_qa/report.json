@@ -1,0 +1,31 @@
+{
+  "quoteId": "32eb8eb4-ce1d-4c77-8c33-43851331b400",
+  "web": "http://localhost:5173",
+  "viewports": {
+    "375": {
+      "width": 375,
+      "horizontalScroll": false,
+      "requirementsVisible": true,
+      "reviewVisible": true,
+      "footerClear": true,
+      "errors": []
+    },
+    "390": {
+      "width": 390,
+      "horizontalScroll": false,
+      "requirementsVisible": true,
+      "reviewVisible": true,
+      "footerClear": true,
+      "errors": []
+    },
+    "430": {
+      "width": 430,
+      "horizontalScroll": false,
+      "requirementsVisible": true,
+      "reviewVisible": true,
+      "footerClear": true,
+      "errors": []
+    }
+  },
+  "ok": true
+}

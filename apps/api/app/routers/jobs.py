@@ -152,6 +152,7 @@ def _job_assignees(client: UserClient, workspace_id: UUID, job_id: str) -> list[
                 "workspace_id": f"eq.{workspace_id}",
                 "resource_type": "eq.job",
                 "resource_id": f"eq.{job_id}",
+                "unassigned_at": "is.null",
                 "select": "user_id,assigned_by,created_at",
                 "order": "created_at.asc",
             },
@@ -594,18 +595,22 @@ def assign_job(
     )
     previous = _job_assignees(client, workspace_id, str(job_id))
     previous_ids = {a.user_id for a in previous}
-    # Remove other assignees (history preserved via audit + timeline).
+    now = datetime.now(UTC).isoformat()
+    actor = actor_id(user)
+    # Close other active assignees — do not delete rows (operational history).
     for assignee in previous:
         if assignee.user_id == body.user_id:
             continue
         try:
-            client.delete(
+            client.patch(
                 "assignments",
+                {"unassigned_at": now, "unassigned_by": actor},
                 params={
                     "workspace_id": f"eq.{workspace_id}",
                     "resource_type": "eq.job",
                     "resource_id": f"eq.{job_id}",
                     "user_id": f"eq.{assignee.user_id}",
+                    "unassigned_at": "is.null",
                 },
             )
         except Exception:
@@ -619,11 +624,11 @@ def assign_job(
                     "user_id": body.user_id,
                     "resource_type": "job",
                     "resource_id": str(job_id),
-                    "assigned_by": actor_id(user),
+                    "assigned_by": actor,
                 },
             )
         )
-    names = _profile_names(client, {body.user_id, *previous_ids, actor_id(user)})
+    names = _profile_names(client, {body.user_id, *previous_ids, actor})
     from_names = [a.display_name or a.user_id for a in previous if a.user_id != body.user_id]
     to_name = names.get(body.user_id, body.user_id)
     removed_others = bool(previous_ids - {body.user_id})
@@ -639,7 +644,7 @@ def assign_job(
             "to_name": to_name,
             "from_user_ids": sorted(previous_ids),
             "from_names": from_names,
-            "assigned_by": actor_id(user),
+            "assigned_by": actor,
         },
     )
     body_text = None
@@ -649,7 +654,7 @@ def assign_job(
         client,
         workspace_id=str(workspace_id),
         job=existing,
-        actor=actor_id(user),
+        actor=actor,
         title=f"{existing.get('number') or 'עבודה'} — שויכה ל־{to_name}",
         body=body_text,
     )
@@ -659,7 +664,7 @@ def assign_job(
         "job_id": str(job_id),
         "user_id": body.user_id,
         "assigned_at": primary.assigned_at if primary else None,
-        "assigned_by": primary.assigned_by if primary else actor_id(user),
+        "assigned_by": primary.assigned_by if primary else actor,
         "assignees": [a.model_dump() for a in assignees],
         "reassigned": action == "jobs.reassign",
     }
@@ -723,7 +728,7 @@ def patch_checklist_item(
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
-    require(ctx, "jobs.complete" if body.completed else "jobs.start", resource=_ref(existing))
+    require(ctx, "jobs.start", resource=_ref(existing))
     patch: dict = {"completed": body.completed}
     if body.completed:
         patch["completed_at"] = datetime.now(UTC).isoformat()

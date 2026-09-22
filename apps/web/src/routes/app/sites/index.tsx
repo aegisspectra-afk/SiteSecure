@@ -1,6 +1,7 @@
 import { ApiClientError } from "@site-secure/api-client";
 import { Button, Select } from "@site-secure/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Building2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   addressLine,
@@ -17,6 +18,7 @@ import {
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
+import { installationStatusLabel } from "../../../lib/customer-profile";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/sites/")({
@@ -135,6 +137,8 @@ function SitesBody() {
       ) : (
         <SimpleEntityTable
           empty={he.sitesEmpty}
+          leadingIcon={Building2}
+          statusLabel={(status) => installationStatusLabel(status) || status}
           rows={(listQuery.data?.items ?? []).map((row) => ({
             id: row.id,
             title: row.name,

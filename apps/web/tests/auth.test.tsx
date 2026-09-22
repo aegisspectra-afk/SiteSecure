@@ -287,6 +287,7 @@ describe("AuthLayout", () => {
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/legal/terms");
     expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute("href", "/legal/security");
     expect(screen.getByRole("heading", { name: he.loginLead })).toBeInTheDocument();
+    expect(document.querySelector(".auth-root")).toHaveClass("auth-premium");
     const skip = screen.getByRole("link", { name: he.skipToForm });
     expect(skip).toHaveAttribute("href", "#auth-form");
     expect(skip).toHaveClass("skip-link");

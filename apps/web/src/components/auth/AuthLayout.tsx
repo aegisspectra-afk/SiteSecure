@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@site-secure/ui";
 import { he } from "../../i18n/he";
 import { useDocumentMeta } from "../../lib/document-meta";
 import { AuthBrandPanel } from "./AuthBrandPanel";
@@ -18,6 +19,7 @@ export function AuthLayout({
   footer,
   showTrust = true,
   variant = "default",
+  tone = "premium",
 }: {
   title: string;
   kicker?: string;
@@ -28,6 +30,7 @@ export function AuthLayout({
   footer?: ReactNode;
   showTrust?: boolean;
   variant?: "default" | "login";
+  tone?: "console" | "premium";
 }) {
   useDocumentMeta({
     title: `${title} — ${he.brand}`,
@@ -39,13 +42,19 @@ export function AuthLayout({
   const slideKey = steps?.[currentIndex]?.n ?? "form";
   return (
     <AuthExperienceProvider>
-      <div className="auth-root auth-shell flex min-h-dvh flex-col lg:flex-row" dir="ltr">
+      <div
+        className={cn(
+          "auth-root auth-shell flex min-h-dvh flex-col lg:flex-row",
+          tone === "premium" && "auth-premium",
+        )}
+        dir="ltr"
+      >
         <a href="#auth-form" className="skip-link">
           {he.skipToForm}
         </a>
         <AuthBrandPanel />
         <main className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-8 lg:w-[45%] lg:shrink-0 lg:border-s lg:border-border lg:px-12 lg:py-16">
-          <div className="mx-auto flex w-full max-w-[420px] flex-col gap-5">
+          <div className="auth-form-column mx-auto flex w-full max-w-[420px] flex-col gap-5">
             <div
               className={
                 variant === "login"
@@ -60,7 +69,7 @@ export function AuthLayout({
                   stepOf={stepOf}
                   title={heading ?? title}
                   description={description}
-                  showBrand={variant === "login"}
+                  showBrand={tone === "premium" || variant === "login"}
                 />
                 {steps ? <AuthStepRail steps={steps} /> : null}
                 <div id="auth-form" tabIndex={-1} className="auth-form-body outline-none">

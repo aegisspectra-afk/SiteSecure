@@ -1,0 +1,72 @@
+{
+  "gate": "BETA_GATE_09",
+  "ts": "2026-09-10T09:50:00Z",
+  "integrity": {
+    "branch": "feat/quote-cpq-phase-ab",
+    "head": "dd76586acc8b2e326fdebfeb39706f4e64b43f08",
+    "tag_beta_0_1_2": "dd76586acc8b2e326fdebfeb39706f4e64b43f08",
+    "app_version": "0.1.2-beta",
+    "tracked_tree_clean": true,
+    "stash_isolated": true,
+    "stash_0": "wip: unrelated API parallelization (deps/dashboard/team)",
+    "servers_host": "0.0.0.0",
+    "lan_web": "http://10.73.131.205:5173/",
+    "lan_api_direct": "http://10.73.131.205:8010/api/v1/health",
+    "lan_api_via_vite_proxy": "http://10.73.131.205:5173/api/v1/health",
+    "lan_reachability": {
+      "web": 200,
+      "api": 200,
+      "proxy": 200
+    },
+    "candidate_tree_equals_tested_tree": "PASS",
+    "note": "DEV SPA uses same-origin /api proxy; phone must open LAN Vite URL, not localhost and not API origin alone for auth+UI."
+  },
+  "device": {
+    "executed": false,
+    "reason": "No physical smartphone controllable in this agent session (no ADB, no device farm). Browser emulation explicitly disallowed by gate.",
+    "model": null,
+    "os": null,
+    "browser": null,
+    "screen": null,
+    "connection": null
+  },
+  "access_url_non_secret": "http://10.73.131.205:5173/",
+  "alternate_prod_url": "https://site-secure-umber.vercel.app",
+  "matrix": [
+    { "flow": "Login", "device": "—", "result": "NOT_EXECUTED", "notes": "Requires real phone" },
+    { "flow": "Dashboard", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Bottom Nav", "device": "—", "result": "NOT_EXECUTED", "notes": "Prior viewport bug — must re-verify physically" },
+    { "flow": "Customer", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Site", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Mobile form typing", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Quote Builder", "device": "—", "result": "NOT_EXECUTED", "notes": "Typing latency critical" },
+    { "flow": "Catalog picker", "device": "—", "result": "NOT_EXECUTED", "notes": "Beres SKU sample" },
+    { "flow": "CCTV Build System", "device": "—", "result": "NOT_EXECUTED", "notes": "4-cam + env null/outdoor" },
+    { "flow": "Partial Apply", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "PDF", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Technician Today", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Field Job", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Camera capture", "device": "—", "result": "NOT_EXECUTED", "notes": "Mandatory hardware" },
+    { "flow": "Gallery upload", "device": "—", "result": "NOT_EXECUTED", "notes": "Mandatory hardware" },
+    { "flow": "Network recovery", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Background/resume", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "RTL/LTR", "device": "—", "result": "NOT_EXECUTED", "notes": "" },
+    { "flow": "Rotation", "device": "—", "result": "NOT_EXECUTED", "notes": "" }
+  ],
+  "commercial_pulse_physical_qa": "NOT_EXECUTED",
+  "blockers": [
+    {
+      "severity": "P1",
+      "title": "Physical device field matrix not executed",
+      "device": "n/a — no phone attached/controllable",
+      "page": "Gate 09 overall",
+      "steps": "Agent verified candidate integrity and LAN access readiness only.",
+      "expected": "Full real-phone matrix including camera/gallery, bottom nav, quote typing, CCTV apply, PDF.",
+      "actual": "Zero physical-device flows executed; Chrome DevTools emulation would not satisfy gate rules.",
+      "suspected_root_cause": "Environment limitation for this session, not a product defect."
+    }
+  ],
+  "code_changes": false,
+  "candidate_moved": false,
+  "verdict": "PHYSICAL DEVICE QA FAIL — PRIVATE BETA BLOCKED"
+}

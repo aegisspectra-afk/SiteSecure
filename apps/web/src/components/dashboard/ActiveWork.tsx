@@ -1,5 +1,7 @@
 import type { DashboardItem } from "@site-secure/api-client";
+import { ActivityRow } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
+import { CalendarDays, Clock } from "lucide-react";
 import { he } from "../../i18n/he";
 
 function formatTime(value: string | null): string | null {
@@ -18,17 +20,22 @@ export function ActiveWork({
 }) {
   if (!items.length && compactEmpty) {
     return (
-      <section className="ops-today-card is-empty" aria-labelledby="active-work-heading">
-        <div className="ops-today-empty-row">
-          <div className="min-w-0">
-            <h2 id="active-work-heading" className="ops-section-title is-secondary">
-              {he.activeWorkTitle}
-            </h2>
-            <p className="ops-today-empty-text">{he.todaySectionEmptyCompact}</p>
-          </div>
-          <Link to="/app/today" className="ops-section-link ops-today-empty-cta">
-            {he.todayScheduleCta}
-          </Link>
+      <section className="ops-today-card is-empty is-premium" aria-labelledby="active-work-heading">
+        <div className="ops-section-head is-today">
+          <h2 id="active-work-heading" className="ops-section-title is-today">
+            {he.todayTitle}
+          </h2>
+        </div>
+        <div className="ops-today-empty-tile">
+          <ActivityRow
+            leading={<CalendarDays aria-hidden strokeWidth={1.75} />}
+            title={he.todaySectionEmptyCompact}
+            trailing={
+              <Link to="/app/today" className="ops-today-empty-action">
+                {he.todayScheduleCta}
+              </Link>
+            }
+          />
         </div>
       </section>
     );
@@ -36,17 +43,17 @@ export function ActiveWork({
 
   return (
     <section className="ops-today-card is-dense" aria-labelledby="active-work-heading">
-      <div className="ops-section-head">
+      <div className="ops-section-head is-today">
         <div className="ops-today-head-main">
-          <h2 id="active-work-heading" className="ops-section-title is-secondary">
-            {he.activeWorkTitle}
+          <h2 id="active-work-heading" className="ops-section-title is-today">
+            {he.todayTitle}
           </h2>
           {items.length ? (
             <span className="ops-section-count">{he.activeWorkCount(items.length)}</span>
           ) : null}
         </div>
         <Link to="/app/today" className="ops-section-link">
-          {he.todayViewAll}
+          {he.dashViewToday}
         </Link>
       </div>
 
@@ -55,43 +62,35 @@ export function ActiveWork({
           {items.map((item) => {
             const time = formatTime(item.scheduled_for);
             const place = item.site_name || item.customer_name || "—";
+            const statusLabel =
+              item.status && item.status in he.jobStatuses
+                ? he.jobStatuses[item.status as keyof typeof he.jobStatuses]
+                : null;
             return (
               <li key={item.entity_id} className="ops-today-row">
-                <div className="ops-today-main min-w-0">
-                  <p className="ops-today-title">
-                    {time ? (
-                      <>
+                <ActivityRow
+                  leading={<Clock aria-hidden />}
+                  title={item.title_he || item.number}
+                  subtitle={[place, statusLabel, item.number].filter(Boolean).join(" · ")}
+                  trailing={
+                    <>
+                      {time ? (
                         <span className="ops-today-time ltr-meta" dir="ltr">
                           {time}
                         </span>
-                        <span className="ops-today-sep" aria-hidden>
-                          ·
-                        </span>
-                      </>
-                    ) : null}
-                    <span>{item.title_he || item.number}</span>
-                  </p>
-                  <p className="ops-today-context">
-                    {place}
-                    {item.number && item.title_he ? (
-                      <>
-                        {" · "}
-                        <span className="ops-today-id ltr-meta" dir="ltr">
-                          {item.number}
-                        </span>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                {item.entity_type === "job" ? (
-                  <Link
-                    to="/app/jobs/$jobId"
-                    params={{ jobId: item.entity_id }}
-                    className="ops-attention-cta is-ghost"
-                  >
-                    {he.todayOpenJob}
-                  </Link>
-                ) : null}
+                      ) : null}
+                      {item.entity_type === "job" ? (
+                        <Link
+                          to="/app/jobs/$jobId"
+                          params={{ jobId: item.entity_id }}
+                          className="ops-attention-cta is-ghost"
+                        >
+                          {he.todayOpenJob}
+                        </Link>
+                      ) : null}
+                    </>
+                  }
+                />
               </li>
             );
           })}

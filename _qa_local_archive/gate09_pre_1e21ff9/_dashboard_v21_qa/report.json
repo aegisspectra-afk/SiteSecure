@@ -1,0 +1,221 @@
+{
+  "web": "http://localhost:5173",
+  "api": "http://127.0.0.1:8000",
+  "workspace": "f1f76d59-fd2e-4b27-9586-06f7c89abc9c",
+  "viewports": {
+    "desktop-1280": {
+      "shot": "desktop-1280.png",
+      "horizontalOverflow": false,
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "chips": [
+        "8 דורשים טיפול",
+        "5 הצעות פתוחות",
+        "צנרת ‏61,309.26 ‏₪"
+      ],
+      "ctas": [
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 36,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 36,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 36,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 36,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 36,
+          "clipped": false
+        }
+      ],
+      "securityNoise": false,
+      "order": {
+        "attentionTop": 194.09375,
+        "todayTop": 687.390625,
+        "commercialTop": 827.15625
+      },
+      "quiet": false,
+      "hasAttentionRows": 5,
+      "hasRecent": 5
+    },
+    "mobile-375": {
+      "shot": "mobile-375.png",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "chips": [
+        "8 דורשים טיפול",
+        "5 הצעות פתוחות",
+        "צנרת ‏61,309.26 ‏₪"
+      ],
+      "ctas": [
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        }
+      ],
+      "securityNoise": false,
+      "order": {
+        "attentionTop": 272.09375,
+        "todayTop": 1018.125,
+        "commercialTop": 1189.890625
+      },
+      "quiet": false,
+      "hasAttentionRows": 5,
+      "hasRecent": 5
+    },
+    "mobile-390": {
+      "shot": "mobile-390.png",
+      "horizontalOverflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "chips": [
+        "8 דורשים טיפול",
+        "5 הצעות פתוחות",
+        "צנרת ‏61,309.26 ‏₪"
+      ],
+      "ctas": [
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        }
+      ],
+      "securityNoise": false,
+      "order": {
+        "attentionTop": 257.09375,
+        "todayTop": 1003.125,
+        "commercialTop": 1174.890625
+      },
+      "quiet": false,
+      "hasAttentionRows": 5,
+      "hasRecent": 5
+    },
+    "mobile-430": {
+      "shot": "mobile-430.png",
+      "horizontalOverflow": false,
+      "scrollWidth": 430,
+      "clientWidth": 430,
+      "chips": [
+        "8 דורשים טיפול",
+        "5 הצעות פתוחות",
+        "צנרת ‏61,309.26 ‏₪"
+      ],
+      "ctas": [
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 99.59375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 85.25,
+          "h": 40,
+          "clipped": false
+        }
+      ],
+      "securityNoise": false,
+      "order": {
+        "attentionTop": 257.09375,
+        "todayTop": 986.328125,
+        "commercialTop": 1126.09375
+      },
+      "quiet": false,
+      "hasAttentionRows": 5,
+      "hasRecent": 5
+    }
+  },
+  "checks": {
+    "noHorizontalScroll": true,
+    "noSecurityNoise": true,
+    "hierarchyOk": true,
+    "mobileCtasReachable": true
+  }
+}

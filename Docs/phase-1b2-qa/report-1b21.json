@@ -1,0 +1,106 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    {
+      "name": "hero-live-390-light",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/hero-live-390-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night"
+    },
+    {
+      "name": "hero-live-390-dark",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "file": "Docs/phase-1b2-qa/hero-live-390-dark.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night"
+    },
+    {
+      "name": "hero-live-1440-light",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/hero-live-1440-light.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night"
+    },
+    {
+      "name": "hero-live-1440-dark",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "file": "Docs/phase-1b2-qa/hero-live-1440-dark.png",
+      "ok": true,
+      "surface": "dark-night",
+      "period": "night"
+    },
+    {
+      "name": "hero-force-light-day",
+      "theme": "light",
+      "surface": "light-day",
+      "period": "morning",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-light-day.png",
+      "ok": true
+    },
+    {
+      "name": "hero-force-light-evening",
+      "theme": "light",
+      "surface": "dark-evening",
+      "period": "evening",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-light-evening.png",
+      "ok": true
+    },
+    {
+      "name": "hero-force-light-night",
+      "theme": "light",
+      "surface": "dark-night",
+      "period": "night",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-light-night.png",
+      "ok": true
+    },
+    {
+      "name": "hero-force-dark-day",
+      "theme": "dark",
+      "surface": "dark-day",
+      "period": "morning",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-dark-day.png",
+      "ok": true
+    },
+    {
+      "name": "hero-force-dark-evening",
+      "theme": "dark",
+      "surface": "dark-evening",
+      "period": "evening",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-dark-evening.png",
+      "ok": true
+    },
+    {
+      "name": "hero-force-dark-night",
+      "theme": "dark",
+      "surface": "dark-night",
+      "period": "night",
+      "width": 390,
+      "height": 844,
+      "file": "Docs/phase-1b2-qa/hero-force-dark-night.png",
+      "ok": true
+    }
+  ]
+}

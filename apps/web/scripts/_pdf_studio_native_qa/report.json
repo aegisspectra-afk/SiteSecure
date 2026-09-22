@@ -1,0 +1,86 @@
+{
+  "started_at": "2026-09-05T16:08:24.627Z",
+  "checks": {
+    "desktop": {
+      "pages": 6,
+      "iframe": 0,
+      "zoomMin": "50%",
+      "zoomMax": "150%",
+      "zoomRangeOk": true,
+      "afterFit": "66%",
+      "afterManual": "75%",
+      "backToFit": "66%",
+      "fitManualOk": true,
+      "pagesAfterRace": 6,
+      "raceOk": true,
+      "previewHits": 1,
+      "openPdfUrl": "",
+      "openPdfIsBlob": false,
+      "pagesAfterOpen": 6,
+      "openPdfOk": true,
+      "scroll": {
+        "max": 2871,
+        "steps": 36,
+        "ms": 573.1000000238419,
+        "pages": 6
+      },
+      "scrollOk": true,
+      "ok": true
+    },
+    "live_backend": {
+      "iframe": 0,
+      "pages": 1,
+      "pagesAfter": 1,
+      "hasCanvas": true,
+      "ok": true
+    }
+  },
+  "viewports": {
+    "375": {
+      "width": 375,
+      "iframe": 0,
+      "pages": 6,
+      "overflowX": false,
+      "fit": "55%",
+      "canvas": null,
+      "pageWidth": 329,
+      "viewportWidth": 375,
+      "fitsWidth": true,
+      "fitPercentOk": true,
+      "ok": true
+    },
+    "390": {
+      "width": 390,
+      "iframe": 0,
+      "pages": 6,
+      "overflowX": false,
+      "fit": "57%",
+      "canvas": null,
+      "pageWidth": 344,
+      "viewportWidth": 390,
+      "fitsWidth": true,
+      "fitPercentOk": true,
+      "ok": true
+    },
+    "430": {
+      "width": 430,
+      "iframe": 0,
+      "pages": 6,
+      "overflowX": false,
+      "fit": "64%",
+      "canvas": null,
+      "pageWidth": 384,
+      "viewportWidth": 430,
+      "fitsWidth": true,
+      "fitPercentOk": true,
+      "ok": true
+    }
+  },
+  "notes": [],
+  "web": "http://localhost:5176",
+  "api": "http://127.0.0.1:8000",
+  "fixture_b_bytes": 76727,
+  "user": "aegisspectra@gmail.com",
+  "verdict": "PDF STUDIO NATIVE PREVIEW — CLOSED + VISUALLY VERIFIED",
+  "finished_at": "2026-09-05T16:10:55.258Z"
+}

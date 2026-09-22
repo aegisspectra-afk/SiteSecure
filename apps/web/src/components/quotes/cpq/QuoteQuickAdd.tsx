@@ -2,10 +2,12 @@ import {
   Boxes,
   FileStack,
   Layers,
+  MessageSquareText,
   Package,
   Plus,
   Search,
   Sparkles,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -15,6 +17,8 @@ import { he } from "../../../i18n/he";
 export type QuickAddActionId =
   | "catalog"
   | "free"
+  | "service"
+  | "note"
   | "section"
   | "system"
   | "addSystem"
@@ -38,6 +42,7 @@ export function QuoteQuickAdd({
   onPickCatalog,
   canCatalog,
   canSystem,
+  catalogKind = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -49,12 +54,15 @@ export function QuoteQuickAdd({
     selling_price?: number | null;
     category_path?: string | null;
     manufacturer?: string | null;
+    kind?: string | null;
   }>;
   catalogLoading?: boolean;
   onCatalogQuery: (q: string) => void;
   onPickCatalog: (productId: string) => void;
   canCatalog?: boolean;
   canSystem?: boolean;
+  /** When "service", catalog hits are scoped to catalog kind=service. */
+  catalogKind?: string | null;
 }) {
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,27 +72,48 @@ export function QuoteQuickAdd({
   const actions = useMemo(() => {
     const list: Action[] = [
       {
+        id: "catalog",
+        label: he.cpqQuickAddCatalog,
+        hint: he.cpqQuickAddCatalogHint,
+        icon: Package,
+        keywords: "catalog קטלוג מוצר sku",
+      },
+      {
         id: "free",
         label: he.cpqQuickAddFree,
         hint: he.cpqQuickAddFreeHint,
         icon: Plus,
-        keywords: "free פריט חופשי חדש",
+        keywords: "free שורה חופשית פריט מותאם",
+      },
+      {
+        id: "service",
+        label: he.cpqQuickAddService,
+        hint: he.cpqQuickAddServiceHint,
+        icon: Wrench,
+        keywords: "service labor שירות עבודה התקנה",
+      },
+      {
+        id: "note",
+        label: he.cpqQuickAddNote,
+        hint: he.cpqQuickAddNoteHint,
+        icon: MessageSquareText,
+        keywords: "note הערה טקסט",
       },
       {
         id: "section",
         label: he.cpqQuickAddSection,
         hint: he.cpqQuickAddSectionHint,
         icon: Layers,
-        keywords: "section סעיף",
+        keywords: "section סעיף מקטע",
       },
     ];
     if (canSystem) {
-      list.unshift({
+      list.push({
         id: "system",
         label: he.cpqQuickAddSystem,
         hint: he.cpqQuickAddSystemHint,
         icon: Sparkles,
-        keywords: "system מערכת cctv בנה",
+        keywords: "system מערכת cctv בנה תכנון",
       });
     }
     if (canCatalog) {
@@ -94,14 +123,7 @@ export function QuoteQuickAdd({
           label: he.cpqQuickAddAddSystem,
           hint: he.cpqQuickAddAddSystemHint,
           icon: Boxes,
-          keywords: "system מערכת cctv alarm scope",
-        },
-        {
-          id: "catalog",
-          label: he.cpqQuickAddCatalog,
-          hint: he.cpqQuickAddCatalogHint,
-          icon: Package,
-          keywords: "catalog קטלוג מוצר sku",
+          keywords: "package חבילה מערכת מוכנה",
         },
         {
           id: "template",
@@ -121,7 +143,7 @@ export function QuoteQuickAdd({
     return actions.filter((a) => `${a.label} ${a.hint} ${a.keywords}`.toLowerCase().includes(q));
   }, [actions, query]);
 
-  const showCatalogHits = query.trim().length >= 1 && canCatalog;
+  const showCatalogHits = Boolean(canCatalog && (query.trim().length >= 1 || catalogKind === "service"));
   const rows = showCatalogHits
     ? [
         ...catalogResults.map((p) => {
@@ -132,13 +154,14 @@ export function QuoteQuickAdd({
             p.selling_price != null && Number.isFinite(Number(p.selling_price))
               ? `₪${Number(p.selling_price).toLocaleString("he-IL")}`
               : "";
-          const hint = [meta, price].filter(Boolean).join(" · ");
+          const kindHint = p.kind === "service" ? he.quoteLaborBadge : "";
+          const hint = [kindHint, meta, price].filter(Boolean).join(" · ");
           return {
             kind: "product" as const,
             id: p.id,
             label,
             hint,
-            icon: Package as LucideIcon,
+            icon: (p.kind === "service" ? Wrench : Package) as LucideIcon,
           };
         }),
         ...filteredActions.map((a) => ({
@@ -187,9 +210,15 @@ export function QuoteQuickAdd({
         event.preventDefault();
         const row = rows[active];
         if (!row) return;
-        if (row.kind === "product") onPickCatalog(row.id);
-        else onAction(row.id as QuickAddActionId);
-        onClose();
+        if (row.kind === "product") {
+          onPickCatalog(row.id);
+          onClose();
+          return;
+        }
+        const actionId = row.id as QuickAddActionId;
+        onAction(actionId);
+        // Stay open for catalog/service browse modes — parent may keep dialog open.
+        if (actionId !== "catalog" && actionId !== "service") onClose();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -221,7 +250,9 @@ export function QuoteQuickAdd({
               setActive(0);
               onCatalogQuery(value);
             }}
-            placeholder={he.cpqQuickAddPlaceholder}
+            placeholder={
+              catalogKind === "service" ? he.cpqQuickAddPlaceholderService : he.cpqQuickAddPlaceholder
+            }
             className="cpq-quick-add-input"
             autoComplete="off"
           />
@@ -241,9 +272,14 @@ export function QuoteQuickAdd({
                   className={`cpq-quick-add-row${index === active ? " is-active" : ""}`}
                   onMouseEnter={() => setActive(index)}
                   onClick={() => {
-                    if (row.kind === "product") onPickCatalog(row.id);
-                    else onAction(row.id as QuickAddActionId);
-                    onClose();
+                    if (row.kind === "product") {
+                      onPickCatalog(row.id);
+                      onClose();
+                      return;
+                    }
+                    const actionId = row.id as QuickAddActionId;
+                    onAction(actionId);
+                    if (actionId !== "catalog" && actionId !== "service") onClose();
                   }}
                 >
                   <span className="cpq-quick-add-icon" aria-hidden>

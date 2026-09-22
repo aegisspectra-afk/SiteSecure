@@ -1,0 +1,420 @@
+{
+  "run": "6f789dd7",
+  "timestamp_utc": "20260911T125542Z",
+  "web": "https://site-secure-umber.vercel.app",
+  "api": "https://site-secure-api-staging.onrender.com",
+  "checks": [
+    {
+      "name": "https_web",
+      "ok": true,
+      "status": 200,
+      "ms": 248
+    },
+    {
+      "name": "https_api",
+      "ok": true,
+      "ms": 311
+    },
+    {
+      "name": "identity_html_asset",
+      "ok": true,
+      "asset": "/assets/index-BflGOKlb.js"
+    },
+    {
+      "name": "identity_app_version",
+      "ok": true,
+      "versions": [
+        "0.1.5-beta"
+      ]
+    },
+    {
+      "name": "no_service_role_in_bundle",
+      "ok": true
+    },
+    {
+      "name": "api_external",
+      "ok": true
+    },
+    {
+      "name": "supabase_external",
+      "ok": true
+    },
+    {
+      "name": "no_lan_api",
+      "ok": true
+    },
+    {
+      "name": "no_localhost_api_base",
+      "ok": true
+    },
+    {
+      "name": "no_qa_password_bundle",
+      "ok": true
+    },
+    {
+      "name": "registration_login",
+      "ok": true,
+      "email_domain": "sitesecure.test"
+    },
+    {
+      "name": "workspace_create",
+      "ok": true,
+      "status": 200,
+      "ms": 3119
+    },
+    {
+      "name": "owner_role",
+      "ok": true,
+      "role": "owner"
+    },
+    {
+      "name": "platform_admin_false_owner",
+      "ok": true,
+      "value": false
+    },
+    {
+      "name": "founding_not_platform_admin",
+      "ok": true
+    },
+    {
+      "name": "beta_participant_model",
+      "ok": true,
+      "status": "absent_until_enroll",
+      "note": "layers independent; enroll via platform admin"
+    },
+    {
+      "name": "clean_customers",
+      "ok": true,
+      "count": 0,
+      "status": 200
+    },
+    {
+      "name": "clean_sites",
+      "ok": true,
+      "count": 0,
+      "status": 200
+    },
+    {
+      "name": "clean_quotes",
+      "ok": true,
+      "count": 0,
+      "status": 200
+    },
+    {
+      "name": "clean_projects",
+      "ok": true,
+      "count": 0,
+      "status": 200
+    },
+    {
+      "name": "clean_catalog",
+      "ok": true,
+      "count": 0,
+      "status": 200
+    },
+    {
+      "name": "dashboard",
+      "ok": true,
+      "status": 200,
+      "ms": 3778
+    },
+    {
+      "name": "customer_create",
+      "ok": true,
+      "status": 200,
+      "ms": 2102
+    },
+    {
+      "name": "site_create",
+      "ok": true,
+      "status": 200,
+      "ms": 2756
+    },
+    {
+      "name": "site_persist",
+      "ok": true
+    },
+    {
+      "name": "document_durability",
+      "ok": false,
+      "error": "0"
+    },
+    {
+      "name": "photo",
+      "ok": false,
+      "error": "0"
+    },
+    {
+      "name": "quote_create",
+      "ok": true,
+      "status": 200,
+      "ms": 3088
+    },
+    {
+      "name": "quote_item",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "quote_edit",
+      "ok": false,
+      "status": 403
+    },
+    {
+      "name": "quote_persist",
+      "ok": true,
+      "items": 1
+    },
+    {
+      "name": "pdf",
+      "ok": true,
+      "status": 200,
+      "bytes": 30833
+    },
+    {
+      "name": "cctv_empty_catalog",
+      "ok": true,
+      "status": 200,
+      "invented": [],
+      "blocking": true
+    },
+    {
+      "name": "catalog_still_empty_or_owned",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "name": "catalog_add_one",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "invite_founding_rejected",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_invite",
+      "ok": true,
+      "status": 200,
+      "role": "technician"
+    },
+    {
+      "name": "tech_invite_accept",
+      "ok": true,
+      "status": 200,
+      "body": "{\"workspace_id\":\"637dac16-d083-4b6d-9faa-37b470c0a3ed\",\"status\":\"success\"}"
+    },
+    {
+      "name": "tech_role",
+      "ok": true,
+      "role": "technician"
+    },
+    {
+      "name": "platform_admin_false_tech",
+      "ok": true,
+      "value": false
+    },
+    {
+      "name": "jobs_create",
+      "ok": true
+    },
+    {
+      "name": "job_assign",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "tech_sees_assigned_job",
+      "ok": true,
+      "count": 1
+    },
+    {
+      "name": "tech_hides_unassigned_job",
+      "ok": true
+    },
+    {
+      "name": "tech_direct_assigned",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "tech_direct_unassigned_denied",
+      "ok": true,
+      "status": 404,
+      "leak": true
+    },
+    {
+      "name": "tech_site_scope",
+      "ok": true,
+      "seen": 1
+    },
+    {
+      "name": "tech_field_photo",
+      "ok": false,
+      "error": "upload intent 403 {\"error\":{\"code\":\"SCOPE_DENIED\",\"message\":\"אין גישה למשאב זה\",\"details\":{\"scope\":\"assigned\"}}}"
+    },
+    {
+      "name": "tech_quotes_denied",
+      "ok": false,
+      "status": 200
+    },
+    {
+      "name": "tech_catalog_denied",
+      "ok": false,
+      "status": 200
+    },
+    {
+      "name": "tech_members_denied",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_audit_denied",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_settings_denied",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_workspace_mutate_denied",
+      "ok": true,
+      "status": 403
+    },
+    {
+      "name": "tech_platform_admin_denied",
+      "ok": true,
+      "status": 404
+    },
+    {
+      "name": "workspace_b_create",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "tenant_deny_customer",
+      "ok": true,
+      "status": 404,
+      "leak": true
+    },
+    {
+      "name": "tenant_deny_site",
+      "ok": true,
+      "status": 404,
+      "leak": true
+    },
+    {
+      "name": "tenant_deny_job",
+      "ok": true,
+      "status": 404,
+      "leak": true
+    },
+    {
+      "name": "tenant_deny_quote",
+      "ok": true,
+      "status": 404,
+      "leak": true
+    },
+    {
+      "name": "tenant_cross_ws_customer",
+      "ok": true,
+      "status": 404
+    },
+    {
+      "name": "feedback_submit",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "feedback_list",
+      "ok": true,
+      "count": 1
+    },
+    {
+      "name": "password_recovery",
+      "ok": true,
+      "recover_status": 429,
+      "gen_status": 200,
+      "redirect_ok": true,
+      "localhost_cb": false
+    },
+    {
+      "name": "relogin",
+      "ok": true
+    },
+    {
+      "name": "session_after_relogin",
+      "ok": true
+    },
+    {
+      "name": "forgot_password_page",
+      "ok": true
+    },
+    {
+      "name": "viewer_sales_manager_sanity",
+      "ok": true,
+      "note": "skipped_no_extra_actors_auth_live_closed"
+    }
+  ],
+  "timings_ms": {
+    "web_home": 248,
+    "api_health": 311,
+    "workspace_create": 3119,
+    "dashboard": 3778,
+    "customer_create": 2102,
+    "site_create": 2756,
+    "document_upload": 6428,
+    "photo_upload": 6940,
+    "quote_create": 3088
+  },
+  "defects": [
+    {
+      "sev": "P1",
+      "title": "Document durability flow failed",
+      "detail": "0"
+    },
+    {
+      "sev": "P1",
+      "title": "Photo upload failed",
+      "detail": "0"
+    }
+  ],
+  "ok": false,
+  "identity": {
+    "asset": "/assets/index-BflGOKlb.js",
+    "versions": [
+      "0.1.5-beta"
+    ]
+  },
+  "workspace_a": "637dac16-d083-4b6d-9faa-37b470c0a3ed",
+  "owner_session": {
+    "role": "owner",
+    "is_platform_admin": false,
+    "badges": []
+  },
+  "beta_participant": {
+    "present": false,
+    "status": null
+  },
+  "clean_counts": {
+    "customers": 0,
+    "sites": 0,
+    "quotes": 0,
+    "projects": 0,
+    "catalog": 0
+  },
+  "dashboard_keys": [
+    "activity",
+    "attention",
+    "business_chart",
+    "generated_at",
+    "home_variant",
+    "recent_quotes",
+    "summary",
+    "today"
+  ],
+  "workspace_b": "ca948e99-67e5-4394-9fcb-702066ea5798"
+}

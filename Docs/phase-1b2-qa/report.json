@@ -1,0 +1,70 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    {
+      "name": "dashboard-390-light",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-390-light.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-390-dark",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "file": "Docs/phase-1b2-qa/dashboard-390-dark.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-1440-light",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-1440-light.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-1440-dark",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "file": "Docs/phase-1b2-qa/dashboard-1440-dark.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-360-light",
+      "width": 360,
+      "height": 800,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-360-light.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-430-light",
+      "width": 430,
+      "height": 932,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-430-light.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-768-light",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-768-light.png",
+      "ok": true
+    },
+    {
+      "name": "dashboard-1280-light",
+      "width": 1280,
+      "height": 800,
+      "theme": "light",
+      "file": "Docs/phase-1b2-qa/dashboard-1280-light.png",
+      "ok": true
+    }
+  ]
+}

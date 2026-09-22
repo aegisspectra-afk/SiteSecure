@@ -1,0 +1,66 @@
+{
+  "quoteId": "c5b81b3b-c0c3-4763-9960-df52782e7281",
+  "results": [
+    {
+      "name": "Hebrew description typing",
+      "pass": true,
+      "observation": "mid=67chars blur=67chars itemPATCHes=1"
+    },
+    {
+      "name": "Hebrew description persistence",
+      "pass": true,
+      "observation": "refetch match"
+    },
+    {
+      "name": "Section rename",
+      "pass": false,
+      "observation": "patches_during_type=1 total=1 value=\"ציוד מצלמות ותשתיות\""
+    },
+    {
+      "name": "Pricing edits",
+      "pass": true,
+      "observation": "qty=8 price=425 line_net=3060 patches=0 total_gross=23883.2"
+    },
+    {
+      "name": "Multi-row editing",
+      "pass": true,
+      "observation": "5 rows edited sequentially"
+    },
+    {
+      "name": "Concurrent section + line",
+      "pass": true,
+      "observation": "section=\" מצלמות ותשתיות + QA\" line=\"שורה QA 3 — בדי (concurrent)קה\""
+    },
+    {
+      "name": "Template → immediate editing",
+      "pass": false,
+      "observation": "fastPath=0 items after apply"
+    },
+    {
+      "name": "Save indicator",
+      "pass": true,
+      "observation": "label=\"נשמר\""
+    },
+    {
+      "name": "Send readiness (incomplete)",
+      "pass": true,
+      "observation": "disabled=true buttons=0 can_send=false gaps=5"
+    },
+    {
+      "name": "Send readiness (complete)",
+      "pass": false,
+      "observation": "enabled=false can_send=true gaps=0"
+    },
+    {
+      "name": "Network behavior",
+      "pass": true,
+      "observation": "headerPATCH=0 itemPATCH=3 sectionPATCH=2"
+    },
+    {
+      "name": "Mobile sanity",
+      "pass": false,
+      "observation": "descVisible=false overflowX=false"
+    }
+  ],
+  "allRequests": 39
+}

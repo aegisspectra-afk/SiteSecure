@@ -1,0 +1,50 @@
+{
+  "viewports": {
+    "375x812": {
+      "sendVisible": true,
+      "previewVisible": true,
+      "addVisible": true,
+      "overflowVisible": true,
+      "sendAboveNav": true,
+      "headerHamburger": 0,
+      "addMenuItems": [
+        "פריט",
+        "מערכת",
+        "סעיף",
+        "בנה מערכת"
+      ],
+      "horizontalScroll": false
+    },
+    "390x844": {
+      "sendVisible": true,
+      "previewVisible": true,
+      "addVisible": true,
+      "overflowVisible": true,
+      "sendAboveNav": true,
+      "headerHamburger": 0,
+      "addMenuItems": [
+        "פריט",
+        "מערכת",
+        "סעיף",
+        "בנה מערכת"
+      ],
+      "horizontalScroll": false
+    },
+    "430x932": {
+      "sendVisible": true,
+      "previewVisible": true,
+      "addVisible": true,
+      "overflowVisible": true,
+      "sendAboveNav": true,
+      "headerHamburger": 0,
+      "addMenuItems": [
+        "פריט",
+        "מערכת",
+        "סעיף",
+        "בנה מערכת"
+      ],
+      "horizontalScroll": false
+    }
+  },
+  "checks": {}
+}

@@ -8,6 +8,7 @@ import type { QuoteLinePatch } from "../../../lib/quote-line-edit";
 import { LINE_ITEM_DISCOUNT_TYPE } from "../../../lib/quote-line-edit";
 import { formatMoney } from "../../../lib/quotes";
 import { QuoteLineRow } from "./QuoteLineRow";
+import { QuoteSectionDiscountField } from "./QuoteSectionDiscountField";
 import { QuoteSectionNameField } from "./QuoteSectionNameField";
 
 type AddBody = {
@@ -43,6 +44,7 @@ export function QuoteLinesPanel({
   onFocusCatalog,
   onAddSection,
   onRenameSection,
+  onPatchSectionDiscount,
   onToggleSection,
   onDuplicateSection,
   onDeleteSection,
@@ -68,15 +70,18 @@ export function QuoteLinesPanel({
   onFocusCatalog?: () => void;
   onAddSection?: () => void;
   onRenameSection?: (sectionId: string, name: string) => Promise<void>;
+  onPatchSectionDiscount?: (sectionId: string, body: { discount_type: string; discount_value: number }) => void;
   onToggleSection?: (sectionId: string, collapsed: boolean) => void;
   onDuplicateSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
   addPending?: boolean;
 }) {
   const rows = sortedQuoteItems(items);
+  const [emptyCatalogOpen, setEmptyCatalogOpen] = useState(false);
   const sectionOrder = [...sections].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const grouped = groupBySection(rows, sectionOrder);
   const [sectionMenuId, setSectionMenuId] = useState<string | null>(null);
+  const isEmpty = rows.length === 0 && sectionOrder.length === 0;
 
   const defaultFreeLine = useCallback(
     (): AddBody => ({
@@ -91,74 +96,112 @@ export function QuoteLinesPanel({
     [],
   );
 
+  const catalogResultsList =
+    debouncedCatalogQ && catalogResults.length ? (
+      <ul className="flex max-h-40 flex-col gap-1 overflow-auto text-sm">
+        {catalogResults.map((product) => (
+          <li key={product.id}>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start hover:bg-bg-2"
+              onClick={() =>
+                onAdd({
+                  product_id: product.id,
+                  item_type: product.kind === "service" ? "labor" : "catalog",
+                  description: product.description || product.name,
+                  sku: product.sku,
+                  qty: 1,
+                  unit_price: product.selling_price ?? product.list_price,
+                  discount: 0,
+                  discount_type: LINE_ITEM_DISCOUNT_TYPE,
+                })
+              }
+            >
+              <span className="min-w-0 text-start">
+                <span className="block font-medium">
+                  {product.sku ? <span className="ltr-meta me-2 font-mono text-xs">{product.sku}</span> : null}
+                  {product.name}
+                </span>
+                <span className="block text-xs text-fg-muted">
+                  {[product.category_path, product.manufacturer].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+              <span className="ltr-meta shrink-0 text-xs text-fg-muted">
+                {formatMoney(product.selling_price ?? product.list_price, currency)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
   return (
-    <section id="quote-items" tabIndex={-1} className="cpq-content-panel flex flex-col gap-4 p-5">
+    <section id="quote-items" tabIndex={-1} className="cpq-content-panel cpq-content-kai flex flex-col gap-4 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.cpqScopeKicker}</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-fg">{he.cpqContentTitle}</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-fg">{he.cpqContentTitle}</h2>
           <p className="mt-1 text-sm text-fg-muted">{he.quoteItemsCount(rows.length)}</p>
         </div>
-        {canEdit ? (
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => onOpenQuickAdd?.()}>
+        {canEdit && !isEmpty ? (
+          <div className="cpq-scope-toolbar flex flex-wrap gap-2">
+            <Button type="button" loading={addPending} onClick={() => onOpenQuickAdd?.()}>
               <Plus className="size-4" aria-hidden />
-              {he.cpqAddCommand}
+              {he.cpqAddToQuotePrimary}
             </Button>
-            <Button type="button" variant="secondary" loading={addPending} onClick={() => onAdd(defaultFreeLine())}>
-              <Plus className="size-4" aria-hidden />
-              {he.quoteAddItem}
-            </Button>
-            {onOpenAddSystem ? (
-              <Button type="button" variant="secondary" onClick={onOpenAddSystem}>
-                <Plus className="size-4" aria-hidden />
-                {he.cpqAddSystem}
-              </Button>
-            ) : null}
             {onAddSection ? (
-              <Button type="button" variant="secondary" onClick={onAddSection}>
-                <Plus className="size-4" aria-hidden />
+              <Button type="button" variant="ghost" onClick={onAddSection}>
                 {he.cpqAddSection}
-              </Button>
-            ) : null}
-            {onOpenSystemBuilder ? (
-              <Button type="button" variant="secondary" onClick={onOpenSystemBuilder}>
-                {he.cpqBuildSystem}
               </Button>
             ) : null}
           </div>
         ) : null}
       </div>
 
-      {rows.length === 0 && sectionOrder.length === 0 ? (
-        <div className="cpq-empty">
+      {isEmpty ? (
+        <div className="cpq-empty cpq-empty-kai">
           <p className="cpq-empty-title">{he.cpqEmptyTitle}</p>
           <p className="cpq-empty-body">{he.cpqEmptyBody}</p>
           {canEdit ? (
-            <div className="cpq-empty-actions-simple">
-              <Button type="button" onClick={() => onAdd(defaultFreeLine())}>
+            <div className="cpq-empty-actions-kai">
+              <Button type="button" onClick={() => onOpenQuickAdd?.()}>
+                <Plus className="size-4" aria-hidden />
                 {he.quoteAddItem}
               </Button>
-              {onOpenAddSystem ? (
+              {onOpenSystemBuilder ? (
+                <Button type="button" variant="secondary" className="cpq-empty-build-cta" onClick={onOpenSystemBuilder}>
+                  {he.cpqBuildSystem}
+                </Button>
+              ) : onOpenAddSystem ? (
                 <Button type="button" variant="secondary" onClick={onOpenAddSystem}>
                   {he.cpqAddSystem}
                 </Button>
               ) : null}
-              {onOpenSystemBuilder ? (
-                <Button type="button" variant="secondary" onClick={onOpenSystemBuilder}>
-                  {he.cpqBuildSystem}
-                </Button>
-              ) : null}
-              <Button
+              <button
                 type="button"
-                variant="ghost"
+                className="cpq-empty-catalog-link"
                 onClick={() => {
+                  setEmptyCatalogOpen(true);
                   onFocusCatalog?.();
-                  document.getElementById("catalog-search")?.focus();
+                  window.requestAnimationFrame(() => {
+                    document.getElementById("catalog-search")?.focus();
+                  });
                 }}
               >
-                {he.cpqEmptyCatalogTitle}
-              </Button>
+                {he.cpqEmptyBrowseCatalog}
+              </button>
+            </div>
+          ) : null}
+          {canCatalog && canEdit && (emptyCatalogOpen || Boolean(catalogQ)) ? (
+            <div className="cpq-empty-catalog-panel">
+              <Input
+                id="catalog-search"
+                label={he.quoteCatalogSearch}
+                value={catalogQ}
+                onChange={(e) => onCatalogQ(e.target.value)}
+                placeholder={he.quoteCatalogSearchHint}
+              />
+              {catalogLoading ? <p className="text-xs text-fg-muted">{he.loading}</p> : null}
+              {catalogResultsList}
             </div>
           ) : null}
         </div>
@@ -186,7 +229,17 @@ export function QuoteLinesPanel({
                       <p className="mt-1 text-xs text-fg-muted">
                         {he.quoteItemsCount(group.items.length)}
                         {group.items.length ? ` · ${formatMoney(sectionNet, currency)}` : ""}
+                        {Number(group.section.discount_value || 0) > 0 ? ` · ${he.cpqSectionDiscount}` : ""}
                       </p>
+                      {onPatchSectionDiscount || Number(group.section.discount_value || 0) > 0 ? (
+                        <div className="mt-2">
+                          <QuoteSectionDiscountField
+                            section={group.section}
+                            canEdit={Boolean(canEdit && onPatchSectionDiscount)}
+                            onPersist={(body) => onPatchSectionDiscount?.(group.section!.id, body)}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                     {canEdit ? (
                       <div className="relative">
@@ -211,7 +264,23 @@ export function QuoteLinesPanel({
                                 setSectionMenuId(null);
                               }}
                             >
-                              {he.quoteAddItem}
+                              {he.quoteAddFree}
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onAdd({
+                                  item_type: "note",
+                                  description: "",
+                                  qty: 1,
+                                  unit_price: 0,
+                                  section_id: group.section!.id,
+                                });
+                                setSectionMenuId(null);
+                              }}
+                            >
+                              {he.quoteAddNote}
                             </button>
                             {onDuplicateSection ? (
                               <button
@@ -285,8 +354,8 @@ export function QuoteLinesPanel({
         </div>
       )}
 
-      {canCatalog && canEdit ? (
-        <div className="flex flex-col gap-2 border-t border-border pt-4">
+      {canCatalog && canEdit && !isEmpty ? (
+        <div className="cpq-catalog-inline flex flex-col gap-2 border-t border-border pt-4">
           <Input
             id="catalog-search"
             label={he.quoteCatalogSearch}
@@ -295,41 +364,7 @@ export function QuoteLinesPanel({
             placeholder={he.quoteCatalogSearchHint}
           />
           {catalogLoading ? <p className="text-xs text-fg-muted">{he.loading}</p> : null}
-          {debouncedCatalogQ && catalogResults.length ? (
-            <ul className="flex max-h-40 flex-col gap-1 overflow-auto text-sm">
-              {catalogResults.map((product) => (
-                <li key={product.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-start hover:bg-bg-2"
-                    onClick={() =>
-                      onAdd({
-                        product_id: product.id,
-                        item_type: "catalog",
-                        description: product.description || product.name,
-                        sku: product.sku,
-                        qty: 1,
-                        unit_price: product.selling_price ?? product.list_price,
-                        discount: 0,
-                        discount_type: LINE_ITEM_DISCOUNT_TYPE,
-                      })
-                    }
-                  >
-                    <span className="min-w-0 text-start">
-                      <span className="block font-medium">
-                        {product.sku ? <span className="ltr-meta me-2 font-mono text-xs">{product.sku}</span> : null}
-                        {product.name}
-                      </span>
-                      <span className="block text-xs text-fg-muted">
-                        {[product.category_path, product.manufacturer].filter(Boolean).join(" · ")}
-                      </span>
-                    </span>
-                    <span>{formatMoney(product.selling_price ?? product.list_price, currency)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          {catalogResultsList}
         </div>
       ) : null}
     </section>

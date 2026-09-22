@@ -43,10 +43,15 @@ export function QuoteMobileSheet({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, onOpenChange]);
 
   function onPointerDown(event: React.PointerEvent) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -98,41 +103,36 @@ export function QuoteMobileSheet({
       ) : null}
       <div
         ref={panelRef}
-        className={`cpq-mobile-sheet${visible ? " is-open" : ""}`}
+        className={`cpq-mobile-sheet${compactHandle ? " cpq-mobile-sheet--docked" : ""}${visible ? " is-open" : ""}`}
         role="dialog"
         aria-modal={open}
         aria-labelledby={titleId}
       >
-        <button
-          type="button"
-          className="cpq-mobile-sheet-handle"
-          aria-expanded={open}
-          aria-controls={titleId}
-          onClick={() => onOpenChange(!open)}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <span className="cpq-mobile-sheet-grabber" aria-hidden />
-          {!open ? (
-            compactHandle ? (
-              <span className="cpq-mobile-sheet-mini cpq-mobile-sheet-mini-compact">
-                <span className="cpq-mobile-sheet-mini-label">{he.cpqMobileSheetTitle}</span>
-                <span className="cpq-mobile-sheet-mini-hint">{he.cpqMobileOpenSummary}</span>
-              </span>
-            ) : (
+        {compactHandle && !open ? null : (
+          <button
+            type="button"
+            className="cpq-mobile-sheet-handle"
+            aria-expanded={open}
+            aria-controls={titleId}
+            onClick={() => onOpenChange(!open)}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <span className="cpq-mobile-sheet-grabber" aria-hidden />
+            {!open ? (
               <span className="cpq-mobile-sheet-mini">
                 <span className="cpq-mobile-sheet-mini-label">{he.cpqMobileSheetTotal}</span>
                 <span className="cpq-mobile-sheet-mini-value ltr-meta">{totalLabel}</span>
               </span>
-            )
-          ) : (
-            <span id={titleId} className="cpq-mobile-sheet-title">
-              {he.cpqMobileSheetTitle}
-            </span>
-          )}
-        </button>
+            ) : (
+              <span id={titleId} className="cpq-mobile-sheet-title">
+                {he.cpqMobileSheetTitle}
+              </span>
+            )}
+          </button>
+        )}
         <div className="cpq-mobile-sheet-body">{children}</div>
         {footer ? <footer className="cpq-mobile-sheet-footer">{footer}</footer> : null}
       </div>

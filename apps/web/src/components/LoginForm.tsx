@@ -51,7 +51,15 @@ export function LoginForm({
   }
 
   return (
-    <AuthForm onSubmit={handleSubmit} aria-busy={busy || undefined} className="auth-login-form gap-5">
+    <AuthForm
+      onSubmit={handleSubmit}
+      aria-busy={busy || undefined}
+      className={
+        error || fieldErrors.email || fieldErrors.password
+          ? "auth-login-form ss-auth-shake gap-5"
+          : "auth-login-form gap-5"
+      }
+    >
       <div className="flex flex-col gap-4">
         <AuthField
           id="email"
@@ -59,6 +67,7 @@ export function LoginForm({
           label={he.email}
           type="email"
           autoComplete="email"
+          appearance="comfortable"
           ltr
           value={email}
           onChange={(ev) => setEmail(ev.target.value)}
@@ -70,6 +79,7 @@ export function LoginForm({
           name="password"
           label={he.password}
           autoComplete="current-password"
+          appearance="comfortable"
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
           error={fieldErrors.password}
@@ -96,11 +106,11 @@ export function LoginForm({
 
       <Button
         type="submit"
-        variant="primary"
+        variant="pill"
         loading={busy}
         loadingLabel={he.authenticating}
         disabled={busy}
-        className="auth-cta h-12 w-full"
+        className="auth-cta w-full"
       >
         {he.loginPrimary}
       </Button>

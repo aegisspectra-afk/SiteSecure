@@ -1,0 +1,1150 @@
+{
+  "web": "http://localhost:5174",
+  "api": "http://127.0.0.1:8010",
+  "workspace": "f1f76d59-fd2e-4b27-9586-06f7c89abc9c",
+  "viewports": {
+    "mobile-360": {
+      "shot": "mobile-360.png",
+      "loadMs": 5781,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 160
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 160
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 160
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 160
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 242.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 328,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 328,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 328,
+          "h": 91.25,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 81,
+        "signalTop": 255.65625,
+        "attentionTop": 405.015625,
+        "todayTop": 1077.515625,
+        "commercialTop": 1305.296875
+      }
+    },
+    "mobile-375": {
+      "shot": "mobile-375.png",
+      "loadMs": 5318,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 167.5
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 167.5
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 167.5
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 167.5
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 257.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 343,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 343,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 343,
+          "h": 91.25,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 81,
+        "signalTop": 255.65625,
+        "attentionTop": 405.015625,
+        "todayTop": 1077.515625,
+        "commercialTop": 1305.296875
+      }
+    },
+    "mobile-390": {
+      "shot": "mobile-390.png",
+      "loadMs": 5155,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 175
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 175
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 175
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 175
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 272.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 358,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 358,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 358,
+          "h": 91.25,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 81,
+        "signalTop": 255.65625,
+        "attentionTop": 405.015625,
+        "todayTop": 1077.515625,
+        "commercialTop": 1305.296875
+      }
+    },
+    "mobile-430": {
+      "shot": "mobile-430.png",
+      "loadMs": 5167,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 430,
+      "clientWidth": 430,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 195
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 195
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 195
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 195
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 312.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 398,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 398,
+          "h": 91.25,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 398,
+          "h": 91.25,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 81,
+        "signalTop": 255.65625,
+        "attentionTop": 405.015625,
+        "todayTop": 1077.515625,
+        "commercialTop": 1250.90625
+      }
+    },
+    "tablet-768": {
+      "shot": "tablet-768.png",
+      "loadMs": 5320,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 176.203125
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 176.203125
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 176.203125
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 176.21875
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 136.8125,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 81,
+        "signalTop": 195.65625,
+        "attentionTop": 270.734375,
+        "todayTop": 674.609375,
+        "commercialTop": 848
+      }
+    },
+    "desktop-1024": {
+      "shot": "desktop-1024.png",
+      "loadMs": 5354,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 177.203125
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 177.203125
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 177.203125
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 177.21875
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 136.8125,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 89,
+        "signalTop": 209.140625,
+        "attentionTop": 284.21875,
+        "todayTop": 297.875,
+        "commercialTop": 848.671875
+      }
+    },
+    "desktop-1280": {
+      "shot": "desktop-1280.png",
+      "loadMs": 5236,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 241.203125
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 241.203125
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 241.203125
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 241.21875
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 136.8125,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 89,
+        "signalTop": 210.84375,
+        "attentionTop": 285.921875,
+        "todayTop": 299.578125,
+        "commercialTop": 783.1875
+      }
+    },
+    "desktop-1440": {
+      "shot": "desktop-1440.png",
+      "loadMs": 5122,
+      "loadError": null,
+      "dashRequestCount": 22,
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "signals": [
+        {
+          "text": "דורשים טיפול4",
+          "h": 66.28125,
+          "w": 281.203125
+        },
+        {
+          "text": "עבודות היום0",
+          "h": 66.28125,
+          "w": 281.203125
+        },
+        {
+          "text": "הצעות פתוחות1",
+          "h": 66.28125,
+          "w": 281.203125
+        },
+        {
+          "text": "צנרת‏20,060 ‏₪",
+          "h": 66.28125,
+          "w": 281.21875
+        }
+      ],
+      "touchables": [
+        {
+          "text": "חיפוש…Ctrl K",
+          "w": 136.8125,
+          "h": 40,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 77.5,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "חיפוש…",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "+ יצירה",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "יצירת פרויקט",
+          "w": 101.390625,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "פתח הצעה",
+          "w": 87.375,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "תזמן עבודה",
+          "w": 68.03125,
+          "h": 44,
+          "clipped": false
+        },
+        {
+          "text": "הצג ניתוח מלא →",
+          "w": 85.296875,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "צפה בכל ההצעות →",
+          "w": 98,
+          "h": 18,
+          "clipped": false
+        },
+        {
+          "text": "Q-00055טיוטהשנידי הלר‏10,030 ‏₪",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00039אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        },
+        {
+          "text": "Q-00038אושרהQA Task12 A 1788189294‏1,180",
+          "w": 0,
+          "h": 0,
+          "clipped": false
+        }
+      ],
+      "bottomNavH": 0,
+      "hasV3": true,
+      "hasHeader": true,
+      "hasSignalStrip": true,
+      "hasCommandQueue": true,
+      "hasCommercial": true,
+      "hasToday": true,
+      "hasRecentTable": true,
+      "hasRecentMobile": true,
+      "hasApex": true,
+      "hasWorkspace": true,
+      "loadFailCopy": false,
+      "order": {
+        "headerTop": 89,
+        "signalTop": 210.84375,
+        "attentionTop": 285.921875,
+        "todayTop": 299.578125,
+        "commercialTop": 783.1875
+      }
+    }
+  },
+  "checks": {
+    "noHorizontalScroll": true,
+    "hasV3Shell": true,
+    "hasCommandHeader": true,
+    "hasSignalStrip": true,
+    "hierarchyOk": true,
+    "mobileTouchOk": true,
+    "desktopRecentTable": true,
+    "mobileRecentCards": true,
+    "commercialChartPresent": true,
+    "noLoadFailCopy": true
+  },
+  "load": {
+    "mobile-360": {
+      "loadMs": 5781,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "mobile-375": {
+      "loadMs": 5318,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "mobile-390": {
+      "loadMs": 5155,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "mobile-430": {
+      "loadMs": 5167,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "tablet-768": {
+      "loadMs": 5320,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "desktop-1024": {
+      "loadMs": 5354,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "desktop-1280": {
+      "loadMs": 5236,
+      "loadError": null,
+      "loadFailCopy": false
+    },
+    "desktop-1440": {
+      "loadMs": 5122,
+      "loadError": null,
+      "loadFailCopy": false
+    }
+  },
+  "verdict": "PASS"
+}

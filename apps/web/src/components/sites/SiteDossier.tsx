@@ -410,10 +410,10 @@ export function SiteDossier({ siteId }: { siteId: string }) {
         ← {he.navSiteFiles}
       </Link>
 
-      <header className="site-file-hero">
+      <header className="site-file-hero ops-card">
         <div className="min-w-0">
           <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.siteFileKicker}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-fg sm:text-3xl">{site.name}</h1>
+          <h1 className="site-file-title mt-2 text-2xl font-semibold tracking-[-0.03em] text-fg sm:text-3xl">{site.name}</h1>
           {siteCode ? (
             <p className="public-mono mt-2 text-xs text-fg-muted" dir="ltr">
               {siteCode}

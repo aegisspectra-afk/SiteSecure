@@ -36,7 +36,12 @@ const api = {
   getCustomer: vi.fn(),
   listEquipment: vi.fn(),
   listDocuments: vi.fn(),
+  listMembers: vi.fn(),
+  getServiceCall: vi.fn(),
   startJob: vi.fn(),
+  enRouteJob: vi.fn(),
+  arrivedJob: vi.fn(),
+  assignJob: vi.fn(),
   completeJob: vi.fn(),
   patchJobChecklistItem: vi.fn(),
   createDocumentUpload: vi.fn(),
@@ -88,8 +93,13 @@ describe("FieldJob", () => {
       customer_id: "c1",
       site_id: "s1",
       scheduled_for: "2026-08-27T09:00:00Z",
+      scheduled_end: "2026-08-27T11:00:00Z",
+      priority: "high",
       completion_notes: null,
+      assignees: [{ user_id: "t1", display_name: "דניאל כהן", assigned_at: "2026-08-27T07:00:00Z" }],
     });
+    api.listMembers.mockResolvedValue([]);
+    api.getServiceCall.mockResolvedValue({ id: "sc1", title: "קריאה", number: "SR-00010" });
     api.listJobChecklist.mockResolvedValue([
       { id: "i1", label_he: "תשתית", completed: true },
       { id: "i2", label_he: "ציוד", completed: false },
@@ -118,7 +128,7 @@ describe("FieldJob", () => {
     renderJob();
     expect(await screen.findByText(he.fieldJobKicker)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "התקנת מצלמות" })).toBeInTheDocument();
-    expect(await screen.findByText("בית ספר גולדה מאיר")).toBeInTheDocument();
+    expect((await screen.findAllByText("בית ספר גולדה מאיר")).length).toBeGreaterThan(0);
     expect(screen.getByText(he.installationChecklist)).toBeInTheDocument();
     expect(screen.getByText("תשתית")).toBeInTheDocument();
     expect(await screen.findByText("CAM-018")).toBeInTheDocument();

@@ -2,7 +2,7 @@ import type { AttentionGroup, DashboardItem, LeadOut } from "@site-secure/api-cl
 import { he } from "../i18n/he";
 import { leadDisplayTitle, leadRequirementsSummary } from "./leads";
 
-const SEVERITY_ORDER: Record<DashboardItem["severity"], number> = { now: 0, next: 1, info: 2 };
+const SEVERITY_ORDER: Record<DashboardItem["severity"], number> = { now: 0, next: 1, later: 2, info: 3 };
 
 /** Lower number = higher priority. Derived from domain urgency. */
 export const ATTENTION_KIND_PRIORITY: Record<string, number> = {
@@ -61,7 +61,7 @@ export function attentionActionLabel(
   }
   if (actions.includes("select_site")) return he.cpqSelectSiteForProject;
   if (item.entity_type === "job") {
-    if (actions.includes("start") || actions.includes("complete")) return he.todayOpenJob;
+    if (actions.includes("en_route") || actions.includes("arrived") || actions.includes("start") || actions.includes("complete")) return he.todayOpenJob;
     return he.todayOpenJob;
   }
   if (item.entity_type === "lead" || kind === "lead_follow_up") return he.leadsOpenLead;

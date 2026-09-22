@@ -25,6 +25,7 @@ const registerShell = {
   kicker: he.authCreateAccount,
   heading: he.registerTitle,
   description: he.registerLead,
+  tone: "premium" as const,
 } as const;
 
 function RegisterPage() {

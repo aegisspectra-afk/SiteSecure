@@ -46,7 +46,7 @@ function ResetPage() {
 
   if (loading) {
     return (
-      <AuthLayout title={he.resetTitle} description={he.resetLead}>
+      <AuthLayout title={he.resetTitle} heading={he.resetTitle} description={he.resetLead}>
         <LoadingBlock label={he.loading} />
       </AuthLayout>
     );
@@ -54,13 +54,13 @@ function ResetPage() {
 
   if (!user) {
     return (
-      <AuthLayout title={he.resetTitle} description={he.resetLead}>
+      <AuthLayout title={he.resetTitle} heading={he.resetTitle} description={he.resetLead}>
         <ErrorState
           className="px-0 py-4"
           title={he.resetInvalid}
           description={he.resetInvalidBody}
           action={
-            <Button variant="primary" className="h-12" onClick={() => void navigate({ to: "/forgot-password" })}>
+            <Button variant="pill" className="auth-cta w-full" onClick={() => void navigate({ to: "/forgot-password" })}>
               {he.requestNewReset}
             </Button>
           }
@@ -72,6 +72,7 @@ function ResetPage() {
   return (
     <AuthLayout
       title={he.resetTitle}
+      heading={he.resetTitle}
       description={he.resetLead}
       footer={
         <AuthFooter
@@ -83,15 +84,17 @@ function ResetPage() {
         />
       }
     >
-      <AuthForm onSubmit={onSubmit}>
+      <AuthForm onSubmit={onSubmit} className={error || fieldError ? "ss-auth-shake" : undefined}>
         <PasswordField
           id="password"
           name="password"
           label={he.password}
           autoComplete="new-password"
+          appearance="comfortable"
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
           error={fieldError}
+          disabled={submitting}
         />
         <PasswordStrength password={password} />
         <PasswordField
@@ -99,11 +102,19 @@ function ResetPage() {
           name="confirm"
           label={he.passwordConfirm}
           autoComplete="new-password"
+          appearance="comfortable"
           value={confirm}
           onChange={(ev) => setConfirm(ev.target.value)}
+          disabled={submitting}
         />
         {error ? <AuthAlert>{error}</AuthAlert> : null}
-        <Button type="submit" variant="primary" loading={submitting} className="h-12 w-full">
+        <Button
+          type="submit"
+          variant="pill"
+          loading={submitting}
+          disabled={submitting}
+          className="auth-cta w-full"
+        >
           {he.resetPrimary}
         </Button>
       </AuthForm>

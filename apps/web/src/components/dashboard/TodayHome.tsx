@@ -20,11 +20,14 @@ export function TodayHome({
     <div className="field-today">
       <header className="field-today-hero">
         <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.fieldOpsKicker}</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-fg sm:text-3xl">{he.todayTitle}</h1>
-        <p className="mt-2 text-sm text-fg-muted">{he.fieldTodayLead}</p>
+        <h1 className="mt-2 text-[1.75rem] font-semibold tracking-[-0.04em] text-fg sm:text-3xl">{he.todayTitle}</h1>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{he.fieldTodayLead}</p>
         {count > 0 ? (
-          <p className="public-mono mt-3 text-xs text-fg-muted" dir="ltr">
-            {count} {he.fieldJobsCount}
+          <p className="field-today-count tabular-nums" dir="ltr">
+            {count}{" "}
+            <span className="public-mono align-middle text-xs font-medium tracking-[0.16em] text-fg-muted">
+              {he.fieldJobsCount}
+            </span>
           </p>
         ) : null}
       </header>

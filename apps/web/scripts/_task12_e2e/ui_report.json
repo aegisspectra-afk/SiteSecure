@@ -1,0 +1,42 @@
+{
+  "Approved internal state (UI)": {
+    "result": "PASS",
+    "evidence": "approved banner visible"
+  },
+  "Approved → Project (UI)": {
+    "result": "FAIL",
+    "evidence": "open=0 create=1"
+  },
+  "Draft → Send (UI waiting)": {
+    "result": "PASS",
+    "evidence": "waiting_labels=1 send_buttons=0"
+  },
+  "Customer rejection (UI)": {
+    "result": "PASS",
+    "evidence": "rejected=1 revise=1 create=0"
+  },
+  "Mobile lifecycle (draft Task11)": {
+    "result": "PASS",
+    "evidence": "draft toolbar send/preview/add=true"
+  },
+  "Mobile lifecycle": {
+    "result": "FAIL",
+    "evidence": "390x844 open_project=0"
+  },
+  "Mobile lifecycle (rejected)": {
+    "result": "PASS",
+    "evidence": "revise_mobile=1"
+  },
+  "Viewed polling": {
+    "result": "PASS",
+    "evidence": "before='ממתין לאישור הלקוח' after='הלקוח צפה — ממתין לאישור' (18s poll)"
+  },
+  "Approved → Project (UI primary)": {
+    "result": "PASS",
+    "evidence": "desktop_create=1 mobile_create=1"
+  },
+  "Open linked Project (UI)": {
+    "result": "PASS",
+    "evidence": "create dialog opened=true"
+  }
+}

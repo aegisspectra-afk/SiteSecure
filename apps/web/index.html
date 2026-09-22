@@ -22,10 +22,25 @@
         background-color: #0b1220;
         color-scheme: dark;
       }
+      html.ss-brand-dark,
+      html.ss-brand-dark body {
+        background-color: #070b12;
+        color-scheme: dark;
+      }
     </style>
     <script>
       (function () {
         var KEY = "site-secure-theme";
+        var BRAND_CANVAS = "#070b12";
+        function isBrandDarkPath(pathname) {
+          var path = String(pathname || "/").split("?")[0].split("#")[0];
+          if (!path) path = "/";
+          if (path.length > 1 && path.charAt(path.length - 1) === "/") path = path.slice(0, -1);
+          if (path === "/app" || path.indexOf("/app/") === 0) return false;
+          if (path === "/admin" || path.indexOf("/admin/") === 0) return false;
+          if (path === "/dev" || path.indexOf("/dev/") === 0) return false;
+          return true;
+        }
         var mode = "system";
         try {
           var stored = localStorage.getItem(KEY);
@@ -39,13 +54,15 @@
             dark = false;
           }
         }
+        var brandDark = isBrandDarkPath(location.pathname);
         var root = document.documentElement;
         root.dataset.themeMode = mode;
         root.dataset.theme = dark ? "dark" : "light";
         root.classList.toggle("dark", dark);
-        root.style.colorScheme = dark ? "dark" : "light";
+        root.classList.toggle("ss-brand-dark", brandDark);
+        root.style.colorScheme = brandDark ? "dark" : dark ? "dark" : "light";
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", dark ? "#0b1220" : "#f1f5f9");
+        if (meta) meta.setAttribute("content", brandDark ? BRAND_CANVAS : dark ? "#0b1220" : "#f1f5f9");
       })();
     </script>
   </head>

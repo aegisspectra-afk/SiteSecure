@@ -1,0 +1,287 @@
+{
+  "generated_at": "2026-09-11T13:05:50.796786+00:00",
+  "mode": "READ_ONLY",
+  "buckets": {
+    "documents": {
+      "db_refs": 53,
+      "healthy": 9,
+      "missing": 44,
+      "storage_objects": 9,
+      "objects_with_db_or_logo_ref": 9,
+      "objects_orphan": 0
+    },
+    "photos": {
+      "db_refs": 9,
+      "healthy": 8,
+      "missing": 1,
+      "storage_objects": 8,
+      "objects_with_db_or_logo_ref": 8,
+      "objects_orphan": 0
+    },
+    "signatures": {
+      "db_refs": 14,
+      "healthy": 13,
+      "missing": 1,
+      "storage_objects": 13,
+      "objects_with_db_or_logo_ref": 13,
+      "objects_orphan": 0
+    },
+    "branding": {
+      "db_refs": 0,
+      "healthy": 0,
+      "missing": 0,
+      "storage_objects": 1,
+      "objects_with_db_or_logo_ref": 1,
+      "objects_orphan": 0
+    },
+    "exports": {
+      "db_refs": 0,
+      "healthy": 0,
+      "missing": 0,
+      "storage_objects": 0,
+      "objects_with_db_or_logo_ref": 0,
+      "objects_orphan": 0
+    }
+  },
+  "documents_classification": {
+    "QA_FIXTURE": 42,
+    "HEALTHY": 30,
+    "METADATA_ONLY_BY_DESIGN": 2,
+    "OBJECT_MISSING": 2
+  },
+  "samples": {
+    "object_missing": [
+      {
+        "id": "3f4dd535-5aac-44d8-a76a-a68fcc0b2dfb",
+        "workspace_id": "378d7f65-e014-47c4-8e74-7ab3500ddfee",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "OBJECT_MISSING",
+        "byte_size": 23,
+        "reserved_bytes": 0,
+        "filename_sanitized": "gate10b-a-1789127448.txt"
+      },
+      {
+        "id": "a7815481-0d51-43cd-b74e-af8f1f0ad41b",
+        "workspace_id": "f1f76d59-fd2e-4b27-9586-06f7c89abc9c",
+        "kind": "signature",
+        "bucket": "signatures",
+        "class": "OBJECT_MISSING",
+        "byte_size": 68,
+        "reserved_bytes": 0,
+        "filename_sanitized": "signature-v1.png"
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "0296fbd5-c34d-429c-bf5c-ee2205a1e00b",
+        "workspace_id": "2408367d-99da-46be-ba25-1c53a5388c69",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "03eb6661-ed02-4b42-8620-fad5c9f837b2",
+        "workspace_id": "2832e916-f0fb-4d30-9647-18b5a9413c4e",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 16106127260,
+        "filename_sanitized": ""
+      },
+      {
+        "id": "090102f2-3e22-4da9-8ad2-6ab0c185c277",
+        "workspace_id": "53e87b27-cc58-4785-9821-a5684ff569bb",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 0,
+        "filename_sanitized": "spec.pdf"
+      },
+      {
+        "id": "0db959dd-8f42-4e82-8a27-cc8e375d1b42",
+        "workspace_id": "cd0f6444-afeb-4d63-9274-cab677eb9f47",
+        "kind": "photo",
+        "bucket": "photos",
+        "class": "METADATA_ONLY_BY_DESIGN",
+        "byte_size": null,
+        "reserved_bytes": 22,
+        "filename_sanitized": "a.jpg"
+      },
+      {
+        "id": "11c3b376-db86-4be4-9e0c-28a909070992",
+        "workspace_id": "dbc16a4e-0056-4cdc-b99d-057e5016f0eb",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "1a829684-f400-4374-ac77-516365d52986",
+        "workspace_id": "0496add9-2656-4572-8267-efecd5166e06",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 16106127260,
+        "filename_sanitized": ""
+      },
+      {
+        "id": "29dfc2f7-a56d-4db1-af05-a584c0c8246f",
+        "workspace_id": "3b7f355d-32e2-4c71-8989-c4664caa55bc",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "2e4176e2-4f11-4b94-a35d-a43d4d92d5bc",
+        "workspace_id": "97912a17-a9d4-4296-a927-28ec0c97818c",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 0,
+        "filename_sanitized": "spec.pdf"
+      },
+      {
+        "id": "3359e6a7-6c6d-4da9-aad0-7fbfec09114e",
+        "workspace_id": "eb9e760d-3be3-4be3-8a11-17d34e9188c6",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "36628e52-93c9-447a-b6a7-5a272928bd2e",
+        "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 64,
+        "filename_sanitized": "field.pdf"
+      },
+      {
+        "id": "3e77a092-39de-495f-b6b0-e5cf82029fdc",
+        "workspace_id": "775ba264-53ba-4fc3-9714-23d588d95097",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "41a701e6-0f5f-4569-9ac6-3ed96c1e8982",
+        "workspace_id": "2770cc8c-e4a2-4c80-b745-4a0655cf39cd",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 0,
+        "filename_sanitized": "spec.pdf"
+      },
+      {
+        "id": "4ba3a93c-42c0-410f-a49c-cc16fde35eb4",
+        "workspace_id": "82576424-97d5-4d3d-aaf2-c01622b3c83b",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 16106127260,
+        "filename_sanitized": ""
+      },
+      {
+        "id": "4ffe2b1e-5ae5-42ec-99c9-27ab4d6c9a4e",
+        "workspace_id": "7383f159-aeba-43b6-8b8b-8ec34c56fd69",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "5bc51b6a-738f-435d-b16f-2368c48c5d37",
+        "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "secret.pdf"
+      },
+      {
+        "id": "6613e39e-7c98-48e9-8db6-3e6d7724dda7",
+        "workspace_id": "9376e15a-af16-496b-b2b6-66f12e836f9c",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "758d4d3b-da8c-4dd2-be8d-c970f50923c5",
+        "workspace_id": "d29866d4-d474-44f1-82a6-9749beb0791d",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 16106127260,
+        "filename_sanitized": ""
+      },
+      {
+        "id": "7dd9b3ed-a0c5-4161-a491-2f0a9f0d47ce",
+        "workspace_id": "129cf35b-d73c-435f-8bed-6d132df3daa0",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "80ed5d51-350e-49c3-9bd6-4f46f6a30716",
+        "workspace_id": "37e2f69c-477b-4503-928f-61a60d37ee55",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      },
+      {
+        "id": "85debb52-686b-4153-89c2-30abfcc64afd",
+        "workspace_id": "a2dfd3a4-7516-4e72-b8df-ee95f1081dec",
+        "kind": "document",
+        "bucket": "documents",
+        "class": "QA_FIXTURE",
+        "byte_size": null,
+        "reserved_bytes": 128,
+        "filename_sanitized": "small.txt"
+      }
+    ]
+  },
+  "documents_total": 76,
+  "storage_orphans_sample": [],
+  "notes": [
+    "METADATA_ONLY_BY_DESIGN = upload reservation (documents row before Storage PUT; byte_size null).",
+    "QA_FIXTURE = known automated test filenames (spec.pdf/small.txt/pad.bin/secret.pdf/field.pdf).",
+    "OBJECT_MISSING = completed metadata (byte_size set) without Storage object.",
+    "branding objects may reference workspace_settings.branding.logoStoragePath, not documents.",
+    "Destructive repair requires explicit operator action — not performed by this tool."
+  ]
+}

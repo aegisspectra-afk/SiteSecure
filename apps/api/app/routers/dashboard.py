@@ -41,9 +41,11 @@ class DashboardItemOut(BaseModel):
     site_address: str | None = None
     customer_phone: str | None = None
     scheduled_for: str | None = None
-    severity: Literal["now", "next", "info"]
+    severity: Literal["now", "next", "later", "info"]
     actions: list[str] = Field(default_factory=list)
     updated_at: str | None = None
+    scheduled_end: str | None = None
+    status: str | None = None
 
 
 class AttentionGroupOut(BaseModel):
@@ -171,6 +173,7 @@ def get_dashboard(
                 params={
                     "workspace_id": f"eq.{ws}",
                     "resource_type": "eq.job",
+                    "unassigned_at": "is.null",
                     "select": "resource_id,user_id",
                 },
             )

@@ -147,6 +147,7 @@ def load_authz_context(
             params={
                 "user_id": f"eq.{user_id}",
                 "workspace_id": f"eq.{workspace_id}",
+                "unassigned_at": "is.null",
                 "select": "resource_type,resource_id",
             },
         )

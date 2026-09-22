@@ -1,0 +1,31 @@
+{
+  "checks": [
+    {
+      "name": "relogin_fresh",
+      "ok": true,
+      "url": "https://site-secure-umber.vercel.app/app"
+    },
+    {
+      "name": "network_recovery",
+      "ok": true,
+      "chars": 103
+    },
+    {
+      "name": "session_relogin",
+      "ok": true,
+      "url": "https://site-secure-umber.vercel.app/app"
+    },
+    {
+      "name": "mobile_no_h_overflow",
+      "ok": true,
+      "sw": 390,
+      "cw": 390
+    },
+    {
+      "name": "forgot_status",
+      "ok": true
+    }
+  ],
+  "timings_ms": {},
+  "ok": true
+}

@@ -811,6 +811,10 @@ def _load_default_pdf_template(client: UserClient, workspace_id: UUID) -> dict |
     return None
 
 
+# Non-draft lifecycle states whose customer document must equal the sent version snapshot.
+_SNAPSHOT_PDF_STATES = frozenset({"sent", "viewed", "approved", "rejected", "expired"})
+
+
 def _document_payload(
     client: UserClient,
     workspace_id: UUID,
@@ -818,6 +822,38 @@ def _document_payload(
     items: list[dict],
 ) -> dict:
     from ..documents.company_profile import missing_quote_company_fields, normalize_company_profile
+
+    status = str(quote.get("status") or "draft")
+    # A3: formally sent current version — staff document = immutable snapshot.public
+    # (same customer content source as public PDF). Draft remains live.
+    if status in _SNAPSHOT_PDF_STATES:
+        version = int(quote.get("version") or 1)
+        versions = as_list(
+            client.get(
+                "quote_versions",
+                params={
+                    "quote_id": f"eq.{quote['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "version": f"eq.{version}",
+                    "select": "snapshot",
+                    "limit": "1",
+                },
+            )
+        )
+        if versions:
+            snap = versions[0].get("snapshot") if isinstance(versions[0].get("snapshot"), dict) else {}
+            public = snap.get("public") if isinstance(snap.get("public"), dict) else {}
+            if public:
+                out = dict(public)
+                # Keep live lifecycle overlays consistent with public assemble.
+                out["status"] = status
+                out["version"] = version
+                out["viewed_at"] = quote.get("viewed_at")
+                out["approved_at"] = quote.get("approved_at")
+                out["approved_name"] = quote.get("approved_name")
+                out["rejected_at"] = quote.get("rejected_at")
+                out["sent_at"] = quote.get("sent_at")
+                return out
 
     workspace, customer, site = _related(client, workspace_id, quote)
     sections = _load_sections(client, workspace_id, UUID(quote["id"]))
@@ -833,7 +869,6 @@ def _document_payload(
             "חסרים פרטי חברה להפקת המסמך",
             {"missing_fields": missing, "cta": "company_branding"},
         )
-    status = str(quote.get("status") or "draft")
     company_snapshot = None
     frozen_pdf_template = None
     if status not in {"draft"}:
@@ -1332,7 +1367,11 @@ def _transition_to_sent(
     workspace_id: UUID,
     existing: dict,
 ) -> tuple[dict, list[dict], str]:
-    """Validate, snapshot, mark sent, mint public token. Caller must authorize quotes.send."""
+    """Validate, mark sent (conditional), snapshot, mint public token. Caller must authorize quotes.send.
+
+    A3 concurrency: only one request may win draft→sent for the same id/workspace/version.
+    Losers must not mint tokens or write publication side effects.
+    """
     quote_id = UUID(str(existing["id"]))
     items = _load_items(client, workspace_id, quote_id)
     existing, items = _persist_totals(client, workspace_id, existing, items)
@@ -1345,20 +1384,34 @@ def _transition_to_sent(
     _ = soft  # advisory only — never blocks send
     now = datetime.now(UTC).isoformat()
     version = int(existing.get("version") or 1)
+    # Conditional publication boundary — must precede snapshot/token side effects.
+    res = client.patch(
+        "quotes",
+        {"status": "sent", "sent_at": now},
+        params={
+            "id": f"eq.{quote_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "status": "eq.draft",
+            "version": f"eq.{version}",
+        },
+    )
+    rows = as_list(res) if res.status_code == 200 else []
+    if not rows:
+        # Another Send won, or quote left draft — do not snapshot/mint again.
+        raise ApiError(
+            403,
+            "RESOURCE_STATE",
+            MESSAGES["RESOURCE_STATE"],
+            {"state": str(existing.get("status") or "unknown"), "reason": "send_already_published"},
+        )
+    row = rows[0]
     _upsert_version_snapshot(
         client,
         user,
         workspace_id,
-        existing,
+        row,
         items,
         snapshot_status="sent",
-    )
-    row = patched_or_403(
-        client.patch(
-            "quotes",
-            {"status": "sent", "sent_at": now},
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
-        )
     )
     token = new_public_token()
     _mint_access(svc, row, token)
@@ -1452,10 +1505,11 @@ def share_quote(
     user: Annotated[dict, Depends(current_user)],
     svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
-    """Mint (or re-mint) a secure customer link.
+    """Mint (or re-mint) a secure customer view link.
 
-    Creating a link must NOT mark the quote as sent. Sent/locked is an explicit
-    `/send` action (or customer first-open promotion on the public route).
+    Creating a link must NOT mark the quote as sent. Formal publication is an
+    explicit `/send` action only. Opening a draft Share link must not promote
+    draft → sent (SHARE = VIEW).
     """
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
@@ -1584,6 +1638,10 @@ def delete_quote(
             prefer="return=minimal",
         )
     )
+    # Soft-delete does not CASCADE; stamp Designs so they cannot remain independently visible.
+    from ..system_designs import soft_delete_designs_for_quote
+
+    soft_delete_designs_for_quote(svc, workspace_id, quote_id)
     try:
         _revoke_public_access(svc, workspace_id, quote_id)
     except Exception:

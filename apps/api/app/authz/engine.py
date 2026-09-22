@@ -96,9 +96,18 @@ def _resource_state(action: str, resource: ResourceRef | None) -> Decision | Non
         return _deny("RESOURCE_STATE", state=resource.state)
     if action == "quotes.create" and resource.type == "quote_revision" and resource.state not in QUOTE_REVISABLE:
         return _deny("RESOURCE_STATE", state=resource.state)
-    if action == "jobs.start" and resource.state not in {"scheduled", None}:
+    # jobs.start is the field-execution grant (en-route / arrived / start / checklist).
+    # Exact status transitions are enforced separately by job_lifecycle.assert_transition.
+    if action == "jobs.start" and resource.state not in {
+        "scheduled",
+        "en_route",
+        "arrived",
+        "in_progress",
+        "blocked",
+        None,
+    }:
         return _deny("RESOURCE_STATE", state=resource.state)
-    if action == "jobs.complete" and resource.state not in {"in_progress", "en_route"}:
+    if action == "jobs.complete" and resource.state not in {"in_progress", None}:
         return _deny("RESOURCE_STATE", state=resource.state)
     return None
 

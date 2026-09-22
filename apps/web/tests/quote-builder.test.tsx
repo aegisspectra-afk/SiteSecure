@@ -162,6 +162,10 @@ function openQuoteOverflowMenu() {
   fireEvent.click(screen.getByRole("button", { name: he.cpqMoreActionsAria }));
 }
 
+function clickStage(name: string) {
+  fireEvent.click(screen.getAllByRole("button", { name })[0]!);
+}
+
 describe("CPQ builder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -169,14 +173,19 @@ describe("CPQ builder", () => {
 
   it("shows go-to-field when the quote is not sendable", async () => {
     renderBuilder(quote());
+    // P0: empty draft opens Stage 1 (details). Jump freely to review for readiness.
+    clickStage(he.cpqWorkflowChecks);
     expect(screen.getByText(he.cpqReadinessTitle)).toBeInTheDocument();
     const readiness = screen.getByRole("region", { name: he.cpqReadinessTitle });
     expect(within(readiness).getByRole("button", { name: new RegExp(he.cpqReadinessCustomer) })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.cpqCustomerView }).length).toBeGreaterThan(0);
+    clickStage(he.cpqWorkflowDetails);
     expect(screen.getByRole("button", { name: he.quoteApplyTemplate })).toBeDisabled();
     expect(screen.getByRole("heading", { name: he.cpqHeaderTitle("Q-00001") })).toBeInTheDocument();
+    clickStage(he.cpqWorkflowContent);
     expect(screen.getByText(he.cpqEmptyTitle)).toBeInTheDocument();
 
+    clickStage(he.cpqWorkflowChecks);
     const submitButtons = screen.getAllByRole("button", { name: he.cpqSendForApproval });
     expect(submitButtons.length).toBeGreaterThanOrEqual(1);
     submitButtons.forEach((button) => expect(button).toBeDisabled());

@@ -1,3 +1,4 @@
+import { ActivityRow } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
@@ -42,16 +43,17 @@ export function ActivityList({
       {items.length === 0 ? (
         <GettingStarted canCreateQuote={canCreateQuote} />
       ) : (
-        <ul className="mt-3 flex flex-col gap-3">
+        <ul className="ss-activity-list mt-3">
           {items.map((item) => (
-            <li
-              key={`${item.entity_type}-${item.entity_id}-${item.occurred_at}`}
-              className="flex items-baseline gap-3 text-sm"
-            >
-              <span className="public-mono shrink-0 text-xs text-fg-muted">
-                {formatWhen(item.occurred_at)}
-              </span>
-              <span className="text-fg">{item.title_he}</span>
+            <li key={`${item.entity_type}-${item.entity_id}-${item.occurred_at}`}>
+              <ActivityRow
+                title={item.title_he}
+                trailing={
+                  <span className="public-mono ltr-meta" dir="ltr">
+                    {formatWhen(item.occurred_at)}
+                  </span>
+                }
+              />
             </li>
           ))}
         </ul>

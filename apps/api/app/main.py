@@ -28,6 +28,7 @@ from .routers import (
     public_quotes,
     quote_cpq,
     quotes,
+    system_designs,
     search,
     sites,
     systems,
@@ -126,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(ops_modules.router)
     app.include_router(quotes.router)
     app.include_router(quote_cpq.router)
+    app.include_router(system_designs.router)
     app.include_router(catalog.router)
     app.include_router(catalog_import.router)
     app.include_router(cctv.router)

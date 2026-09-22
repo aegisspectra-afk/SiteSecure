@@ -1,0 +1,103 @@
+{
+  "web": "http://localhost:5174",
+  "api": "http://127.0.0.1:8010",
+  "workspaceId": "f1f76d59-fd2e-4b27-9586-06f7c89abc9c",
+  "direct": [
+    {
+      "name": "dashboard",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/dashboard",
+      "status": 200,
+      "ms": 1891,
+      "bytes": 3830
+    },
+    {
+      "name": "dashboard_warm",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/dashboard",
+      "status": 200,
+      "ms": 2959,
+      "bytes": 3830,
+      "warm": true
+    },
+    {
+      "name": "usage",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/usage",
+      "status": 200,
+      "ms": 2171,
+      "bytes": 1034
+    },
+    {
+      "name": "usage_warm",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/usage",
+      "status": 200,
+      "ms": 2497,
+      "bytes": 1034,
+      "warm": true
+    },
+    {
+      "name": "leads",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/leads?limit=20",
+      "status": 200,
+      "ms": 1330,
+      "bytes": 764
+    },
+    {
+      "name": "leads_warm",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/leads?limit=20",
+      "status": 200,
+      "ms": 1290,
+      "bytes": 764,
+      "warm": true
+    },
+    {
+      "name": "customers_probe",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/customers?limit=1",
+      "status": 200,
+      "ms": 1341,
+      "bytes": 466
+    },
+    {
+      "name": "customers_probe_warm",
+      "url": "http://127.0.0.1:8010/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/customers?limit=1",
+      "status": 200,
+      "ms": 1478,
+      "bytes": 466,
+      "warm": true
+    }
+  ],
+  "marks": {
+    "dom": 546,
+    "skeletonOrShell": 2973,
+    "firstUseful": 5276,
+    "commandQueue": 5287,
+    "commercialPulse": 5299,
+    "settle": 6507
+  },
+  "network": [
+    {
+      "atMs": 1891,
+      "url": "/api/v1/auth/session",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "atMs": 4810,
+      "url": "/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/usage",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "atMs": 5189,
+      "url": "/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/dashboard",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "atMs": 6601,
+      "url": "/api/v1/workspaces/f1f76d59-fd2e-4b27-9586-06f7c89abc9c/leads?limit=20",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "bodyPreview": "דלגו לתוכן אגיס מערכות בע״מ Solo · Active SITE SECURE סביבת עבודה לוח בקרה יומן ומשימות מכירות ולקוחות לקוחות לידים הצעות מחיר קטלוג תפעול פרויקטים תיקי אתר קריאות שירות אחריות מודיעין טכני מערכת הגדרות IK ilya kerner אגיס מערכות בע״מ סביבת העבודה פעילה חיפוש Ctrl K מוכן לפעולה OPERATIONS OVERVIEW צהריים טובים, ilya kerner יום שישי, 11 בספטמבר 4 דורשים טיפול חיפוש… Ctrl K + יצירה היום בשטח דורשים טיפול 4 עבודות היום 0 הצעות פתוחות 1 צנרת ‏20,060 ‏₪ תור פקודות · 4 Q-00045 · או",
+  "loadFail": false
+}

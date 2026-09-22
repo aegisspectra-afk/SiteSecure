@@ -150,7 +150,6 @@ def main() -> int:
                 "customer_id": cust["id"],
                 "site_id": site["id"],
                 "kind": "service",
-                "status": "scheduled",
                 "scheduled_for": scheduled,
             },
         )

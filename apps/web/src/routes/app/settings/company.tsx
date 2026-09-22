@@ -2,10 +2,12 @@ import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { PaymentDetailsCard, PaymentDetailsEmpty } from "../../../components/settings/PaymentDetailsCard";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
+import { hasPaymentDetails, type PaymentDetailsFields } from "../../../lib/payment-details";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/settings/company")({
@@ -58,6 +60,28 @@ const EMPTY: FormState = {
   showBankOnDocuments: false,
 };
 
+function paymentSlice(form: FormState): PaymentDetailsFields {
+  return {
+    bankName: form.bankName,
+    bankBranch: form.bankBranch,
+    bankAccount: form.bankAccount,
+    bankAccountHolder: form.bankAccountHolder,
+    paymentInstructions: form.paymentInstructions,
+    showBankOnDocuments: form.showBankOnDocuments,
+  };
+}
+
+function paymentFromProfile(p: Record<string, unknown>): PaymentDetailsFields {
+  return {
+    bankName: String(p.bankName || ""),
+    bankBranch: String(p.bankBranch || ""),
+    bankAccount: String(p.bankAccount || ""),
+    bankAccountHolder: String(p.bankAccountHolder || ""),
+    paymentInstructions: String(p.paymentInstructions || ""),
+    showBankOnDocuments: Boolean(p.showBankOnDocuments),
+  };
+}
+
 function CompanyBrandingPage() {
   return (
     <RequirePermission permission="workspace.edit">
@@ -74,6 +98,8 @@ function CompanyBrandingBody() {
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  const [paymentEditing, setPaymentEditing] = useState(true);
+  const paymentModeSeeded = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const query = useQuery({
@@ -85,6 +111,7 @@ function CompanyBrandingBody() {
   useEffect(() => {
     if (!query.data?.profile) return;
     const p = query.data.profile as Record<string, unknown>;
+    const pay = paymentFromProfile(p);
     setForm({
       displayName: String(p.displayName || ""),
       legalName: String(p.legalName || ""),
@@ -100,13 +127,12 @@ function CompanyBrandingBody() {
       website: String(p.website || ""),
       brandPrimary: String(p.brandPrimary || "#1c4e80"),
       brandAccent: String(p.brandAccent || ""),
-      bankName: String(p.bankName || ""),
-      bankBranch: String(p.bankBranch || ""),
-      bankAccount: String(p.bankAccount || ""),
-      bankAccountHolder: String(p.bankAccountHolder || ""),
-      paymentInstructions: String(p.paymentInstructions || ""),
-      showBankOnDocuments: Boolean(p.showBankOnDocuments),
+      ...pay,
     });
+    if (!paymentModeSeeded.current) {
+      setPaymentEditing(!hasPaymentDetails(pay));
+      paymentModeSeeded.current = true;
+    }
   }, [query.data]);
 
   const save = useMutation({
@@ -145,11 +171,23 @@ function CompanyBrandingBody() {
       window.setTimeout(() => setSaved(false), 1600);
       await queryClient.invalidateQueries({ queryKey: ["company-profile", workspaceId] });
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
+      setPaymentEditing(!hasPaymentDetails(paymentSlice(form)));
     },
     onError: (err) => {
       setFormError(err instanceof ApiClientError ? err.message : he.sessionError);
     },
   });
+
+  function cancelPaymentEdit() {
+    const p = query.data?.profile as Record<string, unknown> | undefined;
+    if (p) {
+      const pay = paymentFromProfile(p);
+      setForm((prev) => ({ ...prev, ...pay }));
+      setPaymentEditing(!hasPaymentDetails(pay));
+      return;
+    }
+    setPaymentEditing(true);
+  }
 
   async function onLogoSelected(file: File | null) {
     if (!file || !workspaceId) return;
@@ -202,6 +240,8 @@ function CompanyBrandingBody() {
   if (query.isError) return <ErrorState title={he.settingsError} />;
 
   const logoPath = String((query.data?.profile as Record<string, unknown>)?.logoStoragePath || "");
+  const payment = paymentSlice(form);
+  const showPaymentCard = !paymentEditing && hasPaymentDetails(payment);
 
   return (
     <div className="settings-panel flex flex-col gap-6">
@@ -355,53 +395,71 @@ function CompanyBrandingBody() {
           <div className="company-brand-swatch" style={{ background: form.brandPrimary || "#1c4e80" }} aria-hidden />
         </section>
 
-        <section className="settings-section">
-          <h2 className="settings-section-title">{he.companyPaymentSection}</h2>
-          <label className="settings-toggle">
-            <input
-              type="checkbox"
-              checked={form.showBankOnDocuments}
-              onChange={(ev) => setForm({ ...form, showBankOnDocuments: ev.target.checked })}
-            />
-            <span>{he.companyShowBank}</span>
-          </label>
-          <div className="settings-field-grid">
-            <Input
-              id="co-bank"
-              label={he.companyBankName}
-              value={form.bankName}
-              onChange={(ev) => setForm({ ...form, bankName: ev.target.value })}
-            />
-            <Input
-              id="co-branch"
-              label={he.companyBankBranch}
-              value={form.bankBranch}
-              onChange={(ev) => setForm({ ...form, bankBranch: ev.target.value })}
-              className="ltr-meta"
-            />
-            <Input
-              id="co-account"
-              label={he.companyBankAccount}
-              value={form.bankAccount}
-              onChange={(ev) => setForm({ ...form, bankAccount: ev.target.value })}
-              className="ltr-meta"
-            />
-            <Input
-              id="co-holder"
-              label={he.companyBankHolder}
-              value={form.bankAccountHolder}
-              onChange={(ev) => setForm({ ...form, bankAccountHolder: ev.target.value })}
-            />
+        <section className="settings-section ss-payment-section" aria-labelledby="company-payment-heading">
+          <div className="ss-payment-section-head">
+            <h2 id="company-payment-heading" className="settings-section-title">
+              {he.companyPaymentSection}
+            </h2>
+            {paymentEditing && (query.data?.profile ? hasPaymentDetails(paymentFromProfile(query.data.profile as Record<string, unknown>)) : false) ? (
+              <button type="button" className="ss-payment-cancel" onClick={cancelPaymentEdit}>
+                {he.companyPaymentCancel}
+              </button>
+            ) : null}
           </div>
-          <label className="settings-field-block">
-            <span className="settings-field-label">{he.companyPaymentInstructions}</span>
-            <textarea
-              className="settings-textarea"
-              rows={3}
-              value={form.paymentInstructions}
-              onChange={(ev) => setForm({ ...form, paymentInstructions: ev.target.value })}
-            />
-          </label>
+
+          {showPaymentCard ? (
+            <PaymentDetailsCard details={payment} onEdit={() => setPaymentEditing(true)} />
+          ) : !paymentEditing ? (
+            <PaymentDetailsEmpty onEdit={() => setPaymentEditing(true)} />
+          ) : (
+            <div className="ss-payment-edit">
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={form.showBankOnDocuments}
+                  onChange={(ev) => setForm({ ...form, showBankOnDocuments: ev.target.checked })}
+                />
+                <span>{he.companyShowBank}</span>
+              </label>
+              <div className="settings-field-grid">
+                <Input
+                  id="co-bank"
+                  label={he.companyBankName}
+                  value={form.bankName}
+                  onChange={(ev) => setForm({ ...form, bankName: ev.target.value })}
+                />
+                <Input
+                  id="co-branch"
+                  label={he.companyBankBranch}
+                  value={form.bankBranch}
+                  onChange={(ev) => setForm({ ...form, bankBranch: ev.target.value })}
+                  className="ltr-meta"
+                />
+                <Input
+                  id="co-account"
+                  label={he.companyBankAccount}
+                  value={form.bankAccount}
+                  onChange={(ev) => setForm({ ...form, bankAccount: ev.target.value })}
+                  className="ltr-meta"
+                />
+                <Input
+                  id="co-holder"
+                  label={he.companyBankHolder}
+                  value={form.bankAccountHolder}
+                  onChange={(ev) => setForm({ ...form, bankAccountHolder: ev.target.value })}
+                />
+              </div>
+              <label className="settings-field-block">
+                <span className="settings-field-label">{he.companyPaymentInstructions}</span>
+                <textarea
+                  className="settings-textarea"
+                  rows={3}
+                  value={form.paymentInstructions}
+                  onChange={(ev) => setForm({ ...form, paymentInstructions: ev.target.value })}
+                />
+              </label>
+            </div>
+          )}
         </section>
 
         <section className="settings-section">

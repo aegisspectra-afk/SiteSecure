@@ -152,7 +152,11 @@ describe("QuoteBuilder system apply", () => {
 
   it("opens picker from toolbar and applies system with section", async () => {
     renderBuilder(quote());
-    fireEvent.click(screen.getByRole("button", { name: he.cpqAddSystem }));
+    const itemsSection = document.getElementById("quote-items");
+    expect(itemsSection).toBeTruthy();
+    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
+    const listbox = await screen.findByRole("listbox");
+    fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) }));
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
     const dialog = await screen.findByRole("dialog", { name: he.cpqAddSystemTitle });
     fireEvent.click(within(dialog).getByRole("button", { name: he.cpqAddSystemToQuote }));
@@ -169,7 +173,7 @@ describe("QuoteBuilder system apply", () => {
     renderBuilder(quote());
     const itemsSection = document.getElementById("quote-items");
     expect(itemsSection).toBeTruthy();
-    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddCommand }));
+    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
     const listbox = await screen.findByRole("listbox");
     fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) }));
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
@@ -181,7 +185,7 @@ describe("QuoteBuilder system apply", () => {
     renderBuilder(quote());
     const itemsSection = document.getElementById("quote-items");
     expect(itemsSection).toBeTruthy();
-    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddCommand }));
+    fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
     const listbox = await screen.findByRole("listbox");
     fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddTemplate) }));
     expect(await screen.findByRole("dialog", { name: he.cpqApplyProposalTemplateTitle })).toBeInTheDocument();
@@ -190,6 +194,7 @@ describe("QuoteBuilder system apply", () => {
   it("shows save as system label for managers", async () => {
     window.prompt = vi.fn(() => "My System");
     renderBuilder(quote(), "manager");
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowDetails })[0]!);
     fireEvent.click(screen.getByRole("button", { name: he.cpqTemplateActions }));
     fireEvent.click(screen.getByRole("menuitem", { name: he.cpqSaveAsPackage }));
     await waitFor(() => expect(api.saveQuoteAsPackage).toHaveBeenCalled());

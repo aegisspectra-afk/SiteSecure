@@ -1,0 +1,77 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "quoteId": "c79b9091-6200-454e-b0f9-c7dee78007f6",
+  "shots": [
+    "desktop-1440-light",
+    "desktop-1440-dark",
+    "desktop-1280-light",
+    "narrow-desktop-1100-light",
+    "mobile-390-light",
+    "mobile-390-dark",
+    "mobile-360-light"
+  ],
+  "notes": [
+    {
+      "name": "desktop-1440-light",
+      "summaryWidth": 352,
+      "itemsWidth": 963.984375,
+      "titleText": "#Q-00002",
+      "overflowX": false
+    },
+    {
+      "name": "desktop-1440-dark",
+      "summaryWidth": 352,
+      "itemsWidth": 963.984375,
+      "titleText": "#Q-00002",
+      "overflowX": false
+    },
+    {
+      "name": "desktop-1280-light",
+      "summaryWidth": 352,
+      "itemsWidth": 804,
+      "titleText": "#Q-00002",
+      "overflowX": false
+    },
+    {
+      "name": "narrow-desktop-1100-light",
+      "summaryWidth": 352,
+      "itemsWidth": 624,
+      "titleText": "#Q-00002",
+      "overflowX": false
+    },
+    {
+      "name": "mobile-390-light",
+      "mobile": {
+        "dockH": 69.203125,
+        "dockBottom": 758,
+        "navTop": null,
+        "gap": null,
+        "mainPadBottom": "168px",
+        "contentClearsDock": true
+      }
+    },
+    {
+      "name": "mobile-390-dark",
+      "mobile": {
+        "dockH": 69.203125,
+        "dockBottom": 758,
+        "navTop": null,
+        "gap": null,
+        "mainPadBottom": "168px",
+        "contentClearsDock": true
+      }
+    },
+    {
+      "name": "mobile-360-light",
+      "mobile": {
+        "dockH": 69.203125,
+        "dockBottom": 714,
+        "navTop": null,
+        "gap": null,
+        "mainPadBottom": "168px",
+        "contentClearsDock": true
+      }
+    }
+  ]
+}

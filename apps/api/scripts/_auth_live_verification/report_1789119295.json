@@ -1,0 +1,1644 @@
+{
+  "run_id": 1789119295,
+  "api": "http://127.0.0.1:8010",
+  "started_at": "2026-09-11T09:34:55.679114+00:00",
+  "checks": [
+    {
+      "name": "api_health",
+      "ok": true,
+      "severity": "P1",
+      "status": 200
+    },
+    {
+      "name": "invite_accept_technician",
+      "ok": true,
+      "severity": "P1",
+      "invite": {
+        "create_status": 200,
+        "create_body": {
+          "id": "3286ebd9-080b-4611-b622-0cef7ec4e3b6",
+          "email": "authlive.tech.a.1789119295@sitesecure.test",
+          "role_key": "technician",
+          "expires_at": "2026-09-25T09:35:25.225016+00:00",
+          "token": "rs6tit9__g6n3GAIPomN1SHJ4bbiHNx8tiN4VJMzL_c"
+        },
+        "accept_status": 200,
+        "accept_body": {
+          "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+          "status": "success"
+        }
+      },
+      "membership_role": "technician"
+    },
+    {
+      "name": "invite_accept_viewer",
+      "ok": true,
+      "severity": "P1",
+      "invite": {
+        "create_status": 200,
+        "create_body": {
+          "id": "1a0ae17f-86b5-4a1d-a2ae-fc7580629383",
+          "email": "authlive.viewer.a.1789119295@sitesecure.test",
+          "role_key": "viewer",
+          "expires_at": "2026-09-25T09:35:40.321206+00:00",
+          "token": "BymnCWXvX3UJddV92EkDylsAwgzmY6fMYGwJzhIGY6U"
+        },
+        "accept_status": 200,
+        "accept_body": {
+          "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+          "status": "success"
+        }
+      },
+      "membership_role": "viewer"
+    },
+    {
+      "name": "invite_accept_sales",
+      "ok": true,
+      "severity": "P1",
+      "invite": {
+        "create_status": 200,
+        "create_body": {
+          "id": "2b88f717-48ed-4d32-8810-b28bc587ba22",
+          "email": "authlive.sales.a.1789119295@sitesecure.test",
+          "role_key": "sales",
+          "expires_at": "2026-09-25T09:35:56.646759+00:00",
+          "token": "-rMTU_IF4uiJIGeJnmIEukEpwhfxUeHpgCnxNA9gnYo"
+        },
+        "accept_status": 200,
+        "accept_body": {
+          "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+          "status": "success"
+        }
+      },
+      "membership_role": "sales"
+    },
+    {
+      "name": "invite_accept_manager",
+      "ok": true,
+      "severity": "P1",
+      "invite": {
+        "create_status": 200,
+        "create_body": {
+          "id": "974593fd-0845-4b2b-b4f2-97715525672d",
+          "email": "authlive.manager.a.1789119295@sitesecure.test",
+          "role_key": "manager",
+          "expires_at": "2026-09-25T09:36:12.659819+00:00",
+          "token": "325Qkun0CC05doHbi7ro4BcO0pNT7oVFB1Jzk4pzjfM"
+        },
+        "accept_status": 200,
+        "accept_body": {
+          "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+          "status": "success"
+        }
+      },
+      "membership_role": "manager"
+    },
+    {
+      "name": "owner_invite_owner_denied",
+      "ok": true,
+      "severity": "P1",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "BUSINESS_RULE",
+          "message": "לא ניתן להזמין בעלים. מינוי בעלים נעשה מחברי הסביבה.",
+          "details": {}
+        }
+      }
+    },
+    {
+      "name": "api_invite_founding_technician_denied",
+      "ok": true,
+      "severity": "P1",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "BUSINESS_RULE",
+          "message": "הפעולה חסומה לפי כללי התוכנית",
+          "details": {
+            "reason": "role_not_assignable",
+            "invite_role": "founding_technician"
+          }
+        }
+      }
+    },
+    {
+      "name": "tech_zero_customers",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/customers",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_zero_sites",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/sites",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_zero_jobs",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/jobs",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_zero_projects",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/projects",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_zero_service",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/service-calls",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_zero_documents",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/documents",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "tech_quotes_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_catalog",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/catalog/products",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_security",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_team",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/team",
+      "status": 404,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    {
+      "name": "tech_roles",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/roles",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_audit",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/audit",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_workspace_patch",
+      "ok": true,
+      "severity": "P1",
+      "method": "PATCH",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "assign_job_a",
+      "ok": true,
+      "severity": "P1",
+      "status": 200,
+      "body": {
+        "id": "727c9373-75f1-4340-b368-4acefd6827fe",
+        "user_id": "7f6ab21e-09e6-4959-a0bd-7d4827a2063b",
+        "resource_id": "0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c"
+      }
+    },
+    {
+      "name": "tech_assigned_jobs_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/jobs",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c",
+            "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+            "number": "J-00001",
+            "title": "Job A Assigned",
+            "kind": "service",
+            "status": "scheduled",
+            "project_id": null,
+            "service_call_id": null,
+            "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+            "site_id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+            "scheduled_for": null,
+            "started_at": null,
+            "completed_at": null,
+            "completion_notes": null,
+            "created_at": "2026-09-11T09:36:59.906968+00:00",
+            "updated_at": "2026-09-11T09:36:59.906968+00:00"
+          }
+        ],
+        "next_cursor": null,
+        "items_len": 1
+      }
+    },
+    {
+      "name": "tech_assigned_job_get",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/jobs/0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c",
+      "status": 200,
+      "body": {
+        "id": "0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c",
+        "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+        "number": "J-00001",
+        "title": "Job A Assigned",
+        "kind": "service",
+        "status": "scheduled",
+        "project_id": null,
+        "service_call_id": null,
+        "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+        "site_id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+        "scheduled_for": null,
+        "started_at": null,
+        "completed_at": null,
+        "completion_notes": null,
+        "created_at": "2026-09-11T09:36:59.906968+00:00",
+        "updated_at": "2026-09-11T09:36:59.906968+00:00"
+      }
+    },
+    {
+      "name": "tech_assigned_sites_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/sites",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+            "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+            "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+            "code": "AS-S-00001",
+            "name": "Site A Assigned",
+            "address": {},
+            "installation_status": "planned",
+            "access_notes": null,
+            "created_at": "2026-09-11T09:36:48.903732+00:00",
+            "updated_at": "2026-09-11T09:36:48.903732+00:00"
+          }
+        ],
+        "next_cursor": null,
+        "items_len": 1
+      }
+    },
+    {
+      "name": "tech_assigned_site_get",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/sites/c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+      "status": 200,
+      "body": {
+        "id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+        "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+        "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+        "code": "AS-S-00001",
+        "name": "Site A Assigned",
+        "address": {},
+        "installation_status": "planned",
+        "access_notes": null,
+        "created_at": "2026-09-11T09:36:48.903732+00:00",
+        "updated_at": "2026-09-11T09:36:48.903732+00:00"
+      }
+    },
+    {
+      "name": "tech_assigned_customer_get",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/customers/d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+      "status": 200,
+      "body": {
+        "id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+        "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+        "display_name": "Cust A Assigned",
+        "type": "private",
+        "status": "active",
+        "legal_name": null,
+        "tax_id": null,
+        "email": null,
+        "phone": null,
+        "billing_address": {},
+        "notes": null,
+        "created_at": "2026-09-11T09:36:37.378405+00:00",
+        "updated_at": "2026-09-11T09:36:37.378405+00:00"
+      }
+    },
+    {
+      "name": "tech_dashboard_today",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/dashboard",
+      "status": 200,
+      "body": {
+        "home_variant": "today",
+        "generated_at": "2026-09-11T09:42:04.155142+00:00",
+        "attention": [],
+        "today": {
+          "label_he": "היום",
+          "items": []
+        },
+        "activity": [],
+        "summary": {
+          "quotes_draft": 0,
+          "quotes_sent": 0,
+          "quotes_viewed": 0,
+          "quotes_approved": 0,
+          "quotes_rejected": 0,
+          "quotes_open": 0,
+          "quotes_approved_value": 0.0,
+          "quotes_open_value": 0.0,
+          "jobs_open": 1,
+          "jobs_overdue": 0,
+          "jobs_unassigned": 0
+        },
+        "recent_quotes": [],
+        "business_chart": null
+      }
+    },
+    {
+      "name": "tech_unassigned_job_not_in_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/jobs",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c",
+            "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+            "number": "J-00001",
+            "title": "Job A Assigned",
+            "kind": "service",
+            "status": "scheduled",
+            "project_id": null,
+            "service_call_id": null,
+            "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+            "site_id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+            "scheduled_for": null,
+            "started_at": null,
+            "completed_at": null,
+            "completion_notes": null,
+            "created_at": "2026-09-11T09:36:59.906968+00:00",
+            "updated_at": "2026-09-11T09:36:59.906968+00:00"
+          }
+        ],
+        "next_cursor": null,
+        "items_len": 1
+      }
+    },
+    {
+      "name": "tech_unassigned_site_not_in_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/sites",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+            "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+            "customer_id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+            "code": "AS-S-00001",
+            "name": "Site A Assigned",
+            "address": {},
+            "installation_status": "planned",
+            "access_notes": null,
+            "created_at": "2026-09-11T09:36:48.903732+00:00",
+            "updated_at": "2026-09-11T09:36:48.903732+00:00"
+          }
+        ],
+        "next_cursor": null,
+        "items_len": 1
+      }
+    },
+    {
+      "name": "tech_unassigned_customer_not_in_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/customers",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+            "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+            "display_name": "Cust A Assigned",
+            "type": "private",
+            "status": "active",
+            "legal_name": null,
+            "tax_id": null,
+            "email": null,
+            "phone": null,
+            "billing_address": {},
+            "notes": null,
+            "created_at": "2026-09-11T09:36:37.378405+00:00",
+            "updated_at": "2026-09-11T09:36:37.378405+00:00"
+          }
+        ],
+        "next_cursor": null,
+        "items_len": 1
+      }
+    },
+    {
+      "name": "idor_ws_customer",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/customers/d90f6369-db9d-4453-9467-c7a0c3aa4216",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "idor_ws_site",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/sites/e3a40e88-b511-4dfb-934f-5673b3f86a3f",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "idor_ws_job",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/jobs/48d34352-4c03-4aca-becc-a938780bc8db",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "idor_ws_project",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/projects/1cecf024-1802-4178-bdc4-cdf22eb05c6f",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "idor_ws_service",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/service-calls/acf107a4-c587-4e0d-b8c6-c7c3d74e3e7f",
+      "status": 405,
+      "body": {
+        "detail": "Method Not Allowed"
+      }
+    },
+    {
+      "name": "idor_ws_document",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/documents/5bc51b6a-738f-435d-b16f-2368c48c5d37/url",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "tech_quote_detail_on_assigned_site",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes/df556c65-7835-43a6-9f4c-cce6a6a3b23c",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "xws_customer",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/6a34d9e7-4bc8-4339-9b90-31c29f17e60d/customers/948d9428-2eb0-40c4-be73-61cc676d04c7",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "xws_site",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/6a34d9e7-4bc8-4339-9b90-31c29f17e60d/sites/5e5e1ab9-10b4-410d-959e-a17f8f7daa3b",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "xws_job",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/6a34d9e7-4bc8-4339-9b90-31c29f17e60d/jobs/e5920704-42bd-4f82-8f53-c6ca86fd22eb",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "xws_customers_list",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/6a34d9e7-4bc8-4339-9b90-31c29f17e60d/customers",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "xws_quote",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/6a34d9e7-4bc8-4339-9b90-31c29f17e60d/quotes/2adb625c-deb2-46e6-8083-e4b2d89cefe8",
+      "status": 404,
+      "body": {}
+    },
+    {
+      "name": "tech_quotes_still_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_catalog_still_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/catalog/products",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "tech_catalog_import",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/catalog/import/sessions",
+      "status": 404,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    {
+      "name": "security_technician",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "security_viewer",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "security_sales",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "security_manager",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 200,
+      "body": {
+        "role_key": "manager",
+        "signals": [
+          {
+            "key": "authentication",
+            "label_he": "Authentication",
+            "status": "healthy",
+            "detail_he": "Supabase Auth עם JWT על הבקשה הנוכחית"
+          },
+          {
+            "key": "rbac",
+            "label_he": "RBAC",
+            "status": "healthy",
+            "detail_he": "תפקיד פעיל: manager"
+          },
+          {
+            "key": "tenant_isolation",
+            "label_he": "Tenant Isolation",
+            "status": "healthy",
+            "detail_he": "הבקשה מוגבלת ל־workspace של החברות"
+          },
+          {
+            "key": "audit_logging",
+            "label_he": "Audit Logging",
+            "status": "healthy",
+            "detail_he": "צפייה ביומן כלולה בתוכנית"
+          },
+          {
+            "key": "api_security",
+            "label_he": "API Security",
+            "status": "healthy",
+            "detail_he": "authorize() ואז RLS. הסתרת כפתור אינה אבטחה"
+          },
+          {
+            "key": "sessions",
+            "label_he": "Sessions",
+            "status": "not_built",
+            "detail_he": "ניהול סשנים מפורט עדיין לא נבנה"
+          }
+        ]
+      }
+    },
+    {
+      "name": "security_owner",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 200,
+      "body": {
+        "role_key": "owner",
+        "signals": [
+          {
+            "key": "authentication",
+            "label_he": "Authentication",
+            "status": "healthy",
+            "detail_he": "Supabase Auth עם JWT על הבקשה הנוכחית"
+          },
+          {
+            "key": "rbac",
+            "label_he": "RBAC",
+            "status": "healthy",
+            "detail_he": "תפקיד פעיל: owner"
+          },
+          {
+            "key": "tenant_isolation",
+            "label_he": "Tenant Isolation",
+            "status": "healthy",
+            "detail_he": "הבקשה מוגבלת ל־workspace של החברות"
+          },
+          {
+            "key": "audit_logging",
+            "label_he": "Audit Logging",
+            "status": "healthy",
+            "detail_he": "צפייה ביומן כלולה בתוכנית"
+          },
+          {
+            "key": "api_security",
+            "label_he": "API Security",
+            "status": "healthy",
+            "detail_he": "authorize() ואז RLS. הסתרת כפתור אינה אבטחה"
+          },
+          {
+            "key": "sessions",
+            "label_he": "Sessions",
+            "status": "not_built",
+            "detail_he": "ניהול סשנים מפורט עדיין לא נבנה"
+          }
+        ]
+      }
+    },
+    {
+      "name": "viewer_cannot_create_customer",
+      "ok": true,
+      "severity": "P1",
+      "method": "POST",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/customers",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "viewer_security_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/security",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "viewer_team_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/team",
+      "status": 404,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    {
+      "name": "viewer_quotes_readable_or_documented_mismatch",
+      "ok": true,
+      "severity": "P3",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      },
+      "note": "grant may allow; RLS may empty — see report"
+    },
+    {
+      "name": "manager_audit_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/audit",
+      "status": 403,
+      "body": {}
+    },
+    {
+      "name": "manager_roles_deny",
+      "ok": false,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/roles",
+      "status": 200,
+      "body": [
+        {
+          "id": "72987e54-972b-4b84-ad1a-d881321ac4d5",
+          "key": "administrator",
+          "label_he": "מנהל מערכת",
+          "description": "ניהול סביבה, משתמשים והגדרות.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "administrator",
+          "grants": [
+            "audit.view",
+            "calendar.edit",
+            "calendar.view",
+            "catalog.edit",
+            "catalog.view",
+            "crm.create",
+            "crm.delete",
+            "crm.edit",
+            "crm.export",
+            "crm.view",
+            "dashboard.view",
+            "documents.delete",
+            "documents.upload",
+            "documents.view",
+            "finance.edit",
+            "finance.view",
+            "inventory.edit",
+            "inventory.view",
+            "jobs.assign",
+            "jobs.cancel",
+            "jobs.complete",
+            "jobs.create",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.edit",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.delete",
+            "leads.edit",
+            "leads.view",
+            "projects.close",
+            "projects.create",
+            "projects.delete",
+            "projects.edit",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.delete",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.override_price",
+            "quotes.send",
+            "quotes.view",
+            "quotes.view_cost",
+            "reports.export",
+            "reports.financial",
+            "reports.view",
+            "roles.manage",
+            "service.assign",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.branding",
+            "settings.general",
+            "settings.view",
+            "sites.create",
+            "sites.delete",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "users.invite",
+            "users.manage",
+            "users.view",
+            "warranties.issue",
+            "warranties.view",
+            "workspace.edit"
+          ],
+          "users_count": 0
+        },
+        {
+          "id": "bae6f2d5-a305-4f01-ad81-d82a9481c76a",
+          "key": "manager",
+          "label_he": "תפעול",
+          "description": "תפעול שטח, פרויקטים ותיקי אתר.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "manager",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "catalog.edit",
+            "catalog.view",
+            "crm.create",
+            "crm.delete",
+            "crm.edit",
+            "crm.export",
+            "crm.view",
+            "dashboard.view",
+            "documents.delete",
+            "documents.upload",
+            "documents.view",
+            "finance.view",
+            "inventory.edit",
+            "inventory.view",
+            "jobs.assign",
+            "jobs.cancel",
+            "jobs.complete",
+            "jobs.create",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.edit",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.delete",
+            "leads.edit",
+            "leads.view",
+            "projects.close",
+            "projects.create",
+            "projects.edit",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.delete",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.override_price",
+            "quotes.send",
+            "quotes.view",
+            "quotes.view_cost",
+            "reports.export",
+            "reports.view",
+            "service.assign",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.general",
+            "settings.view",
+            "sites.create",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "users.view",
+            "warranties.issue",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "bc81652a-7850-4dfb-83bb-a99677532e26",
+          "key": "owner",
+          "label_he": "בעלים",
+          "description": "בעלים — גישה מלאה. לא ניתן לצמצם.",
+          "is_system": true,
+          "is_locked": true,
+          "base_role_key": "owner",
+          "grants": [
+            "*"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "66bf2387-d9a0-4110-9b03-35796542a742",
+          "key": "sales",
+          "label_he": "מכירות",
+          "description": "מכירות, לידים והצעות מחיר.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "sales",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "catalog.view",
+            "crm.create",
+            "crm.edit",
+            "crm.view",
+            "dashboard.view",
+            "documents.upload",
+            "documents.view",
+            "jobs.view",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.edit",
+            "leads.view",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.send",
+            "quotes.view",
+            "service.view",
+            "settings.view",
+            "sites.view",
+            "systems.view",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "7d665de6-fca8-49f5-b22a-07c72086f003",
+          "key": "technician",
+          "label_he": "טכנאי",
+          "description": "עבודות שטח ושירות.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "technician",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "crm.view",
+            "dashboard.view",
+            "documents.upload",
+            "documents.view",
+            "jobs.complete",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.view",
+            "projects.view",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.view",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "warranties.issue",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "db8c06af-a153-4b40-92b9-acb8f0399d83",
+          "key": "viewer",
+          "label_he": "צפייה בלבד",
+          "description": "צפייה בלבד בכל המודולים הפתוחים.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "viewer",
+          "grants": [
+            "calendar.view",
+            "catalog.view",
+            "crm.view",
+            "dashboard.view",
+            "documents.view",
+            "jobs.view",
+            "knowledge.view",
+            "leads.view",
+            "projects.view",
+            "quotes.view",
+            "reports.view",
+            "service.view",
+            "settings.view",
+            "sites.view",
+            "systems.view",
+            "warranties.view"
+          ],
+          "users_count": 1
+        }
+      ]
+    },
+    {
+      "name": "sales_quotes_ok",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes",
+      "status": 200,
+      "body": {
+        "items": [],
+        "next_cursor": null,
+        "items_len": 0
+      }
+    },
+    {
+      "name": "sales_team_deny",
+      "ok": true,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/team",
+      "status": 404,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    {
+      "name": "tech_session_no_quotes_perm",
+      "ok": true,
+      "severity": "P1",
+      "permissions_sample": [
+        "calendar.edit",
+        "calendar.view",
+        "crm.view",
+        "dashboard.view",
+        "documents.upload",
+        "documents.view",
+        "jobs.complete",
+        "jobs.start",
+        "jobs.view",
+        "knowledge.view",
+        "projects.view",
+        "service.close",
+        "service.create",
+        "service.edit",
+        "service.view",
+        "settings.view",
+        "sites.edit",
+        "sites.view",
+        "systems.edit",
+        "systems.view"
+      ],
+      "features": [
+        "api",
+        "audit",
+        "automation",
+        "catalog",
+        "core",
+        "crm",
+        "finance",
+        "inventory",
+        "projects",
+        "quotes",
+        "reports",
+        "sales",
+        "service",
+        "settings",
+        "team"
+      ]
+    },
+    {
+      "name": "tech_session_has_jobs_perm",
+      "ok": true,
+      "severity": "P1",
+      "permissions_sample": [
+        "calendar.edit",
+        "calendar.view",
+        "crm.view",
+        "dashboard.view",
+        "documents.upload",
+        "documents.view",
+        "jobs.complete",
+        "jobs.start",
+        "jobs.view",
+        "knowledge.view",
+        "projects.view",
+        "service.close",
+        "service.create",
+        "service.edit",
+        "service.view",
+        "settings.view",
+        "sites.edit",
+        "sites.view",
+        "systems.edit",
+        "systems.view"
+      ]
+    },
+    {
+      "name": "plan_has_quotes_feature_but_role_denies",
+      "ok": true,
+      "severity": "P1",
+      "features": [
+        "api",
+        "audit",
+        "automation",
+        "catalog",
+        "core",
+        "crm",
+        "finance",
+        "inventory",
+        "projects",
+        "quotes",
+        "reports",
+        "sales",
+        "service",
+        "settings",
+        "team"
+      ],
+      "has_quotes_view": false
+    },
+    {
+      "name": "invite_tech_b_is_technician",
+      "ok": true,
+      "severity": "P1",
+      "invite": {
+        "create_status": 200,
+        "create_body": {
+          "id": "9383b30d-f9c0-4559-b60b-891be2b5a81d",
+          "email": "authlive.tech.b.1789119295@sitesecure.test",
+          "role_key": "technician",
+          "expires_at": "2026-09-25T09:46:34.543823+00:00",
+          "token": "bsRyo1jo0LJK-2lcKubMeXZ4C0r8mxoUTu28kgzkECw"
+        },
+        "accept_status": 200,
+        "accept_body": {
+          "workspace_id": "71183619-297e-4efb-99f7-e22c05420876",
+          "status": "success"
+        }
+      },
+      "role": "technician"
+    },
+    {
+      "name": "badge_present_no_quotes_grant",
+      "ok": true,
+      "severity": "P1",
+      "badges": [
+        "founding_technician"
+      ],
+      "permissions": [
+        "calendar.edit",
+        "calendar.view",
+        "crm.view",
+        "dashboard.view",
+        "documents.upload",
+        "documents.view",
+        "jobs.complete",
+        "jobs.start",
+        "jobs.view",
+        "knowledge.view",
+        "projects.view",
+        "service.close",
+        "service.create",
+        "service.edit",
+        "service.view",
+        "settings.view",
+        "sites.edit",
+        "sites.view",
+        "systems.edit",
+        "systems.view",
+        "warranties.issue",
+        "warranties.view"
+      ]
+    },
+    {
+      "name": "badge_not_platform_admin",
+      "ok": true,
+      "severity": "P1",
+      "is_platform_admin": false
+    },
+    {
+      "name": "ui_tech_nav_permissions_absent",
+      "ok": true,
+      "severity": "P1",
+      "missing_ok": [
+        "quotes.view",
+        "catalog.view",
+        "users.view",
+        "roles.manage",
+        "audit.view",
+        "workspace.billing",
+        "settings.general"
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "name": "manager_roles_deny",
+      "ok": false,
+      "severity": "P1",
+      "method": "GET",
+      "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/roles",
+      "status": 200,
+      "body": [
+        {
+          "id": "72987e54-972b-4b84-ad1a-d881321ac4d5",
+          "key": "administrator",
+          "label_he": "מנהל מערכת",
+          "description": "ניהול סביבה, משתמשים והגדרות.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "administrator",
+          "grants": [
+            "audit.view",
+            "calendar.edit",
+            "calendar.view",
+            "catalog.edit",
+            "catalog.view",
+            "crm.create",
+            "crm.delete",
+            "crm.edit",
+            "crm.export",
+            "crm.view",
+            "dashboard.view",
+            "documents.delete",
+            "documents.upload",
+            "documents.view",
+            "finance.edit",
+            "finance.view",
+            "inventory.edit",
+            "inventory.view",
+            "jobs.assign",
+            "jobs.cancel",
+            "jobs.complete",
+            "jobs.create",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.edit",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.delete",
+            "leads.edit",
+            "leads.view",
+            "projects.close",
+            "projects.create",
+            "projects.delete",
+            "projects.edit",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.delete",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.override_price",
+            "quotes.send",
+            "quotes.view",
+            "quotes.view_cost",
+            "reports.export",
+            "reports.financial",
+            "reports.view",
+            "roles.manage",
+            "service.assign",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.branding",
+            "settings.general",
+            "settings.view",
+            "sites.create",
+            "sites.delete",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "users.invite",
+            "users.manage",
+            "users.view",
+            "warranties.issue",
+            "warranties.view",
+            "workspace.edit"
+          ],
+          "users_count": 0
+        },
+        {
+          "id": "bae6f2d5-a305-4f01-ad81-d82a9481c76a",
+          "key": "manager",
+          "label_he": "תפעול",
+          "description": "תפעול שטח, פרויקטים ותיקי אתר.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "manager",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "catalog.edit",
+            "catalog.view",
+            "crm.create",
+            "crm.delete",
+            "crm.edit",
+            "crm.export",
+            "crm.view",
+            "dashboard.view",
+            "documents.delete",
+            "documents.upload",
+            "documents.view",
+            "finance.view",
+            "inventory.edit",
+            "inventory.view",
+            "jobs.assign",
+            "jobs.cancel",
+            "jobs.complete",
+            "jobs.create",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.edit",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.delete",
+            "leads.edit",
+            "leads.view",
+            "projects.close",
+            "projects.create",
+            "projects.edit",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.delete",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.override_price",
+            "quotes.send",
+            "quotes.view",
+            "quotes.view_cost",
+            "reports.export",
+            "reports.view",
+            "service.assign",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.general",
+            "settings.view",
+            "sites.create",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "users.view",
+            "warranties.issue",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "bc81652a-7850-4dfb-83bb-a99677532e26",
+          "key": "owner",
+          "label_he": "בעלים",
+          "description": "בעלים — גישה מלאה. לא ניתן לצמצם.",
+          "is_system": true,
+          "is_locked": true,
+          "base_role_key": "owner",
+          "grants": [
+            "*"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "66bf2387-d9a0-4110-9b03-35796542a742",
+          "key": "sales",
+          "label_he": "מכירות",
+          "description": "מכירות, לידים והצעות מחיר.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "sales",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "catalog.view",
+            "crm.create",
+            "crm.edit",
+            "crm.view",
+            "dashboard.view",
+            "documents.upload",
+            "documents.view",
+            "jobs.view",
+            "knowledge.view",
+            "leads.assign",
+            "leads.create",
+            "leads.edit",
+            "leads.view",
+            "projects.view",
+            "quotes.approve",
+            "quotes.create",
+            "quotes.edit",
+            "quotes.export",
+            "quotes.send",
+            "quotes.view",
+            "service.view",
+            "settings.view",
+            "sites.view",
+            "systems.view",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "7d665de6-fca8-49f5-b22a-07c72086f003",
+          "key": "technician",
+          "label_he": "טכנאי",
+          "description": "עבודות שטח ושירות.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "technician",
+          "grants": [
+            "calendar.edit",
+            "calendar.view",
+            "crm.view",
+            "dashboard.view",
+            "documents.upload",
+            "documents.view",
+            "jobs.complete",
+            "jobs.start",
+            "jobs.view",
+            "knowledge.view",
+            "projects.view",
+            "service.close",
+            "service.create",
+            "service.edit",
+            "service.view",
+            "settings.view",
+            "sites.edit",
+            "sites.view",
+            "systems.edit",
+            "systems.view",
+            "warranties.issue",
+            "warranties.view"
+          ],
+          "users_count": 1
+        },
+        {
+          "id": "db8c06af-a153-4b40-92b9-acb8f0399d83",
+          "key": "viewer",
+          "label_he": "צפייה בלבד",
+          "description": "צפייה בלבד בכל המודולים הפתוחים.",
+          "is_system": true,
+          "is_locked": false,
+          "base_role_key": "viewer",
+          "grants": [
+            "calendar.view",
+            "catalog.view",
+            "crm.view",
+            "dashboard.view",
+            "documents.view",
+            "jobs.view",
+            "knowledge.view",
+            "leads.view",
+            "projects.view",
+            "quotes.view",
+            "reports.view",
+            "service.view",
+            "settings.view",
+            "sites.view",
+            "systems.view",
+            "warranties.view"
+          ],
+          "users_count": 1
+        }
+      ]
+    }
+  ],
+  "workspaces": {
+    "a": "71183619-297e-4efb-99f7-e22c05420876",
+    "b": "6a34d9e7-4bc8-4339-9b90-31c29f17e60d"
+  },
+  "emails": {
+    "owner_a": "authlive.owner.a.1789119295@sitesecure.test",
+    "tech_a": "authlive.tech.a.1789119295@sitesecure.test",
+    "viewer_a": "authlive.viewer.a.1789119295@sitesecure.test",
+    "sales_a": "authlive.sales.a.1789119295@sitesecure.test",
+    "manager_a": "authlive.manager.a.1789119295@sitesecure.test",
+    "tech_b_invite": "authlive.tech.b.1789119295@sitesecure.test",
+    "owner_b": "authlive.owner.b.1789119295@sitesecure.test"
+  },
+  "resources": {
+    "cust_a": "d19cd12a-436c-435a-b098-cb0ec68f3cd4",
+    "cust_un": "d90f6369-db9d-4453-9467-c7a0c3aa4216",
+    "site_a": "c496aeac-ce4e-4ed8-b623-c002bd26eed6",
+    "site_un": "e3a40e88-b511-4dfb-934f-5673b3f86a3f",
+    "job_a": "0e3b7ec8-7ef2-4da3-abde-04d7f577fc9c",
+    "job_un": "48d34352-4c03-4aca-becc-a938780bc8db",
+    "proj_un": "1cecf024-1802-4178-bdc4-cdf22eb05c6f",
+    "svc_un": "acf107a4-c587-4e0d-b8c6-c7c3d74e3e7f",
+    "quote_a": "df556c65-7835-43a6-9f4c-cce6a6a3b23c",
+    "doc_un": "5bc51b6a-738f-435d-b16f-2368c48c5d37",
+    "cust_b": "948d9428-2eb0-40c4-be73-61cc676d04c7",
+    "site_b": "5e5e1ab9-10b4-410d-959e-a17f8f7daa3b",
+    "job_b": "e5920704-42bd-4f82-8f53-c6ca86fd22eb",
+    "quote_b": "2adb625c-deb2-46e6-8083-e4b2d89cefe8",
+    "svc_a": "7ec2aa98-531d-4cfb-ba8a-de751b6934ac",
+    "doc_a": "36628e52-93c9-447a-b6a7-5a272928bd2e"
+  },
+  "viewer_quotes": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes",
+    "status": 200,
+    "body": {
+      "items": [],
+      "next_cursor": null,
+      "items_len": 0
+    }
+  },
+  "sales_quote_detail": {
+    "method": "GET",
+    "path": "/api/v1/workspaces/71183619-297e-4efb-99f7-e22c05420876/quotes/df556c65-7835-43a6-9f4c-cce6a6a3b23c",
+    "status": 404,
+    "body": {}
+  },
+  "summary": {
+    "total_checks": 65,
+    "failures": 1,
+    "p0": 0,
+    "p1": 1,
+    "viewer_quotes_status": 200,
+    "viewer_quotes_items": 0
+  },
+  "verdict": "AUTHORIZATION LIVE VERIFICATION FAIL — PRIVATE BETA BLOCKED"
+}

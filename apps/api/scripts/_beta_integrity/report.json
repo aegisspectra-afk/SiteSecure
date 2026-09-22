@@ -1,0 +1,70 @@
+{
+  "checks": [
+    {
+      "name": "env_fe_api",
+      "ok": true,
+      "detail": "fe=200"
+    },
+    {
+      "name": "register_login",
+      "ok": true,
+      "detail": "beta.integrity.c57c7351@sitesecure.test"
+    },
+    {
+      "name": "workspace",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "golden_empty",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "dashboard",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "catalog_import_list",
+      "ok": true,
+      "detail": "commit=200 created=320 list100=100 limit1000=400 search=50"
+    },
+    {
+      "name": "bulk_pricing",
+      "ok": true,
+      "detail": "{'dry_run': False, 'matched': 50, 'will_update': 50, 'updated': 50, 'skipped': 0, 'sample': [{'id': 'ae0534f8-f539-4a7e-"
+    },
+    {
+      "name": "customer_site",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cctv_apply_to_quote",
+      "ok": true,
+      "detail": "obsolete=404 rec=200 applied=4 items=6 blocking=False"
+    },
+    {
+      "name": "pdf",
+      "ok": true,
+      "detail": "status=200 bytes=33997"
+    },
+    {
+      "name": "quote_to_project",
+      "ok": true,
+      "detail": "200 {\"id\":\"e36af582-bb56-4d30-abc5-d9e942f66604\",\"workspace_id\":\"cd0f6444-afeb-4d63-9274-cab677eb9f47\",\"name\":\"Quote c57c735"
+    },
+    {
+      "name": "today_field_photo",
+      "ok": true,
+      "detail": "job=2bc15cc2-a33b-4d93-8c55-caddc2de3467 start=200 cl=200 up=200"
+    },
+    {
+      "name": "platform_admin_denial",
+      "ok": true,
+      "detail": "403"
+    }
+  ],
+  "failed": []
+}

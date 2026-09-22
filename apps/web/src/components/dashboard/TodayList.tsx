@@ -1,19 +1,21 @@
-import { Button, Status } from "@site-secure/ui";
+import { ActivityRow, Button, Status } from "@site-secure/ui";
 import type { DashboardItem } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
+import { MapPin } from "lucide-react";
 import { he } from "../../i18n/he";
 
-function formatTime(value: string | null): string | null {
+function formatTime(value: string | null | undefined): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function severityTone(severity: DashboardItem["severity"]): "warning" | "info" | "neutral" | "success" {
+function statusTone(status: string | null | undefined, severity: DashboardItem["severity"]): "warning" | "info" | "neutral" | "success" {
+  if (status === "completed" || severity === "info") return "success";
+  if (status === "en_route" || status === "arrived" || status === "in_progress" || status === "blocked") return "warning";
   if (severity === "now") return "warning";
   if (severity === "next") return "info";
-  if (severity === "info") return "success";
   return "neutral";
 }
 
@@ -29,14 +31,17 @@ function sectionLabel(key: "now" | "next" | "later" | "done"): string {
 }
 
 function bucketFor(item: DashboardItem): "now" | "next" | "later" | "done" {
-  if (item.severity === "info" || item.actions.length === 0 && item.title_he === he.jobStatuses.completed) {
-    // completed items use severity info
-    if (item.severity === "info") return "done";
-  }
+  if (item.severity === "info" || item.status === "completed") return "done";
   if (item.severity === "now") return "now";
-  if (item.severity === "next") return "next";
-  if (item.severity === "info") return "done";
-  return "later";
+  if (item.severity === "later") return "later";
+  return "next";
+}
+
+function statusLabel(item: DashboardItem): string {
+  if (item.status && item.status in he.jobStatuses) {
+    return he.jobStatuses[item.status as keyof typeof he.jobStatuses];
+  }
+  return item.title_he;
 }
 
 export function TodayList({
@@ -92,10 +97,10 @@ function TodayCard({
   busyId?: string | null;
   onAction?: (id: string, action: string) => void;
 }) {
-  const time = formatTime(item.scheduled_for);
+  const start = formatTime(item.scheduled_for);
+  const end = formatTime(item.scheduled_end);
   const busy = busyId === item.entity_id;
   const isJob = item.entity_type === "job";
-  const phone = item.customer_phone?.trim() || "";
   const address = item.site_address?.trim() || "";
   const primary =
     item.actions.find((a) => a === "en_route") ||
@@ -116,44 +121,43 @@ function TodayCard({
 
   return (
     <li className="field-job-card">
-      <div className="field-job-card-meta">
-        {time ? (
-          <p className="public-mono text-lg font-semibold tracking-[-0.02em] text-fg" dir="ltr">
-            {time}
-          </p>
-        ) : (
-          <p className="text-sm text-fg-muted">{he.fieldNoSchedule}</p>
-        )}
-        <Status label={item.title_he} tone={severityTone(item.severity)} />
-      </div>
-
-      <div className="min-w-0">
-        <p className="public-mono text-[10px] tracking-[0.14em] text-fg-subtle">{he.fieldWhereKicker}</p>
-        <p className="mt-1 text-base font-semibold text-fg">{item.site_name || he.fieldSiteUnknown}</p>
-        {item.customer_name ? <p className="mt-1 text-sm text-fg-muted">{item.customer_name}</p> : null}
-        {address ? (
-          <p className="mt-1 text-sm text-fg-muted">{address}</p>
-        ) : (
-          <p className="mt-1 text-xs text-fg-subtle">{he.todayAddressMissing}</p>
-        )}
-        <p className="public-mono mt-2 text-xs text-fg-muted" dir="ltr">
-          {item.number}
-        </p>
-      </div>
+      <ActivityRow
+        leading={<MapPin aria-hidden />}
+        title={item.site_name || he.fieldSiteUnknown}
+        subtitle={
+          <>
+            <span>{item.title_he}</span>
+            {item.customer_name ? <span>{` · ${item.customer_name}`}</span> : null}
+          </>
+        }
+        meta={
+          <>
+            <span className="public-mono ltr-meta" dir="ltr">
+              {item.number}
+            </span>
+            {start ? (
+              <span className="public-mono ltr-meta" dir="ltr">
+                {" · "}
+                {start}
+                {end ? `–${end}` : ""}
+              </span>
+            ) : (
+              <span>{` · ${he.fieldNoSchedule}`}</span>
+            )}
+            {address ? <span className="ss-activity-row-address">{address}</span> : null}
+          </>
+        }
+        trailing={<Status label={statusLabel(item)} tone={statusTone(item.status, item.severity)} />}
+      />
 
       <div className="field-job-card-actions">
         {address ? (
-          <a className="field-job-open" href={mapsUrl(address)} target="_blank" rel="noreferrer">
+          <a className="field-job-navlink" href={mapsUrl(address)} target="_blank" rel="noreferrer">
             {he.navigateMaps}
           </a>
         ) : null}
-        {phone ? (
-          <a className="field-job-open" href={`tel:${phone}`}>
-            {he.todayCall}
-          </a>
-        ) : null}
         {isJob ? (
-          <Link to="/app/jobs/$jobId" params={{ jobId: item.entity_id }} className="field-job-open">
+          <Link to="/app/jobs/$jobId" params={{ jobId: item.entity_id }} className="field-job-navlink">
             {he.todayOpenJob}
           </Link>
         ) : null}

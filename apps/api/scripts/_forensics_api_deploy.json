@@ -1,0 +1,69 @@
+{
+  "web": "https://site-secure-umber.vercel.app",
+  "asset": "/assets/index-CKkTq_u7.js",
+  "web_versions": [
+    "0.1.6-beta"
+  ],
+  "onrender_hosts_in_bundle": [
+    "https://site-secure-api-staging.onrender.com"
+  ],
+  "relative_api_refs": 10,
+  "WEB_PRODUCTION_API_BASE_URL": "https://site-secure-api-staging.onrender.com",
+  "api_dns_ips": [
+    "216.24.57.15",
+    "216.24.57.7"
+  ],
+  "tls_subject": [
+    [
+      [
+        "commonName",
+        "onrender.com"
+      ]
+    ]
+  ],
+  "tls_san": [
+    [
+      "DNS",
+      "onrender.com"
+    ],
+    [
+      "DNS",
+      "*.onrender.com"
+    ]
+  ],
+  "health": {
+    "status": 200,
+    "body": "{\"ok\":true,\"version\":\"v1\"}"
+  },
+  "response_headers": {
+    "server": "cloudflare",
+    "x-render-origin-server": "uvicorn",
+    "x-request-id": "964e37a0-3b1c-4f89-99b1-459f87832f48",
+    "cf-ray": "a3a94e87a9ad9741-FRA"
+  },
+  "render_api_key_present": false,
+  "empty_grants_probe": {
+    "api_used": "https://site-secure-api-staging.onrender.com",
+    "grants_before_had_quotes": false,
+    "session_permissions_commercial": [
+      "catalog.view",
+      "quotes.view"
+    ],
+    "session_has_quotes_view": true,
+    "session_has_catalog_view": true,
+    "db_grants_after_session_call": [],
+    "db_after_session_has_quotes": false,
+    "db_after_session_has_catalog": false,
+    "restored_ok": true,
+    "strip_effective": false,
+    "image_catalog_looks_current": false
+  },
+  "dockerfile_copies_authz_package": true,
+  "dockerfile_authz_catalog_env": "/src/packages/authz/catalog.json",
+  "pip_install_packages": [
+    "app"
+  ],
+  "resolve_role_grants_module": "app.workspace_rbac.resolve_role_grants",
+  "strip_helper_source": "apps/api/app/workspace_rbac.py::strip_technician_commercial_grants",
+  "catalog_source": "packages/authz/catalog.json via AUTHZ_CATALOG_PATH"
+}

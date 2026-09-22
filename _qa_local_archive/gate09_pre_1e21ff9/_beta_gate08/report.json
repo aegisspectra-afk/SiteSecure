@@ -1,0 +1,725 @@
+{
+  "gate": "BETA_GATE_08",
+  "ts": "2026-09-08T20:42:08.417Z",
+  "integrity": {
+    "branch": "feat/quote-cpq-phase-ab",
+    "head": "c3bbff8cef526952718396142427b3729098d290",
+    "tag_beta_0_1_1": "c3bbff8cef526952718396142427b3729098d290",
+    "app_version": "0.1.1-beta",
+    "stash_present": true,
+    "dirty_tracked": [],
+    "routeTree_blob_equals_head": true,
+    "content_dirty": [],
+    "candidate_tree_equals_tested_tree": "PASS"
+  },
+  "workbook": {
+    "path_outside_repo": true,
+    "filename": "מחירון ג.ברס למוצרי Uniview-Technologies 2026-v1.xlsx",
+    "parse_status": 200,
+    "sheet_count": 11,
+    "sheets": [
+      {
+        "index": 0,
+        "name": "תפריט",
+        "row_count": 24,
+        "header_row": null,
+        "header_confidence": 0,
+        "suggested_include": false,
+        "suggested_map": {}
+      },
+      {
+        "index": 1,
+        "name": " IPC מצלמות רשת",
+        "row_count": 45,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "5": "cost",
+          "7": "name",
+          "8": "description",
+          "9": "attributes.resolution_mp",
+          "10": "attributes.form_factor",
+          "13": "attributes.codec",
+          "15": "attributes.lens_mm",
+          "22": "attributes.poe"
+        }
+      },
+      {
+        "index": 2,
+        "name": " NVR מערכות הקלטה",
+        "row_count": 16,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "5": "cost",
+          "6": "name",
+          "7": "description",
+          "10": "attributes.drive_bays",
+          "12": "attributes.channels",
+          "13": "attributes.max_incoming_bandwidth_mbps",
+          "14": "attributes.codec",
+          "15": "attributes.poe"
+        }
+      },
+      {
+        "index": 3,
+        "name": "PTZ מצלמות ממונעות",
+        "row_count": 10,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "5": "cost",
+          "6": "name",
+          "7": "description",
+          "8": "attributes.resolution_mp",
+          "9": "attributes.form_factor",
+          "13": "attributes.lens_mm",
+          "20": "attributes.poe"
+        }
+      },
+      {
+        "index": 4,
+        "name": "LPR מצלמות",
+        "row_count": 7,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "5": "cost",
+          "6": "name",
+          "7": "description",
+          "8": "attributes.resolution_mp",
+          "9": "attributes.form_factor",
+          "13": "attributes.lens_mm",
+          "20": "attributes.poe"
+        }
+      },
+      {
+        "index": 5,
+        "name": "TVI מצלמות אנלוגיות",
+        "row_count": 11,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "4": "cost",
+          "5": "name",
+          "6": "description",
+          "7": "attributes.resolution_mp",
+          "8": "attributes.form_factor",
+          "12": "attributes.lens_mm",
+          "19": "attributes.poe"
+        }
+      },
+      {
+        "index": 6,
+        "name": " DVR מערכות הקלטה",
+        "row_count": 7,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "2": "model",
+          "5": "cost",
+          "6": "name",
+          "7": "description",
+          "10": "attributes.drive_bays",
+          "12": "attributes.channels",
+          "13": "attributes.max_incoming_bandwidth_mbps",
+          "14": "attributes.resolution_mp"
+        }
+      },
+      {
+        "index": 7,
+        "name": "אביזרים נלווים",
+        "row_count": 13,
+        "header_row": 2,
+        "header_confidence": 1,
+        "suggested_include": true,
+        "suggested_map": {
+          "0": "sku",
+          "1": "model",
+          "3": "cost",
+          "4": "name",
+          "5": "description"
+        }
+      },
+      {
+        "index": 8,
+        "name": "Accessory",
+        "row_count": 0,
+        "header_row": null,
+        "header_confidence": 0,
+        "suggested_include": false,
+        "suggested_map": {}
+      },
+      {
+        "index": 9,
+        "name": "!PTZ Dome",
+        "row_count": 36,
+        "header_row": 1,
+        "header_confidence": 0.9166666666666666,
+        "suggested_include": false,
+        "suggested_map": {
+          "0": "model",
+          "2": "description"
+        }
+      },
+      {
+        "index": 10,
+        "name": "WpsReserved_CellImgList",
+        "row_count": 0,
+        "header_row": null,
+        "header_confidence": 0,
+        "suggested_include": false,
+        "suggested_map": {}
+      }
+    ],
+    "selected_sheets": [
+      "IPC מצלמות רשת",
+      "PTZ מצלמות ממונעות",
+      "NVR מערכות הקלטה",
+      "אביזרים נלווים"
+    ]
+  },
+  "mapping": {
+    "categories": {
+      "before_count": 134,
+      "ensure_status": 200,
+      "ensure_body": {
+        "ok": true,
+        "roots": 10,
+        "leaves": 124,
+        "categories": 134
+      },
+      "roots": 10,
+      "leaves": 124,
+      "products_before": 0,
+      "products_after_ensure": 0
+    },
+    "header_detection": [
+      {
+        "sheet": "IPC מצלמות רשת",
+        "detected_header_row": 2,
+        "ui_header_row": 2,
+        "confidence": 1,
+        "manual_correction": false
+      },
+      {
+        "sheet": "PTZ מצלמות ממונעות",
+        "detected_header_row": 2,
+        "ui_header_row": 2,
+        "confidence": 1,
+        "manual_correction": false
+      },
+      {
+        "sheet": "NVR מערכות הקלטה",
+        "detected_header_row": 2,
+        "ui_header_row": 2,
+        "confidence": 1,
+        "manual_correction": false
+      },
+      {
+        "sheet": "אביזרים נלווים",
+        "detected_header_row": 2,
+        "ui_header_row": 2,
+        "confidence": 1,
+        "manual_correction": false
+      }
+    ],
+    "cost_mappings": [
+      {
+        "sheet": "IPC מצלמות רשת",
+        "col": 5,
+        "mapped_to": "cost",
+        "list_price_col": false,
+        "auto_suggested_cost": true
+      },
+      {
+        "sheet": "PTZ מצלמות ממונעות",
+        "col": 5,
+        "mapped_to": "cost",
+        "list_price_col": false,
+        "auto_suggested_cost": true
+      },
+      {
+        "sheet": "NVR מערכות הקלטה",
+        "col": 5,
+        "mapped_to": "cost",
+        "list_price_col": false,
+        "auto_suggested_cost": true
+      },
+      {
+        "sheet": "אביזרים נלווים",
+        "col": 3,
+        "mapped_to": "cost",
+        "list_price_col": false,
+        "auto_suggested_cost": true
+      }
+    ],
+    "category_assigned": [
+      {
+        "sheet": "IPC מצלמות רשת",
+        "kind": "cam",
+        "category": "וידאו ואבטחה · מצלמות IP"
+      },
+      {
+        "sheet": "PTZ מצלמות ממונעות",
+        "kind": "ptz",
+        "category": "וידאו ואבטחה · מצלמות PTZ"
+      },
+      {
+        "sheet": "NVR מערכות הקלטה",
+        "kind": "nvr",
+        "category": "וידאו ואבטחה · NVR"
+      },
+      {
+        "sheet": "אביזרים נלווים",
+        "kind": "acc",
+        "category": "וידאו ואבטחה · אביזרי מצלמות"
+      }
+    ],
+    "preview_cta": {
+      "enabled": true,
+      "title": null
+    }
+  },
+  "semantics": {
+    "cost_copied_to_list_count": 0,
+    "attr_samples": [],
+    "persisted_camera": {
+      "sku": "32323212401",
+      "cost": 227,
+      "list_price": 0,
+      "attrs": {
+        "poe": true,
+        "codec": "Ultra 265",
+        "form_factor": "bullet",
+        "resolution_mp": 4
+      },
+      "manufacturer": "Uniview"
+    },
+    "persisted_nvr": {
+      "sku": "32323301340",
+      "cost": 367,
+      "list_price": 0,
+      "attrs": {
+        "channels": 4,
+        "drive_bays": 1,
+        "max_incoming_bandwidth_mbps": 80
+      }
+    }
+  },
+  "import": {
+    "preview_status": 200,
+    "preview_summary": {
+      "detected": 58,
+      "ready": 0,
+      "warning": 58,
+      "blocked": 0,
+      "duplicates": 0,
+      "will_create": 58,
+      "will_update": 0,
+      "will_skip": 0
+    }
+  },
+  "persistence": {
+    "list_status": 200,
+    "total": 58,
+    "page1_count": 50,
+    "page2_count": 50,
+    "search_count": 3,
+    "limit_1000_status": 400,
+    "manufacturer_filter": 20,
+    "ui_shows_products": true
+  },
+  "duplicate": {
+    "before": 58,
+    "after_total": 58,
+    "preview_summary": {
+      "detected": 33,
+      "ready": 0,
+      "warning": 33,
+      "blocked": 0,
+      "duplicates": 33,
+      "will_create": 0,
+      "will_update": 0,
+      "will_skip": 33
+    },
+    "created": 0
+  },
+  "bulk_pricing": {
+    "api_calls": [
+      {
+        "status": 200,
+        "json": {
+          "dry_run": true,
+          "matched": 58,
+          "will_update": 58,
+          "updated": 0,
+          "skipped": 0,
+          "sample": [
+            {
+              "id": "389b008e-ca05-48d3-b5f0-c316459758c1",
+              "sku": "32323700002",
+              "name": "זרוע לקיר למצלמות כיפה של חברת UNIVIEW,",
+              "cost": 102,
+              "list_price_before": 0,
+              "list_price_after": 132.6
+            },
+            {
+              "id": "53ce7e84-4467-4b81-a0cc-69258bdf3bbf",
+              "sku": "32323700001",
+              "name": "זרוע לקיר למצלמות כיפה של חברת UNIVIEW,",
+              "cost": 102,
+              "list_price_before": 0,
+              "list_price_after": 132.6
+            },
+            {
+              "id": "eb5f44d5-5c8a-49db-bca9-f14fa3aa5ae0",
+              "sku": "32323100008",
+              "name": "חבק לעמוד לקופסאת חיבורים למצלמות צינור של חברת UNIVIEW,",
+              "cost": 40,
+              "list_price_before": 0,
+              "list_price_after": 52
+            },
+            {
+              "id": "45898b40-cf4e-4f60-814f-467675351565",
+              "sku": "32323301316",
+              "name": "מערכת הקלטה NVR ל16 ערוצים,\n-עד 12 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 10TB",
+              "cost": 469,
+              "list_price_before": 0,
+              "list_price_after": 609.7
+            },
+            {
+              "id": "e3848821-e921-4e11-9f86-3a3a4a854ea4",
+              "sku": "32323501316",
+              "name": "מערכת הקלטה NVR ל16 ערוצים,\n-עד 16 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 16TB",
+              "cost": 531,
+              "list_price_before": 0,
+              "list_price_after": 690.3
+            },
+            {
+              "id": "038aee87-9a29-4c6b-8f83-b1569e6b3a9e",
+              "sku": "32323302032",
+              "name": "מערכת הקלטה NVR ל32 ערוצים,\n-עד 12 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד 2 כוננים קשיחים  בנפח של 10TB",
+              "cost": 758,
+              "list_price_before": 0,
+              "list_price_after": 985.4
+            },
+            {
+              "id": "c9ec36d9-b599-43b3-aa8f-883dbdde81f9",
+              "sku": "32323502232",
+              "name": "מערכת הקלטה NVR ל32 ערוצים,\n-עד 16 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד 2 כוננים קשיחים  בנפח של 16TB,\nתומך RAID-1\n-",
+              "cost": 976,
+              "list_price_before": 0,
+              "list_price_after": 1268.8
+            },
+            {
+              "id": "3e1d49e7-c37d-48f8-aafb-382858fb54d0",
+              "sku": "32323504464",
+              "name": "מערכת הקלטה NVR ל32 ערוצים,\n-עד 16 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד 4 כוננים קשיחים  בנפח של 16TB,\nתומך RAID-0,1,5,",
+              "cost": 2421,
+              "list_price_before": 0,
+              "list_price_after": 3147.3
+            },
+            {
+              "id": "91257bcf-ec66-4620-bae8-478186a5baf4",
+              "sku": "32323301340",
+              "name": "מערכת הקלטה NVR ל4 ערוצים,\n-עד 12 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 10TB",
+              "cost": 367,
+              "list_price_before": 0,
+              "list_price_after": 477.1
+            },
+            {
+              "id": "7f10e7c3-435a-4699-9484-d267eddcde92",
+              "sku": "32323301380",
+              "name": "מערכת הקלטה NVR ל8 ערוצים,\n-עד 12 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 10TB",
+              "cost": 422,
+              "list_price_before": 0,
+              "list_price_after": 548.6
+            },
+            {
+              "id": "f4fe605e-76e7-44a2-a0e1-d9eb589908ec",
+              "sku": "32323501380",
+              "name": "מערכת הקלטה NVR ל8 ערוצים,\n-עד 16 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 16TB",
+              "cost": 485,
+              "list_price_before": 0,
+              "list_price_after": 630.5
+            },
+            {
+              "id": "68deca4d-fbc3-4f25-a248-e1282224c45d",
+              "sku": "32323301480",
+              "name": "מערכת הקלטה NVR ל8 ערוצים,\nכולל 8 ערוצי POE מובנים,\n-עד 12 מגה רזולוציה להקלטה,\n-ללא כונן קשיח מובנה\n-עד כונן קשיח 1 בנפח של 10TB",
+              "cost": 742,
+              "list_price_before": 0,
+              "list_price_after": 964.6
+            },
+            {
+              "id": "05ff108c-8ef5-41ef-985b-78fb6ab58b55",
+              "sku": "32323360501",
+              "name": "מצלמה כיפה אנטי-ואנדל פאנורמית 180°,\n5MP מסדרת Prime \nעדשה קבועה 1.68 מ\"מ, \nתאורת לילה: IR ל20 מטר, \nמיקרופון מובנה",
+              "cost": 578,
+              "list_price_before": 0,
+              "list_price_after": 751.4
+            },
+            {
+              "id": "a52badac-b63e-4536-9ba7-5be8c901124f",
+              "sku": "32323815001",
+              "name": "מצלמה כיפה אנטי-ואנדל פאנורמית 360°,\n5MP מסדרת Prime \nעדשה קבועה 1.4 מ\"מ, \nתאורת לילה: IR ל10 מטר, \nמיקרופון כפול מובנה",
+              "cost": 984,
+              "list_price_before": 0,
+              "list_price_after": 1279.2
+            },
+            {
+              "id": "010f9bf3-3a2d-4dbf-9800-c1481d6e0e92",
+              "sku": "32323682442",
+              "name": "מצלמה ממונעת PTZ , \n4MP לתנאי חוץ מסדרת  PRO - Light-Hunter,\nעדשה חשמלית: Zx42,\n 6-252 מ\"מ, \nתאורת לילה: לייזר ל500 מטר,\nמעקב אוטומטי אחרי דמות אדם ורכב.",
+              "cost": 6231,
+              "list_price_before": 0,
+              "list_price_after": 8100.3
+            },
+            {
+              "id": "85059499-c979-4149-9098-6fca4f58977d",
+              "sku": "32323941425",
+              "name": "מצלמה ממונעת PTZ , \nבעלת עדשה כפולה 4MP לתנאי חוץ מסדרת PRIME - Light-Hunter,\nעדשה קבועה פאנורמית 4 מ\"מ,\nעדשה חשמלית ממונעת 4.8-120 מ\"מ Zx25.\nתאורת לילה: IR ל100 מטר,\nמעקב אוטומטי אחרי דמות אדם ורכב.",
+              "cost": 1765,
+              "list_price_before": 0,
+              "list_price_after": 2294.5
+            },
+            {
+              "id": "9f23f16d-a469-4d28-bfc6-e21c85a6ed9d",
+              "sku": "32323642425",
+              "name": "מצלמה ממונעת PTZ , אנטי-ואנדל 4MP לתנאי חוץ מסדרת Light-Hunter,\nעדשה חשמלית: Zx25,\n 4.8-120 מ\"מ, \nתאורת לילה: IR ל100 מטר,\nמעקב אוטומטי אחרי דמות אדם ורכב.",
+              "cost": 1601,
+              "list_price_before": 0,
+              "list_price_after": 2081.3
+            },
+            {
+              "id": "2df49741-11eb-44d4-ab1e-59d094af9124",
+              "sku": "32323662433",
+              "name": "מצלמה ממונעת PTZ , אנטי-ואנדל 4MP לתנאי חוץ מסדרת PRIME - Light-Hunter,\nעדשה חשמלית: Zx33,\n 4.5-148.5 מ\"מ, \nתאורת לילה: IR ל150 מטר,\nמעקב אוטומטי אחרי דמות אדם ורכב.",
+              "cost": 2499,
+              "list_price_before": 0,
+              "list_price_after": 3248.7
+            },
+            {
+              "id": "dc9850a0-5f12-433a-a005-ac7f4503e339",
+              "sku": "32323210501",
+              "name": "מצלמה צינור פאנורמית 180°,\n5MP מסדרת Prime \nעדשה קבועה 1.68 מ\"מ, \nתאורת לילה: IR ל20 מטר, \nמיקרופון מובנה",
+              "cost": 617,
+              "list_price_before": 0,
+              "list_price_after": 802.1
+            },
+            {
+              "id": "bb8bcb33-ba42-4fdb-94e9-1e41e471b59b",
+              "sku": "32323632401",
+              "name": "מצלמת PTZ צבע מלא בלילה, \n4MP לתנאי חוץ מסדרת Color-Hunter-Wise-ISP\nעדשה חשמלית 2.7-13.5 מ\"מ, \nתאורת לילה: WarmLight ל40 מטר, \nאורות אזהרה בצבע כחול אדום בזמן גילוי והשמעת הודעות חירום,\nמעקב אוטומטי אחרי דמות אדם,\nמיקרופון וספיקר מובנים",
+              "cost": 898,
+              "list_price_before": 0,
+              "list_price_after": 1167.4
+            },
+            {
+              "id": "5fe13d0c-34f0-46db-ae9d-655934b2b643",
+              "sku": "32323363401",
+              "name": "מצלמת כיפה 4MP לתנאי חוץ מסדרת EasyBasic-IR-VF\nעדשה חשמלית 2.8-12 מ\"מ, תאורת לילה: IR ל40 מטר, מיקרופון מובנה",
+              "cost": 492,
+              "list_price_before": 0,
+              "list_price_after": 639.6
+            },
+            {
+              "id": "f11e358b-b47a-4429-866c-a3a7f1f9b9e3",
+              "sku": "32323361401",
+              "name": "מצלמת כיפה 4MP לתנאי חוץ מסדרת EasyBasic-IR,\nעדשה קבועה 2.8 מ\"מ, תאורת לילה: IR ל30 מטר, מיקרופון מובנה",
+              "cost": 227,
+              "list_price_before": 0,
+              "list_price_after": 295.1
+            },
+            {
+              "id": "1e16415e-fc2e-4e29-b794-bef43f4f0b60",
+              "sku": "32323361801",
+              "name": "מצלמת כיפה 8MP לתנאי חוץ מסדרת EasyStar-IR,\nעדשה קבועה 2.8 מ\"מ, תאורת לילה: IR ל30 מטר, מיקרופון מובנה",
+              "cost": 453,
+              "list_price_before": 0,
+              "list_price_after": 588.9
+            },
+            {
+              "id": "ed9427fa-be8e-4649-aa6c-a9df67addd17",
+              "sku": "32323363471",
+              "name": "מצלמת כיפה OwelView צבע מלא בלילה, אנטי-קורוזיה ואנטי-ואנדל \n4MP לתנאי חוץ מסדרת Prime III-Color Hunter,\nעדשה קבועה 2.8 מ\"מ, \nתאורת לילה WarmLight ל30 מטר, \nמיקרופון וספיקר מובנים",
+              "cost": 641,
+              "list_price_before": 0,
+              "list_price_after": 833.3
+            },
+            {
+              "id": "946bf280-baa0-4014-b632-271e055191ce",
+              "sku": "32323352401",
+              "name": "מצלמת כיפה א.ואנדל צבע מלא בלילה 4MP לתנאי חוץ מסדרת OwelView,\nעדשה קבועה 2.8 מ\"מ, \nתאורת לילה:\nAperture  F1.0\n WarmLight ל30 מטר, \nמיקרופון מובנה",
+              "cost": 297,
+              "list_price_before": 0,
+              "list_price_after": 386.1
+            }
+          ],
+          "mode": "markup_percent",
+          "value": 30
+        }
+      }
+    ],
+    "cost_before": 227,
+    "list_before": 0,
+    "cost_after": 227,
+    "list_after": 0,
+    "nvr_list_after": 477.1,
+    "expected": 295.1
+  },
+  "quote": {
+    "create_status": 200,
+    "url": "http://localhost:5173/app/quotes/692aabd7-3b11-4575-adb9-c5ad936ad1a5"
+  },
+  "cctv": {
+    "scenarios": [
+      {
+        "ok": false,
+        "reason": "no_builder_cta",
+        "cams": 4
+      },
+      {
+        "ok": false,
+        "reason": "no_builder_cta",
+        "cams": 8
+      },
+      {
+        "ok": false,
+        "reason": "no_builder_cta",
+        "cams": 16
+      }
+    ]
+  },
+  "apply": {
+    "after_refresh_lines": 0,
+    "line_skus": [],
+    "line_prices": []
+  },
+  "performance": {
+    "catalog_initial_ms": 5533,
+    "upload_parse_ms": 6254,
+    "preview_ms": 6182,
+    "commit_ms": 8182,
+    "total_ms": 205810
+  },
+  "blockers": [
+    "CCTV default UI environment=outdoor excludes all imported cameras lacking attributes.environment (0 candidates despite camera_structured=37). Real Beres sheets have מיגון/IP67 but no indoor/outdoor field; fabricating environment is disallowed.",
+    "CCTV apply remains BLOCKED: storage + poe_switch are non-optional blocking components; workbook has no HDD / PoE-switch products. UI cannot remove non-optional unresolved roles. Gate 18 Apply-to-Quote cannot complete without fabricating catalog rows."
+  ],
+  "non_blocking": [
+    "Importer parsed real Beres workbook (11 sheets); header row 2 auto-detected at 100% confidence for product sheets; decorative title row not treated as products.",
+    "מחיר מתקין auto-mapped to cost on all selected sheets; list_price remained 0 until Bulk Pricing.",
+    "ensure-defaults restored 10 roots / 124 leaves without creating products.",
+    "Wrong labor/intercom category picks in an earlier attempt dropped NVR attrs; with correct taxonomy (וידאו ואבטחה · NVR / מצלמות IP / PTZ / אביזרי מצלמות) NVR channels/drive_bays/bandwidth persist.",
+    "Duplicate re-import skip: will_skip=33, total stayed 58.",
+    "Bulk Pricing עלות+30%: 227→295.1, 367→477.1; cost unchanged.",
+    "limit=1000 correctly rejected (400); pagination limit=50 works.",
+    "Unknown attrs (max_power_w, onvif, fps, poe_budget_w) remained unset on sample cameras.",
+    "Quote builder CTA not reached in one harness pass due to auth launch screen timing; CCTV blockers confirmed via POST /cctv/recommend against the imported workspace.",
+    "Unrelated stash@{0} left isolated; no product code changes made for this gate."
+  ],
+  "sample_table": [
+    {
+      "source_sheet": "IPC מצלמות רשת",
+      "sku": "32323212401",
+      "model": "IPC2124LB-ADF28KM-H",
+      "source_cost": 227,
+      "imported_cost": 227,
+      "list_price_after_bulk": 295.1,
+      "key_attrs": "resolution_mp=4, form_factor=bullet, codec=Ultra 265, poe=true; env/max_power/onvif/fps unknown",
+      "result": "MATCH"
+    },
+    {
+      "source_sheet": "NVR מערכות הקלטה",
+      "sku": "32323301340",
+      "model": "NVR301-04B-IQ",
+      "source_cost": 367,
+      "imported_cost": 367,
+      "list_price_after_bulk": 477.1,
+      "key_attrs": "channels=4, drive_bays=1, max_incoming_bandwidth_mbps=80",
+      "result": "MATCH"
+    },
+    {
+      "source_sheet": "אביזרים נלווים",
+      "sku": "32323100002",
+      "model": "TR-JB03-H-IN-V2",
+      "source_cost": 40,
+      "imported_cost": 40,
+      "list_price_after_bulk": 52,
+      "key_attrs": "{}",
+      "result": "MATCH"
+    },
+    {
+      "source_sheet": "PTZ מצלמות ממונעות",
+      "sku": "32323632401",
+      "model": "IPC6324LWH-AX5C-VG2",
+      "source_cost": 898,
+      "imported_cost": 898,
+      "list_price_after_bulk": 1167.4,
+      "key_attrs": "resolution_mp=4, form_factor=ptz, poe=true",
+      "result": "MATCH"
+    }
+  ],
+  "verdict": "REAL SUPPLIER CATALOG PILOT FAIL — PRIVATE BETA BLOCKED",
+  "auth": {
+    "email": "beta.gate08.f8d8a465@sitesecure.test"
+  },
+  "workspace": "df73bd3b-6e7d-41ca-abae-5033435ee4da",
+  "api": {
+    "parse": 200,
+    "preview": 200,
+    "commit": 200,
+    "recommend_statuses": [],
+    "bulk": [
+      {
+        "status": 200,
+        "will_update": 58
+      }
+    ]
+  },
+  "finalized_at": "2026-09-08T20:52:03.100845+00:00",
+  "candidate_tree_equals_tested_tree": "PASS",
+  "cctv_api_evidence": {
+    "workspace": "df73bd3b-6e7d-41ca-abae-5033435ee4da",
+    "catalog_readiness": {
+      "camera_structured": 37,
+      "nvr_structured": 9,
+      "hdd_structured": 0,
+      "switch_structured": 0,
+      "ready_for_core": false
+    },
+    "outdoor": {
+      "camera_candidates": 0,
+      "status": "BLOCKED",
+      "unresolved_includes": "COMPONENT_UNRESOLVED camera"
+    },
+    "environment_null": {
+      "camera_candidates": 3,
+      "recorder_candidates": 3,
+      "status": "BLOCKED",
+      "blocking_roles": [
+        "storage",
+        "poe_switch"
+      ]
+    }
+  }
+}

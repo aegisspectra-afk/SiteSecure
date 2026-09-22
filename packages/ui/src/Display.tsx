@@ -1,11 +1,19 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "./cn";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export type CardAppearance = "default" | "premium";
+
+export function Card({
+  className,
+  appearance = "default",
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { appearance?: CardAppearance }) {
   return (
     <div
       className={cn(
         "rounded-[var(--radius-panel)] border border-border bg-bg-1 p-6 shadow-card",
+        appearance === "premium" &&
+          "ss-premium-card rounded-[var(--radius-premium)] border-[color:var(--color-premium-hairline,var(--color-border))] bg-[var(--color-premium-surface,var(--color-bg-1))] p-5 shadow-[var(--shadow-premium)]",
         className,
       )}
       {...props}

@@ -203,8 +203,10 @@ def test_technician_today_hides_ops_quotes_and_start_is_real_action():
     assert "job-assigned" in today_ids
     assert "job-open" not in today_ids
     assigned = next(item for item in payload["today"]["items"] if item["entity_id"] == "job-assigned")
-    assert "start" in assigned["actions"]
+    assert "en_route" in assigned["actions"]
+    assert "start" not in assigned["actions"]
     assert "create_customer" not in assigned["actions"]
+    assert assigned["title_he"]  # job title or status label
 
 
 def test_technician_is_today_not_ops():

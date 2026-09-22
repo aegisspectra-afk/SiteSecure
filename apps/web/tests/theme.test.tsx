@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemePicker } from "../src/components/ThemePicker";
 import { UserAccountMenu } from "../src/components/UserAccountMenu";
 import { he } from "../src/i18n/he";
 import {
   THEME_STORAGE_KEY,
   applyDocumentTheme,
+  isBrandDarkPath,
   parseThemeMode,
   readThemeMode,
   resolveTheme,
@@ -40,13 +41,49 @@ function mockScheme(dark: boolean, reduced = false) {
 
 afterEach(() => {
   window.localStorage.removeItem(THEME_STORAGE_KEY);
-  document.documentElement.classList.remove("dark", "theme-revealing");
+  document.documentElement.classList.remove("dark", "theme-revealing", "ss-brand-dark");
   delete document.documentElement.dataset.theme;
   delete document.documentElement.dataset.themeMode;
   document.documentElement.style.colorScheme = "";
 });
 
+beforeEach(() => {
+  window.history.replaceState({}, "", "/app/dashboard");
+});
+
 describe("theme helpers", () => {
+  it("scopes fixed brand-dark to public and auth paths only", () => {
+    expect(isBrandDarkPath("/")).toBe(true);
+    expect(isBrandDarkPath("/login")).toBe(true);
+    expect(isBrandDarkPath("/register")).toBe(true);
+    expect(isBrandDarkPath("/forgot-password")).toBe(true);
+    expect(isBrandDarkPath("/reset-password")).toBe(true);
+    expect(isBrandDarkPath("/verify-email")).toBe(true);
+    expect(isBrandDarkPath("/onboarding")).toBe(true);
+    expect(isBrandDarkPath("/invite/abc")).toBe(true);
+    expect(isBrandDarkPath("/legal/privacy")).toBe(true);
+    expect(isBrandDarkPath("/app")).toBe(false);
+    expect(isBrandDarkPath("/app/dashboard")).toBe(false);
+    expect(isBrandDarkPath("/admin")).toBe(false);
+    expect(isBrandDarkPath("/dev/ui")).toBe(false);
+  });
+
+  it("paints a dark html canvas on auth routes without forcing html.dark", () => {
+    mockScheme(false);
+    window.history.replaceState({}, "", "/login");
+    applyDocumentTheme("light");
+    expect(document.documentElement.classList.contains("ss-brand-dark")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+
+    window.history.replaceState({}, "", "/app/dashboard");
+    applyDocumentTheme("light");
+    expect(document.documentElement.classList.contains("ss-brand-dark")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.style.colorScheme).toBe("light");
+  });
+
   it("defaults invalid storage to system", () => {
     expect(parseThemeMode(null)).toBe("system");
     expect(parseThemeMode("solarized")).toBe("system");
@@ -158,8 +195,11 @@ describe("theme boot", () => {
     expect(boot).toContain("site-secure-theme");
     expect(boot).toContain("prefers-color-scheme");
     expect(boot).toContain('classList.toggle("dark"');
+    expect(boot).toContain("ss-brand-dark");
+    expect(boot).toContain("isBrandDarkPath");
     expect(boot.indexOf("site-secure-theme")).toBeLessThan(boot.indexOf('src="/src/main.tsx"') === -1 ? boot.length : boot.indexOf('src="/src/main.tsx"'));
     expect(html).toContain('meta name="color-scheme"');
+    expect(html).toContain("html.ss-brand-dark");
   });
 });
 

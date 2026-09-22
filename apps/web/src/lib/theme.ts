@@ -1,6 +1,8 @@
 export const THEME_STORAGE_KEY = "site-secure-theme";
 export const THEME_MODES = ["light", "dark", "system"] as const;
 export const THEME_REVEAL_MS = 200;
+export const BRAND_DARK_CLASS = "ss-brand-dark";
+export const BRAND_DARK_CANVAS = "#070b12";
 
 export type ThemeMode = (typeof THEME_MODES)[number];
 export type ResolvedTheme = "light" | "dark";
@@ -8,6 +10,27 @@ export type ThemeOrigin = { x: number; y: number };
 
 const LIGHT_CANVAS = "#f1f5f9";
 const DARK_CANVAS = "#0b1220";
+
+function normalizePathname(pathname: string): string {
+  let path = pathname.split("?")[0].split("#")[0];
+  if (!path) return "/";
+  if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+  return path;
+}
+
+/** Public + auth family: fixed SITE SECURE dark. /app, /admin, /dev keep user theme. */
+export function isBrandDarkPath(pathname: string | null | undefined): boolean {
+  const path = normalizePathname(pathname ?? "/");
+  if (path === "/app" || path.startsWith("/app/")) return false;
+  if (path === "/admin" || path.startsWith("/admin/")) return false;
+  if (path === "/dev" || path.startsWith("/dev/")) return false;
+  return true;
+}
+
+export function currentPathname(): string {
+  if (typeof window === "undefined") return "/";
+  return window.location.pathname || "/";
+}
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -51,16 +74,18 @@ export function canvasColor(resolved: ResolvedTheme): string {
   return resolved === "dark" ? DARK_CANVAS : LIGHT_CANVAS;
 }
 
-export function applyDocumentTheme(mode: ThemeMode) {
+export function applyDocumentTheme(mode: ThemeMode, pathname = currentPathname()) {
   if (typeof document === "undefined") return resolveTheme(mode);
   const resolved = resolveTheme(mode);
+  const brandDark = isBrandDarkPath(pathname);
   const root = document.documentElement;
   root.dataset.themeMode = mode;
   root.dataset.theme = resolved;
   root.classList.toggle("dark", resolved === "dark");
-  root.style.colorScheme = resolved;
+  root.classList.toggle(BRAND_DARK_CLASS, brandDark);
+  root.style.colorScheme = brandDark ? "dark" : resolved;
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([media])');
-  if (meta) meta.setAttribute("content", canvasColor(resolved));
+  if (meta) meta.setAttribute("content", brandDark ? BRAND_DARK_CANVAS : canvasColor(resolved));
   return resolved;
 }
 

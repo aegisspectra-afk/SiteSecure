@@ -1,0 +1,22 @@
+{
+  "api": "http://127.0.0.1:8010",
+  "checks": [
+    {
+      "name": "api_health",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "owner_session",
+      "ok": false,
+      "status": 401
+    },
+    {
+      "name": "owner_role",
+      "ok": false,
+      "role": null,
+      "workspace": null
+    }
+  ],
+  "ok": false
+}

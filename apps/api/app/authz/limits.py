@@ -6,6 +6,9 @@ from ..errors import MESSAGES
 from .catalog import load_catalog
 from .types import Decision
 
+# Legacy founding_technician role_key still counts as a technician seat if present.
+TECHNICIAN_ROLE_KEYS = frozenset({"technician", "founding_technician"})
+
 
 def _deny(code: str, **details: object) -> Decision:
     return Decision(False, code, MESSAGES.get(code, code), details)
@@ -16,11 +19,16 @@ def _allow() -> Decision:
 
 
 def seat_limit_key(role_key: str) -> str | None:
+    """Legacy bucket key (office/field). Prefer max_members / max_technicians for Free."""
     buckets = load_catalog().get("seat_buckets") or {}
     for limit_key, roles in buckets.items():
         if role_key in roles:
             return str(limit_key)
     return None
+
+
+def is_technician_role(role_key: str) -> bool:
+    return role_key in TECHNICIAN_ROLE_KEYS
 
 
 def plan_limit_value(plan_key: str, limit_key: str) -> int:
@@ -41,7 +49,59 @@ def evaluate_seat_limit(
     invite_role: str,
     occupied_roles: Iterable[str],
 ) -> Decision:
-    """Catalog-driven seat cap. 0 = unlimited. Does not replace RBAC."""
+    """USER-LOCKED seat model: max_members + max_technicians.
+
+    Pending invites are included in occupied_roles by occupancy_from_rows.
+    Legacy founding_technician counts toward technician capacity.
+    """
+    roles = [str(role or "").strip() for role in occupied_roles if str(role or "").strip()]
+    members = len(roles)
+    technicians = sum(1 for role in roles if is_technician_role(role))
+
+    max_members = plan_limit_value(plan_key, "max_members")
+    if max_members <= 0:
+        # Fall back to legacy buckets when max_members unset (should not happen post Phase 1).
+        return _evaluate_legacy_bucket(
+            plan_key=plan_key, invite_role=invite_role, occupied_roles=roles
+        )
+
+    if members >= max_members:
+        return _deny(
+            "PLAN_LIMIT_REACHED",
+            limit_key="max_members",
+            resource="members",
+            quota_code="member_quota_exceeded",
+            current=members,
+            limit=max_members,
+            plan_key=plan_key,
+            invite_role=invite_role,
+            upgrade_required=True,
+        )
+
+    if is_technician_role(invite_role):
+        max_technicians = plan_limit_value(plan_key, "max_technicians")
+        if max_technicians > 0 and technicians >= max_technicians:
+            return _deny(
+                "PLAN_LIMIT_REACHED",
+                limit_key="max_technicians",
+                resource="technicians",
+                quota_code="technician_quota_exceeded",
+                current=technicians,
+                limit=max_technicians,
+                plan_key=plan_key,
+                invite_role=invite_role,
+                upgrade_required=True,
+            )
+
+    return _allow()
+
+
+def _evaluate_legacy_bucket(
+    *,
+    plan_key: str,
+    invite_role: str,
+    occupied_roles: list[str],
+) -> Decision:
     bucket = seat_limit_key(invite_role)
     if bucket is None:
         return _allow()
@@ -58,6 +118,7 @@ def evaluate_seat_limit(
             limit=limit,
             plan_key=plan_key,
             invite_role=invite_role,
+            upgrade_required=True,
         )
     return _allow()
 
@@ -66,6 +127,8 @@ _RESOURCE_MESSAGES = {
     "customers": "הגעת למגבלת הלקוחות בתוכנית שלך",
     "quotes": "הגעת למגבלת ההצעות בתוכנית שלך",
     "storage": "אין מספיק שטח אחסון להעלאת הקובץ",
+    "members": "הגעת למגבלת חברי הצוות בתוכנית שלך",
+    "technicians": "הגעת למגבלת הטכנאים בתוכנית שלך",
 }
 
 
@@ -95,6 +158,7 @@ def evaluate_count_limit(
                 "limit": limit,
                 "requested": need,
                 "plan_key": plan_key,
+                "upgrade_required": True,
             },
         )
     return _allow()
@@ -123,24 +187,28 @@ def evaluate_storage_limit(
             {
                 "resource": "storage",
                 "limit_key": "storage_gb",
+                "quota_code": "storage_quota_exceeded",
                 "current": used,
                 "limit": limit_bytes,
                 "requested": need,
                 "plan_key": plan_key,
+                "upgrade_required": True,
             },
         )
     return _allow()
 
 
 def raise_plan_limit(decision: Decision) -> None:
-    """Raise ApiError for a denied plan-limit Decision."""
+    """Raise ApiError for a denied plan-limit Decision (HTTP 409 for quotas)."""
     from ..errors import ApiError
 
     if decision.allowed:
         return
+    details = dict(decision.details or {})
     raise ApiError(
-        403,
+        409,
         decision.code or "PLAN_LIMIT_REACHED",
-        decision.message_he or MESSAGES["PLAN_LIMIT_REACHED"],
-        dict(decision.details or {}),
+        decision.message_he
+        or _RESOURCE_MESSAGES.get(str(details.get("resource") or ""), MESSAGES["PLAN_LIMIT_REACHED"]),
+        details,
     )

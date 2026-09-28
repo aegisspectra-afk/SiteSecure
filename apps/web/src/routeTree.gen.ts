@@ -20,9 +20,11 @@ import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
 import { Route as AdminIndexRouteImport } from "./routes/admin/index"
 import { Route as AdminAuditRouteImport } from "./routes/admin/audit"
+import { Route as AdminBadgesRouteImport } from "./routes/admin/badges"
 import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
 import { Route as AdminFeedbackRouteImport } from "./routes/admin/feedback"
 import { Route as AdminFlagsRouteImport } from "./routes/admin/flags"
+import { Route as AdminInvitationsRouteImport } from "./routes/admin/invitations"
 import { Route as AdminOrganizationsRouteImport } from "./routes/admin/organizations"
 import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
@@ -122,6 +124,11 @@ const AdminAuditRoute = AdminAuditRouteImport.update({
   path: "/audit",
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminBadgesRoute = AdminBadgesRouteImport.update({
+  id: "/badges",
+  path: "/badges",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminBetaRoute = AdminBetaRouteImport.update({
   id: "/beta",
   path: "/beta",
@@ -135,6 +142,11 @@ const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
 const AdminFlagsRoute = AdminFlagsRouteImport.update({
   id: "/flags",
   path: "/flags",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminInvitationsRoute = AdminInvitationsRouteImport.update({
+  id: "/invitations",
+  path: "/invitations",
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
@@ -366,9 +378,11 @@ export interface FileRoutesByFullPath {
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -422,9 +436,11 @@ export interface FileRoutesByTo {
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -482,9 +498,11 @@ export interface FileRoutesById {
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
   "/admin/audit": typeof AdminAuditRoute
+  "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -543,9 +561,11 @@ export interface FileRouteTypes {
     | "/verify-email"
     | "/app/settings"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -599,9 +619,11 @@ export interface FileRouteTypes {
     | "/reset-password"
     | "/verify-email"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -658,9 +680,11 @@ export interface FileRouteTypes {
     | "/verify-email"
     | "/app/settings"
     | "/admin/audit"
+    | "/admin/badges"
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -803,6 +827,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminAuditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    "/admin/badges": {
+      id: "/admin/badges"
+      path: "/badges"
+      fullPath: "/admin/badges"
+      preLoaderRoute: typeof AdminBadgesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     "/admin/beta": {
       id: "/admin/beta"
       path: "/beta"
@@ -822,6 +853,13 @@ declare module "@tanstack/react-router" {
       path: "/flags"
       fullPath: "/admin/flags"
       preLoaderRoute: typeof AdminFlagsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/invitations": {
+      id: "/admin/invitations"
+      path: "/invitations"
+      fullPath: "/admin/invitations"
+      preLoaderRoute: typeof AdminInvitationsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     "/admin/organizations": {
@@ -1130,9 +1168,11 @@ declare module "@tanstack/react-router" {
 
 interface AdminRouteRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminBadgesRoute: typeof AdminBadgesRoute
   AdminBetaRoute: typeof AdminBetaRoute
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminFlagsRoute: typeof AdminFlagsRoute
+  AdminInvitationsRoute: typeof AdminInvitationsRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1140,9 +1180,11 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
+  AdminBadgesRoute: AdminBadgesRoute,
   AdminBetaRoute: AdminBetaRoute,
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminFlagsRoute: AdminFlagsRoute,
+  AdminInvitationsRoute: AdminInvitationsRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,

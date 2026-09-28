@@ -49,6 +49,7 @@ MESSAGES = {
     "INVITE_INVALID": "ההזמנה אינה תקפה",
     "INVITE_EXPIRED": "תוקף ההזמנה פג",
     "INVITE_ALREADY_ACCEPTED": "ההזמנה כבר נוצלה",
+    "INVITE_REVOKED": "ההזמנה בוטלה",
     "INVITE_EMAIL_MISMATCH": "ההזמנה שייכת לכתובת דוא״ל אחרת",
     "INVITE_ALREADY_PENDING": "כבר קיימת הזמנה ממתינה לכתובת הזו",
     "INVITE_USER_EXISTS": "הכתובת כבר שייכת לחבר פעיל בסביבה",

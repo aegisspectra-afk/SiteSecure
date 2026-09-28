@@ -42,15 +42,32 @@ QUOTE_SELECT = (
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
+# Authenticated RETURNING/select must omit cost columns (Q4-S column lockdown).
+QUOTE_SELECT_SAFE = (
+    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,"
+    "currency,vat_percent,discount_type,discount_value,subtotal_net,vat_amount,"
+    "total_gross,valid_until,payment_terms,"
+    "customer_notes,internal_notes,title,project_name,project_address,summary,"
+    "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
+    "approved_at,rejected_at,approved_name,rejection_reason,"
+    "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "created_at,updated_at,customers(display_name),sites(name)"
+)
 QUOTE_LIST_SELECT = (
     "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,currency,"
-    "total_gross,cost_total,margin_amount,margin_percent,valid_until,title,"
+    "total_gross,valid_until,title,"
     "project_name,version,created_at,updated_at,"
     "customers(display_name),sites(name)"
 )
+QUOTE_LIST_COST_SELECT = "id,cost_total,margin_amount,margin_percent"
 OPEN_LIST_STATUSES = frozenset({"draft", "sent", "viewed"})
 ITEM_SELECT = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,cost,discount,"
+    "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
+    "section_id,package_instance_id,package_id,package_name"
+)
+ITEM_SELECT_SAFE = (
+    "id,quote_id,product_id,item_type,description,qty,unit_price,discount,"
     "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
     "section_id,package_instance_id,package_id,package_name"
 )
@@ -167,6 +184,11 @@ def _can_view_cost(ctx) -> bool:
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
 
 
+def _service() -> ServiceClient:
+    """Privileged PostgREST reader for commercial columns (SELECT revoked from authenticated)."""
+    return ServiceClient(get_settings())
+
+
 def _nested_name(row: dict, key: str, field: str) -> str | None:
     nested = row.get(key)
     name = None
@@ -233,13 +255,39 @@ def _strip_cost(quote: dict, items: list[dict], *, show_cost: bool) -> dict:
     return out
 
 
-def _load_quote(client: UserClient, workspace_id: UUID, quote_id: UUID) -> dict:
-    return one_or_404(
+def _load_quote(client: UserClient, workspace_id: UUID, quote_id: UUID, *, show_cost: bool = False) -> dict:
+    visible = one_or_404(
         client.get(
             "quotes",
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": QUOTE_SELECT},
+            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
         )
     )
+    del visible
+    row = one_or_404(
+        client.get(
+            "quotes",
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
+        )
+    )
+    if show_cost:
+        cost_row = one_or_404(
+            _service().get(
+                "quotes",
+                params={
+                    "id": f"eq.{quote_id}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": "id,cost_total,margin_amount,margin_percent",
+                },
+            )
+        )
+        row["cost_total"] = cost_row.get("cost_total")
+        row["margin_amount"] = cost_row.get("margin_amount")
+        row["margin_percent"] = cost_row.get("margin_percent")
+    return row
 
 
 def _load_items(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[dict]:
@@ -249,7 +297,7 @@ def _load_items(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[
             params={
                 "quote_id": f"eq.{quote_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": ITEM_SELECT,
+                "select": ITEM_SELECT_SAFE,
                 "order": "sort_order.asc",
             },
         )
@@ -965,6 +1013,26 @@ def list_quotes(
     rows = as_list(client.get("quotes", params=params))
     page = page_from_rows(rows, page_size)
     show_cost = _can_view_cost(ctx)
+    if show_cost and page.items:
+        ids = [str(row["id"]) for row in page.items if row.get("id")]
+        if ids:
+            cost_rows = as_list(
+                _service().get(
+                    "quotes",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "id": f"in.({','.join(ids)})",
+                        "select": QUOTE_LIST_COST_SELECT,
+                    },
+                )
+            )
+            by_id = {str(r["id"]): r for r in cost_rows}
+            for row in page.items:
+                extra = by_id.get(str(row["id"]))
+                if extra:
+                    row["cost_total"] = extra.get("cost_total")
+                    row["margin_amount"] = extra.get("margin_amount")
+                    row["margin_percent"] = extra.get("margin_percent")
     items = [_strip_cost(_flatten_quote(row), [], show_cost=show_cost) for row in page.items]
     count_rows = as_list(
         client.get(
@@ -1011,7 +1079,7 @@ def create_quote(
         "vat_percent": vat,
         **body.model_dump(exclude_none=True, exclude={"vat_percent"}),
     }
-    row = created_or_403(client.post("quotes", payload))
+    row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
     lead_id = row.get("lead_id") or body.lead_id
     if lead_id:
         try:
@@ -1208,7 +1276,7 @@ def patch_item(
                 "id": f"eq.{item_id}",
                 "quote_id": f"eq.{quote_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": ITEM_SELECT,
+                "select": ITEM_SELECT_SAFE,
             },
         )
     )
@@ -1621,7 +1689,7 @@ def duplicate_quote(
     title = str(existing.get("title") or "").strip()
     if title:
         payload["title"] = f"{title} (העתק)"
-    row = created_or_403(client.post("quotes", payload))
+    row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
     items = _load_items(client, workspace_id, quote_id)
     for item in items:
         created_or_403(

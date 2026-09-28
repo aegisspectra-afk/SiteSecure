@@ -102,6 +102,7 @@ export type SessionResponse = {
   memberships: SessionMembership[];
   has_workspace: boolean;
   is_platform_admin?: boolean;
+  platform_role?: string | null;
 };
 
 export type WorkspaceOut = {
@@ -160,11 +161,42 @@ export type AdminOrganization = {
   subscription_status?: string | null;
 };
 
+export type BetaParticipantStatus =
+  | "invited"
+  | "registered"
+  | "activated"
+  | "active"
+  | "paused"
+  | "exited";
+
+export type BetaParticipant = {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  cohort: string | null;
+  status: BetaParticipantStatus;
+  invited_at?: string | null;
+  registered_at?: string | null;
+  activated_at?: string | null;
+  joined_at?: string | null;
+  paused_at?: string | null;
+  exited_at?: string | null;
+  internal_note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  email?: string | null;
+  full_name?: string | null;
+  role_key?: string | null;
+  workspace_name?: string | null;
+  recognition_badges?: string[];
+};
+
 export type AdminUser = {
   id: string;
   email: string | null;
   full_name: string;
   is_platform_admin: boolean;
+  platform_role?: string | null;
   recognition_badges?: string[];
   created_at: string;
   memberships: {
@@ -173,6 +205,7 @@ export type AdminUser = {
     role_key: string;
     is_beta?: boolean;
   }[];
+  beta_participations?: BetaParticipant[];
 };
 
 export type AdminSummary = {
@@ -194,7 +227,9 @@ export type DashboardItem = {
   site_address?: string | null;
   customer_phone?: string | null;
   scheduled_for: string | null;
-  severity: "now" | "next" | "info";
+  scheduled_end?: string | null;
+  status?: string | null;
+  severity: "now" | "next" | "later" | "info";
   actions: string[];
   updated_at?: string | null;
 };
@@ -230,10 +265,14 @@ export type RecentQuote = {
   updated_at: string;
 };
 
-export type BusinessChart = {
+export type BusinessChartSeries = {
   labels_he: string[];
   revenue: number[];
   quotes: number[];
+};
+
+export type BusinessChart = BusinessChartSeries & {
+  daily?: BusinessChartSeries | null;
   revenue_change_percent?: number | null;
   quote_change?: number | null;
   conversion_change_percent?: number | null;
@@ -307,6 +346,11 @@ export type QuoteOut = {
   lines_subtotal?: number | null;
   section_discount_amount?: number | null;
   quote_discount_amount?: number | null;
+  optional_subtotal?: number | null;
+  optional_vat_amount?: number | null;
+  optional_total_gross?: number | null;
+  optional_cost_total?: number | null;
+  total_with_options_gross?: number | null;
   valid_until?: string | null;
   customer_notes?: string | null;
   internal_notes?: string | null;
@@ -349,6 +393,7 @@ export type QuoteItemOut = {
   package_instance_id?: string | null;
   package_id?: string | null;
   package_name?: string | null;
+  is_optional?: boolean;
 };
 
 export type QuotePatchBody = {
@@ -388,6 +433,7 @@ export type QuoteItemIn = {
   package_instance_id?: string | null;
   package_id?: string | null;
   package_name?: string | null;
+  is_optional?: boolean;
 };
 
 export type CatalogAttributeField = {
@@ -545,6 +591,8 @@ export type QuotePackage = {
   category?: string;
   is_active?: boolean;
   item_count?: number;
+  /** Expanded package lines for picker preview (existing items only). */
+  items_preview?: Array<{ description: string; qty: number }>;
 };
 
 /** Task 13C/13D — server CCTV recommendation (transient; not a Saved System). */
@@ -643,11 +691,158 @@ export type SystemRecommendation = {
   };
 };
 
+/** E2 Equipment Intent — design-side equipment definition (not a Product). */
+export type EquipmentIntent = {
+  manufacturer?: string;
+  model_reference?: string;
+  display_description?: string;
+  selected_attributes?: Record<string, string | number | boolean | null>;
+};
+
+/** Durable System Design (R1 persistence / R2 CCTV hydration). */
+export type SystemDesignComponent = {
+  id: string;
+  workspace_id: string;
+  design_id: string;
+  role_key: string;
+  label: string;
+  quantity: number;
+  optional: boolean;
+  blocking: boolean;
+  removed: boolean;
+  resolution_status?: string | null;
+  technical_requirements?: Record<string, unknown>;
+  candidates?: unknown[];
+  engine_preferred_product_id?: string | null;
+  user_selected_product_id?: string | null;
+  selection_origin: "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED";
+  reason_codes?: unknown[];
+  needs_review: boolean;
+  /** E2 — durable Equipment Intent (no product_id / commercial money). */
+  equipment_intent?: EquipmentIntent | null;
+  quote_item_id?: string | null;
+  applied_product_id?: string | null;
+  applied_qty?: number | null;
+  applied_output_fingerprint?: string | null;
+  last_apply_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SystemDesign = {
+  id: string;
+  workspace_id: string;
+  quote_id: string;
+  site_id?: string | null;
+  engine_type: string;
+  engine_version: number;
+  lifecycle_status: "draft" | "calculated" | "applied";
+  requirements: Record<string, unknown>;
+  engineering_result?: Record<string, unknown> | null;
+  recommendation_meta?: Record<string, unknown> | null;
+  calculated_at?: string | null;
+  last_applied_at?: string | null;
+  current_apply_id?: string | null;
+  apply_fingerprint?: string | null;
+  revision: number;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  components: SystemDesignComponent[];
+};
+
+export type SystemDesignComponentIn = {
+  id?: string | null;
+  role_key: string;
+  label?: string;
+  quantity?: number;
+  optional?: boolean;
+  blocking?: boolean;
+  removed?: boolean;
+  resolution_status?: string | null;
+  technical_requirements?: Record<string, unknown>;
+  candidates?: unknown[];
+  engine_preferred_product_id?: string | null;
+  user_selected_product_id?: string | null;
+  selection_origin?: "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED";
+  reason_codes?: unknown[];
+  needs_review?: boolean;
+  equipment_intent?: EquipmentIntent | null;
+  quote_item_id?: string | null;
+  applied_product_id?: string | null;
+  applied_qty?: number | null;
+  applied_output_fingerprint?: string | null;
+  last_apply_id?: string | null;
+};
+
+export type SystemDesignCreateIn = {
+  engine_type?: string;
+  engine_version?: number;
+  requirements?: Record<string, unknown>;
+  site_id?: string | null;
+};
+
+export type SystemDesignPatchIn = {
+  revision: number;
+  requirements?: Record<string, unknown>;
+  engineering_result?: Record<string, unknown> | null;
+  recommendation_meta?: Record<string, unknown> | null;
+  lifecycle_status?: "draft" | "calculated" | "applied";
+  engine_version?: number;
+  calculated_at?: string | null;
+  site_id?: string | null;
+  components?: SystemDesignComponentIn[];
+  components_replace?: boolean;
+};
+
+export type SystemDesignApplyIn = {
+  revision: number;
+  confirmation_token?: string | null;
+  section_name?: string | null;
+};
+
+export type SystemDesignApplyDiverged = {
+  design_id: string;
+  revision: number;
+  confirmation_required: true;
+  confirmation_token: string;
+  confirmation_expires_at: string;
+  diverged: Array<{
+    component_id: string;
+    role_key: string;
+    kind: "CHANGED" | "MISSING" | "UNEXPECTED";
+    applied: { product_id?: string | null; qty?: number | null; fingerprint?: string };
+    current: {
+      quote_item_id?: string;
+      product_id?: string | null;
+      qty?: number;
+      fingerprint?: string;
+    } | null;
+  }>;
+  proposed: Array<{
+    component_id: string;
+    role_key: string;
+    product_id: string;
+    qty: number;
+    optional: boolean;
+  }>;
+  untouched_manual_item_count?: number;
+};
+
+export type SystemDesignApplyResult = {
+  ok: boolean;
+  apply_id: string;
+  design: SystemDesign;
+  quote: QuoteOut;
+};
+
 export type QuoteVersionMeta = {
   id: string;
   version: number;
   created_at?: string;
   created_by?: string | null;
+  snapshot_status?: string | null;
+  total_gross?: number | null;
 };
 
 export type QuoteRevisionCompare = {
@@ -723,6 +918,7 @@ export type DocumentOut = {
   entity_type: string;
   entity_id: string;
   kind: string;
+  visibility?: "internal" | "customer" | null;
   storage_bucket?: string;
   mime_type?: string | null;
   byte_size?: number | null;
@@ -798,34 +994,111 @@ export type ProjectOut = {
   customer_id: string;
   site_id?: string | null;
   source_quote_id?: string | null;
+  /** Frozen quote.version at conversion; null on legacy projects. Does not follow revises. */
+  source_quote_version?: number | null;
   assigned_to?: string | null;
   created_at: string;
   updated_at: string;
 };
 
+/** Q8-B planned execution scope — not Installed Assets. */
+export type ProjectPlannedItemOut = {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  source_quote_id?: string | null;
+  source_quote_version: number;
+  source_quote_item_id?: string | null;
+  section_id?: string | null;
+  section_name?: string | null;
+  item_type: string;
+  scope_kind: "equipment" | "labor" | "other" | string;
+  product_id?: string | null;
+  sku?: string | null;
+  name?: string | null;
+  description: string;
+  qty: number;
+  unit?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  is_optional?: boolean;
+  sort_order: number;
+  created_at: string;
+  /** Q8-C: count of equipment rows linked via project_planned_item_id */
+  assets_created?: number;
+  /** Remaining qty to materialize; null for non-equipment rows */
+  assets_remaining?: number | null;
+};
+
+export type CreateInstalledAssetsLineOut = {
+  planned_item_id: string;
+  label: string;
+  qty: number;
+  existing: number;
+  created_now?: number;
+  remaining?: number;
+  category: string;
+};
+
+export type CreateInstalledAssetsPreviewOut = {
+  site_id?: string | null;
+  eligible: boolean;
+  fully_materialized: boolean;
+  total_to_create: number;
+  lines: CreateInstalledAssetsLineOut[];
+  message?: string | null;
+};
+
+export type CreateInstalledAssetsResultOut = {
+  requested: number;
+  created: number;
+  already_existing: number;
+  failed: number;
+  fully_materialized: boolean;
+  equipment_ids: string[];
+  lines: CreateInstalledAssetsLineOut[];
+  message: string;
+};
+
 export type ServiceCallOut = {
   id: string;
   workspace_id: string;
+  number?: string;
   status: string;
   priority: string;
   customer_id: string;
   site_id: string;
+  system_id?: string | null;
+  equipment_id?: string | null;
   title: string;
   description?: string | null;
+  customer_name?: string | null;
+  site_name?: string | null;
   created_at: string;
   updated_at: string;
+  linked_jobs?: { id: string; number: string; title: string; status: string; scheduled_for?: string | null }[];
 };
 
 export type WarrantyOut = {
   id: string;
   workspace_id: string;
   number: string;
+  title?: string | null;
   type: string;
   status: string;
   customer_id: string;
-  site_id: string;
+  site_id?: string | null;
+  policy?: Record<string, unknown> | null;
+  equipment_id?: string | null;
+  customer_name?: string | null;
+  site_name?: string | null;
+  equipment_name?: string | null;
+  equipment_manufacturer?: string | null;
+  equipment_model?: string | null;
+  equipment_serial?: string | null;
   starts_on: string;
   ends_on: string;
+  document_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -846,6 +1119,7 @@ export type PublicQuote = {
   version: number;
   status: string;
   superseded: boolean;
+  historical?: boolean;
   can_approve?: boolean;
   can_reject?: boolean;
   title?: string | null;
@@ -862,9 +1136,16 @@ export type PublicQuote = {
   vat_percent: number;
   discount_type?: string | null;
   discount_value?: number | null;
+  lines_subtotal?: number | null;
+  section_discount_amount?: number | null;
+  quote_discount_amount?: number | null;
   subtotal_net: number;
   vat_amount: number;
   total_gross: number;
+  optional_subtotal?: number | null;
+  optional_vat_amount?: number | null;
+  optional_total_gross?: number | null;
+  total_with_options_gross?: number | null;
   company: {
     name?: string | null;
     legal_name?: string | null;
@@ -984,6 +1265,22 @@ export type InviteOut = {
   role_key: string;
   expires_at: string;
   token: string | null;
+  status?: "pending" | "accepted" | "expired" | "revoked" | null;
+  created_at?: string | null;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+};
+
+export type WorkspaceInvitation = {
+  id: string;
+  email: string;
+  role_key: string;
+  expires_at?: string | null;
+  created_at?: string | null;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+  status: "pending" | "accepted" | "expired" | "revoked";
+  token?: string | null;
 };
 
 export type InvitePreviewStatus =
@@ -991,6 +1288,7 @@ export type InvitePreviewStatus =
   | "invalid"
   | "expired"
   | "already_accepted"
+  | "revoked"
   | "wrong_account";
 
 export type InvitePreview = {
@@ -1002,9 +1300,82 @@ export type InvitePreview = {
   expires_at: string | null;
 };
 
+export type AdminInviteStatus = "pending" | "accepted" | "expired" | "revoked";
+
+export type AdminInvitation = {
+  id: string;
+  workspace_id: string;
+  workspace_name?: string | null;
+  email: string;
+  role_key: string;
+  created_at?: string;
+  expires_at?: string;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+  invited_by?: string | null;
+  status: AdminInviteStatus;
+  token?: string;
+  invite_path?: string;
+};
+
+export type AdminMembership = {
+  id: string;
+  email?: string | null;
+  full_name?: string | null;
+  workspace_id: string;
+  workspace_name?: string | null;
+  role_key: string;
+  status?: string | null;
+  created_at?: string | null;
+};
+
 export type InviteAcceptResult = {
   workspace_id: string;
   status: "success";
+};
+
+export type PortalAccessStatus = "not_enabled" | "invited" | "active" | "expired" | "revoked";
+
+export type PortalAccess = {
+  id: string;
+  email: string;
+  status: PortalAccessStatus;
+  contact_id?: string | null;
+  last_login_at?: string | null;
+  expires_at?: string | null;
+  token?: string;
+};
+
+export type PortalInvitePreview = {
+  status: "valid" | "invalid" | "expired" | "consumed" | "revoked" | "wrong_account";
+  email?: string | null;
+  customer_name?: string | null;
+  workspace_name?: string | null;
+  expires_at?: string | null;
+};
+
+export type PortalGrant = {
+  access_id: string;
+  customer_id: string;
+  customer_name: string;
+  capabilities: string[];
+};
+
+export type PortalSession = {
+  grants: PortalGrant[];
+};
+
+export type PortalHome = {
+  access_id: string;
+  customer_name: string;
+  profile: { display_name: string; type: string; phone?: string | null; email: string };
+  sites: Array<{ id: string; name: string; code: string; installation_status: string; address: Record<string, string> }>;
+  installations: Array<{ id: string; number: string; title: string; status: string; completed_at?: string | null; site_id?: string | null }>;
+  equipment: Array<{ id: string; site_id?: string | null; name: string; category: string; manufacturer?: string | null; model?: string | null; serial?: string | null; installed_at?: string | null; status: string }>;
+  warranties: Array<{ id: string; number: string; type: string; status: string; starts_on?: string | null; ends_on?: string | null; site_id?: string | null }>;
+  quotes: Array<{ id: string; number: string; status: string; total_gross?: number | null; sent_at?: string | null; valid_until?: string | null }>;
+  service: Array<{ id: string; number?: string | null; title: string; status: string; created_at?: string | null; site_id?: string | null }>;
+  documents: Array<{ id: string; filename: string; mime_type?: string | null; created_at?: string | null }>;
 };
 
 export type AuditItem = {
@@ -1066,6 +1437,14 @@ export type AuthzCatalog = {
   plans: { key: string; label_he: string; features: string[] }[];
 };
 
+export type JobAssigneeOut = {
+  user_id: string;
+  display_name?: string | null;
+  assigned_at?: string | null;
+  assigned_by?: string | null;
+  assigned_by_name?: string | null;
+};
+
 export type JobOut = {
   id: string;
   workspace_id: string;
@@ -1073,16 +1452,25 @@ export type JobOut = {
   title: string;
   kind?: string;
   status: string;
+  priority?: string;
   project_id?: string | null;
   service_call_id?: string | null;
   customer_id?: string;
   site_id?: string;
   scheduled_for?: string | null;
+  scheduled_end?: string | null;
   started_at?: string | null;
+  arrived_at?: string | null;
   completed_at?: string | null;
   completion_notes?: string | null;
+  created_by?: string | null;
   created_at?: string;
   updated_at?: string;
+  assignees?: JobAssigneeOut[];
+  is_assigned?: boolean;
+  customer_name?: string | null;
+  site_name?: string | null;
+  project_name?: string | null;
 };
 
 export type JobChecklistItem = {
@@ -1113,6 +1501,7 @@ export type EquipmentOut = {
   workspace_id: string;
   site_id: string;
   system_id?: string | null;
+  zone_id?: string | null;
   category: string;
   status: string;
   name: string;
@@ -1123,12 +1512,132 @@ export type EquipmentOut = {
   ip?: string | null;
   location_note?: string | null;
   installed_at?: string | null;
+  product_id?: string | null;
+  project_id?: string | null;
+  project_planned_item_id?: string | null;
+  asset_code?: string | null;
   created_at: string;
   updated_at: string;
 };
 
+export type AssetLifecycleActivityOut = {
+  id: string;
+  kind: string;
+  at: string;
+  title: string;
+  detail?: string | null;
+  metadata?: Record<string, unknown>;
+  href?: { type: string; id: string } | null;
+};
+
+export type SiteVlanOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  vlan_number: number;
+  name: string;
+  purpose?: string | null;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteNetworkOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  vlan_id?: string | null;
+  name: string;
+  cidr: string;
+  gateway?: string | null;
+  dhcp_enabled: boolean;
+  dhcp_start?: string | null;
+  dhcp_end?: string | null;
+  dns_primary?: string | null;
+  dns_secondary?: string | null;
+  purpose?: string | null;
+  notes?: string | null;
+  ip_count?: number;
+  assigned_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteIpAddressOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  network_id: string;
+  vlan_id?: string | null;
+  equipment_id?: string | null;
+  ip_address: string;
+  hostname?: string | null;
+  mac_address?: string | null;
+  assignment_type: "static" | "dhcp" | "reserved" | string;
+  status: "available" | "assigned" | "reserved" | string;
+  notes?: string | null;
+  equipment_name?: string | null;
+  equipment_asset_code?: string | null;
+  network_name?: string | null;
+  network_cidr?: string | null;
+  vlan_number?: number | null;
+  vlan_name?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteNetworkOverviewOut = {
+  networks: number;
+  vlans: number;
+  ips: number;
+  assigned: number;
+  available: number;
+  reserved: number;
+};
+
+export type AssetConnectionOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string;
+  source_equipment_id: string;
+  target_equipment_id: string;
+  connection_type: string;
+  source_port?: string | null;
+  target_port?: string | null;
+  notes?: string | null;
+  source_name?: string | null;
+  source_asset_code?: string | null;
+  source_category?: string | null;
+  source_ip?: string | null;
+  target_name?: string | null;
+  target_asset_code?: string | null;
+  target_category?: string | null;
+  target_ip?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TopologyNodeOut = {
+  id: string;
+  site_id: string;
+  name: string;
+  asset_code?: string | null;
+  category: string;
+  status: string;
+  ip?: string | null;
+  primary_ip?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+};
+
+export type SiteTopologyOut = {
+  nodes: TopologyNodeOut[];
+  edges: AssetConnectionOut[];
+  directional: boolean;
+};
+
 export type GlobalSearchHit = {
-  entity_type: "customer" | "site" | "lead" | "quote" | "project" | "service" | "equipment";
+  entity_type: "customer" | "site" | "lead" | "quote" | "project" | "service" | "equipment" | "warranty";
   id: string;
   title: string;
   subtitle?: string | null;
@@ -1403,9 +1912,17 @@ export function createApiClient(opts: {
         body: JSON.stringify({ reason }),
       }),
     listQuoteVersions: (workspaceId: string, quoteId: string) =>
-      request<{ items: QuoteVersionMeta[]; current_version: number }>(
-        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions`,
+      request<{
+        items: QuoteVersionMeta[];
+        current_version: number;
+        current_status?: string | null;
+      }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions`),
+    getQuoteVersionDocument: (workspaceId: string, quoteId: string, version: number) =>
+      request<PublicQuote>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions/${version}/document`,
       ),
+    downloadQuoteVersionPdf: (workspaceId: string, quoteId: string, version: number) =>
+      requestBlob(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/versions/${version}/pdf`),
     compareQuoteVersions: (
       workspaceId: string,
       quoteId: string,
@@ -1633,22 +2150,50 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    listProjectPlannedItems: (workspaceId: string, projectId: string) =>
+      request<{ items: ProjectPlannedItemOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/projects/${projectId}/planned-items`,
+      ),
+    previewCreateInstalledAssets: (workspaceId: string, projectId: string) =>
+      request<CreateInstalledAssetsPreviewOut>(
+        `/api/v1/workspaces/${workspaceId}/projects/${projectId}/create-installed-assets/preview`,
+      ),
+    createInstalledAssets: (workspaceId: string, projectId: string) =>
+      request<CreateInstalledAssetsResultOut>(
+        `/api/v1/workspaces/${workspaceId}/projects/${projectId}/create-installed-assets`,
+        { method: "POST", body: JSON.stringify({}) },
+      ),
     patchProject: (workspaceId: string, projectId: string, body: Partial<{ name: string; status: string }>) =>
       request<ProjectOut>(`/api/v1/workspaces/${workspaceId}/projects/${projectId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
-    listServiceCalls: (workspaceId: string, opts: { q?: string; status?: string; limit?: number } = {}) => {
+    listServiceCalls: (
+      workspaceId: string,
+      opts: { q?: string; status?: string; site_id?: string; equipment_id?: string; limit?: number } = {},
+    ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status) params.set("status", opts.status);
+      if (opts.site_id) params.set("site_id", opts.site_id);
+      if (opts.equipment_id) params.set("equipment_id", opts.equipment_id);
       return request<{ items: ServiceCallOut[] }>(
         `/api/v1/workspaces/${workspaceId}/service-calls?${params}`,
       );
     },
+    getServiceCall: (workspaceId: string, callId: string) =>
+      request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}`),
     createServiceCall: (
       workspaceId: string,
-      body: { title: string; customer_id: string; site_id: string; priority?: string; description?: string },
+      body: {
+        title: string;
+        customer_id: string;
+        site_id: string;
+        priority?: string;
+        description?: string;
+        system_id?: string | null;
+        equipment_id?: string | null;
+      },
     ) =>
       request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls`, {
         method: "POST",
@@ -1657,10 +2202,26 @@ export function createApiClient(opts: {
     patchServiceCall: (
       workspaceId: string,
       callId: string,
-      body: Partial<{ title: string; status: string; priority: string; description: string }>,
+      body: Partial<{
+        title: string;
+        status: string;
+        priority: string;
+        description: string;
+        system_id: string | null;
+        equipment_id: string | null;
+      }>,
     ) =>
       request<ServiceCallOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}`, {
         method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    createJobFromServiceCall: (
+      workspaceId: string,
+      callId: string,
+      body: { scheduled_for?: string; scheduled_end?: string; title?: string } = {},
+    ) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/service-calls/${callId}/create-job`, {
+        method: "POST",
         body: JSON.stringify(body),
       }),
     listWarranties: (
@@ -1673,12 +2234,41 @@ export function createApiClient(opts: {
       if (opts.customer_id) params.set("customer_id", opts.customer_id);
       return request<{ items: WarrantyOut[] }>(`/api/v1/workspaces/${workspaceId}/warranties?${params}`);
     },
+    getWarranty: (workspaceId: string, warrantyId: string) =>
+      request<WarrantyOut>(`/api/v1/workspaces/${workspaceId}/warranties/${warrantyId}`),
     createWarranty: (
       workspaceId: string,
-      body: { customer_id: string; site_id: string; type?: string; starts_on: string; ends_on: string },
+      body: {
+        customer_id: string;
+        site_id?: string | null;
+        type?: string;
+        starts_on: string;
+        ends_on: string;
+        equipment_id?: string | null;
+        title?: string | null;
+        status?: string | null;
+        policy?: Record<string, unknown> | null;
+      },
     ) =>
       request<WarrantyOut>(`/api/v1/workspaces/${workspaceId}/warranties`, {
         method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWarranty: (
+      workspaceId: string,
+      warrantyId: string,
+      body: {
+        status?: string;
+        starts_on?: string;
+        ends_on?: string;
+        type?: string;
+        equipment_id?: string | null;
+        title?: string | null;
+        policy?: Record<string, unknown> | null;
+      },
+    ) =>
+      request<WarrantyOut>(`/api/v1/workspaces/${workspaceId}/warranties/${warrantyId}`, {
+        method: "PATCH",
         body: JSON.stringify(body),
       }),
     globalSearch: (workspaceId: string, q: string, limit = 12) => {
@@ -1708,6 +2298,195 @@ export function createApiClient(opts: {
       request<{ items: EquipmentOut[] }>(
         `/api/v1/workspaces/${workspaceId}/equipment?site_id=${encodeURIComponent(siteId)}`,
       ),
+    getEquipment: (workspaceId: string, equipmentId: string) =>
+      request<EquipmentOut>(`/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}`),
+    listEquipmentLifecycleActivity: (workspaceId: string, equipmentId: string) =>
+      request<{ items: AssetLifecycleActivityOut[]; source: string }>(
+        `/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}/lifecycle-activity`,
+      ),
+    getSiteNetworkOverview: (workspaceId: string, siteId: string) =>
+      request<SiteNetworkOverviewOut>(
+        `/api/v1/workspaces/${workspaceId}/sites/${siteId}/network-overview`,
+      ),
+    listSiteVlans: (workspaceId: string, siteId: string) =>
+      request<{ items: SiteVlanOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/sites/${siteId}/vlans`,
+      ),
+    createSiteVlan: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        vlan_number: number;
+        name: string;
+        purpose?: string | null;
+        description?: string | null;
+      },
+    ) =>
+      request<SiteVlanOut>(`/api/v1/workspaces/${workspaceId}/vlans`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchSiteVlan: (
+      workspaceId: string,
+      vlanId: string,
+      body: Partial<{ vlan_number: number; name: string; purpose: string | null; description: string | null }>,
+    ) =>
+      request<SiteVlanOut>(`/api/v1/workspaces/${workspaceId}/vlans/${vlanId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listSiteNetworks: (workspaceId: string, siteId: string) =>
+      request<{ items: SiteNetworkOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/sites/${siteId}/networks`,
+      ),
+    createSiteNetwork: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        name: string;
+        cidr: string;
+        vlan_id?: string | null;
+        gateway?: string | null;
+        dhcp_enabled?: boolean;
+        dhcp_start?: string | null;
+        dhcp_end?: string | null;
+        dns_primary?: string | null;
+        dns_secondary?: string | null;
+        purpose?: string | null;
+        notes?: string | null;
+      },
+    ) =>
+      request<SiteNetworkOut>(`/api/v1/workspaces/${workspaceId}/networks`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchSiteNetwork: (
+      workspaceId: string,
+      networkId: string,
+      body: Partial<{
+        name: string;
+        cidr: string;
+        vlan_id: string | null;
+        gateway: string | null;
+        dhcp_enabled: boolean;
+        dhcp_start: string | null;
+        dhcp_end: string | null;
+        dns_primary: string | null;
+        dns_secondary: string | null;
+        purpose: string | null;
+        notes: string | null;
+      }>,
+    ) =>
+      request<SiteNetworkOut>(`/api/v1/workspaces/${workspaceId}/networks/${networkId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listSiteIpAddresses: (
+      workspaceId: string,
+      siteId: string,
+      opts: { network_id?: string; status?: string; q?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.network_id) params.set("network_id", opts.network_id);
+      if (opts.status) params.set("status", opts.status);
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      const qs = params.toString();
+      return request<{ items: SiteIpAddressOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/sites/${siteId}/ip-addresses${qs ? `?${qs}` : ""}`,
+      );
+    },
+    listEquipmentIpAddresses: (workspaceId: string, equipmentId: string) =>
+      request<{ items: SiteIpAddressOut[]; legacy_ip?: string | null; legacy_mac?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}/ip-addresses`,
+      ),
+    createSiteIpAddress: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        network_id: string;
+        ip_address: string;
+        vlan_id?: string | null;
+        equipment_id?: string | null;
+        hostname?: string | null;
+        mac_address?: string | null;
+        assignment_type?: string;
+        status?: string | null;
+        notes?: string | null;
+      },
+    ) =>
+      request<SiteIpAddressOut>(`/api/v1/workspaces/${workspaceId}/ip-addresses`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchSiteIpAddress: (
+      workspaceId: string,
+      ipId: string,
+      body: Partial<{
+        network_id: string;
+        ip_address: string;
+        vlan_id: string | null;
+        equipment_id: string | null;
+        hostname: string | null;
+        mac_address: string | null;
+        assignment_type: string;
+        status: string;
+        notes: string | null;
+        clear_equipment: boolean;
+      }>,
+    ) =>
+      request<SiteIpAddressOut>(`/api/v1/workspaces/${workspaceId}/ip-addresses/${ipId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteSiteIpAddress: (workspaceId: string, ipId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/ip-addresses/${ipId}`, {
+        method: "DELETE",
+      }),
+    listSiteAssetConnections: (workspaceId: string, siteId: string) =>
+      request<{ items: AssetConnectionOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/sites/${siteId}/asset-connections`,
+      ),
+    listEquipmentAssetConnections: (workspaceId: string, equipmentId: string) =>
+      request<{ items: AssetConnectionOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}/asset-connections`,
+      ),
+    getSiteTopology: (workspaceId: string, siteId: string) =>
+      request<SiteTopologyOut>(`/api/v1/workspaces/${workspaceId}/sites/${siteId}/topology`),
+    createAssetConnection: (
+      workspaceId: string,
+      body: {
+        site_id: string;
+        source_equipment_id: string;
+        target_equipment_id: string;
+        connection_type?: string;
+        source_port?: string | null;
+        target_port?: string | null;
+        notes?: string | null;
+      },
+    ) =>
+      request<AssetConnectionOut>(`/api/v1/workspaces/${workspaceId}/asset-connections`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchAssetConnection: (
+      workspaceId: string,
+      connectionId: string,
+      body: Partial<{
+        target_equipment_id: string;
+        connection_type: string;
+        source_port: string | null;
+        target_port: string | null;
+        notes: string | null;
+      }>,
+    ) =>
+      request<AssetConnectionOut>(`/api/v1/workspaces/${workspaceId}/asset-connections/${connectionId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteAssetConnection: (workspaceId: string, connectionId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/asset-connections/${connectionId}`, {
+        method: "DELETE",
+      }),
     createEquipment: (
       workspaceId: string,
       body: {
@@ -1716,26 +2495,78 @@ export function createApiClient(opts: {
         category?: string;
         status?: string;
         system_id?: string;
+        zone_id?: string | null;
         manufacturer?: string;
         model?: string;
         serial?: string;
+        mac?: string | null;
         ip?: string;
         location_note?: string;
+        installed_at?: string | null;
+        product_id?: string | null;
+        project_id?: string | null;
+        project_planned_item_id?: string | null;
+        asset_code?: string | null;
       },
     ) =>
       request<EquipmentOut>(`/api/v1/workspaces/${workspaceId}/equipment`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    patchEquipment: (
+      workspaceId: string,
+      equipmentId: string,
+      body: Partial<{
+        name: string;
+        category: string;
+        status: string;
+        system_id: string | null;
+        zone_id: string | null;
+        manufacturer: string | null;
+        model: string | null;
+        serial: string | null;
+        mac: string | null;
+        ip: string | null;
+        location_note: string | null;
+        installed_at: string | null;
+        product_id: string | null;
+        project_id: string | null;
+        project_planned_item_id: string | null;
+        asset_code: string | null;
+      }>,
+    ) =>
+      request<EquipmentOut>(`/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
     listJobs: (
       workspaceId: string,
-      opts: { q?: string; status?: string; site_id?: string; limit?: number } = {},
+      opts: {
+        q?: string;
+        status?: string;
+        site_id?: string;
+        service_call_id?: string;
+        project_id?: string;
+        assignment?: "assigned" | "unassigned";
+        include_assignees?: boolean;
+        include_context?: boolean;
+        limit?: number;
+        cursor?: string;
+      } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status) params.set("status", opts.status);
       if (opts.site_id) params.set("site_id", opts.site_id);
-      return request<{ items: JobOut[] }>(`/api/v1/workspaces/${workspaceId}/jobs?${params}`);
+      if (opts.service_call_id) params.set("service_call_id", opts.service_call_id);
+      if (opts.project_id) params.set("project_id", opts.project_id);
+      if (opts.assignment) params.set("assignment", opts.assignment);
+      if (opts.include_assignees) params.set("include_assignees", "true");
+      if (opts.include_context) params.set("include_context", "true");
+      if (opts.cursor) params.set("cursor", opts.cursor);
+      return request<{ items: JobOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/jobs?${params}`,
+      );
     },
     getJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}`),
@@ -1747,13 +2578,32 @@ export function createApiClient(opts: {
         site_id: string;
         kind?: string;
         scheduled_for?: string;
+        scheduled_end?: string;
         project_id?: string;
+        service_call_id?: string;
+        priority?: string;
       },
     ) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    assignJob: (workspaceId: string, jobId: string, body: { user_id: string }) =>
+      request<{
+        job_id: string;
+        user_id: string;
+        assigned_at?: string | null;
+        assigned_by?: string | null;
+        assignees: JobAssigneeOut[];
+        reassigned: boolean;
+      }>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/assign`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    enRouteJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/en-route`, { method: "POST" }),
+    arrivedJob: (workspaceId: string, jobId: string) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/arrived`, { method: "POST" }),
     startJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
     completeJob: (workspaceId: string, jobId: string, body: { completion_notes?: string } = {}) =>
@@ -1818,6 +2668,34 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    listSystemDesigns: (workspaceId: string, quoteId: string) =>
+      request<{ items: SystemDesign[] }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/system-designs`,
+      ),
+    createSystemDesign: (workspaceId: string, quoteId: string, body: SystemDesignCreateIn) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/system-designs`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSystemDesign: (workspaceId: string, designId: string) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`),
+    patchSystemDesign: (workspaceId: string, designId: string, body: SystemDesignPatchIn) =>
+      request<SystemDesign>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteSystemDesign: (workspaceId: string, designId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/system-designs/${designId}`, {
+        method: "DELETE",
+      }),
+    applySystemDesign: (workspaceId: string, designId: string, body: SystemDesignApplyIn) =>
+      request<SystemDesignApplyResult>(
+        `/api/v1/workspaces/${workspaceId}/system-designs/${designId}/apply`,
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
     listCatalogProducts: (
       workspaceId: string,
       opts: { q?: string; kind?: string; category_id?: string; limit?: number; include_inactive?: boolean; active?: boolean } = {},
@@ -1875,6 +2753,8 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    getCatalogProduct: (workspaceId: string, productId: string) =>
+      request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products/${productId}`),
     listCatalogCategories: (workspaceId: string) =>
       request<{ items: CatalogCategory[] }>(`/api/v1/workspaces/${workspaceId}/catalog/categories`),
     ensureCatalogDefaults: (workspaceId: string) =>
@@ -2101,14 +2981,62 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    listInvitations: (workspaceId: string) =>
+      request<WorkspaceInvitation[]>(`/api/v1/workspaces/${workspaceId}/invitations`),
+    revokeInvitation: (workspaceId: string, invitationId: string) =>
+      request<WorkspaceInvitation>(`/api/v1/workspaces/${workspaceId}/invitations/${invitationId}/revoke`, {
+        method: "POST",
+      }),
+    reissueInvitation: (workspaceId: string, invitationId: string) =>
+      request<InviteOut>(`/api/v1/workspaces/${workspaceId}/invitations/${invitationId}/reissue`, {
+        method: "POST",
+      }),
     peekInvitation: (token: string) => {
       const params = new URLSearchParams({ token });
       return request<InvitePreview>(`/api/v1/invitations/peek?${params.toString()}`);
+    },
+    peekInvitationPublic: (token: string) => {
+      const params = new URLSearchParams({ token });
+      return request<InvitePreview>(`/api/v1/invitations/public-peek?${params.toString()}`);
     },
     acceptInvitation: (token: string) =>
       request<InviteAcceptResult>("/api/v1/invitations/accept", {
         method: "POST",
         body: JSON.stringify({ token }),
+      }),
+    listCustomerPortal: (workspaceId: string, customerId: string) =>
+      request<{ access: PortalAccess[] }>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal`),
+    enableCustomerPortal: (workspaceId: string, customerId: string, body: { email: string }) =>
+      request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    copyCustomerPortalLink: (workspaceId: string, customerId: string, accessId: string) =>
+      request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal/${accessId}/link`, {
+        method: "POST",
+      }),
+    resendCustomerPortal: (workspaceId: string, customerId: string, accessId: string) =>
+      request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal/${accessId}/resend`, {
+        method: "POST",
+      }),
+    revokeCustomerPortal: (workspaceId: string, customerId: string, accessId: string) =>
+      request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal/${accessId}/revoke`, {
+        method: "POST",
+      }),
+    peekPortalInvite: (token: string) => {
+      const params = new URLSearchParams({ token });
+      return request<PortalInvitePreview>(`/api/v1/portal/invites/peek?${params.toString()}`);
+    },
+    acceptPortalInvite: (token: string) =>
+      request<{ access_id: string; status: string }>("/api/v1/portal/invites/accept", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
+    getPortalSession: () => request<PortalSession>("/api/v1/portal/session"),
+    getPortalHome: (accessId: string) => request<PortalHome>(`/api/v1/portal/access/${accessId}`),
+    getPortalDocumentUrl: (accessId: string, documentId: string) =>
+      request<{ url: string }>(`/api/v1/portal/access/${accessId}/documents/${documentId}/url`, {
+        method: "POST",
       }),
     listAudit: (workspaceId: string) =>
       request<AuditItem[]>(`/api/v1/workspaces/${workspaceId}/audit`),
@@ -2144,14 +3072,80 @@ export function createApiClient(opts: {
     },
     adminSummary: () => request<AdminSummary>("/api/v1/admin/summary"),
     adminOrganizations: () => request<AdminOrganization[]>("/api/v1/admin/organizations"),
+    adminCreateOrganization: (body: {
+      name: string;
+      plan_key?: string;
+      is_beta?: boolean;
+      beta_program?: string;
+      internal_note?: string | null;
+    }) =>
+      request<AdminOrganization>("/api/v1/admin/organizations", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     adminPatchOrganization: (workspaceId: string, body: { is_beta?: boolean; beta_program?: string }) =>
       request<AdminOrganization>(`/api/v1/admin/organizations/${workspaceId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
-    adminUsers: () => request<AdminUser[]>("/api/v1/admin/users"),
-    adminPatchUserBadges: (userId: string, body: { recognition_badges: string[] }) =>
+    adminMemberships: (opts: { workspace_id?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.workspace_id) params.set("workspace_id", opts.workspace_id);
+      if (opts.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<AdminMembership[]>(`/api/v1/admin/memberships${q ? `?${q}` : ""}`);
+    },
+    adminInvitations: (opts: { workspace_id?: string; status?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.workspace_id) params.set("workspace_id", opts.workspace_id);
+      if (opts.status) params.set("status", opts.status);
+      if (opts.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<AdminInvitation[]>(`/api/v1/admin/invitations${q ? `?${q}` : ""}`);
+    },
+    adminCreateInvitation: (body: { workspace_id: string; email: string; role_key: string }) =>
+      request<AdminInvitation>("/api/v1/admin/invitations", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    adminRevokeInvitation: (invitationId: string) =>
+      request<AdminInvitation>(`/api/v1/admin/invitations/${invitationId}/revoke`, { method: "POST" }),
+    adminReissueInvitation: (invitationId: string) =>
+      request<AdminInvitation>(`/api/v1/admin/invitations/${invitationId}/reissue`, { method: "POST" }),
+    adminUsers: (opts: { q?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.q) params.set("q", opts.q);
+      const q = params.toString();
+      return request<AdminUser[]>(`/api/v1/admin/users${q ? `?${q}` : ""}`);
+    },
+    adminPatchUserBadges: (
+      userId: string,
+      body: { recognition_badges: string[]; reason?: string | null },
+    ) =>
       request<AdminUser>(`/api/v1/admin/users/${userId}/badges`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminBetaParticipants: (
+      opts: { status?: string; cohort?: string; badge?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.cohort) params.set("cohort", opts.cohort);
+      if (opts.badge) params.set("badge", opts.badge);
+      const q = params.toString();
+      return request<BetaParticipant[]>(`/api/v1/admin/beta/participants${q ? `?${q}` : ""}`);
+    },
+    adminPatchUserBeta: (
+      userId: string,
+      body: {
+        workspace_id: string;
+        status: BetaParticipantStatus;
+        cohort?: string | null;
+        internal_note?: string | null;
+      },
+    ) =>
+      request<BetaParticipant>(`/api/v1/admin/users/${userId}/beta`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
@@ -2160,10 +3154,12 @@ export function createApiClient(opts: {
       return request<
         Array<{
           id: string;
-          workspace_id: string;
+          source?: string;
+          workspace_id?: string | null;
           workspace_name?: string | null;
           actor_user_id?: string | null;
           actor_email?: string | null;
+          target_user_id?: string | null;
           action: string;
           entity_type?: string | null;
           entity_id?: string | null;

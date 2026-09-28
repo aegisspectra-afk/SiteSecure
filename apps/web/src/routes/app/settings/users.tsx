@@ -20,6 +20,28 @@ function formatMeterUsage(row: WorkspaceUsageMeter): string {
   return `${row.current} / ${row.limit}`;
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("he-IL");
+}
+
+function inviteStatusLabel(status: string) {
+  switch (status) {
+    case "pending":
+      return he.inviteStatusPending;
+    case "accepted":
+      return he.inviteStatusAccepted;
+    case "expired":
+      return he.inviteStatusExpired;
+    case "revoked":
+      return he.inviteStatusRevoked;
+    default:
+      return status;
+  }
+}
+
 export const Route = createFileRoute("/app/settings/users")({
   component: UsersPage,
 });
@@ -50,6 +72,11 @@ function UsersBody() {
     queryKey: ["members", workspaceId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.listMembers(workspaceId!),
+  });
+  const invitesQuery = useQuery({
+    queryKey: ["invitations", workspaceId],
+    enabled: Boolean(workspaceId && canInvite),
+    queryFn: () => api.listInvitations(workspaceId!),
   });
   const rolesQuery = useQuery({
     queryKey: ["workspace-roles", workspaceId],
@@ -85,6 +112,7 @@ function UsersBody() {
         setInviteLink(null);
       }
       void queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["invitations", workspaceId] });
       void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
     },
     onError: (err) => {
@@ -93,6 +121,27 @@ function UsersBody() {
         return;
       }
       setFormError(err instanceof ApiClientError ? err.message : he.sessionError);
+    },
+  });
+
+  const revokeInvite = useMutation({
+    mutationFn: (invitationId: string) => api.revokeInvitation(workspaceId!, invitationId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["invitations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
+    },
+  });
+
+  const reissueInvite = useMutation({
+    mutationFn: (invitationId: string) => api.reissueInvitation(workspaceId!, invitationId),
+    onSuccess: (row) => {
+      setCopied(false);
+      if (row.token) {
+        setInviteLink(`${window.location.origin}/invite/${row.token}`);
+        void navigator.clipboard.writeText(`${window.location.origin}/invite/${row.token}`).then(() => setCopied(true));
+      }
+      void queryClient.invalidateQueries({ queryKey: ["invitations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["usage", workspaceId] });
     },
   });
 
@@ -134,12 +183,13 @@ function UsersBody() {
   const planInvite = new Set(assignableInviteRoles(membership?.plan_key));
   const workspaceRoles = rolesQuery.data ?? [];
   const inviteRoles = workspaceRoles
-    .filter((role) => planInvite.has(role.base_role_key) && role.key !== "owner")
+    .filter((role) => planInvite.has(role.base_role_key) && role.key !== "owner" && role.base_role_key !== "owner")
     .map((role) => ({ value: role.key, label: role.label_he, base: role.base_role_key }));
   const manageRoles = workspaceRoles
     .filter((role) => (canAssignOwner ? true : role.key !== "owner"))
     .map((role) => ({ value: role.key, label: role.label_he }));
   const usage = usageQuery.data?.meters ?? [];
+  const pendingInvites = (invitesQuery.data ?? []).filter((row) => row.status !== "accepted");
 
   return (
     <div className="settings-panel flex flex-col gap-8">
@@ -181,7 +231,7 @@ function UsersBody() {
             type="submit"
             variant="primary"
             loading={invite.isPending}
-            disabled={atSeatLimit}
+            disabled={atSeatLimit || inviteRoles.length === 0}
             className="h-11"
             aria-describedby={atSeatLimit ? "seat-limit-hint" : undefined}
           >
@@ -215,80 +265,156 @@ function UsersBody() {
           </Button>
         </div>
       ) : null}
-      {query.data.length === 0 ? (
-        <EmptyState title={he.usersEmpty} />
-      ) : (
-        <Table>
-          <THead>
-            <TR>
-              <TH>{he.fullName}</TH>
-              <TH>{he.email}</TH>
-              <TH>{he.role}</TH>
-              <TH>{he.status}</TH>
-              {canManage ? <TH>{he.actions}</TH> : null}
-            </TR>
-          </THead>
-          <TBody>
-            {query.data.map((member) => {
-              const effectiveRole = member.workspace_role_key || member.role_key;
-              const roleName =
-                workspaceRoles.find((r) => r.key === effectiveRole)?.label_he ?? roleLabel(member.role_key);
-              return (
-                <TR key={member.id}>
-                  <TD>{member.full_name || "—"}</TD>
-                  <TD className="ltr-meta">{member.email || "—"}</TD>
-                  <TD>
-                    {canManage && member.user_id !== session?.user_id ? (
-                      <select
-                        className="min-h-9 rounded-[var(--radius-control)] border border-border bg-transparent px-2 text-sm"
-                        value={effectiveRole}
-                        onChange={(ev) =>
-                          patch.mutate({ id: member.id, workspace_role_key: ev.target.value })
-                        }
-                        aria-label={he.changeRole}
-                      >
-                        {manageRoles.map((role) => (
-                          <option key={role.value} value={role.value}>
-                            {role.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      roleName
-                    )}
-                  </TD>
-                  <TD>
-                    <Status
-                      label={member.status === "active" ? he.statusActive : he.statusDisabled}
-                      tone={member.status === "active" ? "success" : "neutral"}
-                    />
-                  </TD>
-                  {canManage ? (
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-fg">{he.usersMembersTitle}</h2>
+        {query.data.length === 0 ? (
+          <EmptyState title={he.usersEmpty} />
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>{he.fullName}</TH>
+                <TH>{he.email}</TH>
+                <TH>{he.role}</TH>
+                <TH>{he.status}</TH>
+                <TH>{he.usersJoined}</TH>
+                {canManage ? <TH>{he.actions}</TH> : null}
+              </TR>
+            </THead>
+            <TBody>
+              {query.data.map((member) => {
+                const effectiveRole = member.workspace_role_key || member.role_key;
+                const roleName =
+                  workspaceRoles.find((r) => r.key === effectiveRole)?.label_he ?? roleLabel(member.role_key);
+                return (
+                  <TR key={member.id}>
+                    <TD>{member.full_name || "—"}</TD>
+                    <TD className="ltr-meta">{member.email || "—"}</TD>
                     <TD>
-                      {member.user_id !== session?.user_id ? (
-                        <button
-                          type="button"
-                          className="settings-text-btn"
-                          onClick={() =>
-                            patch.mutate({
-                              id: member.id,
-                              status: member.status === "active" ? "disabled" : "active",
-                            })
+                      {canManage && member.user_id !== session?.user_id ? (
+                        <select
+                          className="min-h-9 rounded-[var(--radius-control)] border border-border bg-transparent px-2 text-sm"
+                          value={effectiveRole}
+                          onChange={(ev) =>
+                            patch.mutate({ id: member.id, workspace_role_key: ev.target.value })
                           }
+                          aria-label={he.changeRole}
                         >
-                          {member.status === "active" ? he.deactivateUser : he.activateUser}
-                        </button>
+                          {manageRoles.map((role) => (
+                            <option key={role.value} value={role.value}>
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
-                        "—"
+                        roleName
                       )}
                     </TD>
-                  ) : null}
+                    <TD>
+                      <Status
+                        label={member.status === "active" ? he.statusActive : he.statusDisabled}
+                        tone={member.status === "active" ? "success" : "neutral"}
+                      />
+                    </TD>
+                    <TD className="ltr-meta">{formatDate(member.created_at)}</TD>
+                    {canManage ? (
+                      <TD>
+                        {member.user_id !== session?.user_id ? (
+                          <button
+                            type="button"
+                            className="settings-text-btn"
+                            onClick={() =>
+                              patch.mutate({
+                                id: member.id,
+                                status: member.status === "active" ? "disabled" : "active",
+                              })
+                            }
+                          >
+                            {member.status === "active" ? he.deactivateUser : he.activateUser}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </TD>
+                    ) : null}
+                  </TR>
+                );
+              })}
+            </TBody>
+          </Table>
+        )}
+      </section>
+
+      {canInvite ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-fg">{he.usersInvitesTitle}</h2>
+          {invitesQuery.isLoading ? <p className="text-sm text-fg-muted">{he.loading}</p> : null}
+          {!invitesQuery.isLoading && pendingInvites.length === 0 ? (
+            <p className="text-sm text-fg-muted">{he.usersInvitesEmpty}</p>
+          ) : null}
+          {pendingInvites.length > 0 ? (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>{he.email}</TH>
+                  <TH>{he.role}</TH>
+                  <TH>{he.status}</TH>
+                  <TH>{he.usersInviteCreated}</TH>
+                  <TH>{he.usersInviteExpires}</TH>
+                  <TH>{he.actions}</TH>
                 </TR>
-              );
-            })}
-          </TBody>
-        </Table>
-      )}
+              </THead>
+              <TBody>
+                {pendingInvites.map((row) => (
+                  <TR key={row.id}>
+                    <TD className="ltr-meta">{row.email}</TD>
+                    <TD>{roleLabel(row.role_key)}</TD>
+                    <TD>
+                      <Status
+                        label={inviteStatusLabel(row.status)}
+                        tone={
+                          row.status === "pending"
+                            ? "warning"
+                            : row.status === "expired" || row.status === "revoked"
+                              ? "neutral"
+                              : "success"
+                        }
+                      />
+                    </TD>
+                    <TD className="ltr-meta">{formatDate(row.created_at)}</TD>
+                    <TD className="ltr-meta">{formatDate(row.expires_at)}</TD>
+                    <TD>
+                      <div className="flex flex-wrap gap-2">
+                        {row.status === "pending" || row.status === "expired" || row.status === "revoked" ? (
+                          <button
+                            type="button"
+                            className="settings-text-btn"
+                            disabled={reissueInvite.isPending}
+                            onClick={() => reissueInvite.mutate(row.id)}
+                          >
+                            {he.inviteReissue}
+                          </button>
+                        ) : null}
+                        {row.status === "pending" ? (
+                          <button
+                            type="button"
+                            className="settings-text-btn"
+                            disabled={revokeInvite.isPending}
+                            onClick={() => revokeInvite.mutate(row.id)}
+                          >
+                            {he.inviteRevoke}
+                          </button>
+                        ) : null}
+                      </div>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

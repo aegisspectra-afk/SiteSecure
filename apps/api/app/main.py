@@ -80,13 +80,21 @@ def create_app() -> FastAPI:
         started = time.perf_counter()
         response = await call_next(request)
         response.headers["X-Request-Id"] = request_id
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        # Put request_id in the message body so Render log search finds it
+        # without requiring structured-extra indexing.
         logger.info(
-            "request",
+            "request_id=%s method=%s path=%s status=%s latency_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            latency_ms,
             extra={
                 "request_id": request_id,
                 "path": request.url.path,
                 "status": response.status_code,
-                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "latency_ms": latency_ms,
             },
         )
         return response

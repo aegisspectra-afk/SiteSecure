@@ -60,6 +60,15 @@ class ServiceClient:
             json=json,
         )
 
+    def rpc(self, name: str, payload: dict | None = None):
+        """PostgREST RPC with service role (server-side only; never expose this client to browsers)."""
+        return supabase_request(
+            "POST",
+            f"{self.rest}/rpc/{name}",
+            headers=self._headers,
+            json=payload or {},
+        )
+
     def storage_upload_bytes(self, bucket: str, path: str, data: bytes, content_type: str) -> None:
         """Upload a private object with the service role (bypasses Storage RLS)."""
         headers = {

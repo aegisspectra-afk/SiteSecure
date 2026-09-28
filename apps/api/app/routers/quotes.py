@@ -69,13 +69,18 @@ ITEM_SELECT = (
 ITEM_SELECT_SAFE = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,discount,"
     "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
-    "section_id,package_instance_id,package_id,package_name"
+    "section_id,package_instance_id,package_id,package_name,is_optional"
 )
 SECTION_SELECT = (
     "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
 )
 PRODUCT_SELECT = (
     "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
+    "manufacturer,model,attributes"
+)
+# Authenticated product reads must omit cost (Q4-S). Service role uses PRODUCT_SELECT.
+PRODUCT_SELECT_SAFE = (
+    "id,sku,name,description,unit,kind,list_price,vat_eligible,is_labor,is_active,"
     "manufacturer,model,attributes"
 )
 COST_FIELDS = ("cost_total", "margin_amount", "margin_percent")
@@ -377,7 +382,11 @@ def _persist_totals(
             client.patch(
                 "quote_items",
                 {"line_net": computed_item["line_net"]},
-                params={"id": f"eq.{item['id']}", "workspace_id": f"eq.{workspace_id}"},
+                params={
+                    "id": f"eq.{item['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": ITEM_SELECT_SAFE,
+                },
             )
             item["line_net"] = computed_item["line_net"]
     totals = {
@@ -388,14 +397,19 @@ def _persist_totals(
         "margin_amount": computed["margin_amount"],
         "margin_percent": computed["margin_percent"],
     }
+    # UPDATE cost_* via authenticated (UPDATE granted); RETURNING must omit locked columns.
     patched = patched_or_403(
         client.patch(
             "quotes",
             totals,
-            params={"id": f"eq.{quote['id']}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote['id']}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
-    return patched, items
+    return {**patched, **totals}, items
 
 
 TEMPLATE_ITEM_SELECT = (
@@ -501,7 +515,7 @@ def _insert_line(
     unit = None
     if body.product_id:
         products = as_list(
-            client.get(
+            _service().get(
                 "products",
                 params={
                     "id": f"eq.{body.product_id}",
@@ -577,7 +591,13 @@ def _insert_line(
             )
         ),
     }
-    created_or_403(client.post("quote_items", payload))
+    created_or_403(
+        client.post(
+            "quote_items",
+            payload,
+            params={"select": ITEM_SELECT_SAFE},
+        )
+    )
     return True
 
 
@@ -1128,7 +1148,15 @@ def patch_quote(
     if any(k in patch for k in ("total_gross", "subtotal_net", "vat_amount", "cost_total")):
         raise ApiError(400, "VALIDATION_ERROR", "סה״כ מחושב בשרת בלבד")
     row = patched_or_403(
-        client.patch("quotes", patch, params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"})
+        client.patch(
+            "quotes",
+            patch,
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
+        )
     )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, row, items)
@@ -1234,7 +1262,11 @@ def apply_template(
         client.patch(
             "quotes",
             {"template_id": template["id"]},
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     _record_event(
@@ -1314,7 +1346,12 @@ def patch_item(
         client.patch(
             "quote_items",
             patch,
-            params={"id": f"eq.{item_id}", "quote_id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{item_id}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ITEM_SELECT_SAFE,
+            },
         )
     )
     _record_event(
@@ -1425,7 +1462,11 @@ def _transition_to_sent(
         client.patch(
             "quotes",
             {"status": "sent", "sent_at": now},
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     token = new_public_token()
@@ -1489,7 +1530,11 @@ def revise_quote(
         client.patch(
             "quotes",
             patch,
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     items = _load_items(client, workspace_id, quote_id)
@@ -1717,6 +1762,7 @@ def duplicate_quote(
                     "package_name": item.get("package_name"),
                     "line_net": item.get("line_net") or 0,
                 },
+                params={"select": ITEM_SELECT_SAFE},
             )
         )
     copied = _load_items(client, workspace_id, UUID(row["id"]))

@@ -2,7 +2,7 @@ import type { AttentionGroup, DashboardItem, LeadOut } from "@site-secure/api-cl
 import { he } from "../i18n/he";
 import { leadDisplayTitle, leadRequirementsSummary } from "./leads";
 
-const SEVERITY_ORDER: Record<DashboardItem["severity"], number> = { now: 0, next: 1, info: 2 };
+const SEVERITY_ORDER: Record<DashboardItem["severity"], number> = { now: 0, next: 1, later: 2, info: 3 };
 
 /** Lower number = higher priority. Derived from domain urgency. */
 export const ATTENTION_KIND_PRIORITY: Record<string, number> = {

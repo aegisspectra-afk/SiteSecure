@@ -16,3 +16,13 @@ dist/
 coverage/
 .vite/
 **/.vite/
+.cache/
+**/.cache/
+Docs/**/*-qa/
+Docs/**/*-qa/**
+*.zip
+apps/api/
+apps/mobile/
+_backup_vault/
+.external-reference/
+supabase/.temp/

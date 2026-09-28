@@ -1,9 +1,9 @@
 import { Button, ErrorState, Input, PageHeader } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { PaymentDetailsCard, PaymentDetailsEmpty } from "../../../components/settings/PaymentDetailsCard";
-import { RequirePermission } from "../../../components/settings/RequirePermission";
+import { RequireAnyPermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { ApiClientError } from "@site-secure/api-client";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
@@ -84,10 +84,31 @@ function paymentFromProfile(p: Record<string, unknown>): PaymentDetailsFields {
 
 function CompanyBrandingPage() {
   return (
-    <RequirePermission permission="workspace.edit">
+    <RequireAnyPermission permissions={["workspace.edit", "settings.branding"]}>
       <CompanyBrandingBody />
-    </RequirePermission>
+    </RequireAnyPermission>
   );
+}
+
+function formFromProfile(p: Record<string, unknown>): FormState {
+  const pay = paymentFromProfile(p);
+  return {
+    displayName: String(p.displayName || ""),
+    legalName: String(p.legalName || ""),
+    businessNumberType: String(p.businessNumberType || "company_number"),
+    businessNumber: String(p.businessNumber || ""),
+    taxStatus: String(p.taxStatus || "unknown"),
+    addressLine1: String(p.addressLine1 || ""),
+    addressLine2: String(p.addressLine2 || ""),
+    city: String(p.city || ""),
+    postalCode: String(p.postalCode || ""),
+    phone: String(p.phone || ""),
+    email: String(p.email || ""),
+    website: String(p.website || ""),
+    brandPrimary: String(p.brandPrimary || "#1c4e80"),
+    brandAccent: String(p.brandAccent || ""),
+    ...pay,
+  };
 }
 
 function CompanyBrandingBody() {
@@ -95,6 +116,7 @@ function CompanyBrandingBody() {
   const workspaceId = session?.memberships[0]?.workspace_id;
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [baseline, setBaseline] = useState<FormState | null>(null);
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -111,29 +133,19 @@ function CompanyBrandingBody() {
   useEffect(() => {
     if (!query.data?.profile) return;
     const p = query.data.profile as Record<string, unknown>;
-    const pay = paymentFromProfile(p);
-    setForm({
-      displayName: String(p.displayName || ""),
-      legalName: String(p.legalName || ""),
-      businessNumberType: String(p.businessNumberType || "company_number"),
-      businessNumber: String(p.businessNumber || ""),
-      taxStatus: String(p.taxStatus || "unknown"),
-      addressLine1: String(p.addressLine1 || ""),
-      addressLine2: String(p.addressLine2 || ""),
-      city: String(p.city || ""),
-      postalCode: String(p.postalCode || ""),
-      phone: String(p.phone || ""),
-      email: String(p.email || ""),
-      website: String(p.website || ""),
-      brandPrimary: String(p.brandPrimary || "#1c4e80"),
-      brandAccent: String(p.brandAccent || ""),
-      ...pay,
-    });
+    const next = formFromProfile(p);
+    setForm(next);
+    setBaseline(next);
     if (!paymentModeSeeded.current) {
-      setPaymentEditing(!hasPaymentDetails(pay));
+      setPaymentEditing(!hasPaymentDetails(paymentSlice(next)));
       paymentModeSeeded.current = true;
     }
   }, [query.data]);
+
+  const dirty = useMemo(() => {
+    if (!baseline) return false;
+    return (Object.keys(form) as (keyof FormState)[]).some((key) => form[key] !== baseline[key]);
+  }, [baseline, form]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -169,6 +181,7 @@ function CompanyBrandingBody() {
       setFormError(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
+      setBaseline(form);
       await queryClient.invalidateQueries({ queryKey: ["company-profile", workspaceId] });
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
       setPaymentEditing(!hasPaymentDetails(paymentSlice(form)));
@@ -255,6 +268,7 @@ function CompanyBrandingBody() {
         className="settings-form"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
+          if (!dirty) return;
           save.mutate();
         }}
       >
@@ -483,12 +497,26 @@ function CompanyBrandingBody() {
           </div>
         </section>
 
-        {formError ? <p className="text-sm text-danger">{formError}</p> : null}
+        {formError ? (
+          <p className="text-sm text-danger" role="alert">
+            {formError}
+          </p>
+        ) : null}
+        {saved ? (
+          <p className="text-sm text-success" role="status">
+            {he.settingsSaved}
+          </p>
+        ) : null}
         <div className="settings-actions-row">
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? he.saving : he.save}
+          <Button
+            type="submit"
+            variant="primary"
+            loading={save.isPending}
+            disabled={!dirty || !form.displayName.trim()}
+            title={!dirty ? he.settingsSaveDisabled : undefined}
+          >
+            {he.saveSettings}
           </Button>
-          {saved ? <span className="settings-saved">{he.settingsSaved}</span> : null}
         </div>
       </form>
     </div>

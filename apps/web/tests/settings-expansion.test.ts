@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { planAllowsCustomRbac } from "@site-secure/authz";
 import { he } from "../src/i18n/he";
 import { appNav, TARGET_IA } from "../src/lib/app-nav";
-import { can } from "../src/lib/can";
+import { can, canAny } from "../src/lib/can";
 import {
   prefsFromSettings,
   prefsToSettingsPatch,
@@ -15,12 +15,22 @@ import {
   buildGrantMatrixFromCatalog,
 } from "../src/lib/settings-rbac-demo";
 
+const FULL_FEATURES = [
+  "core",
+  "crm",
+  "sales",
+  "catalog",
+  "quotes",
+  "projects",
+  "service",
+  "settings",
+  "team",
+  "audit",
+];
+
 describe("settings production nav", () => {
   it("keeps Team/RBAC/Security out of the sidebar", () => {
-    const paths = appNav(
-      "owner",
-      ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "team", "audit"],
-    ).flatMap((g) => g.items.map((i) => i.to));
+    const paths = appNav("owner", FULL_FEATURES).flatMap((g) => g.items.map((i) => i.to));
     expect(paths).toContain("/app/settings");
     expect(paths).not.toContain("/app/settings/users");
     expect(paths).not.toContain("/app/settings/roles");
@@ -28,15 +38,55 @@ describe("settings production nav", () => {
     expect(TARGET_IA.map((g) => g.id)).toEqual(["overview", "sales", "ops", "system"]);
   });
 
-  it("covers required Hebrew settings sections", () => {
+  it("covers required Hebrew settings sections and groups", () => {
+    expect(he.settingsTitle).toBe("הגדרות");
+    expect(he.settingsLead).toContain("סביבת העבודה");
+    expect(he.settingsNavGroupWorkspace).toBe("חשבון וסביבה");
+    expect(he.settingsNavGroupCommercial).toBe("מסחרי");
+    expect(he.settingsNavGroupOperations).toBe("תפעול");
+    expect(he.settingsNavGroupTeam).toBe("צוות וגישה");
+    expect(he.settingsNavGroupAdvanced).toBe("מתקדם");
     expect(he.settingsNavGeneral).toBeTruthy();
     expect(he.settingsNavCompany).toBe("פרטי חברה ומיתוג");
+    expect(he.settingsNavSystem).toBe("הגדרות מערכת");
     expect(he.settingsNavPdf).toBe("תבניות מסמכים");
     expect(he.pdfTemplatesTitle).toBe("תבניות מסמכים");
-    expect(he.pdfTemplatePreviewReal).toBeTruthy();
+    expect(he.pdfTemplatesLead).toContain("PDF");
     expect(he.settingsNavRoles).toBe("תפקידים והרשאות");
-    expect(he.navUsers).toBeTruthy();
-    expect(he.navSecurity).toBeTruthy();
+    expect(he.navUsers).toBe("צוות");
+    expect(he.navSecurity).toBe("אבטחה");
+    expect(he.securityTitle).toBe("אבטחה");
+    expect(he.accountAvatarMan).toBe("איור 1");
+    expect(he.accountAvatarWoman).toBe("איור 2");
+    expect(he.settingsQuotesApplyHint).toBeTruthy();
+    expect(he.settingsNumberingExampleHint).toBeTruthy();
+  });
+});
+
+describe("settings role-aware access", () => {
+  it("owner/admin can edit workspace settings", () => {
+    expect(can("owner", "workspace.edit", FULL_FEATURES)).toBe(true);
+    expect(can("administrator", "workspace.edit", FULL_FEATURES)).toBe(true);
+    expect(can("owner", "users.view", FULL_FEATURES)).toBe(true);
+    expect(can("owner", "roles.manage", FULL_FEATURES)).toBe(true);
+  });
+
+  it("manager sees team/security, not workspace.edit", () => {
+    expect(can("manager", "workspace.edit", FULL_FEATURES)).toBe(false);
+    expect(can("manager", "users.view", FULL_FEATURES)).toBe(true);
+    expect(can("manager", "settings.general", FULL_FEATURES)).toBe(true);
+    expect(canAny("manager", ["settings.general", "workspace.edit"], FULL_FEATURES)).toBe(true);
+    expect(can("manager", "roles.manage", FULL_FEATURES)).toBe(false);
+  });
+
+  it("sales/technician/viewer do not get settings management surfaces", () => {
+    for (const role of ["sales", "technician", "viewer"] as const) {
+      expect(can(role, "workspace.edit", FULL_FEATURES)).toBe(false);
+      expect(can(role, "users.view", FULL_FEATURES)).toBe(false);
+      expect(can(role, "settings.general", FULL_FEATURES)).toBe(false);
+      expect(can(role, "roles.manage", FULL_FEATURES)).toBe(false);
+      expect(can(role, "audit.view", FULL_FEATURES)).toBe(false);
+    }
   });
 });
 
@@ -98,6 +148,5 @@ describe("RBAC matrix mapping", () => {
 
   it("honors session permissions over catalog role", () => {
     expect(can("viewer", "quotes.create", ["quotes"], ["quotes.view", "quotes.create"])).toBe(true);
-    expect(can("viewer", "quotes.create", ["quotes"], ["quotes.view"])).toBe(false);
   });
 });

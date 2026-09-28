@@ -59,3 +59,6 @@ pnpm-lock.yaml
 _backup_vault/
 apps/api/scripts/durability/.vault/
 apps/api/scripts/durability/reports/
+
+# External OSS reference clones (local research only — never commit / never build)
+.external-reference/

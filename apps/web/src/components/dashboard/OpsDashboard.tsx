@@ -13,23 +13,22 @@ import {
   leadsToAttentionGroups,
 } from "../../lib/attention-queue";
 import { can } from "../../lib/can";
-import { hasFeature } from "../../lib/home";
-import { hasQuoteRecords } from "../../lib/ux-metrics";
+import { hasFeature, homeVariant } from "../../lib/home";
 import { liveAdminActions, workspaceSetup } from "../../lib/workspace-setup";
 import { ActivationCard } from "./ActivationCard";
 import { ActiveWork } from "./ActiveWork";
-import { CommercialPulse } from "./CommercialPulse";
 import { CommandStatus } from "./CommandStatus";
 import { DashboardActivity } from "./DashboardActivity";
+import { buildCreateActions } from "./DashboardCreateMenu";
 import { DashboardCommandHero } from "./DashboardCommandHero";
 import { DashboardFreshness } from "./DashboardFreshness";
+import { DashboardZone } from "./DashboardZone";
+import { QuotePipeline } from "./QuotePipeline";
 import { RecentQuotes } from "./RecentQuotes";
 import { UsageThresholdBanner, usageThresholdMeters } from "./UsageThresholdBanner";
 
 /**
- * Phase 1B.4 — Adaptive daily command center.
- * Uses existing GET /dashboard (+ existing lead/usage probes). No Tasks/Service/Projects/Warranties queries.
- * Sections omit when empty; desktop primary/secondary grids reflow — no reserved blank slots.
+ * Premium daily command center — hero balance + quick actions + zoned ops/commercial.
  */
 export function OpsDashboard({
   data,
@@ -79,13 +78,6 @@ export function OpsDashboard({
   const quoteCta = canCreateQuote;
   const invite = liveAdminActions(roleKey, features).find((action) => action.href === "/app/settings/users");
   const showQuotes = Boolean(summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
-  const showBusiness =
-    showQuotes &&
-    Boolean(summary) &&
-    hasQuoteRecords(summary) &&
-    ((summary?.quotes_open ?? 0) > 0 ||
-      (summary?.quotes_open_value ?? 0) > 0 ||
-      (summary?.quotes_approved_value ?? 0) > 0);
   const showActivation = shouldShowActivationCard({
     activation,
     canCreateQuote,
@@ -111,32 +103,27 @@ export function OpsDashboard({
       ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
   const todayItems = data.today.items;
-  const showToday = can(roleKey, "jobs.view", features);
+  // Sales API returns empty today jobs by design — hide the empty Today tile (no /app/today ping-pong).
+  const showToday =
+    can(roleKey, "jobs.view", features) && homeVariant(roleKey) !== "sales";
   const thresholdMeters = usageThresholdMeters(usage);
   const canManageTeam = Boolean(invite) || can(roleKey, "users.view", features);
   const showUsageBanner = thresholdMeters.length > 0 && roleKey !== "sales" && canManageTeam;
 
-  // Today remains visible (incl. compact empty) whenever jobs are permitted — controlled width, not a giant wall.
   const showTodaySection = showToday;
-  // Truthful limited activity (quote events + job completions) — never invent rows.
   const showActivity = activityItems.length > 0;
-  // Recent quotes when no activity rows; omit empty recent during activation (Quick Actions + setup own start).
-  const showRecentSection = !showActivity && showQuotes && recentQuotes.length > 0 && !showActivation;
-  // Attention only when items exist — Hero calm state is enough when quiet.
   const showAttention = !showActivation && attentionTotal > 0;
-
-  const showPrimary = showTodaySection || showAttention;
-  const showSecondary = showActivity || showRecentSection || showBusiness;
+  const showCommercial = showQuotes && Boolean(summary) && !showActivation;
   const showUtility = showActivation || showUsageBanner;
 
-  /**
-   * Low-data desktop: pair Today with Setup/warning rail — never leave a dead sibling column.
-   * Active data: Attention|Today then Recent|Commercial; utilities stay compact.
-   */
+  const showPrimary = showTodaySection || showAttention;
+  const showSecondary = showActivity || showCommercial;
+
   const isSparseWorkbench = !showAttention && !showSecondary && showTodaySection && showUtility;
 
   const primaryClass = [
     "ops-command-primary",
+    "is-dash-final",
     showAttention && showTodaySection ? "has-pair" : "is-solo",
     !showAttention && todayItems.length === 0 ? "is-empty-today" : "",
   ]
@@ -145,19 +132,14 @@ export function OpsDashboard({
 
   const secondaryClass = [
     "ops-command-secondary",
-    (showActivity || showRecentSection) && showBusiness ? "has-pair" : "is-solo",
+    "is-dash-final",
+    showActivity && showCommercial ? "has-pair" : "is-solo",
   ].join(" ");
 
-  // Quick Actions remain available in low-data workspaces — actionability is the product.
-  const showCreateActions =
-    canCreateQuote ||
-    canCreateCustomer ||
-    can(roleKey, "sites.create", features) ||
-    can(roleKey, "leads.create", features) ||
-    can(roleKey, "jobs.create", features);
+  const showCreateActions = buildCreateActions(roleKey, features).length > 0;
 
   return (
-    <div className="ops-dashboard ops-command-center ops-dashboard-v3 ops-dashboard-flagship ops-dashboard-v2 ops-dashboard-daily ops-dashboard-adaptive flex flex-col">
+    <div className="ops-dashboard ops-command-center ops-dashboard-v3 ops-dashboard-flagship ops-dashboard-v2 ops-dashboard-daily ops-dashboard-adaptive ops-dashboard-dash12 ops-dashboard-final flex flex-col">
       <DashboardCommandHero
         displayName={displayName}
         roleKey={roleKey}
@@ -169,6 +151,8 @@ export function OpsDashboard({
         showToday={showToday}
         showCreate={showCreateActions}
         activationMode={showActivation}
+        summary={showQuotes ? summary : null}
+        chart={data.business_chart ?? null}
         secondaryAction={
           !quoteCta && invite ? (
             <Link to={invite.href} className="ops-command-hero-invite">
@@ -201,48 +185,50 @@ export function OpsDashboard({
         ) : (
           <>
             {showPrimary ? (
-              <div className={primaryClass}>
-                {showAttention ? (
-                  <CommandStatus
-                    attention={attentionGroups}
-                    canCreateProject={canCreateProject}
-                    viewAllTo={showQuotes ? "/app/quotes" : "/app/today"}
-                    workspaceId={workspaceId}
-                  />
-                ) : null}
-                {showTodaySection ? <ActiveWork items={todayItems} compactEmpty /> : null}
-              </div>
+              <DashboardZone id="ops" label={he.dashZoneOps} className="is-ops">
+                <div className={primaryClass}>
+                  {showAttention ? (
+                    <CommandStatus
+                      attention={attentionGroups}
+                      canCreateProject={canCreateProject}
+                      viewAllTo={showQuotes ? "/app/quotes" : "/app/today"}
+                      workspaceId={workspaceId}
+                    />
+                  ) : null}
+                  {showTodaySection ? <ActiveWork items={todayItems} compactEmpty /> : null}
+                </div>
+              </DashboardZone>
             ) : null}
 
             {showSecondary ? (
-              <div className={secondaryClass}>
-                {showActivity ? <DashboardActivity items={activityItems} /> : null}
-                {showRecentSection ? (
-                  <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} />
-                ) : null}
-                {showBusiness && summary ? (
-                  <div className="ops-v3-pulse">
-                    <CommercialPulse summary={summary} chart={data.business_chart ?? null} />
-                  </div>
-                ) : null}
-              </div>
+              <DashboardZone id="commercial" label={he.dashZoneCommercial} className="is-commercial">
+                <div className={secondaryClass}>
+                  {showActivity ? <DashboardActivity items={activityItems} /> : null}
+                  {showCommercial && summary ? <QuotePipeline summary={summary} /> : null}
+                  {showCommercial ? (
+                    <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} />
+                  ) : null}
+                </div>
+              </DashboardZone>
             ) : null}
 
             {showUtility ? (
-              <div className="ops-home-utility">
-                {showActivation ? (
-                  <ActivationCard
-                    activation={activation}
-                    setupProgress={setupProgress}
-                    canCreateQuote={canCreateQuote}
-                    canCreateCustomer={canCreateCustomer}
-                    compact
-                  />
-                ) : null}
-                {showUsageBanner ? (
-                  <UsageThresholdBanner meters={thresholdMeters} canManageTeam={canManageTeam} />
-                ) : null}
-              </div>
+              <DashboardZone id="utility" label={he.dashZoneUtility} className="is-utility">
+                <div className="ops-home-utility">
+                  {showActivation ? (
+                    <ActivationCard
+                      activation={activation}
+                      setupProgress={setupProgress}
+                      canCreateQuote={canCreateQuote}
+                      canCreateCustomer={canCreateCustomer}
+                      compact
+                    />
+                  ) : null}
+                  {showUsageBanner ? (
+                    <UsageThresholdBanner meters={thresholdMeters} canManageTeam={canManageTeam} />
+                  ) : null}
+                </div>
+              </DashboardZone>
             ) : null}
           </>
         )}
@@ -258,6 +244,7 @@ export function ObserveDashboard({
   roleKey,
   features = [],
   displayName = null,
+  leadAttentionItems = [],
 }: {
   data: DashboardResponse;
   workspaceStatus?: string;
@@ -265,44 +252,42 @@ export function ObserveDashboard({
   features?: string[];
   displayName?: string | null;
   workspaceName?: string | null;
+  leadAttentionItems?: LeadOut[];
 }) {
   const showQuotes = Boolean(data.summary) && can(roleKey, "quotes.view", features) && hasFeature(features, "quotes");
-  const attentionTotal = attentionEntityCount(data.attention);
+  const leadRows = filterLeadAttention(leadAttentionItems);
+  const attentionGroups = [...data.attention, ...leadsToAttentionGroups(leadRows)];
+  const attentionTotal = attentionEntityCount(attentionGroups);
   const attentionQuoteIds = new Set(
-    attentionQueue(data.attention)
+    attentionQueue(attentionGroups)
       .filter((row) => row.item.entity_type === "quote")
       .map((row) => row.item.entity_id),
   );
+  const showToday = data.today.items.length > 0;
+  const showAttention = attentionTotal > 0;
   const recentQuotes = (data.recent_quotes ?? []).filter((quote) => !attentionQuoteIds.has(quote.id));
   const activityItems = data.activity ?? [];
-  const empty =
-    data.attention.length === 0 && data.today.items.length === 0 && activityItems.length === 0 && recentQuotes.length === 0;
-  const showToday = data.today.items.length > 0 || can(roleKey, "jobs.view", features);
-  const showAttention = attentionTotal > 0;
   const showActivity = activityItems.length > 0;
-  const showRecent = !showActivity && showQuotes && recentQuotes.length > 0;
-  const showBusiness =
-    showQuotes &&
-    data.summary &&
-    hasQuoteRecords(data.summary) &&
-    ((data.summary.quotes_open ?? 0) > 0 ||
-      (data.summary.quotes_open_value ?? 0) > 0 ||
-      (data.summary.quotes_approved_value ?? 0) > 0);
+  const empty =
+    attentionTotal === 0 && data.today.items.length === 0 && activityItems.length === 0 && recentQuotes.length === 0;
 
   const primaryClass = [
     "ops-command-primary",
+    "is-dash-final",
     showAttention && showToday ? "has-pair" : "is-solo",
     !showAttention && data.today.items.length === 0 ? "is-empty-today" : "",
   ]
     .filter(Boolean)
     .join(" ");
+
   const secondaryClass = [
     "ops-command-secondary",
-    (showActivity || showRecent) && showBusiness ? "has-pair" : "is-solo",
+    "is-dash-final",
+    showActivity && showQuotes ? "has-pair" : "is-solo",
   ].join(" ");
 
   return (
-    <div className="ops-dashboard ops-command-center ops-dashboard-v3 ops-dashboard-flagship ops-dashboard-v2 ops-dashboard-daily ops-dashboard-adaptive flex flex-col">
+    <div className="ops-dashboard ops-command-center ops-dashboard-v3 ops-dashboard-flagship ops-dashboard-v2 ops-dashboard-daily ops-dashboard-adaptive ops-dashboard-dash12 ops-dashboard-final flex flex-col">
       <DashboardCommandHero
         displayName={displayName}
         roleKey={roleKey}
@@ -311,34 +296,40 @@ export function ObserveDashboard({
         todayCount={data.today.items.length}
         quotesOpen={showQuotes ? (data.summary?.quotes_open ?? 0) : 0}
         showQuotes={showQuotes}
-        showToday={showToday}
+        showToday={showToday || can(roleKey, "jobs.view", features)}
         showCreate={false}
+        summary={showQuotes ? data.summary : null}
+        chart={data.business_chart ?? null}
       />
+
       <div className="ops-command-body ss-ops-enter ss-ops-enter-3">
         {showAttention || showToday ? (
-          <div className={primaryClass}>
-            {showAttention ? <CommandStatus attention={data.attention} canCreateProject={false} /> : null}
-            {showToday ? <ActiveWork items={data.today.items} compactEmpty /> : null}
-          </div>
+          <DashboardZone id="ops" label={he.dashZoneOps} className="is-ops">
+            <div className={primaryClass}>
+              {showAttention ? <CommandStatus attention={attentionGroups} canCreateProject={false} /> : null}
+              {showToday ? <ActiveWork items={data.today.items} compactEmpty /> : null}
+            </div>
+          </DashboardZone>
         ) : null}
-        {showActivity || showRecent || showBusiness ? (
-          <div className={secondaryClass}>
-            {showActivity ? <DashboardActivity items={activityItems} /> : null}
-            {showRecent ? <RecentQuotes quotes={recentQuotes} canCreate={false} /> : null}
-            {showBusiness && data.summary ? (
-              <div className="ops-v3-pulse">
-                <CommercialPulse summary={data.summary} chart={data.business_chart ?? null} />
-              </div>
-            ) : null}
-          </div>
+
+        {showActivity || showQuotes ? (
+          <DashboardZone id="commercial" label={he.dashZoneCommercial} className="is-commercial">
+            <div className={secondaryClass}>
+              {showActivity ? <DashboardActivity items={activityItems} /> : null}
+              {showQuotes && data.summary ? <QuotePipeline summary={data.summary} linked={false} /> : null}
+              {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={false} /> : null}
+            </div>
+          </DashboardZone>
         ) : null}
+
         {empty ? (
-          <div className="ops-observe-empty">
+          <div className="ops-panel p-4">
             <p className="text-sm font-medium text-fg">{he.dashboardEmptyTitle}</p>
             <p className="mt-1 text-sm text-fg-muted">{he.viewerEmptyBody}</p>
           </div>
         ) : null}
       </div>
+
       <DashboardFreshness generatedAt={data.generated_at} />
     </div>
   );

@@ -214,6 +214,91 @@ export type AdminSummary = {
   users: number;
   feedback_open: number;
   feedback_total: number;
+  beta_participants_active?: number;
+  beta_participants_total?: number;
+  beta_workspaces_active?: number;
+  founding_technicians?: number;
+  invites_pending?: number;
+  invites_expired?: number;
+  invites_revoked?: number;
+  invites_accepted?: number;
+  invites_accepted_7d?: number;
+  owner_invites_pending?: number;
+  technician_invites_pending?: number;
+  joined_7d?: number;
+  funnel?: {
+    beta_workspaces: number;
+    owner_invites: number;
+    owner_accepted: number;
+    owner_pending: number;
+  };
+  attention?: AdminAttentionItem[];
+  pending_invites?: AdminPendingInviteCard[];
+  beta_workspaces?: AdminBetaWorkspaceCard[];
+  open_feedback?: AdminFeedbackCard[];
+  recent_activity?: AdminActivityItem[];
+  system?: {
+    api_ok: boolean;
+    api_version?: string;
+    app_env: string;
+    backup_status: "unavailable" | "ok" | "failed";
+    auth_status: "unknown" | "ok" | "degraded";
+    web_status?: "unknown" | "ok";
+    invite_flow_status?: "unknown" | "ok";
+    quote_flow_status?: "unknown" | "ok";
+  };
+};
+
+export type AdminAttentionItem = {
+  id: string;
+  kind: string;
+  severity: "critical" | "high" | "medium" | "low" | string;
+  title: string;
+  detail?: string | null;
+  href: string;
+  created_at?: string | null;
+};
+
+export type AdminPendingInviteCard = {
+  id: string;
+  email: string;
+  workspace_id: string;
+  workspace_name?: string | null;
+  role_key: string;
+  status: AdminInviteStatus | string;
+  created_at?: string | null;
+  expires_at?: string | null;
+  age_hours?: number;
+};
+
+export type AdminBetaWorkspaceCard = {
+  id: string;
+  name: string;
+  status: string;
+  created_at?: string | null;
+  member_count: number;
+  pending_invites: number;
+  has_owner: boolean;
+};
+
+export type AdminFeedbackCard = {
+  id: string;
+  ticket_id?: string | null;
+  title?: string | null;
+  severity?: string | null;
+  status?: string | null;
+  workspace_id?: string | null;
+  created_at?: string | null;
+  is_beta?: boolean;
+};
+
+export type AdminActivityItem = {
+  id: string;
+  action?: string | null;
+  created_at?: string | null;
+  workspace_id?: string | null;
+  actor_user_id?: string | null;
+  summary?: string | null;
 };
 
 export type DashboardItem = {

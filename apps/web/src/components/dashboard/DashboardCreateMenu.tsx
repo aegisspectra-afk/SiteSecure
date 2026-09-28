@@ -29,8 +29,21 @@ export function buildCreateActions(
   if (can(roleKey, "leads.create", features)) {
     out.push({ key: "lead", label: he.dashCreateLead, href: "/app/leads" });
   }
+  // Ops office roles — Tasks shortcut (no tasks.* grant in catalog). Sales stays commercial-only.
+  if (roleKey === "owner" || roleKey === "manager" || roleKey === "administrator") {
+    out.push({ key: "task", label: he.dashCreateTask, href: "/app/tasks" });
+  }
+  if (can(roleKey, "projects.create", features)) {
+    out.push({ key: "project", label: he.dashCreateProject, href: "/app/projects" });
+  }
   if (can(roleKey, "jobs.create", features)) {
     out.push({ key: "job", label: he.dashCreateJob, href: "/app/today" });
+  }
+  if (
+    (can(roleKey, "catalog.edit", features) || (roleKey === "sales" && can(roleKey, "catalog.view", features))) &&
+    hasFeature(features, "catalog")
+  ) {
+    out.push({ key: "catalog", label: he.navCatalog, href: "/app/catalog" });
   }
   return out;
 }

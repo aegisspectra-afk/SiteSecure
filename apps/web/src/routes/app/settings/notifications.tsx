@@ -29,7 +29,9 @@ function NotificationsBody() {
   const workspaceId = session?.memberships[0]?.workspace_id;
   const queryClient = useQueryClient();
   const [prefs, setPrefs] = useState<WorkspacePrefs>(DEFAULT_WORKSPACE_PREFS);
+  const [baseline, setBaseline] = useState<WorkspacePrefs | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["workspace-settings", workspaceId],
@@ -38,16 +40,29 @@ function NotificationsBody() {
   });
 
   useEffect(() => {
-    if (query.data) setPrefs(prefsFromSettings(query.data));
+    if (!query.data) return;
+    const next = prefsFromSettings(query.data);
+    setPrefs(next);
+    setBaseline(next);
   }, [query.data]);
+
+  const dirty =
+    baseline != null &&
+    (prefs.notifyQuoteViewed !== baseline.notifyQuoteViewed ||
+      prefs.notifyQuoteApproved !== baseline.notifyQuoteApproved ||
+      prefs.notifyJobOverdue !== baseline.notifyJobOverdue ||
+      prefs.notifyTeamInvite !== baseline.notifyTeamInvite);
 
   const save = useMutation({
     mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
     onSuccess: async () => {
+      setSaveError(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
+      setBaseline(prefs);
     },
+    onError: () => setSaveError(he.settingsError),
   });
 
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
@@ -61,6 +76,7 @@ function NotificationsBody() {
         className="settings-form"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
+          if (!dirty) return;
           save.mutate();
         }}
       >
@@ -96,12 +112,24 @@ function NotificationsBody() {
           />
           <span>{he.settingsNotifyTeamInvite}</span>
         </label>
+        {saveError ? (
+          <p className="text-sm text-danger" role="alert">
+            {saveError}
+          </p>
+        ) : null}
         {saved ? (
           <p className="text-sm text-success" role="status">
             {he.settingsSaved}
           </p>
         ) : null}
-        <Button type="submit" variant="primary" className="self-start" loading={save.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="self-start"
+          loading={save.isPending}
+          disabled={!dirty}
+          title={!dirty ? he.settingsSaveDisabled : undefined}
+        >
           {he.saveSettings}
         </Button>
       </form>

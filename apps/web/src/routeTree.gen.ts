@@ -15,6 +15,7 @@ import { Route as AppRouteRouteImport } from "./routes/app/route"
 import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password"
 import { Route as LoginRouteImport } from "./routes/login"
 import { Route as OnboardingRouteImport } from "./routes/onboarding"
+import { Route as PortalRouteRouteImport } from "./routes/portal/route"
 import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
@@ -28,6 +29,7 @@ import { Route as AdminInvitationsRouteImport } from "./routes/admin/invitations
 import { Route as AdminOrganizationsRouteImport } from "./routes/admin/organizations"
 import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
+import { Route as AppAnalyticsRouteImport } from "./routes/app/analytics"
 import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
 import { Route as AppSettingsRouteRouteImport } from "./routes/app/settings/route"
@@ -36,9 +38,12 @@ import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as PortalIndexRouteImport } from "./routes/portal/index"
+import { Route as PortalChooseRouteImport } from "./routes/portal/choose"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
 import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
 import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
+import { Route as AppJobsIndexRouteImport } from "./routes/app/jobs/index"
 import { Route as AppJobsJobIdRouteImport } from "./routes/app/jobs/$jobId"
 import { Route as AppKnowledgeIndexRouteImport } from "./routes/app/knowledge/index"
 import { Route as AppLeadsIndexRouteImport } from "./routes/app/leads/index"
@@ -66,8 +71,11 @@ import { Route as AppSitesIndexRouteImport } from "./routes/app/sites/index"
 import { Route as AppSitesSiteIdRouteImport } from "./routes/app/sites/$siteId"
 import { Route as AppTasksIndexRouteImport } from "./routes/app/tasks/index"
 import { Route as AppWarrantiesIndexRouteImport } from "./routes/app/warranties/index"
+import { Route as AppWarrantiesWarrantyIdRouteImport } from "./routes/app/warranties/$warrantyId"
+import { Route as PortalInviteTokenRouteImport } from "./routes/portal/invite/$token"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
 import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId.preview"
+import { Route as AppSitesSiteIdAssetsAssetIdRouteImport } from "./routes/app/sites/$siteId_.assets.$assetId"
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -97,6 +105,11 @@ const LoginRoute = LoginRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: "/onboarding",
   path: "/onboarding",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRouteRoute = PortalRouteRouteImport.update({
+  id: "/portal",
+  path: "/portal",
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -164,6 +177,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: "/",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: "/analytics",
+  path: "/analytics",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppCatalogRoute = AppCatalogRouteImport.update({
   id: "/catalog",
   path: "/catalog",
@@ -204,6 +222,16 @@ const LegalSlugRoute = LegalSlugRouteImport.update({
   path: "/legal/$slug",
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalIndexRoute = PortalIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalChooseRoute = PortalChooseRouteImport.update({
+  id: "/choose",
+  path: "/choose",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const QTokenRoute = QTokenRouteImport.update({
   id: "/q/$token",
   path: "/q/$token",
@@ -217,6 +245,11 @@ const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
 const AppCustomersCustomerIdRoute = AppCustomersCustomerIdRouteImport.update({
   id: "/customers/$customerId",
   path: "/customers/$customerId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppJobsIndexRoute = AppJobsIndexRouteImport.update({
+  id: "/jobs/",
+  path: "/jobs/",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppJobsJobIdRoute = AppJobsJobIdRouteImport.update({
@@ -355,6 +388,16 @@ const AppWarrantiesIndexRoute = AppWarrantiesIndexRouteImport.update({
   path: "/warranties/",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppWarrantiesWarrantyIdRoute = AppWarrantiesWarrantyIdRouteImport.update({
+  id: "/warranties/$warrantyId",
+  path: "/warranties/$warrantyId",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const PortalInviteTokenRoute = PortalInviteTokenRouteImport.update({
+  id: "/invite/$token",
+  path: "/invite/$token",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PublicQuotesTokenRoute = PublicQuotesTokenRouteImport.update({
   id: "/public/quotes/$token",
   path: "/public/quotes/$token",
@@ -365,11 +408,18 @@ const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
   path: "/preview",
   getParentRoute: () => AppQuotesQuoteIdRoute,
 } as any)
+const AppSitesSiteIdAssetsAssetIdRoute =
+  AppSitesSiteIdAssetsAssetIdRouteImport.update({
+    id: "/sites/$siteId_/assets/$assetId",
+    path: "/sites/$siteId/assets/$assetId",
+    getParentRoute: () => AppRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
+  "/portal": typeof PortalRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
@@ -385,16 +435,19 @@ export interface FileRoutesByFullPath {
   "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
+  "/app/analytics": typeof AppAnalyticsRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/portal/": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
@@ -414,8 +467,11 @@ export interface FileRoutesByFullPath {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/jobs/": typeof AppJobsIndexRoute
   "/app/knowledge/": typeof AppKnowledgeIndexRoute
   "/app/leads/": typeof AppLeadsIndexRoute
   "/app/projects/": typeof AppProjectsIndexRoute
@@ -426,6 +482,7 @@ export interface FileRoutesByFullPath {
   "/app/tasks/": typeof AppTasksIndexRoute
   "/app/warranties/": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/sites/$siteId/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
@@ -443,16 +500,19 @@ export interface FileRoutesByTo {
   "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
+  "/app/analytics": typeof AppAnalyticsRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
+  "/portal": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
@@ -472,8 +532,11 @@ export interface FileRoutesByTo {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers": typeof AppCustomersIndexRoute
+  "/app/jobs": typeof AppJobsIndexRoute
   "/app/knowledge": typeof AppKnowledgeIndexRoute
   "/app/leads": typeof AppLeadsIndexRoute
   "/app/projects": typeof AppProjectsIndexRoute
@@ -484,12 +547,14 @@ export interface FileRoutesByTo {
   "/app/tasks": typeof AppTasksIndexRoute
   "/app/warranties": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/sites/$siteId/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
   "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
+  "/portal": typeof PortalRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
@@ -505,16 +570,19 @@ export interface FileRoutesById {
   "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
+  "/app/analytics": typeof AppAnalyticsRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
+  "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/portal/": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
@@ -534,8 +602,11 @@ export interface FileRoutesById {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/jobs/": typeof AppJobsIndexRoute
   "/app/knowledge/": typeof AppKnowledgeIndexRoute
   "/app/leads/": typeof AppLeadsIndexRoute
   "/app/projects/": typeof AppProjectsIndexRoute
@@ -546,6 +617,7 @@ export interface FileRoutesById {
   "/app/tasks/": typeof AppTasksIndexRoute
   "/app/warranties/": typeof AppWarrantiesIndexRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/sites/$siteId_/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -553,6 +625,7 @@ export interface FileRouteTypes {
     | "/"
     | "/admin"
     | "/app"
+    | "/portal"
     | "/forgot-password"
     | "/login"
     | "/onboarding"
@@ -568,16 +641,19 @@ export interface FileRouteTypes {
     | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
+    | "/app/analytics"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
+    | "/portal/choose"
     | "/q/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
+    | "/portal/"
     | "/app/customers/$customerId"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
@@ -597,8 +673,11 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/warranties/$warrantyId"
+    | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
+    | "/app/jobs/"
     | "/app/knowledge/"
     | "/app/leads/"
     | "/app/projects/"
@@ -609,6 +688,7 @@ export interface FileRouteTypes {
     | "/app/tasks/"
     | "/app/warranties/"
     | "/app/quotes/$quoteId/preview"
+    | "/app/sites/$siteId/assets/$assetId"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
@@ -626,16 +706,19 @@ export interface FileRouteTypes {
     | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
+    | "/app/analytics"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
+    | "/portal/choose"
     | "/q/$token"
     | "/admin"
     | "/app"
     | "/legal"
+    | "/portal"
     | "/app/customers/$customerId"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
@@ -655,8 +738,11 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/warranties/$warrantyId"
+    | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers"
+    | "/app/jobs"
     | "/app/knowledge"
     | "/app/leads"
     | "/app/projects"
@@ -667,11 +753,13 @@ export interface FileRouteTypes {
     | "/app/tasks"
     | "/app/warranties"
     | "/app/quotes/$quoteId/preview"
+    | "/app/sites/$siteId/assets/$assetId"
   id:
     | "__root__"
     | "/"
     | "/admin"
     | "/app"
+    | "/portal"
     | "/forgot-password"
     | "/login"
     | "/onboarding"
@@ -687,16 +775,19 @@ export interface FileRouteTypes {
     | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
+    | "/app/analytics"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
+    | "/portal/choose"
     | "/q/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
+    | "/portal/"
     | "/app/customers/$customerId"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
@@ -716,8 +807,11 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/warranties/$warrantyId"
+    | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
+    | "/app/jobs/"
     | "/app/knowledge/"
     | "/app/leads/"
     | "/app/projects/"
@@ -728,12 +822,14 @@ export interface FileRouteTypes {
     | "/app/tasks/"
     | "/app/warranties/"
     | "/app/quotes/$quoteId/preview"
+    | "/app/sites/$siteId_/assets/$assetId"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  PortalRouteRoute: typeof PortalRouteRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -790,6 +886,13 @@ declare module "@tanstack/react-router" {
       path: "/onboarding"
       fullPath: "/onboarding"
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/portal": {
+      id: "/portal"
+      path: "/portal"
+      fullPath: "/portal"
+      preLoaderRoute: typeof PortalRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/register": {
@@ -883,6 +986,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/analytics": {
+      id: "/app/analytics"
+      path: "/analytics"
+      fullPath: "/app/analytics"
+      preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/app/catalog": {
       id: "/app/catalog"
       path: "/catalog"
@@ -939,6 +1049,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LegalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/portal/": {
+      id: "/portal/"
+      path: "/"
+      fullPath: "/portal/"
+      preLoaderRoute: typeof PortalIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/choose": {
+      id: "/portal/choose"
+      path: "/choose"
+      fullPath: "/portal/choose"
+      preLoaderRoute: typeof PortalChooseRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     "/q/$token": {
       id: "/q/$token"
       path: "/q/$token"
@@ -958,6 +1082,13 @@ declare module "@tanstack/react-router" {
       path: "/customers/$customerId"
       fullPath: "/app/customers/$customerId"
       preLoaderRoute: typeof AppCustomersCustomerIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/jobs/": {
+      id: "/app/jobs/"
+      path: "/jobs"
+      fullPath: "/app/jobs/"
+      preLoaderRoute: typeof AppJobsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/jobs/$jobId": {
@@ -1149,6 +1280,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppWarrantiesIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/warranties/$warrantyId": {
+      id: "/app/warranties/$warrantyId"
+      path: "/warranties/$warrantyId"
+      fullPath: "/app/warranties/$warrantyId"
+      preLoaderRoute: typeof AppWarrantiesWarrantyIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/portal/invite/$token": {
+      id: "/portal/invite/$token"
+      path: "/invite/$token"
+      fullPath: "/portal/invite/$token"
+      preLoaderRoute: typeof PortalInviteTokenRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     "/public/quotes/$token": {
       id: "/public/quotes/$token"
       path: "/public/quotes/$token"
@@ -1162,6 +1307,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/app/quotes/$quoteId/preview"
       preLoaderRoute: typeof AppQuotesQuoteIdPreviewRouteImport
       parentRoute: typeof AppQuotesQuoteIdRoute
+    }
+    "/app/sites/$siteId_/assets/$assetId": {
+      id: "/app/sites/$siteId_/assets/$assetId"
+      path: "/sites/$siteId/assets/$assetId"
+      fullPath: "/app/sites/$siteId/assets/$assetId"
+      preLoaderRoute: typeof AppSitesSiteIdAssetsAssetIdRouteImport
+      parentRoute: typeof AppRouteRoute
     }
   }
 }
@@ -1242,6 +1394,7 @@ const AppQuotesQuoteIdRouteWithChildren =
 
 interface AppRouteRouteChildren {
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppCatalogRoute: typeof AppCatalogRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
@@ -1253,7 +1406,9 @@ interface AppRouteRouteChildren {
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
   AppQuotesNewRoute: typeof AppQuotesNewRoute
   AppSitesSiteIdRoute: typeof AppSitesSiteIdRoute
+  AppWarrantiesWarrantyIdRoute: typeof AppWarrantiesWarrantyIdRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
+  AppJobsIndexRoute: typeof AppJobsIndexRoute
   AppKnowledgeIndexRoute: typeof AppKnowledgeIndexRoute
   AppLeadsIndexRoute: typeof AppLeadsIndexRoute
   AppProjectsIndexRoute: typeof AppProjectsIndexRoute
@@ -1262,10 +1417,12 @@ interface AppRouteRouteChildren {
   AppSitesIndexRoute: typeof AppSitesIndexRoute
   AppTasksIndexRoute: typeof AppTasksIndexRoute
   AppWarrantiesIndexRoute: typeof AppWarrantiesIndexRoute
+  AppSitesSiteIdAssetsAssetIdRoute: typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
+  AppAnalyticsRoute: AppAnalyticsRoute,
   AppCatalogRoute: AppCatalogRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
@@ -1277,7 +1434,9 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
   AppQuotesNewRoute: AppQuotesNewRoute,
   AppSitesSiteIdRoute: AppSitesSiteIdRoute,
+  AppWarrantiesWarrantyIdRoute: AppWarrantiesWarrantyIdRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
+  AppJobsIndexRoute: AppJobsIndexRoute,
   AppKnowledgeIndexRoute: AppKnowledgeIndexRoute,
   AppLeadsIndexRoute: AppLeadsIndexRoute,
   AppProjectsIndexRoute: AppProjectsIndexRoute,
@@ -1286,16 +1445,34 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSitesIndexRoute: AppSitesIndexRoute,
   AppTasksIndexRoute: AppTasksIndexRoute,
   AppWarrantiesIndexRoute: AppWarrantiesIndexRoute,
+  AppSitesSiteIdAssetsAssetIdRoute: AppSitesSiteIdAssetsAssetIdRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
+interface PortalRouteRouteChildren {
+  PortalChooseRoute: typeof PortalChooseRoute
+  PortalIndexRoute: typeof PortalIndexRoute
+  PortalInviteTokenRoute: typeof PortalInviteTokenRoute
+}
+
+const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalChooseRoute: PortalChooseRoute,
+  PortalIndexRoute: PortalIndexRoute,
+  PortalInviteTokenRoute: PortalInviteTokenRoute,
+}
+
+const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
+  PortalRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
+  PortalRouteRoute: PortalRouteRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,

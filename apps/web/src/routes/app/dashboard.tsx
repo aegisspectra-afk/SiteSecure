@@ -148,6 +148,7 @@ function DashboardBody({
         features={features}
         displayName={displayName}
         workspaceName={workspaceName}
+        leadAttentionItems={leadAttentionItems}
       />
     );
   }

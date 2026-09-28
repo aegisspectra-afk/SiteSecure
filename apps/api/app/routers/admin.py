@@ -115,26 +115,323 @@ def _serialize_beta_row(row: dict[str, Any], *, email: str | None = None, full_n
     }
 
 
+def _parse_iso(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        return None
+
+
+def _hours_ago(value: Any, *, now: datetime) -> float | None:
+    dt = _parse_iso(value)
+    if not dt:
+        return None
+    return max(0.0, (now - dt).total_seconds() / 3600.0)
+
+
 @router.get("/summary")
 def admin_summary(
     service: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
 ):
+    """Founding Beta operations summary — real counts only, no fabricated health."""
+    from ..config import get_settings
+
     require_platform_admin(service, user["id"])
-    orgs = as_list(service.get("workspaces", params={"select": "id,is_beta,status"}))
-    users = as_list(service.get("profiles", params={"select": "id"}))
-    reports = as_list(service.get("feedback_reports", params={"select": "id,status"}))
-    participants = as_list(service.get("beta_participants", params={"select": "id,status"}))
+    now = datetime.now(timezone.utc)
+    week_ago = now.timestamp() - 7 * 24 * 3600
+
+    orgs = as_list(
+        service.get(
+            "workspaces",
+            params={
+                "select": "id,name,status,is_beta,beta_program,created_at",
+                "order": "created_at.desc",
+                "limit": "500",
+            },
+        )
+    )
+    profiles = as_list(
+        service.get(
+            "profiles",
+            params={"select": "id,recognition_badges,created_at", "limit": "1000"},
+        )
+    )
+    reports = as_list(
+        service.get(
+            "feedback_reports",
+            params={
+                "select": "id,ticket_id,title,severity,status,is_beta,workspace_id,created_at",
+                "order": "created_at.desc",
+                "limit": "200",
+            },
+        )
+    )
+    participants = as_list(service.get("beta_participants", params={"select": "id,status,user_id"}))
+    invites = as_list(
+        service.get(
+            "invitations",
+            params={
+                "select": "id,workspace_id,email,role_key,expires_at,accepted_at,revoked_at,created_at,workspaces(name)",
+                "order": "created_at.desc",
+                "limit": "500",
+            },
+        )
+    )
+    memberships = as_list(
+        service.get(
+            "workspace_memberships",
+            params={
+                "select": "id,workspace_id,user_id,role_key,status,created_at",
+                "order": "created_at.desc",
+                "limit": "1000",
+            },
+        )
+    )
+    recent_events = as_list(
+        service.get(
+            "platform_admin_events",
+            params={
+                "select": "id,actor_user_id,action,target_user_id,target_workspace_id,metadata,created_at",
+                "order": "created_at.desc",
+                "limit": "20",
+            },
+        )
+    )
+
     open_statuses = {"new", "triage", "in_progress"}
     active_beta = {"invited", "registered", "activated", "active"}
+    invite_rows = [
+        {
+            **_serialize_admin_invite(row, workspace_name=(_nested(row.get("workspaces")) or {}).get("name")),
+            "created_ts": _parse_iso(row.get("created_at")),
+            "accepted_ts": _parse_iso(row.get("accepted_at")),
+        }
+        for row in invites
+    ]
+
+    beta_orgs = [row for row in orgs if row.get("is_beta")]
+    beta_active = [row for row in beta_orgs if str(row.get("status") or "") == "active"]
+    founding = [
+        row
+        for row in profiles
+        if "founding_technician" in (row.get("recognition_badges") or [])
+    ]
+
+    pending = [row for row in invite_rows if row["status"] == "pending"]
+    expired = [row for row in invite_rows if row["status"] == "expired"]
+    revoked = [row for row in invite_rows if row["status"] == "revoked"]
+    accepted = [row for row in invite_rows if row["status"] == "accepted"]
+    accepted_7d = [
+        row
+        for row in accepted
+        if row.get("accepted_ts") and row["accepted_ts"].timestamp() >= week_ago
+    ]
+    owner_pending = [row for row in pending if row.get("role_key") == "owner"]
+    tech_pending = [row for row in pending if row.get("role_key") == "technician"]
+    owner_invites = [row for row in invite_rows if row.get("role_key") == "owner"]
+    owner_accepted = [row for row in owner_invites if row["status"] == "accepted"]
+
+    active_memberships = [row for row in memberships if str(row.get("status") or "") == "active"]
+    members_by_ws: dict[str, list[dict[str, Any]]] = {}
+    for row in active_memberships:
+        members_by_ws.setdefault(str(row["workspace_id"]), []).append(row)
+    joined_7d = [
+        row
+        for row in memberships
+        if (_parse_iso(row.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp()
+        >= week_ago
+    ]
+
+    attention: list[dict[str, Any]] = []
+    for row in owner_pending:
+        age_h = _hours_ago(row.get("created_at"), now=now)
+        if age_h is not None and age_h >= 24:
+            attention.append(
+                {
+                    "id": f"invite-stale-{row['id']}",
+                    "kind": "owner_invite_stale",
+                    "severity": "high",
+                    "title": "הזמנת Owner ממתינה מעל 24 שעות",
+                    "detail": f"{row.get('email')} · {row.get('workspace_name') or 'סביבה'}",
+                    "href": "/admin/invitations",
+                    "created_at": row.get("created_at"),
+                }
+            )
+    for row in expired[:12]:
+        attention.append(
+            {
+                "id": f"invite-expired-{row['id']}",
+                "kind": "invite_expired",
+                "severity": "medium",
+                "title": "הזמנה שפג תוקפה",
+                "detail": f"{row.get('email')} · {row.get('workspace_name') or 'סביבה'}",
+                "href": "/admin/invitations",
+                "created_at": row.get("created_at"),
+            }
+        )
+    for row in beta_active:
+        ws_id = str(row["id"])
+        members = members_by_ws.get(ws_id) or []
+        has_owner = any(m.get("role_key") == "owner" for m in members)
+        if not members:
+            attention.append(
+                {
+                    "id": f"ws-empty-{ws_id}",
+                    "kind": "workspace_no_members",
+                    "severity": "high",
+                    "title": "סביבת בטא ללא חברים",
+                    "detail": row.get("name") or ws_id,
+                    "href": "/admin/organizations",
+                    "created_at": row.get("created_at"),
+                }
+            )
+        elif not has_owner:
+            attention.append(
+                {
+                    "id": f"ws-no-owner-{ws_id}",
+                    "kind": "workspace_no_owner",
+                    "severity": "high",
+                    "title": "סביבת בטא ללא Owner",
+                    "detail": row.get("name") or ws_id,
+                    "href": "/admin/invitations",
+                    "created_at": row.get("created_at"),
+                }
+            )
+    open_feedback = [row for row in reports if row.get("status") in open_statuses]
+    for row in open_feedback:
+        if row.get("severity") in {"high", "blocker"}:
+            attention.append(
+                {
+                    "id": f"feedback-{row['id']}",
+                    "kind": "feedback_high",
+                    "severity": "high" if row.get("severity") == "high" else "critical",
+                    "title": row.get("title") or "פידבק פתוח",
+                    "detail": f"חומרה: {row.get('severity')}",
+                    "href": "/admin/feedback",
+                    "created_at": row.get("created_at"),
+                }
+            )
+
+    severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    attention.sort(
+        key=lambda item: (
+            severity_rank.get(str(item.get("severity")), 9),
+            -( _parse_iso(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
+        )
+    )
+
+    beta_workspace_cards = []
+    for row in beta_orgs[:12]:
+        ws_id = str(row["id"])
+        members = members_by_ws.get(ws_id) or []
+        pending_for_ws = [inv for inv in pending if str(inv.get("workspace_id")) == ws_id]
+        beta_workspace_cards.append(
+            {
+                "id": ws_id,
+                "name": row.get("name"),
+                "status": row.get("status"),
+                "created_at": row.get("created_at"),
+                "member_count": len(members),
+                "pending_invites": len(pending_for_ws),
+                "has_owner": any(m.get("role_key") == "owner" for m in members),
+            }
+        )
+
+    feedback_cards = [
+        {
+            "id": row["id"],
+            "ticket_id": row.get("ticket_id"),
+            "title": row.get("title"),
+            "severity": row.get("severity"),
+            "status": row.get("status"),
+            "workspace_id": row.get("workspace_id"),
+            "created_at": row.get("created_at"),
+            "is_beta": bool(row.get("is_beta")),
+        }
+        for row in sorted(
+            open_feedback,
+            key=lambda r: (
+                0 if r.get("severity") in {"blocker", "high"} else 1,
+                -( _parse_iso(r.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
+            ),
+        )[:8]
+    ]
+
+    activity = []
+    for row in recent_events[:12]:
+        meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        activity.append(
+            {
+                "id": row["id"],
+                "action": row.get("action"),
+                "created_at": row.get("created_at"),
+                "workspace_id": row.get("target_workspace_id"),
+                "actor_user_id": row.get("actor_user_id"),
+                "summary": meta.get("name") or meta.get("email") or meta.get("invitation_id") or row.get("action"),
+            }
+        )
+
+    settings = get_settings()
     return {
+        # legacy keys (compat)
         "organizations": len(orgs),
-        "beta_organizations": sum(1 for row in orgs if row.get("is_beta")),
-        "users": len(users),
-        "feedback_open": sum(1 for row in reports if row.get("status") in open_statuses),
+        "beta_organizations": len(beta_orgs),
+        "users": len(profiles),
+        "feedback_open": len(open_feedback),
         "feedback_total": len(reports),
         "beta_participants_active": sum(1 for row in participants if row.get("status") in active_beta),
         "beta_participants_total": len(participants),
+        # Founding Beta ops
+        "beta_workspaces_active": len(beta_active),
+        "founding_technicians": len(founding),
+        "invites_pending": len(pending),
+        "invites_expired": len(expired),
+        "invites_revoked": len(revoked),
+        "invites_accepted": len(accepted),
+        "invites_accepted_7d": len(accepted_7d),
+        "owner_invites_pending": len(owner_pending),
+        "technician_invites_pending": len(tech_pending),
+        "joined_7d": len(joined_7d),
+        "funnel": {
+            "beta_workspaces": len(beta_orgs),
+            "owner_invites": len(owner_invites),
+            "owner_accepted": len(owner_accepted),
+            "owner_pending": len(owner_pending),
+        },
+        "attention": attention[:20],
+        "pending_invites": [
+            {
+                "id": row["id"],
+                "email": row.get("email"),
+                "workspace_id": row.get("workspace_id"),
+                "workspace_name": row.get("workspace_name"),
+                "role_key": row.get("role_key"),
+                "status": row.get("status"),
+                "created_at": row.get("created_at"),
+                "expires_at": row.get("expires_at"),
+                "age_hours": round(_hours_ago(row.get("created_at"), now=now) or 0, 1),
+            }
+            for row in pending[:10]
+        ],
+        "beta_workspaces": beta_workspace_cards,
+        "open_feedback": feedback_cards,
+        "recent_activity": activity,
+        "system": {
+            "api_ok": True,
+            "api_version": "v1",
+            "app_env": settings.app_env,
+            "backup_status": "unavailable",
+            "auth_status": "unknown",
+            "web_status": "unknown",
+            "invite_flow_status": "unknown",
+            "quote_flow_status": "unknown",
+        },
     }
 
 

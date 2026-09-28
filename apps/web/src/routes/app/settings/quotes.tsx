@@ -29,7 +29,9 @@ function QuotesSettingsBody() {
   const workspaceId = session?.memberships[0]?.workspace_id;
   const queryClient = useQueryClient();
   const [prefs, setPrefs] = useState<WorkspacePrefs>(DEFAULT_WORKSPACE_PREFS);
+  const [baseline, setBaseline] = useState<WorkspacePrefs | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["workspace-settings", workspaceId],
@@ -38,16 +40,29 @@ function QuotesSettingsBody() {
   });
 
   useEffect(() => {
-    if (query.data) setPrefs(prefsFromSettings(query.data));
+    if (!query.data) return;
+    const next = prefsFromSettings(query.data);
+    setPrefs(next);
+    setBaseline(next);
   }, [query.data]);
+
+  const dirty =
+    baseline != null &&
+    (prefs.quoteValidityDays !== baseline.quoteValidityDays ||
+      prefs.paymentTerms !== baseline.paymentTerms ||
+      prefs.showVatOnQuotes !== baseline.showVatOnQuotes ||
+      prefs.pdfNotes !== baseline.pdfNotes);
 
   const save = useMutation({
     mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
     onSuccess: async () => {
+      setSaveError(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
+      setBaseline(prefs);
     },
+    onError: () => setSaveError(he.settingsError),
   });
 
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
@@ -57,10 +72,12 @@ function QuotesSettingsBody() {
   return (
     <div className="settings-panel flex flex-col gap-6">
       <PageHeader title={he.settingsNavQuotes} description={he.settingsQuotesLead} />
+      <p className="settings-section-lead">{he.settingsQuotesApplyHint}</p>
       <form
         className="settings-form"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
+          if (!dirty) return;
           save.mutate();
         }}
       >
@@ -99,12 +116,24 @@ function QuotesSettingsBody() {
             onChange={(ev) => setPrefs({ ...prefs, pdfNotes: ev.target.value })}
           />
         </label>
+        {saveError ? (
+          <p className="text-sm text-danger" role="alert">
+            {saveError}
+          </p>
+        ) : null}
         {saved ? (
           <p className="text-sm text-success" role="status">
             {he.settingsSaved}
           </p>
         ) : null}
-        <Button type="submit" variant="primary" className="self-start" loading={save.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="self-start"
+          loading={save.isPending}
+          disabled={!dirty}
+          title={!dirty ? he.settingsSaveDisabled : undefined}
+        >
           {he.saveSettings}
         </Button>
       </form>

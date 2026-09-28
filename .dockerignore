@@ -1,5 +1,6 @@
 .git
 .cursor
+.external-reference
 **/.env
 **/.env.*
 !**/.env.example

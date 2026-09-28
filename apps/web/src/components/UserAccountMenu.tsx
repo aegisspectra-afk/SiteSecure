@@ -13,19 +13,30 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
 import { ThemePicker } from "./ThemePicker";
 import { he } from "../i18n/he";
+import { accountAvatarUrl } from "../lib/account-avatar";
 import { planLabel, roleLabelEn } from "../lib/app-nav";
+import { useAccountAvatar } from "../lib/use-account-avatar";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 import { initialsFromName, placeAccountPopover } from "../lib/workspace-header";
 import { BetaBadge } from "./BetaBadge";
 import { FoundingTechnicianBadge } from "./FoundingTechnicianBadge";
 
 function AvatarMark({ initials }: { initials: string }) {
+  const avatarId = useAccountAvatar();
   return (
     <span
-      className="ops-account-avatar flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-bg-subtle text-[11px] font-semibold tracking-wide text-fg"
+      className="ops-account-avatar relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-bg-subtle text-[11px] font-semibold tracking-wide text-fg"
       aria-hidden
     >
-      {initials || "•"}
+      <img
+        src={accountAvatarUrl(avatarId)}
+        alt=""
+        width={32}
+        height={32}
+        decoding="async"
+        className="size-full object-cover"
+      />
+      <span className="sr-only">{initials || "•"}</span>
     </span>
   );
 }
@@ -219,20 +230,18 @@ export function UserAccountMenu({
       className={cn(
         "flex min-w-0 items-center gap-2.5 text-start",
         variant === "sidebar" && "w-full",
-        compact && "justify-center",
+        (compact || variant === "header") && "justify-center",
       )}
     >
       <AvatarMark initials={initials} />
-      {!compact ? (
-        <span className={cn("min-w-0 flex-col", variant === "sidebar" ? "flex" : "hidden sm:flex")}>
+      {/* Header trigger: avatar only. Name/email live in the open panel. Sidebar keeps label when expanded. */}
+      {variant === "sidebar" && !compact ? (
+        <span className="flex min-w-0 flex-col">
           <span className="max-w-40 truncate text-sm font-medium text-fg">{displayName}</span>
           {recognitionBadges.includes("founding_technician") ? (
             <FoundingTechnicianBadge className="mt-0.5 self-start" />
           ) : null}
           {isBeta ? <BetaBadge className="mt-0.5 self-start" /> : null}
-          {variant !== "sidebar" && email ? (
-            <span className="ltr-meta max-w-40 truncate text-[11px] text-fg-muted">{email}</span>
-          ) : null}
         </span>
       ) : (
         <span className="sr-only">{displayName}</span>
@@ -248,7 +257,7 @@ export function UserAccountMenu({
         className={
           variant === "sidebar"
             ? "ops-sidebar-account-trigger flex min-h-11 w-full items-center rounded-[var(--radius-control)] px-1.5 hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            : "inline-flex min-h-11 max-w-64 items-center rounded-[var(--radius-control)] px-2 hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-3"
+            : "inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         }
         aria-expanded={open}
         aria-haspopup="dialog"

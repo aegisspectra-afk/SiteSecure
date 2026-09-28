@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { VercelAnalytics } from "../components/VercelAnalytics";
 import { ThemeRuntime } from "../lib/use-theme";
 
 export const Route = createRootRoute({
@@ -10,6 +11,7 @@ function Root() {
     <>
       <ThemeRuntime />
       <Outlet />
+      <VercelAnalytics />
     </>
   );
 }

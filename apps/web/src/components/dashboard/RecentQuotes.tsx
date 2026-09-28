@@ -1,14 +1,14 @@
-import { ActivityRow, Status } from "@site-secure/ui";
+import { Status } from "@site-secure/ui";
 import type { RecentQuote } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
 import { he } from "../../i18n/he";
 import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { relativeAgeLabel } from "../../lib/relative-age";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
-const MAX_RECENT = 4;
+const MAX_RECENT = 5;
 
+/** DASH-5 — dense quote list (not an admin table). */
 export function RecentQuotes({
   quotes,
   canCreate = false,
@@ -22,15 +22,21 @@ export function RecentQuotes({
 
   if (!rows.length) {
     const empty = (
-      <div className="ops-recent-empty">
+      <div className="ops-recent-empty" data-testid="recent-quotes-empty">
         <p className="text-sm font-medium text-fg">{he.recentQuotesEmptyTitle}</p>
         <p className="mt-1 text-sm text-fg-muted">{he.recentQuotesEmptyBody}</p>
-        {canCreate ? <NewQuoteButton className="mt-3" /> : null}
+        {canCreate ? (
+          <NewQuoteButton className="mt-3 ops-qa-primary is-quote-cta">{he.newQuoteAction}</NewQuoteButton>
+        ) : null}
       </div>
     );
     if (embedded) return empty;
     return (
-      <section className="ops-recent-panel" aria-labelledby="recent-quotes-heading">
+      <section
+        className="ops-recent-panel is-dash5"
+        aria-labelledby="recent-quotes-heading"
+        data-testid="recent-quotes"
+      >
         <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
           {he.recentQuotesTitle}
         </h2>
@@ -39,96 +45,72 @@ export function RecentQuotes({
     );
   }
 
-  const mobileList = (
-    <ul className="ops-recent-mobile">
-      {rows.map((quote) => (
-        <li key={quote.id}>
-          <Link
-            to="/app/quotes/$quoteId"
-            params={{ quoteId: quote.id }}
-            className="ops-recent-mobile-row"
-          >
-            <ActivityRow
-              leading={<FileText aria-hidden />}
-              title={quote.customer_name?.trim() || quote.title?.trim() || "—"}
-              subtitle={
-                <span className="ops-recent-number ltr-meta" dir="ltr">
-                  {quote.number}
-                </span>
-              }
-              trailing={
-                <>
-                  <span className="ops-recent-mobile-amount tabular-nums">{formatMoney(quote.total_gross)}</span>
-                  <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
-                </>
-              }
-            />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const desktopTable = (
-    <div className="ops-recent-table-wrap">
-      <table className="ops-recent-table">
-        <caption className="sr-only">{he.recentQuotesTitle}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{he.dashRecentColQuote}</th>
-            <th scope="col">{he.dashRecentColCustomer}</th>
-            <th scope="col">{he.dashRecentColAmount}</th>
-            <th scope="col">{he.dashRecentColStatus}</th>
-            <th scope="col">{he.dashRecentColUpdated}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((quote) => {
-            const updated = relativeAgeLabel(quote.updated_at);
-            return (
-              <tr key={quote.id}>
-                <td>
-                  <Link
-                    to="/app/quotes/$quoteId"
-                    params={{ quoteId: quote.id }}
-                    className="ops-recent-table-link ltr-meta"
-                    dir="ltr"
-                  >
+  const list = (
+    <ul className="ops-recent-list is-dash5">
+      {rows.map((quote) => {
+        const title = quote.title?.trim() || quote.customer_name?.trim() || "—";
+        const customer = quote.customer_name?.trim();
+        const updated = relativeAgeLabel(quote.updated_at);
+        return (
+          <li key={quote.id}>
+            <Link
+              to="/app/quotes/$quoteId"
+              params={{ quoteId: quote.id }}
+              className="ops-recent-row is-dash5"
+              data-testid="recent-quote-row"
+            >
+              <div className="ops-recent-row-main min-w-0">
+                <p className="ops-recent-row-title truncate">{title}</p>
+                <p className="ops-recent-row-meta">
+                  <span className="ops-recent-number ltr-meta" dir="ltr">
                     {quote.number}
-                  </Link>
-                </td>
-                <td className="ops-recent-table-customer">
-                  <Link to="/app/quotes/$quoteId" params={{ quoteId: quote.id }} className="ops-recent-table-link">
-                    {quote.customer_name?.trim() || quote.title?.trim() || "—"}
-                  </Link>
-                </td>
-                <td className="tabular-nums">{formatMoney(quote.total_gross)}</td>
-                <td>
-                  <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
-                </td>
-                <td className="ops-recent-table-updated">{updated ?? "—"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  </span>
+                  {customer && customer !== title ? (
+                    <>
+                      <span className="ops-recent-meta-sep" aria-hidden>
+                        ·
+                      </span>
+                      <span className="truncate">{customer}</span>
+                    </>
+                  ) : null}
+                  {updated ? (
+                    <>
+                      <span className="ops-recent-meta-sep" aria-hidden>
+                        ·
+                      </span>
+                      <span>{updated}</span>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <div className="ops-recent-row-trailing">
+                <span className="ops-recent-amount tabular-nums ltr-meta" dir="ltr">
+                  {formatMoney(quote.total_gross)}
+                </span>
+                <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
+                <span className="ops-recent-open">{he.recentQuotesOpen}</span>
+              </div>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 
   if (embedded) {
     return (
-      <div>
+      <div data-testid="recent-quotes">
         <h3 className="ops-section-title is-secondary">{he.recentQuotesTitle}</h3>
-        {mobileList}
-        {desktopTable}
+        {list}
       </div>
     );
   }
 
   return (
     <section
-      className={`ops-recent-panel${rows.length <= 2 ? " is-compact" : ""}`}
+      className={`ops-recent-panel is-dash5${rows.length <= 2 ? " is-compact" : ""}`}
       aria-labelledby="recent-quotes-heading"
+      data-testid="recent-quotes"
     >
       <div className="ops-section-head">
         <h2 id="recent-quotes-heading" className="ops-section-title is-secondary">
@@ -138,8 +120,7 @@ export function RecentQuotes({
           {he.recentQuotesViewAll}
         </Link>
       </div>
-      {mobileList}
-      {desktopTable}
+      {list}
     </section>
   );
 }

@@ -1,59 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import {
-  Briefcase,
-  Building2,
-  ChevronDown,
-  FileText,
-  UserPlus,
-  UserRoundSearch,
-  type LucideIcon,
-} from "lucide-react";
-import { useId, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { he } from "../../i18n/he";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
-import { buildCreateActions, type CreateMenuAction } from "./DashboardCreateMenu";
+import { buildCreateActions } from "./DashboardCreateMenu";
 
-const ACTION_ICONS: Record<string, LucideIcon> = {
-  quote: FileText,
-  customer: UserPlus,
-  site: Building2,
-  lead: UserRoundSearch,
-  job: Briefcase,
-};
-
-/** Dashboard-priority create keys; remaining go under "More". */
-const PRIMARY_CREATE_KEYS = ["quote", "customer", "job"] as const;
-
-function ActionFace({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
-  return (
-    <>
-      <span className="ops-qa-tile-icon">
-        <Icon strokeWidth={1.75} aria-hidden />
-      </span>
-      <span className="ops-qa-tile-label">{label}</span>
-    </>
-  );
-}
-
-function CreateActionControl({ action }: { action: CreateMenuAction }) {
-  const Icon = ACTION_ICONS[action.key] ?? FileText;
-  if (action.quote) {
-    return (
-      <NewQuoteButton className="ops-qa-tile is-quote" variant="primary">
-        {action.label}
-      </NewQuoteButton>
-    );
-  }
-  return (
-    <Link to={action.href!} className="ops-qa-tile">
-      <ActionFace icon={Icon} label={action.label} />
-    </Link>
-  );
-}
+/** Visible secondary tools before "More" overflow. */
+const VISIBLE_TOOL_COUNT = 4;
 
 /**
- * High-value create actions only.
- * Search → AppShell Ctrl/Cmd+K. Today → Today section “view all” + bottom nav.
+ * DASH-6 — one primary Quote CTA + quiet secondary tools + More overflow.
  */
 export function DashboardQuickActions({
   roleKey,
@@ -65,58 +21,95 @@ export function DashboardQuickActions({
   showCreate: boolean;
 }) {
   const actions = showCreate ? buildCreateActions(roleKey, features) : [];
-  const primary = actions.filter((a) => (PRIMARY_CREATE_KEYS as readonly string[]).includes(a.key));
-  const secondary = actions.filter((a) => !(PRIMARY_CREATE_KEYS as readonly string[]).includes(a.key));
+  const quote = actions.find((a) => a.quote);
+  const tools = actions.filter((a) => !a.quote && a.href);
+  const visible = tools.slice(0, VISIBLE_TOOL_COUNT);
+  const overflow = tools.slice(VISIBLE_TOOL_COUNT);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreId = useId();
+  const moreRef = useRef<HTMLDivElement>(null);
 
-  const visibleCreates = primary.slice(0, 3);
-  const overflowCreates = [...primary.slice(3), ...secondary];
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (event: MouseEvent) => {
+      if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreOpen]);
 
-  if (!showCreate && overflowCreates.length === 0 && visibleCreates.length === 0) {
+  if (!quote && visible.length === 0 && overflow.length === 0) {
     return null;
   }
 
   return (
-    <nav className="ops-qa" aria-label={he.dashQuickActionsAria}>
-      {visibleCreates.map((action) => (
-        <CreateActionControl key={action.key} action={action} />
-      ))}
+    <nav
+      className="ops-qa is-premium is-dash6"
+      aria-label={he.dashQuickActionsAria}
+      data-testid="dash-quick-actions"
+    >
+      {quote ? (
+        <NewQuoteButton className="ops-qa-primary is-quote-cta quote-new-btn">
+          {he.newQuoteAction}
+        </NewQuoteButton>
+      ) : null}
 
-      {overflowCreates.length > 0 ? (
-        <div className="ops-qa-more">
-          <button
-            type="button"
-            className="ops-qa-tile"
-            aria-expanded={moreOpen}
-            aria-controls={moreId}
-            onClick={() => setMoreOpen((v) => !v)}
-          >
-            <ActionFace icon={ChevronDown} label={he.navMore} />
-          </button>
-          {moreOpen ? (
-            <ul id={moreId} className="ops-qa-more-panel" role="menu">
-              {overflowCreates.map((action) => (
-                <li key={action.key} role="none">
-                  {action.quote ? (
-                    <div role="menuitem" className="ops-qa-more-item">
-                      <NewQuoteButton className="ops-qa-more-quote" variant="link">
+      {visible.length > 0 || overflow.length > 0 ? (
+        <div className="ops-qa-tools" aria-label={he.dashQuickToolsAria}>
+          {visible.map((action) => (
+            <Link
+              key={action.key}
+              to={action.href!}
+              className="ops-qa-tool"
+              data-qa-key={action.key}
+              data-testid={`dash-qa-${action.key}`}
+            >
+              {action.label}
+            </Link>
+          ))}
+
+          {overflow.length > 0 ? (
+            <div className="ops-qa-more" ref={moreRef}>
+              <button
+                type="button"
+                className="ops-qa-tool is-more"
+                aria-label={he.dashQuickMoreAria}
+                aria-expanded={moreOpen}
+                aria-controls={moreId}
+                onClick={() => setMoreOpen((v) => !v)}
+              >
+                <span>{he.navMore}</span>
+                <ChevronDown className="size-3.5 opacity-70" strokeWidth={1.75} aria-hidden />
+              </button>
+              {moreOpen ? (
+                <ul id={moreId} className="ops-qa-more-panel" role="menu">
+                  <li className="ops-qa-more-heading" role="presentation">
+                    {he.dashQuickMoreHeading}
+                  </li>
+                  {overflow.map((action) => (
+                    <li key={action.key} role="none">
+                      <Link
+                        to={action.href!}
+                        role="menuitem"
+                        className="ops-qa-more-item"
+                        data-qa-key={action.key}
+                        data-testid={`dash-qa-${action.key}`}
+                        onClick={() => setMoreOpen(false)}
+                      >
                         {action.label}
-                      </NewQuoteButton>
-                    </div>
-                  ) : (
-                    <Link
-                      to={action.href!}
-                      role="menuitem"
-                      className="ops-qa-more-item"
-                      onClick={() => setMoreOpen(false)}
-                    >
-                      {action.label}
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

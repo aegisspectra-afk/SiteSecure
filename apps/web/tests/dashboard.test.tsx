@@ -360,7 +360,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.usageThresholdTitle })).not.toBeInTheDocument();
   });
 
-  it("renders commercial pulse once the workspace is operating", () => {
+  it("renders quote pipeline once the workspace is operating", () => {
     render(
       <OpsDashboard
         data={{
@@ -419,9 +419,9 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.queryByRole("heading", { name: he.activationTitle })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: he.commercialPulseTitle })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toBeInTheDocument();
-    expect(screen.queryByText(he.quotePipelineStages.draft)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.quotePipelineTitle })).toBeInTheDocument();
+    expect(document.querySelector(".ops-command-balance")?.getAttribute("href")).toContain("/app/analytics");
+    expect(screen.getByText(he.quotePipelineStages.draft)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.usageThresholdMeterFull("משתמשים במשרד") })).toBeInTheDocument();
     expect(screen.queryByText(he.nextActionInvite)).not.toBeInTheDocument();
     expect(screen.queryByText("NPS")).not.toBeInTheDocument();
@@ -529,7 +529,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText(he.kpiConversionLabel)).not.toBeInTheDocument();
   });
 
-  it("places needs attention before business pulse when quotes exist", () => {
+  it("places needs attention before quote pipeline when quotes exist", () => {
     render(
       <OpsDashboard
         data={{
@@ -549,9 +549,9 @@ describe("OpsDashboard", () => {
       />,
     );
     const attentionHeading = screen.getByRole("heading", { name: he.dashCommandQueueCount(1) });
-    const businessHeading = screen.getByRole("heading", { name: he.commercialPulseTitle });
+    const pipelineHeading = screen.getByRole("heading", { name: he.quotePipelineTitle });
     expect(
-      attentionHeading.compareDocumentPosition(businessHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      attentionHeading.compareDocumentPosition(pipelineHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -694,7 +694,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByText(he.dashboardFieldTechnicians(2))).not.toBeInTheDocument();
   });
 
-  it("shows business health from real quote values once the workspace is operating", () => {
+  it("shows quote pipeline values from real quote totals once the workspace is operating", () => {
     render(
       <OpsDashboard
         data={{
@@ -715,8 +715,8 @@ describe("OpsDashboard", () => {
         countsReady
       />,
     );
-    expect(screen.getByRole("heading", { name: he.commercialPulseTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.snapshotOpenValue)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: he.quotePipelineTitle })).toBeInTheDocument();
+    expect(screen.getAllByText(he.snapshotOpenValue).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/48,250/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/21,400/).length).toBeGreaterThan(0);
     expect(screen.queryByText(he.snapshotActiveQuotes)).not.toBeInTheDocument();
@@ -785,10 +785,7 @@ describe("OpsDashboard", () => {
     expect(screen.queryByRole("heading", { name: he.commandTitle })).not.toBeInTheDocument();
     expect(screen.queryByText(he.commandQuietBody)).not.toBeInTheDocument();
     expect(screen.queryByText(he.dashboardTitleShort)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.commercialFullAnalysis })).toHaveAttribute(
-      "href",
-      "/app/analytics",
-    );
+    expect(document.querySelector(".ops-command-balance")?.getAttribute("href")).toContain("/app/analytics");
   });
 });
 
@@ -798,6 +795,65 @@ describe("ObserveDashboard", () => {
     expect(screen.queryByRole("button", { name: he.startJob })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "לקוח חדש" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.completeJob })).not.toBeInTheDocument();
+  });
+
+  it("merges lead follow-ups into the read-only attention queue", () => {
+    render(
+      <ObserveDashboard
+        data={emptyDash}
+        roleKey="viewer"
+        features={["quotes", "crm", "jobs"]}
+        leadAttentionItems={[
+          {
+            id: "lead-1",
+            workspace_id: "ws",
+            title: "ליד צפייה",
+            status: "new",
+            source: "manual",
+            next_action: "להתקשר ללקוח",
+            contact_name: "לקוח צפייה",
+            created_at: "2026-09-28T10:00:00Z",
+            updated_at: "2026-09-28T10:00:00Z",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: he.dashCommandQueueCount(1) })).toBeInTheDocument();
+    expect(screen.getAllByText("להתקשר ללקוח").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: he.newQuoteAction })).not.toBeInTheDocument();
+  });
+});
+
+describe("DASHBOARD-2 role tuning", () => {
+  it("sales does not show empty Today ops tile (API today is always empty for sales)", () => {
+    render(
+      <OpsDashboard
+        data={{
+          ...emptyDash,
+          home_variant: "sales",
+          summary: { ...emptySummary, quotes_draft: 2, quotes_open: 1, quotes_open_value: 500 },
+          recent_quotes: [
+            {
+              id: "q1",
+              number: "Q-1",
+              status: "draft",
+              title: "טיוטה",
+              customer_name: "לקוח",
+              total_gross: 500,
+              updated_at: "2026-09-28T10:00:00Z",
+            },
+          ],
+        }}
+        roleKey="sales"
+        features={["quotes", "crm", "jobs"]}
+        customerCount={2}
+        countsReady
+      />,
+    );
+    expect(screen.queryByText(he.todaySectionEmptyCompact)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: he.todayScheduleCta })).not.toBeInTheDocument();
+    expect(screen.getByTestId("quote-pipeline")).toBeInTheDocument();
+    expect(screen.getByTestId("recent-quotes")).toBeInTheDocument();
   });
 });
 

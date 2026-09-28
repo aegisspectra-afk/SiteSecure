@@ -667,3 +667,376 @@ def patch_admin_flag(
         metadata={"flag_id": str(flag_id), "patch": patch},
     )
     return row
+
+
+# --- BETA-ADMIN-1: workspace provision + invitations ---------------------------------
+
+AdminInviteRole = Literal["owner", "manager", "sales", "technician", "viewer", "administrator"]
+
+
+class AdminWorkspaceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=2, max_length=120)
+    plan_key: str | None = Field(default="business", max_length=40)
+    is_beta: bool = True
+    beta_program: BetaProgram | None = "early"
+    internal_note: str | None = Field(default=None, max_length=2000)
+
+
+class AdminInviteCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspace_id: UUID
+    email: str = Field(min_length=3, max_length=320)
+    role_key: AdminInviteRole = "owner"
+
+
+def _invite_status(row: dict[str, Any]) -> str:
+    if row.get("revoked_at"):
+        return "revoked"
+    if row.get("accepted_at"):
+        return "accepted"
+    expires = row.get("expires_at")
+    if expires:
+        try:
+            exp = datetime.fromisoformat(str(expires).replace("Z", "+00:00"))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp <= datetime.now(timezone.utc):
+                return "expired"
+        except ValueError:
+            pass
+    return "pending"
+
+
+def _serialize_admin_invite(
+    row: dict[str, Any], *, workspace_name: str | None = None, token: str | None = None
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "id": row["id"],
+        "workspace_id": row["workspace_id"],
+        "workspace_name": workspace_name,
+        "email": row.get("email"),
+        "role_key": row.get("role_key"),
+        "created_at": row.get("created_at"),
+        "expires_at": row.get("expires_at"),
+        "accepted_at": row.get("accepted_at"),
+        "revoked_at": row.get("revoked_at"),
+        "invited_by": row.get("invited_by"),
+        "status": _invite_status(row),
+    }
+    if token is not None:
+        out["token"] = token
+        out["invite_path"] = f"/invite/{token}"
+    return out
+
+
+@router.post("/organizations")
+def create_organization(
+    body: AdminWorkspaceCreate,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Provision empty beta workspace (no membership). Invite owner next."""
+    require_platform_admin(service, user["id"])
+    plan = (body.plan_key or "business").strip() or "business"
+    res = service.rpc(
+        "admin_provision_workspace",
+        {"p_name": body.name.strip(), "p_plan_key": plan},
+    )
+    if res.status_code != 200:
+        text = res.text or ""
+        if "INVALID_NAME" in text:
+            raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+        if "INVALID_PLAN" in text:
+            raise ApiError(400, "VALIDATION_ERROR", "תוכנית לא חוקית")
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
+    workspace_id = str(res.json()).strip('"')
+    patch: dict[str, Any] = {}
+    if body.is_beta:
+        patch["is_beta"] = True
+        patch["beta_program"] = body.beta_program or "early"
+        patch["beta_enrolled_at"] = _now()
+    if patch:
+        service.patch("workspaces", patch, params={"id": f"eq.{workspace_id}"})
+    row = one_or_404(
+        service.get(
+            "workspaces",
+            params={
+                "id": f"eq.{workspace_id}",
+                "select": "id,name,status,is_beta,beta_program,beta_enrolled_at,created_at,subscriptions(plan_key,status)",
+            },
+        )
+    )
+    sub = _nested(row.get("subscriptions"))
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="admin_workspace_created",
+        target_workspace_id=workspace_id,
+        metadata={
+            "name": row.get("name"),
+            "plan_key": plan,
+            "is_beta": bool(row.get("is_beta")),
+            "internal_note": body.internal_note,
+        },
+    )
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "status": row["status"],
+        "is_beta": bool(row.get("is_beta")),
+        "beta_program": row.get("beta_program"),
+        "beta_enrolled_at": row.get("beta_enrolled_at"),
+        "created_at": row.get("created_at"),
+        "plan_key": sub.get("plan_key") if sub else plan,
+        "subscription_status": sub.get("status") if sub else None,
+    }
+
+
+@router.get("/memberships")
+def list_memberships(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    workspace_id: UUID | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=500),
+):
+    require_platform_admin(service, user["id"])
+    params: dict[str, str] = {
+        "select": "id,workspace_id,user_id,role_key,status,created_at,profiles(email,full_name),workspaces(name)",
+        "order": "created_at.desc",
+        "limit": str(limit),
+    }
+    if workspace_id:
+        params["workspace_id"] = f"eq.{workspace_id}"
+    rows = as_list(service.get("workspace_memberships", params=params))
+    out = []
+    for row in rows:
+        prof = _nested(row.get("profiles")) or {}
+        ws = _nested(row.get("workspaces")) or {}
+        out.append(
+            {
+                "id": row["id"],
+                "email": prof.get("email"),
+                "full_name": prof.get("full_name"),
+                "workspace_id": row["workspace_id"],
+                "workspace_name": ws.get("name"),
+                "role_key": row.get("role_key"),
+                "status": row.get("status"),
+                "created_at": row.get("created_at"),
+            }
+        )
+    return out
+
+
+@router.get("/invitations")
+def list_admin_invitations(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    workspace_id: UUID | None = Query(default=None),
+    status: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=500),
+):
+    require_platform_admin(service, user["id"])
+    params: dict[str, str] = {
+        "select": "id,workspace_id,email,role_key,invited_by,expires_at,accepted_at,revoked_at,created_at,workspaces(name)",
+        "order": "created_at.desc",
+        "limit": str(limit),
+    }
+    if workspace_id:
+        params["workspace_id"] = f"eq.{workspace_id}"
+    rows = as_list(service.get("invitations", params=params))
+    out = []
+    for row in rows:
+        ws = _nested(row.get("workspaces")) or {}
+        item = _serialize_admin_invite(row, workspace_name=ws.get("name"))
+        if status and item["status"] != status:
+            continue
+        out.append(item)
+    return out
+
+
+@router.post("/invitations")
+def create_admin_invitation(
+    body: AdminInviteCreate,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    import hashlib
+    import secrets
+
+    require_platform_admin(service, user["id"])
+    email = body.email.strip().lower()
+    role_key = body.role_key
+    workspace_id = str(body.workspace_id)
+
+    ws = one_or_404(
+        service.get(
+            "workspaces",
+            params={"id": f"eq.{workspace_id}", "select": "id,name,status"},
+        )
+    )
+    if ws.get("status") != "active":
+        raise ApiError(403, "TENANT_INACTIVE", MESSAGES["TENANT_INACTIVE"])
+
+    if role_key == "owner":
+        owners = as_list(
+            service.get(
+                "workspace_memberships",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "role_key": "eq.owner",
+                    "status": "eq.active",
+                    "select": "id",
+                    "limit": "1",
+                },
+            )
+        )
+        if owners:
+            raise ApiError(403, "BUSINESS_RULE", "לסביבה כבר יש בעלים פעיל — לא ניתן להזמין בעלים נוסף")
+
+    members = as_list(
+        service.get(
+            "workspace_memberships",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "status": "eq.active",
+                "select": "id,user_id,profiles(email)",
+            },
+        )
+    )
+    for m in members:
+        prof = _nested(m.get("profiles")) or {}
+        if str(prof.get("email") or "").strip().lower() == email:
+            raise ApiError(403, "INVITE_USER_EXISTS", MESSAGES["INVITE_USER_EXISTS"])
+
+    pending = as_list(
+        service.get(
+            "invitations",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "email": f"eq.{email}",
+                "accepted_at": "is.null",
+                "revoked_at": "is.null",
+                "select": "id,expires_at",
+                "order": "created_at.desc",
+            },
+        )
+    )
+    now = datetime.now(timezone.utc)
+    for inv in pending:
+        try:
+            exp = datetime.fromisoformat(str(inv["expires_at"]).replace("Z", "+00:00"))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp > now:
+                raise ApiError(403, "INVITE_ALREADY_PENDING", MESSAGES["INVITE_ALREADY_PENDING"])
+        except ValueError:
+            raise ApiError(403, "INVITE_ALREADY_PENDING", MESSAGES["INVITE_ALREADY_PENDING"]) from None
+
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    row = created_or_403(
+        service.post(
+            "invitations",
+            {
+                "workspace_id": workspace_id,
+                "email": email,
+                "role_key": role_key,
+                "token_hash": token_hash,
+                "invited_by": user["id"],
+            },
+        )
+    )
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="admin_invitation_created",
+        target_workspace_id=workspace_id,
+        metadata={"invitation_id": row["id"], "email": email, "role_key": role_key},
+    )
+    return _serialize_admin_invite(row, workspace_name=ws.get("name"), token=token)
+
+
+@router.post("/invitations/{invitation_id}/revoke")
+def revoke_admin_invitation(
+    invitation_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    existing = one_or_404(
+        service.get(
+            "invitations",
+            params={
+                "id": f"eq.{invitation_id}",
+                "select": "id,workspace_id,email,role_key,expires_at,accepted_at,revoked_at,created_at,invited_by,workspaces(name)",
+            },
+        )
+    )
+    if existing.get("accepted_at"):
+        raise ApiError(409, "INVITE_ALREADY_ACCEPTED", MESSAGES["INVITE_ALREADY_ACCEPTED"])
+    if existing.get("revoked_at"):
+        ws = _nested(existing.get("workspaces")) or {}
+        return _serialize_admin_invite(existing, workspace_name=ws.get("name"))
+    row = patched_or_403(
+        service.patch(
+            "invitations",
+            {"revoked_at": _now()},
+            params={
+                "id": f"eq.{invitation_id}",
+                "select": "id,workspace_id,email,role_key,expires_at,accepted_at,revoked_at,created_at,invited_by",
+            },
+        )
+    )
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="admin_invitation_revoked",
+        target_workspace_id=str(row["workspace_id"]),
+        metadata={"invitation_id": str(invitation_id), "email": row.get("email"), "role_key": row.get("role_key")},
+    )
+    ws = _nested(existing.get("workspaces")) or {}
+    return _serialize_admin_invite(row, workspace_name=ws.get("name"))
+
+
+@router.post("/invitations/{invitation_id}/reissue")
+def reissue_admin_invitation(
+    invitation_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Revoke pending invite (if any) and create a replacement with a new token."""
+    require_platform_admin(service, user["id"])
+    existing = one_or_404(
+        service.get(
+            "invitations",
+            params={
+                "id": f"eq.{invitation_id}",
+                "select": "id,workspace_id,email,role_key,accepted_at,revoked_at",
+            },
+        )
+    )
+    if existing.get("accepted_at"):
+        raise ApiError(409, "INVITE_ALREADY_ACCEPTED", MESSAGES["INVITE_ALREADY_ACCEPTED"])
+    if not existing.get("revoked_at"):
+        service.patch(
+            "invitations",
+            {"revoked_at": _now()},
+            params={"id": f"eq.{invitation_id}"},
+        )
+        write_platform_admin_event(
+            service,
+            actor_user_id=user["id"],
+            action="admin_invitation_revoked",
+            target_workspace_id=str(existing["workspace_id"]),
+            metadata={"invitation_id": str(invitation_id), "reason": "reissue"},
+        )
+    return create_admin_invitation(
+        AdminInviteCreate(
+            workspace_id=UUID(str(existing["workspace_id"])),
+            email=str(existing["email"]),
+            role_key=str(existing["role_key"]),  # type: ignore[arg-type]
+        ),
+        service,
+        user,
+    )

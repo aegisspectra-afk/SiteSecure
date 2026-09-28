@@ -9,15 +9,46 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const NAV = [
-  { to: "/admin", labelKey: "adminTitle" as const, exact: true },
-  { to: "/admin/organizations", labelKey: "adminOrgs" as const, exact: false },
-  { to: "/admin/users", labelKey: "adminUsers" as const, exact: false },
-  { to: "/admin/beta", labelKey: "adminBeta" as const, exact: false },
-  { to: "/admin/badges", labelKey: "adminBadges" as const, exact: false },
-  { to: "/admin/feedback", labelKey: "adminFeedback" as const, exact: false },
-  { to: "/admin/audit", labelKey: "adminAudit" as const, exact: false },
-  { to: "/admin/flags", labelKey: "adminFlags" as const, exact: false },
+type NavItem = {
+  to: string;
+  labelKey:
+    | "adminTitle"
+    | "adminOrgs"
+    | "adminInvitations"
+    | "adminUsers"
+    | "adminBeta"
+    | "adminBadges"
+    | "adminFeedback"
+    | "adminAudit"
+    | "adminFlags";
+  exact?: boolean;
+};
+
+const NAV_GROUPS: Array<{ labelKey: "adminNavGroupOps" | "adminNavGroupBeta" | "adminNavGroupSystem"; items: NavItem[] }> = [
+  {
+    labelKey: "adminNavGroupOps",
+    items: [
+      { to: "/admin", labelKey: "adminTitle", exact: true },
+      { to: "/admin/organizations", labelKey: "adminOrgs" },
+      { to: "/admin/invitations", labelKey: "adminInvitations" },
+      { to: "/admin/users", labelKey: "adminUsers" },
+    ],
+  },
+  {
+    labelKey: "adminNavGroupBeta",
+    items: [
+      { to: "/admin/beta", labelKey: "adminBeta" },
+      { to: "/admin/badges", labelKey: "adminBadges" },
+      { to: "/admin/feedback", labelKey: "adminFeedback" },
+    ],
+  },
+  {
+    labelKey: "adminNavGroupSystem",
+    items: [
+      { to: "/admin/audit", labelKey: "adminAudit" },
+      { to: "/admin/flags", labelKey: "adminFlags" },
+    ],
+  },
 ];
 
 function AdminLayout() {
@@ -25,7 +56,13 @@ function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (loading) return <p className="p-6 text-sm text-fg-muted">{he.loading}</p>;
+  if (loading) {
+    return (
+      <div className="admin-shell admin-shell-loading">
+        <p className="p-6 text-sm text-fg-muted">{he.loading}</p>
+      </div>
+    );
+  }
   if (!user) return <Navigate to={guestEntryPath()} />;
   if (error && !session) {
     return (
@@ -46,38 +83,63 @@ function AdminLayout() {
 
   return (
     <div className="admin-shell">
-      <header className="admin-shell-header border-b border-border px-4 py-3 lg:px-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">{he.adminPlatformTitle}</p>
-        <p className="text-sm text-fg-muted">{session?.email}</p>
-      </header>
-      <nav className="admin-nav" aria-label={he.adminNav}>
-        {NAV.map((item) => {
-          const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(active && "is-active")}
-              aria-current={active ? "page" : undefined}
-            >
-              {he[item.labelKey]}
-            </Link>
-          );
-        })}
-        <Button
-          variant="secondary"
-          className="ms-auto lg:ms-0 lg:mt-auto"
-          onClick={() => void navigate({ to: "/app/dashboard" })}
-        >
-          {he.adminBackApp}
-        </Button>
-        <Button variant="ghost" onClick={() => void signOut()}>
-          {he.signOut}
-        </Button>
-      </nav>
-      <main id="main" className="flex-1 p-4 lg:p-6">
-        <Outlet />
-      </main>
+      <aside className="admin-sidebar" aria-label={he.adminNav}>
+        <div className="admin-brand">
+          <p className="admin-brand-mark">SITE SECURE</p>
+          <p className="admin-brand-role">{he.adminPlatformBadge}</p>
+          <p className="admin-brand-email ltr-meta">{session?.email}</p>
+        </div>
+
+        <nav className="admin-nav">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.labelKey} className="admin-nav-group">
+              <p className="admin-nav-group-label">{he[group.labelKey]}</p>
+              {group.items.map((item) => {
+                const active = item.exact ? pathname === item.to || pathname === `${item.to}/` : pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn("admin-nav-link", active && "is-active")}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {he[item.labelKey]}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="admin-sidebar-footer">
+          <Button
+            variant="secondary"
+            className="w-full justify-center"
+            onClick={() => void navigate({ to: "/app/dashboard" })}
+          >
+            {he.adminBackApp}
+          </Button>
+          <Button variant="ghost" className="w-full justify-center" onClick={() => void signOut()}>
+            {he.signOut}
+          </Button>
+        </div>
+      </aside>
+
+      <div className="admin-main-column">
+        <header className="admin-topbar">
+          <div>
+            <p className="admin-topbar-kicker">{he.adminPlatformTitle}</p>
+            <p className="admin-topbar-title">{he.adminConsoleTitle}</p>
+          </div>
+          <div className="admin-topbar-meta">
+            <span className="admin-pill">{he.adminPillInternal}</span>
+            <span className="ltr-meta text-xs text-fg-muted">{session?.email}</span>
+          </div>
+        </header>
+        <main id="main" className="admin-main">
+          <Outlet />
+        </main>
+      </div>
       <FeedbackCenter />
     </div>
   );

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -13,10 +14,13 @@ from ..authz.catalog import default_plan_key
 from ..authz.engine import authorize
 from ..authz.limits import evaluate_seat_limit
 from ..authz.usage import fetch_occupancy, occupant_for_email
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import ServiceClient, UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import MESSAGES, ApiError
 
 router = APIRouter(prefix="/api/v1", tags=["workspaces"])
+
+# Workspace team invite roles — owner only via platform admin bootstrap.
+TEAM_INVITE_ROLES = frozenset({"administrator", "manager", "sales", "technician", "viewer"})
 
 BusinessType = Literal[
     "security_company",
@@ -64,6 +68,10 @@ class InviteOut(BaseModel):
     role_key: str
     expires_at: str
     token: str | None = None
+    status: Literal["pending", "accepted", "expired", "revoked"] | None = None
+    created_at: str | None = None
+    accepted_at: str | None = None
+    revoked_at: str | None = None
 
 
 class InviteAccept(BaseModel):
@@ -76,6 +84,7 @@ class InvitePreviewOut(BaseModel):
         "invalid",
         "expired",
         "already_accepted",
+        "revoked",
         "wrong_account",
     ]
     workspace_id: str | None = None
@@ -88,6 +97,39 @@ class InvitePreviewOut(BaseModel):
 class InviteAcceptOut(BaseModel):
     workspace_id: str
     status: Literal["success"] = "success"
+
+
+def _workspace_invite_status(row: dict) -> str:
+    if row.get("revoked_at"):
+        return "revoked"
+    if row.get("accepted_at"):
+        return "accepted"
+    expires = row.get("expires_at")
+    if expires:
+        try:
+            exp = datetime.fromisoformat(str(expires).replace("Z", "+00:00"))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp <= datetime.now(timezone.utc):
+                return "expired"
+        except ValueError:
+            pass
+    return "pending"
+
+
+def _serialize_workspace_invite(row: dict, *, token: str | None = None) -> dict:
+    out = {
+        "id": row["id"],
+        "email": row.get("email"),
+        "role_key": row.get("role_key"),
+        "expires_at": row.get("expires_at"),
+        "created_at": row.get("created_at"),
+        "accepted_at": row.get("accepted_at"),
+        "revoked_at": row.get("revoked_at"),
+        "status": _workspace_invite_status(row),
+        "token": token,
+    }
+    return out
 
 
 def _workspace_out(row: dict) -> WorkspaceOut:
@@ -106,7 +148,12 @@ def _workspace_out(row: dict) -> WorkspaceOut:
 
 def _raise_decision(decision) -> None:
     if not decision.allowed:
-        status = 401 if decision.code == "UNAUTHENTICATED" else 403
+        if decision.code == "UNAUTHENTICATED":
+            status = 401
+        elif decision.code == "PLAN_LIMIT_REACHED":
+            status = 409
+        else:
+            status = 403
         raise ApiError(status, decision.code or "PERMISSION_DENIED", decision.message_he, decision.details)
 
 
@@ -203,14 +250,18 @@ def create_invitation(
 ) -> InviteOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     role_key = (body.role_key or "technician").strip() or "technician"
-    if role_key == "owner":
+    if role_key == "owner" or role_key not in TEAM_INVITE_ROLES:
         write_audit(
             client,
             str(workspace_id),
             "users.invite",
             metadata={"result": "denied", "code": "OWNER_INVITE_RESTRICTED", "role_key": role_key},
         )
-        raise ApiError(403, "BUSINESS_RULE", "לא ניתן להזמין בעלים. מינוי בעלים נעשה מחברי הסביבה.")
+        raise ApiError(
+            403,
+            "BUSINESS_RULE",
+            "לא ניתן להזמין בעלים. הזמנת צוות מוגבלת לתפקידים המותרים בסביבה.",
+        )
     decision = authorize(ctx=ctx, action="users.invite", invite_role=role_key)
     if not decision.allowed:
         write_audit(
@@ -268,13 +319,7 @@ def create_invitation(
         entity_id=row["id"],
         metadata={"result": "success", "email": row["email"], "role_key": row["role_key"]},
     )
-    return InviteOut(
-        id=row["id"],
-        email=row["email"],
-        role_key=row["role_key"],
-        expires_at=row["expires_at"],
-        token=token,
-    )
+    return InviteOut(**_serialize_workspace_invite(row, token=token))
 
 
 @router.get("/workspaces/{workspace_id}/invitations")
@@ -289,21 +334,118 @@ def list_invitations(
         "invitations",
         params={
             "workspace_id": f"eq.{workspace_id}",
-            "select": "id,email,role_key,expires_at,accepted_at,created_at",
+            "select": "id,email,role_key,expires_at,accepted_at,revoked_at,created_at",
             "order": "created_at.desc",
         },
     )
     if res.status_code != 200:
         raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
-    return res.json()
+    return [_serialize_workspace_invite(row) for row in (res.json() or [])]
+
+
+@router.post("/workspaces/{workspace_id}/invitations/{invitation_id}/revoke")
+def revoke_invitation(
+    workspace_id: UUID,
+    invitation_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = load_authz_context(client, user["id"], str(workspace_id))
+    _raise_decision(authorize(ctx=ctx, action="users.invite"))
+    existing = client.get(
+        "invitations",
+        params={
+            "id": f"eq.{invitation_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "id,email,role_key,expires_at,accepted_at,revoked_at,created_at,workspace_id",
+            "limit": "1",
+        },
+    )
+    if existing.status_code != 200 or not existing.json():
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    row = existing.json()[0]
+    if row.get("accepted_at"):
+        raise ApiError(409, "INVITE_ALREADY_ACCEPTED", MESSAGES["INVITE_ALREADY_ACCEPTED"])
+    if row.get("revoked_at"):
+        return _serialize_workspace_invite(row)
+    now = datetime.now(timezone.utc).isoformat()
+    patched = client.patch(
+        "invitations",
+        {"revoked_at": now},
+        params={
+            "id": f"eq.{invitation_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "id,email,role_key,expires_at,accepted_at,revoked_at,created_at",
+        },
+    )
+    if patched.status_code not in {200, 204} or not patched.json():
+        raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
+    out = patched.json()[0]
+    write_audit(
+        client,
+        str(workspace_id),
+        "users.invite",
+        entity_type="invitation",
+        entity_id=str(invitation_id),
+        metadata={"result": "revoked", "email": out.get("email"), "role_key": out.get("role_key")},
+    )
+    return _serialize_workspace_invite(out)
+
+
+@router.post("/workspaces/{workspace_id}/invitations/{invitation_id}/reissue", response_model=InviteOut)
+def reissue_invitation(
+    workspace_id: UUID,
+    invitation_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> InviteOut:
+    """Revoke pending/expired invite and create a replacement token for the same email/role."""
+    ctx = load_authz_context(client, user["id"], str(workspace_id))
+    _raise_decision(authorize(ctx=ctx, action="users.invite"))
+    existing = client.get(
+        "invitations",
+        params={
+            "id": f"eq.{invitation_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "select": "id,email,role_key,accepted_at,revoked_at",
+            "limit": "1",
+        },
+    )
+    if existing.status_code != 200 or not existing.json():
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    row = existing.json()[0]
+    if row.get("accepted_at"):
+        raise ApiError(409, "INVITE_ALREADY_ACCEPTED", MESSAGES["INVITE_ALREADY_ACCEPTED"])
+    if not row.get("revoked_at"):
+        now = datetime.now(timezone.utc).isoformat()
+        client.patch(
+            "invitations",
+            {"revoked_at": now},
+            params={"id": f"eq.{invitation_id}", "workspace_id": f"eq.{workspace_id}"},
+        )
+        write_audit(
+            client,
+            str(workspace_id),
+            "users.invite",
+            entity_type="invitation",
+            entity_id=str(invitation_id),
+            metadata={"result": "revoked", "reason": "reissue", "email": row.get("email")},
+        )
+    return create_invitation(
+        workspace_id,
+        InviteCreate(email=str(row["email"]), role_key=str(row["role_key"])),
+        client,
+        user,
+    )
 
 
 def _invite_rpc_error(text: str) -> ApiError:
     mapping = (
         ("INVITE_EMAIL_MISMATCH", 403, "INVITE_EMAIL_MISMATCH"),
         ("INVITE_EXPIRED", 400, "INVITE_EXPIRED"),
+        ("INVITE_REVOKED", 400, "INVITE_REVOKED"),
         ("INVITE_ALREADY_ACCEPTED", 409, "INVITE_ALREADY_ACCEPTED"),
-        ("PLAN_LIMIT_REACHED", 403, "PLAN_LIMIT_REACHED"),
+        ("PLAN_LIMIT_REACHED", 409, "PLAN_LIMIT_REACHED"),
         ("ROLE_NOT_ALLOWED", 403, "ROLE_NOT_ALLOWED"),
         ("SUBSCRIPTION_INVALID", 403, "SUBSCRIPTION_INVALID"),
         ("TENANT_INACTIVE", 403, "TENANT_INACTIVE"),
@@ -314,6 +456,37 @@ def _invite_rpc_error(text: str) -> ApiError:
         if needle in text:
             return ApiError(status, code, MESSAGES.get(code, MESSAGES["INVITE_INVALID"]))
     return ApiError(400, "INVITE_INVALID", MESSAGES["INVITE_INVALID"])
+
+
+_INVITE_STATUS_OK = frozenset({"invalid", "expired", "already_accepted", "revoked"})
+
+
+@router.get("/invitations/public-peek", response_model=InvitePreviewOut)
+def public_peek_invitation(
+    token: str,
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> InvitePreviewOut:
+    """Pre-auth invite preview. Does not create membership or expose token hash."""
+    raw = (token or "").strip()
+    if len(raw) < 16:
+        return InvitePreviewOut(status="invalid")
+    res = service.rpc("invitation_public_preview", {"p_token": raw})
+    if res.status_code != 200:
+        return InvitePreviewOut(status="invalid")
+    payload = res.json() or {}
+    if not isinstance(payload, dict):
+        return InvitePreviewOut(status="invalid")
+    status = str(payload.get("status") or "invalid")
+    if status != "valid":
+        return InvitePreviewOut(status=status if status in _INVITE_STATUS_OK else "invalid")
+    return InvitePreviewOut(
+        status="valid",
+        workspace_id=None,
+        workspace_name=str(payload["workspace_name"]) if payload.get("workspace_name") else None,
+        role_key=str(payload["role_key"]) if payload.get("role_key") else None,
+        email=str(payload["email"]).strip().lower() if payload.get("email") else None,
+        expires_at=str(payload["expires_at"]) if payload.get("expires_at") else None,
+    )
 
 
 @router.get("/invitations/peek", response_model=InvitePreviewOut)
@@ -336,7 +509,7 @@ def peek_invitation(
         return InvitePreviewOut(status="invalid")
     status = str(payload.get("status") or "invalid")
     if status != "valid":
-        return InvitePreviewOut(status=status if status in {"invalid", "expired", "already_accepted"} else "invalid")
+        return InvitePreviewOut(status=status if status in _INVITE_STATUS_OK else "invalid")
     invited_email = str(payload.get("email") or "").strip().lower()
     user_email = str(user.get("email") or "").strip().lower()
     if invited_email and user_email and invited_email != user_email:
@@ -362,7 +535,8 @@ def peek_invitation(
 def accept_invitation(
     body: InviteAccept,
     client: Annotated[UserClient, Depends(user_client)],
-    _: Annotated[dict, Depends(current_user)],
+    user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
 ) -> InviteAcceptOut:
     res = client.rpc("accept_invitation", {"p_token": body.token.strip()})
     if res.status_code != 200:
@@ -370,4 +544,14 @@ def accept_invitation(
     workspace_id = res.json()
     if not workspace_id:
         raise ApiError(400, "INVITE_INVALID", MESSAGES["INVITE_INVALID"])
-    return InviteAcceptOut(workspace_id=str(workspace_id), status="success")
+    from ..platform import write_platform_admin_event
+
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="invitation_accepted",
+        target_user_id=user["id"],
+        target_workspace_id=str(workspace_id).strip('"'),
+        metadata={"result": "success"},
+    )
+    return InviteAcceptOut(workspace_id=str(workspace_id).strip('"'), status="success")

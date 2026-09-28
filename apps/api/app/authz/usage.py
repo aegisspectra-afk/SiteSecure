@@ -7,10 +7,11 @@ from typing import Any, Literal
 
 from ..http_supabase import supabase_request
 from ..supabase_user import UserClient
-from .catalog import load_catalog
-from .limits import is_unlimited, plan_limit_value, seat_limit_key
+from .limits import is_technician_role, is_unlimited, plan_limit_value
 
 METER_LABELS = {
+    "max_members": "חברי צוות",
+    "max_technicians": "טכנאים",
     "seats_operator": "משתמשים במשרד",
     "seats_field": "משתמשים בשטח",
     "storage_gb": "אחסון",
@@ -81,6 +82,8 @@ def _profile(row: dict[str, Any]) -> dict[str, Any]:
 
 def _invite_open(row: dict[str, Any], now: datetime) -> bool:
     if row.get("accepted_at"):
+        return False
+    if row.get("revoked_at"):
         return False
     expires = _parse_ts(row.get("expires_at"))
     return expires is None or expires > now
@@ -182,7 +185,7 @@ def fetch_occupancy(client: UserClient, workspace_id: str) -> Occupancy:
         params={
             "workspace_id": f"eq.{workspace_id}",
             "accepted_at": "is.null",
-            "select": "email,role_key,expires_at,accepted_at,created_at",
+            "select": "email,role_key,expires_at,accepted_at,revoked_at,created_at",
             "order": "created_at.asc",
         },
     )
@@ -208,15 +211,21 @@ def seat_meters(
     occupied_roles: Iterable[str] | None = None,
     occupants: Iterable[SeatOccupant] | None = None,
 ) -> list[dict[str, Any]]:
-    catalog = load_catalog()
-    buckets = catalog.get("seat_buckets") or {}
+    """Authoritative Free/Pro meters: max_members + max_technicians (pending invites included)."""
     occupant_rows = list(occupants or [])
     roles = [row.role_key for row in occupant_rows] if occupant_rows else list(occupied_roles or [])
+    member_occupants = occupant_rows
+    tech_occupants = [row for row in occupant_rows if is_technician_role(row.role_key)]
+    members = len(member_occupants) if occupant_rows else len(roles)
+    technicians = (
+        len(tech_occupants) if occupant_rows else sum(1 for role in roles if is_technician_role(role))
+    )
+
     meters: list[dict[str, Any]] = []
-    for limit_key in ("seats_operator", "seats_field"):
-        bucket_roles = set(buckets.get(limit_key) or [])
-        bucket_occupants = [row for row in occupant_rows if row.role_key in bucket_roles]
-        current = len(bucket_occupants) if occupant_rows else sum(1 for role in roles if role in bucket_roles)
+    for limit_key, current, bucket_occupants in (
+        ("max_members", members, member_occupants),
+        ("max_technicians", technicians, tech_occupants),
+    ):
         limit = plan_limit_value(plan_key, limit_key)
         unlimited = is_unlimited(limit)
         meters.append(
@@ -228,17 +237,18 @@ def seat_meters(
                 "unlimited": unlimited,
                 "unit": "seats",
                 "at_limit": (not unlimited) and current >= limit,
-                "occupants": [row.as_dict() for row in bucket_occupants],
+                "occupants": [row.as_dict() for row in (bucket_occupants if occupant_rows else [])],
             }
         )
     return meters
 
 
 def meter_for_invite_role(meters: list[dict[str, Any]], invite_role: str) -> dict[str, Any] | None:
-    bucket = seat_limit_key(invite_role)
-    if bucket is None:
-        return None
-    return next((row for row in meters if row["key"] == bucket), None)
+    if is_technician_role(invite_role):
+        tech = next((row for row in meters if row["key"] == "max_technicians"), None)
+        if tech and tech.get("at_limit"):
+            return tech
+    return next((row for row in meters if row["key"] == "max_members"), None)
 
 
 def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:

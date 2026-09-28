@@ -1,5 +1,5 @@
 import { Button } from "@site-secure/ui";
-import { ApiClientError } from "@site-secure/api-client";
+import { ApiClientError, createApiClient } from "@site-secure/api-client";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -18,6 +18,24 @@ function InviteAcceptPage() {
   const { loading, user, session, api, refresh, signOut } = useSession();
   const navigate = useNavigate();
   const invitePath = `/invite/${token}`;
+  const publicApi = useMemo(() => {
+    const fromEnv = ((import.meta.env.VITE_API_URL as string | undefined) ?? "").trim().replace(/\/$/, "");
+    if (import.meta.env.DEV) {
+      return createApiClient({ baseUrl: "", getAccessToken: async () => null, sameOriginProxy: true });
+    }
+    return createApiClient({
+      baseUrl: fromEnv,
+      getAccessToken: async () => null,
+      sameOriginProxy: !fromEnv,
+    });
+  }, []);
+
+  const publicPreview = useQuery({
+    queryKey: ["invite-public-peek", token],
+    enabled: Boolean(token) && !loading && !user,
+    queryFn: () => publicApi.peekInvitationPublic(token),
+    retry: false,
+  });
 
   const preview = useQuery({
     queryKey: ["invite-peek", token],
@@ -56,8 +74,32 @@ function InviteAcceptPage() {
   }
 
   if (!user || !session) {
+    const pub = publicPreview.data;
+    const pubStatus = pub?.status ?? (publicPreview.isError ? "invalid" : null);
     return (
       <AuthLayout {...shell}>
+        {publicPreview.isLoading ? <p className="mb-4 text-sm text-fg-muted">{he.loading}</p> : null}
+        {pubStatus && pubStatus !== "valid" ? (
+          <p className="mb-4 text-sm text-danger" role="alert">
+            {inviteStatusMessage(pubStatus)}
+          </p>
+        ) : null}
+        {pubStatus === "valid" ? (
+          <dl className="mb-6 grid gap-3 rounded-[var(--radius-panel)] border border-border bg-bg px-4 py-3 text-sm">
+            <div>
+              <dt className="text-xs text-fg-muted">{he.inviteWorkspace}</dt>
+              <dd className="font-semibold text-fg">{pub?.workspace_name ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.role}</dt>
+              <dd className="font-semibold text-fg">{roleLabel(pub?.role_key ?? undefined)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.email}</dt>
+              <dd className="ltr-meta font-semibold text-fg">{pub?.email ?? "—"}</dd>
+            </div>
+          </dl>
+        ) : null}
         <p className="mb-4 text-sm text-fg">{he.inviteAuthRequired}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
@@ -162,6 +204,8 @@ function inviteStatusMessage(status: string): string {
       return he.inviteExpired;
     case "already_accepted":
       return he.inviteAlreadyAccepted;
+    case "revoked":
+      return he.inviteRevoked;
     default:
       return he.inviteInvalid;
   }
@@ -171,6 +215,8 @@ function inviteErrorMessage(code: string): string {
   switch (code) {
     case "INVITE_EXPIRED":
       return he.inviteExpired;
+    case "INVITE_REVOKED":
+      return he.inviteRevoked;
     case "INVITE_ALREADY_ACCEPTED":
       return he.inviteAlreadyAccepted;
     case "INVITE_EMAIL_MISMATCH":

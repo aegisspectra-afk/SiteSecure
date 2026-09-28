@@ -42,17 +42,34 @@ QUOTE_SELECT = (
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
+# Authenticated RETURNING/select must omit cost columns (Q4-S column lockdown).
+QUOTE_SELECT_SAFE = (
+    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,"
+    "currency,vat_percent,discount_type,discount_value,subtotal_net,vat_amount,"
+    "total_gross,valid_until,payment_terms,"
+    "customer_notes,internal_notes,title,project_name,project_address,summary,"
+    "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
+    "approved_at,rejected_at,approved_name,rejection_reason,"
+    "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "created_at,updated_at,customers(display_name),sites(name)"
+)
 QUOTE_LIST_SELECT = (
     "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,currency,"
-    "total_gross,cost_total,margin_amount,margin_percent,valid_until,title,"
+    "total_gross,valid_until,title,"
     "project_name,version,created_at,updated_at,"
     "customers(display_name),sites(name)"
 )
+QUOTE_LIST_COST_SELECT = "id,cost_total,margin_amount,margin_percent"
 OPEN_LIST_STATUSES = frozenset({"draft", "sent", "viewed"})
 ITEM_SELECT = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,cost,discount,"
     "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
-    "section_id,package_instance_id,package_id,package_name"
+    "section_id,package_instance_id,package_id,package_name,is_optional"
+)
+ITEM_SELECT_SAFE = (
+    "id,quote_id,product_id,item_type,description,qty,unit_price,discount,"
+    "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
+    "section_id,package_instance_id,package_id,package_name,is_optional"
 )
 SECTION_SELECT = (
     "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
@@ -61,8 +78,15 @@ PRODUCT_SELECT = (
     "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
     "manufacturer,model,attributes"
 )
-COST_FIELDS = ("cost_total", "margin_amount", "margin_percent")
-ITEM_COST_FIELDS = ("cost",)
+COST_FIELDS = (
+    "cost_total",
+    "margin_amount",
+    "margin_percent",
+    "optional_cost_total",
+    "gross_profit",
+    "markup_percent",
+)
+ITEM_COST_FIELDS = ("cost", "line_cost", "gross_profit", "margin_percent", "markup_percent")
 ITEM_TYPES = frozenset({"catalog", "free", "labor", "note"})
 
 
@@ -127,6 +151,7 @@ class QuoteItemIn(BaseModel):
     package_instance_id: str | None = None
     package_id: str | None = None
     package_name: str | None = None
+    is_optional: bool = False
 
 
 class QuoteItemPatch(BaseModel):
@@ -142,6 +167,7 @@ class QuoteItemPatch(BaseModel):
     item_type: str | None = None
     name: str | None = None
     section_id: str | None = None
+    is_optional: bool | None = None
 
 
 class ApplyTemplateIn(BaseModel):
@@ -165,6 +191,11 @@ def _ref(row: dict) -> ResourceRef:
 
 def _can_view_cost(ctx) -> bool:
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
+
+
+def _service() -> ServiceClient:
+    """Privileged PostgREST reader for commercial columns (SELECT revoked from authenticated)."""
+    return ServiceClient(get_settings())
 
 
 def _nested_name(row: dict, key: str, field: str) -> str | None:
@@ -234,8 +265,21 @@ def _strip_cost(quote: dict, items: list[dict], *, show_cost: bool) -> dict:
 
 
 def _load_quote(client: UserClient, workspace_id: UUID, quote_id: UUID) -> dict:
-    return one_or_404(
+    """Load quote with commercial columns via service_role after caller authorize()."""
+    # Visibility: first prove the row is visible to the caller under RLS.
+    visible = one_or_404(
         client.get(
+            "quotes",
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id",
+            },
+        )
+    )
+    del visible
+    return one_or_404(
+        _service().get(
             "quotes",
             params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": QUOTE_SELECT},
         )
@@ -243,8 +287,16 @@ def _load_quote(client: UserClient, workspace_id: UUID, quote_id: UUID) -> dict:
 
 
 def _load_items(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[dict]:
-    return as_list(
+    """Load items including cost via service_role. Caller must authorize first."""
+    # Visibility gate: quote must be selectable by the user JWT.
+    one_or_404(
         client.get(
+            "quotes",
+            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+        )
+    )
+    return as_list(
+        _service().get(
             "quote_items",
             params={
                 "quote_id": f"eq.{quote_id}",
@@ -329,7 +381,11 @@ def _persist_totals(
             client.patch(
                 "quote_items",
                 {"line_net": computed_item["line_net"]},
-                params={"id": f"eq.{item['id']}", "workspace_id": f"eq.{workspace_id}"},
+                params={
+                    "id": f"eq.{item['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": ITEM_SELECT_SAFE,
+                },
             )
             item["line_net"] = computed_item["line_net"]
     totals = {
@@ -340,14 +396,19 @@ def _persist_totals(
         "margin_amount": computed["margin_amount"],
         "margin_percent": computed["margin_percent"],
     }
+    # UPDATE cost_* via authenticated (UPDATE granted); RETURNING must omit locked columns.
     patched = patched_or_403(
         client.patch(
             "quotes",
             totals,
-            params={"id": f"eq.{quote['id']}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote['id']}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
-    return patched, items
+    return {**patched, **totals}, items
 
 
 TEMPLATE_ITEM_SELECT = (
@@ -453,7 +514,7 @@ def _insert_line(
     unit = None
     if body.product_id:
         products = as_list(
-            client.get(
+            _service().get(
                 "products",
                 params={
                     "id": f"eq.{body.product_id}",
@@ -519,6 +580,7 @@ def _insert_line(
         "package_instance_id": body.package_instance_id,
         "package_id": body.package_id,
         "package_name": body.package_name,
+        "is_optional": bool(body.is_optional),
         "line_net": float(
             pricing.line_net(
                 qty=body.qty,
@@ -529,7 +591,13 @@ def _insert_line(
             )
         ),
     }
-    created_or_403(client.post("quote_items", payload))
+    created_or_403(
+        client.post(
+            "quote_items",
+            payload,
+            params={"select": ITEM_SELECT_SAFE},
+        )
+    )
     return True
 
 
@@ -569,6 +637,24 @@ def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items:
     out = _strip_cost(_flatten_quote(quote), items, show_cost=show_cost)
     sections = _load_sections(client, workspace_id, UUID(quote["id"]))
     out["sections"] = sections
+    computed = pricing.recalculate(
+        items,
+        vat_percent=quote.get("vat_percent"),
+        discount_type=quote.get("discount_type"),
+        discount_value=quote.get("discount_value"),
+        sections=sections,
+    )
+    out["lines_subtotal"] = computed.get("lines_subtotal")
+    out["section_discount_amount"] = computed.get("section_discount_amount")
+    out["quote_discount_amount"] = computed.get("quote_discount_amount")
+    out["optional_subtotal"] = computed.get("optional_subtotal")
+    out["optional_vat_amount"] = computed.get("optional_vat_amount")
+    out["optional_total_gross"] = computed.get("optional_total_gross")
+    out["total_with_options_gross"] = computed.get("total_with_options_gross")
+    if show_cost:
+        out["optional_cost_total"] = computed.get("optional_cost_total")
+    else:
+        out.pop("optional_cost_total", None)
     quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
     if show_cost:
         out["margin_status"] = pricing.margin_status(
@@ -909,8 +995,23 @@ def _document_payload(
             pdf_template["notes"] = quotes_cfg.get("pdf_notes")
         if quotes_cfg.get("payment_terms") and not config.get("paymentTerms"):
             pdf_template["paymentTerms"] = quotes_cfg.get("payment_terms")
+    computed = pricing.recalculate(
+        items,
+        vat_percent=quote.get("vat_percent"),
+        discount_type=quote.get("discount_type"),
+        discount_value=quote.get("discount_value"),
+        sections=sections,
+    )
+    quote_doc = dict(quote)
+    quote_doc["lines_subtotal"] = computed.get("lines_subtotal")
+    quote_doc["section_discount_amount"] = computed.get("section_discount_amount")
+    quote_doc["quote_discount_amount"] = computed.get("quote_discount_amount")
+    quote_doc["optional_subtotal"] = computed.get("optional_subtotal")
+    quote_doc["optional_vat_amount"] = computed.get("optional_vat_amount")
+    quote_doc["optional_total_gross"] = computed.get("optional_total_gross")
+    quote_doc["total_with_options_gross"] = computed.get("total_with_options_gross")
     return public_payload(
-        quote,
+        quote_doc,
         items,
         workspace=workspace,
         customer=customer,
@@ -1000,6 +1101,26 @@ def list_quotes(
     rows = as_list(client.get("quotes", params=params))
     page = page_from_rows(rows, page_size)
     show_cost = _can_view_cost(ctx)
+    if show_cost and page.items:
+        ids = [str(row["id"]) for row in page.items if row.get("id")]
+        if ids:
+            cost_rows = as_list(
+                _service().get(
+                    "quotes",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "id": f"in.({','.join(ids)})",
+                        "select": QUOTE_LIST_COST_SELECT,
+                    },
+                )
+            )
+            by_id = {str(r["id"]): r for r in cost_rows}
+            for row in page.items:
+                extra = by_id.get(str(row["id"]))
+                if extra:
+                    row["cost_total"] = extra.get("cost_total")
+                    row["margin_amount"] = extra.get("margin_amount")
+                    row["margin_percent"] = extra.get("margin_percent")
     items = [_strip_cost(_flatten_quote(row), [], show_cost=show_cost) for row in page.items]
     count_rows = as_list(
         client.get(
@@ -1046,7 +1167,7 @@ def create_quote(
         "vat_percent": vat,
         **body.model_dump(exclude_none=True, exclude={"vat_percent"}),
     }
-    row = created_or_403(client.post("quotes", payload))
+    row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
     lead_id = row.get("lead_id") or body.lead_id
     if lead_id:
         try:
@@ -1095,7 +1216,15 @@ def patch_quote(
     if any(k in patch for k in ("total_gross", "subtotal_net", "vat_amount", "cost_total")):
         raise ApiError(400, "VALIDATION_ERROR", "סה״כ מחושב בשרת בלבד")
     row = patched_or_403(
-        client.patch("quotes", patch, params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"})
+        client.patch(
+            "quotes",
+            patch,
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
+        )
     )
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, row, items)
@@ -1201,7 +1330,11 @@ def apply_template(
         client.patch(
             "quotes",
             {"template_id": template["id"]},
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     _record_event(
@@ -1237,7 +1370,7 @@ def patch_item(
     if "cost" in patch and not _can_view_cost(ctx) and not authorize(ctx=ctx, action="quotes.override_price").allowed:
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לעלות")
     before_rows = as_list(
-        client.get(
+        _service().get(
             "quote_items",
             params={
                 "id": f"eq.{item_id}",
@@ -1281,7 +1414,12 @@ def patch_item(
         client.patch(
             "quote_items",
             patch,
-            params={"id": f"eq.{item_id}", "quote_id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{item_id}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ITEM_SELECT_SAFE,
+            },
         )
     )
     _record_event(
@@ -1311,6 +1449,7 @@ def delete_item(
     res = client.delete(
         "quote_items",
         params={"id": f"eq.{item_id}", "quote_id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+        prefer="return=minimal",
     )
     if res.status_code not in {200, 204}:
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לפעולה זו")
@@ -1393,6 +1532,7 @@ def _transition_to_sent(
             "workspace_id": f"eq.{workspace_id}",
             "status": "eq.draft",
             "version": f"eq.{version}",
+            "select": QUOTE_SELECT_SAFE,
         },
     )
     rows = as_list(res) if res.status_code == 200 else []
@@ -1474,7 +1614,11 @@ def revise_quote(
         client.patch(
             "quotes",
             patch,
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     items = _load_items(client, workspace_id, quote_id)
@@ -1679,7 +1823,7 @@ def duplicate_quote(
     title = str(existing.get("title") or "").strip()
     if title:
         payload["title"] = f"{title} (העתק)"
-    row = created_or_403(client.post("quotes", payload))
+    row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
     items = _load_items(client, workspace_id, quote_id)
     for item in items:
         created_or_403(
@@ -1705,8 +1849,10 @@ def duplicate_quote(
                     "package_instance_id": item.get("package_instance_id"),
                     "package_id": item.get("package_id"),
                     "package_name": item.get("package_name"),
+                    "is_optional": bool(item.get("is_optional")),
                     "line_net": item.get("line_net") or 0,
                 },
+                params={"select": ITEM_SELECT_SAFE},
             )
         )
     copied = _load_items(client, workspace_id, UUID(row["id"]))

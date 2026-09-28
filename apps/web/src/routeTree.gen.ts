@@ -24,6 +24,7 @@ import { Route as AdminBadgesRouteImport } from "./routes/admin/badges"
 import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
 import { Route as AdminFeedbackRouteImport } from "./routes/admin/feedback"
 import { Route as AdminFlagsRouteImport } from "./routes/admin/flags"
+import { Route as AdminInvitationsRouteImport } from "./routes/admin/invitations"
 import { Route as AdminOrganizationsRouteImport } from "./routes/admin/organizations"
 import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
@@ -141,6 +142,11 @@ const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
 const AdminFlagsRoute = AdminFlagsRouteImport.update({
   id: "/flags",
   path: "/flags",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminInvitationsRoute = AdminInvitationsRouteImport.update({
+  id: "/invitations",
+  path: "/invitations",
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
@@ -376,6 +382,7 @@ export interface FileRoutesByFullPath {
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -433,6 +440,7 @@ export interface FileRoutesByTo {
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -494,6 +502,7 @@ export interface FileRoutesById {
   "/admin/beta": typeof AdminBetaRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
+  "/admin/invitations": typeof AdminInvitationsRoute
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/catalog": typeof AppCatalogRoute
@@ -556,6 +565,7 @@ export interface FileRouteTypes {
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -613,6 +623,7 @@ export interface FileRouteTypes {
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | "/admin/beta"
     | "/admin/feedback"
     | "/admin/flags"
+    | "/admin/invitations"
     | "/admin/organizations"
     | "/admin/users"
     | "/app/catalog"
@@ -841,6 +853,13 @@ declare module "@tanstack/react-router" {
       path: "/flags"
       fullPath: "/admin/flags"
       preLoaderRoute: typeof AdminFlagsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/invitations": {
+      id: "/admin/invitations"
+      path: "/invitations"
+      fullPath: "/admin/invitations"
+      preLoaderRoute: typeof AdminInvitationsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     "/admin/organizations": {
@@ -1153,6 +1172,7 @@ interface AdminRouteRouteChildren {
   AdminBetaRoute: typeof AdminBetaRoute
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminFlagsRoute: typeof AdminFlagsRoute
+  AdminInvitationsRoute: typeof AdminInvitationsRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1164,6 +1184,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminBetaRoute: AdminBetaRoute,
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminFlagsRoute: AdminFlagsRoute,
+  AdminInvitationsRoute: AdminInvitationsRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,

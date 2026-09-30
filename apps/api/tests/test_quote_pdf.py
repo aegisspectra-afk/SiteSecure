@@ -183,6 +183,24 @@ def test_pdf_customer_without_address_omits_blank_address_line():
     assert "x@y.com" in text
 
 
+def test_pdf_show_vat_false_hides_vat_line_keeps_total():
+    doc = _doc()
+    doc["pdf_template"] = {"showVat": False, "bodyTotals": True, "showGrandTotal": True, "showSubtotal": True}
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "סה״כ לתשלום" in text or 'סה"כ לתשלום' in text
+    assert "סה״כ כולל מע״מ" not in text and 'סה"כ כולל מע"מ' not in text
+    # Amount line for VAT percent should not appear as a totals row (calc unchanged).
+    assert "1,530.00" not in text and "1530.00" not in text
+
+
+def test_pdf_show_vat_true_shows_vat_line():
+    doc = _doc()
+    doc["pdf_template"] = {"showVat": True, "bodyTotals": True, "showGrandTotal": True, "showSubtotal": True}
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "סה״כ כולל מע״מ" in text or 'סה"כ כולל מע"מ' in text or "מע״מ" in text or 'מע"מ' in text
+    assert "1,530.00" in text or "1530" in text
+
+
 def test_pdf_approved_document_survives_rerender_like_refresh():
     """Approved payload (as after GET /document or public PDF) keeps customer + approval."""
     doc = _doc()

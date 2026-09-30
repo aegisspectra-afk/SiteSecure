@@ -24,6 +24,7 @@ from ..quote_pdf import render_quote_pdf
 from ..quote_snapshot import catalog_line_snapshot, public_payload, version_snapshot
 from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
+from ..quote_workspace_defaults import apply_quote_create_defaults, merge_quote_pdf_template_defaults
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 from ..supabase_service import ServiceClient
 
@@ -328,7 +329,10 @@ def _load_sections(client: UserClient, workspace_id: UUID, quote_id: UUID) -> li
 
 def _load_workspace(client: UserClient, workspace_id: UUID) -> dict:
     return one_or_404(
-        client.get("workspaces", params={"id": f"eq.{workspace_id}", "select": "id,name,vat_percent"})
+        client.get(
+            "workspaces",
+            params={"id": f"eq.{workspace_id}", "select": "id,name,vat_percent,timezone"},
+        )
     )
 
 
@@ -756,10 +760,10 @@ def _upsert_version_snapshot(
             "name": pdf_tpl_row.get("name"),
             **config,
         }
-        if quotes_cfg.get("pdf_notes") and not config.get("notes"):
-            pdf_template["notes"] = quotes_cfg.get("pdf_notes")
-        if quotes_cfg.get("payment_terms") and not config.get("paymentTerms"):
-            pdf_template["paymentTerms"] = quotes_cfg.get("payment_terms")
+        merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config=config)
+    else:
+        pdf_template = {}
+        merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config={})
     snapshot = version_snapshot(
         quote,
         items,
@@ -938,10 +942,10 @@ def _document_payload(
             "name": pdf_tpl.get("name"),
             **config,
         }
-        if quotes_cfg.get("pdf_notes") and not config.get("notes"):
-            pdf_template["notes"] = quotes_cfg.get("pdf_notes")
-        if quotes_cfg.get("payment_terms") and not config.get("paymentTerms"):
-            pdf_template["paymentTerms"] = quotes_cfg.get("payment_terms")
+        merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config=config)
+    elif pdf_template is None:
+        pdf_template = {}
+        merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config={})
     return public_payload(
         quote,
         items,
@@ -1092,6 +1096,10 @@ def create_quote(
     if vat is None:
         ws = _load_workspace(client, workspace_id)
         vat = float(ws.get("vat_percent") or 18)
+    else:
+        ws = _load_workspace(client, workspace_id)
+    settings = _load_quote_settings(client, workspace_id)
+    quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
     payload = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),
@@ -1099,6 +1107,11 @@ def create_quote(
         "vat_percent": vat,
         **body.model_dump(exclude_none=True, exclude={"vat_percent"}),
     }
+    apply_quote_create_defaults(
+        payload,
+        quotes_cfg=quotes_cfg,
+        timezone_name=ws.get("timezone"),
+    )
     row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
     lead_id = row.get("lead_id") or body.lead_id
     if lead_id:

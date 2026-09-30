@@ -11181,6 +11181,305 @@ html.theme-revealing::view-transition-new(root) {
   }
 }
 
+/* CCTV-DESIGNER-2 — professional recommendation review */
+.cpq-cctv-designer {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.cpq-cctv-designer-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+}
+
+.cpq-cctv-designer-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+}
+
+.cpq-cctv-designer-status {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-status.is-complete {
+  color: color-mix(in srgb, var(--color-success, #16a34a) 85%, var(--color-fg-muted));
+}
+
+.cpq-cctv-designer-status.is-pending {
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-catalog {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-surface-muted, var(--color-surface)) 70%, transparent);
+}
+
+.cpq-cctv-designer-catalog-copy {
+  margin: 0;
+  flex: 1 1 12rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.cpq-cctv-designer-catalog-primary {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-action);
+  text-decoration: none;
+}
+
+.cpq-cctv-designer-catalog-primary:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cpq-cctv-designer-catalog-secondary {
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+  text-decoration: none;
+}
+
+.cpq-cctv-designer-catalog-secondary:hover {
+  color: var(--color-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cpq-cctv-designer-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.15rem;
+  padding-block: 0.45rem;
+  border-block: 1px solid var(--color-border);
+}
+
+.cpq-cctv-designer-metric {
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-metric:not(:last-child)::after {
+  content: "·";
+  margin-inline: 0.45rem;
+  color: color-mix(in srgb, var(--color-fg-muted) 55%, transparent);
+}
+
+.cpq-cctv-designer-group {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.cpq-cctv-designer-group-title {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-card {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.cpq-cctv-designer-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+}
+
+.cpq-cctv-designer-card-identity {
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+
+.cpq-cctv-designer-role {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.cpq-cctv-designer-req {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.cpq-cctv-designer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 0.65rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--color-fg-muted);
+  background: transparent;
+}
+
+.cpq-cctv-designer-chip.is-ready {
+  border-color: color-mix(in srgb, var(--color-success, #16a34a) 35%, var(--color-border));
+  color: color-mix(in srgb, var(--color-success, #16a34a) 90%, var(--color-fg));
+  background: color-mix(in srgb, var(--color-success, #16a34a) 10%, transparent);
+}
+
+.cpq-cctv-designer-chip.is-needs {
+  border-color: color-mix(in srgb, var(--color-warning, #ca8a04) 40%, var(--color-border));
+  color: color-mix(in srgb, var(--color-warning, #ca8a04) 88%, var(--color-fg));
+  background: color-mix(in srgb, var(--color-warning, #ca8a04) 9%, transparent);
+}
+
+.cpq-cctv-designer-chip.is-optional {
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-chip.is-verify {
+  border-color: color-mix(in srgb, var(--color-action) 35%, var(--color-border));
+  color: var(--color-action);
+  background: color-mix(in srgb, var(--color-action) 8%, transparent);
+}
+
+.cpq-cctv-designer-pick {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-action);
+  text-decoration: none;
+}
+
+.cpq-cctv-designer-pick:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cpq-cctv-designer-product-name {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 550;
+  color: var(--color-fg);
+}
+
+.cpq-cctv-designer-product-meta,
+.cpq-cctv-designer-specs,
+.cpq-cctv-designer-why {
+  margin: 0.1rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-swap {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.cpq-cctv-designer-swap-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.cpq-cctv-designer-swap-option {
+  display: flex;
+  cursor: pointer;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font-size: 0.8rem;
+}
+
+.cpq-cctv-designer-assumptions {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.35rem;
+}
+
+.cpq-cctv-designer-assumptions > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-fg-muted);
+  user-select: none;
+}
+
+.cpq-cctv-designer-assumptions > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cpq-cctv-designer-assumptions > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-inline-end: 0.35rem;
+  transition: transform 0.12s ease;
+}
+
+.cpq-cctv-designer-assumptions[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.cpq-cctv-designer-assumptions ul {
+  margin: 0.45rem 0 0;
+  padding-inline-start: 1.1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.cpq-cctv-designer-assumptions li {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--color-fg-muted);
+}
+
+.cpq-cctv-designer-footer {
+  width: 100%;
+}
+
 /* E1 — Engineering / Equipment Resolution UX */
 .cpq-e1-eng-banner {
   border-color: color-mix(in srgb, var(--color-success, #16a34a) 32%, var(--color-border));

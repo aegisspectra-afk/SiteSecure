@@ -48,7 +48,6 @@ import {
 } from "../../../lib/cctv-recommend-copy";
 import {
   canAddRecommendationToQuote,
-  componentKindLabel,
   initialReviewSelection,
   isCandidateSelectable,
   resolveComponentProduct,
@@ -473,73 +472,80 @@ export function SystemBuilderDrawer({
 
   const footer =
     step === "review" && recommendation ? (
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            setStep("requirements");
-            setRecommendation(null);
-            setAppliedOnce(false);
-            setLastLines(null);
-            setDivergence(null);
-            setLocalApplyError(null);
-            onClearRecovery?.();
-          }}
-          disabled={busy || conflict}
-        >
-          {he.cpqAdjustPlan}
-        </Button>
-        {divergence ? (
-          <>
+      <div className="cpq-cctv-designer-footer flex w-full flex-col gap-2">
+        {!divergence && !(recovery && lastLines) && addGate.ok && addGate.planned.length > 0 ? (
+          <p className="text-xs text-fg-muted ms-auto" role="status">
+            {he.cpqCctvAddPlanHint(addGate.planned.length, addGate.lines.length)}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setStep("requirements");
+              setRecommendation(null);
+              setAppliedOnce(false);
+              setLastLines(null);
+              setDivergence(null);
+              setLocalApplyError(null);
+              onClearRecovery?.();
+            }}
+            disabled={busy || conflict}
+          >
+            {he.cpqAdjustPlan}
+          </Button>
+          {divergence ? (
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setDivergence(null);
+                  setLocalApplyError(null);
+                  setAppliedOnce(false);
+                }}
+                disabled={busy}
+              >
+                {he.cancel}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleAdd(null, divergence.confirmation_token)}
+                disabled={busy || conflict}
+                aria-busy={busy}
+              >
+                {busy ? he.cpqCctvApplying : he.cpqCctvConfirmReplace}
+              </Button>
+            </>
+          ) : recovery && lastLines ? (
             <Button
               type="button"
-              variant="secondary"
-              onClick={() => {
-                setDivergence(null);
-                setLocalApplyError(null);
-                setAppliedOnce(false);
-              }}
-              disabled={busy}
-            >
-              {he.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleAdd(null, divergence.confirmation_token)}
+              onClick={() => void handleAdd(recovery)}
               disabled={busy || conflict}
               aria-busy={busy}
             >
-              {busy ? he.cpqCctvApplying : he.cpqCctvConfirmReplace}
+              {busy ? he.cpqCctvApplying : he.cpqCctvResumeApply}
             </Button>
-          </>
-        ) : recovery && lastLines ? (
-          <Button
-            type="button"
-            onClick={() => void handleAdd(recovery)}
-            disabled={busy || conflict}
-            aria-busy={busy}
-          >
-            {busy ? he.cpqCctvApplying : he.cpqCctvResumeApply}
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            onClick={() => void handleAdd(null)}
-            disabled={!addGate.ok || busy || appliedOnce || conflict}
-            aria-busy={busy}
-          >
-            {busy
-              ? he.cpqCctvApplying
-              : !addGate.ok
-                ? he.cpqCctvResolveEquipmentFirst
-                : addGate.lines.length === 0 && addGate.planned.length > 0
-                  ? he.cpqAddPlanToQuote
-                  : addGate.incomplete
-                    ? he.cpqAddResolvedToQuote
-                    : he.cpqAddPlanToQuote}
-          </Button>
-        )}
+          ) : (
+            <Button
+              type="button"
+              onClick={() => void handleAdd(null)}
+              disabled={!addGate.ok || busy || appliedOnce || conflict}
+              aria-busy={busy}
+            >
+              {busy
+                ? he.cpqCctvApplying
+                : !addGate.ok
+                  ? he.cpqCctvResolveEquipmentFirst
+                  : addGate.lines.length === 0 && addGate.planned.length > 0
+                    ? he.cpqAddPlanToQuote
+                    : addGate.incomplete
+                      ? he.cpqAddResolvedToQuote
+                      : he.cpqAddPlanToQuote}
+            </Button>
+          )}
+        </div>
       </div>
     ) : step === "loading" || hydrating ? (
       <div className="flex justify-end">
@@ -643,8 +649,6 @@ export function SystemBuilderDrawer({
             setSelection={updateSelection}
             swapRole={swapRole}
             setSwapRole={setSwapRole}
-            addBlocked={!addGate.ok || conflict}
-            incomplete={addGate.ok && addGate.incomplete}
             applyError={shownApplyError}
           />
         ) : null}
@@ -896,14 +900,28 @@ function RequirementsForm({
   );
 }
 
+function componentStatusMeta(
+  component: SystemRecommendation["components"][number],
+  picked: ReturnType<typeof resolveComponentProduct>,
+): { chip: "ready" | "needs" | "optional" | "verify"; label: string } {
+  if (picked?.confidence === "TEXT_ASSISTED") {
+    return { chip: "verify", label: he.cpqCctvChipVerify };
+  }
+  if (picked) {
+    return { chip: "ready", label: he.cpqCctvChipReady };
+  }
+  if (component.optional) {
+    return { chip: "optional", label: he.cpqCctvChipOptional };
+  }
+  return { chip: "needs", label: he.cpqCctvChipNeedsEquipment };
+}
+
 function RecommendationReview({
   rec,
   selection,
   setSelection,
   swapRole,
   setSwapRole,
-  addBlocked,
-  incomplete,
   applyError,
 }: {
   rec: SystemRecommendation;
@@ -911,105 +929,104 @@ function RecommendationReview({
   setSelection: (next: ReviewSelectionState) => void;
   swapRole: string | null;
   setSwapRole: (role: string | null) => void;
-  addBlocked: boolean;
-  incomplete: boolean;
   applyError: string | null;
 }) {
   const summary = buildEngineeringSummary(rec);
-  const groups = groupComponents(
-    rec.components.filter((c) => !selection.removedRoles.has(c.role)),
-  );
-  const assumptions = [...(rec.assumptions || []), ...(rec.warnings || [])].filter(
-    (r, i, arr) => arr.findIndex((x) => x.code === r.code) === i,
-  );
-  const readiness = (rec as { catalog_readiness?: {
-    empty_catalog?: boolean;
-    ready_for_core?: boolean;
-    missing_families?: string[];
-  } }).catalog_readiness;
-  const unresolvedRequired = rec.components.filter(
-    (c) => c.blocking && !c.optional && !selection.removedRoles.has(c.role) && !resolveComponentProduct(c, selection),
-  );
+  const visible = rec.components.filter((c) => !selection.removedRoles.has(c.role));
+  const groups = groupComponents(visible);
+  const readiness = (
+    rec as {
+      catalog_readiness?: {
+        empty_catalog?: boolean;
+        ready_for_core?: boolean;
+        missing_families?: string[];
+      };
+    }
+  ).catalog_readiness;
+  const assumptions = [...(rec.assumptions || []), ...(rec.warnings || [])]
+    .filter((r, i, arr) => arr.findIndex((x) => x.code === r.code) === i)
+    .filter((r) => {
+      // Shown in the catalog action strip — don't repeat in assumptions.
+      if (readiness?.empty_catalog && r.code === "CATALOG_EMPTY") return false;
+      if (readiness && !readiness.ready_for_core && r.code === "CATALOG_CORE_INCOMPLETE") {
+        return false;
+      }
+      return true;
+    });
+  const pendingRequired = visible.filter(
+    (c) => !c.optional && !resolveComponentProduct(c, selection),
+  ).length;
+  const archLabel =
+    summary.architecture === "external_switch"
+      ? he.cpqCctvArchExternalShort
+      : summary.architecture === "integrated"
+        ? he.cpqCctvArchIntegratedShort
+        : he.cpqCctvArchUnknown;
+
+  const metrics: string[] = [];
+  if (summary.channelTier != null) metrics.push(`${summary.channelTier}ch`);
+  if (summary.requiredTb != null) {
+    metrics.push(
+      `≈${summary.requiredTb.toFixed(1)}TB${summary.hddPacking ? ` (${summary.hddPacking})` : ""}`,
+    );
+  }
+  if (summary.poePorts != null) {
+    metrics.push(
+      `${summary.poePorts} PoE${summary.poeBudgetW != null ? ` · ≥${Math.round(summary.poeBudgetW)}W` : ""}`,
+    );
+  }
+  metrics.push(archLabel);
 
   return (
-    <div className="grid gap-4">
+    <div className="cpq-cctv-designer" data-testid="cctv-designer-review">
+      <header className="cpq-cctv-designer-header">
+        <div>
+          <p className="cpq-cctv-designer-title">{he.cpqCctvSummaryTitle(summary.cameraCount)}</p>
+          <p
+            className={
+              pendingRequired > 0
+                ? "cpq-cctv-designer-status is-pending"
+                : "cpq-cctv-designer-status is-complete"
+            }
+            role="status"
+          >
+            {pendingRequired > 0
+              ? he.cpqCctvHeaderStatusPending(pendingRequired)
+              : he.cpqCctvHeaderStatusComplete}
+          </p>
+        </div>
+      </header>
+
       {readiness?.empty_catalog ? (
-        <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="status">
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogEmptyTitle}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCatalogEmpty}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
-              {he.cpqCctvCatalogPickProduct}
+        <div className="cpq-cctv-designer-catalog" role="status">
+          <p className="cpq-cctv-designer-catalog-copy">{he.cpqCctvCatalogEmptyShort}</p>
+          <div className="cpq-cctv-designer-catalog-actions">
+            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-primary">
+              {he.cpqCctvCatalogComplete}
             </Link>
-            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
-              {he.cpqCctvCatalogAddProduct}
-            </Link>
-            <Link to="/app/catalog" className="text-sm font-medium text-action underline-offset-2 hover:underline">
+            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-secondary">
               {he.cpqCctvCatalogImport}
             </Link>
           </div>
         </div>
       ) : readiness && !readiness.ready_for_core ? (
-        <div className="rounded-[var(--radius-control)] border border-border p-3" role="status">
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvCatalogReadiness}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCatalogIncomplete}</p>
+        <div className="cpq-cctv-designer-catalog" role="status">
+          <p className="cpq-cctv-designer-catalog-copy">{he.cpqCctvCatalogIncomplete}</p>
+          <div className="cpq-cctv-designer-catalog-actions">
+            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-primary">
+              {he.cpqCctvCatalogComplete}
+            </Link>
+          </div>
         </div>
       ) : null}
 
-      <section className="rounded-[var(--radius-control)] border border-border bg-surface-muted/40 p-3">
-        <p className="text-sm font-semibold text-fg">
-          {he.cpqCctvSummaryTitle(summary.cameraCount)}
-        </p>
-        <ul className="mt-2 grid gap-1 text-sm text-fg-muted">
-          {summary.channelTier != null ? (
-            <li>
-              {he.cpqCctvSummaryNvr}: {summary.channelTier} {he.cpqCctvChannels}
-            </li>
-          ) : null}
-          {summary.requiredTb != null ? (
-            <li>
-              {he.cpqCctvSummaryStorage}: ≈{summary.requiredTb.toFixed(1)}TB
-              {summary.hddPacking ? ` · ${summary.hddPacking}` : ""}
-            </li>
-          ) : null}
-          {summary.poePorts != null ? (
-            <li>
-              {he.cpqCctvSummaryPoe}: {summary.poePorts} {he.cpqCctvPorts}
-              {summary.poeBudgetW != null ? ` · ≥${Math.round(summary.poeBudgetW)}W` : ""}
-            </li>
-          ) : null}
-          <li>
-            {he.cpqCctvSummaryArch}:{" "}
-            {summary.architecture === "external_switch"
-              ? he.cpqCctvArchExternalShort
-              : summary.architecture === "integrated"
-                ? he.cpqCctvArchIntegratedShort
-                : he.cpqCctvArchUnknown}
-          </li>
-        </ul>
-      </section>
-
-      {addBlocked ? (
-        <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="alert">
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvCannotComplete}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvCannotCompleteHint}</p>
-        </div>
-      ) : incomplete ? (
-        <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 p-3" role="alert">
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvIncompleteSystem}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.cpqCctvIncompleteSystemHint}</p>
-          {unresolvedRequired.length ? (
-            <ul className="mt-2 list-disc pr-5 text-xs text-fg-muted">
-              {unresolvedRequired.map((c) => (
-                <li key={c.role}>
-                  {roleLabelHe(c.role)}
-                  {c.technical_requirements && Object.keys(c.technical_requirements).length
-                    ? `: ${formatUnresolvedRequirementHe(c)}`
-                    : ""}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+      {metrics.length ? (
+        <div className="cpq-cctv-designer-metrics" aria-label={he.cpqCctvPlanSection}>
+          {metrics.map((m) => (
+            <span key={m} className="cpq-cctv-designer-metric">
+              {m}
+            </span>
+          ))}
         </div>
       ) : null}
 
@@ -1019,53 +1036,41 @@ function RecommendationReview({
         </p>
       ) : null}
 
-      {assumptions.length ? (
-        <section>
-          <p className="text-sm font-semibold text-fg">{he.cpqCctvAssumptions}</p>
-          <ul className="mt-1 list-disc pr-5 text-xs text-fg-muted">
-            {assumptions.slice(0, 8).map((a) => (
-              <li key={a.code}>{formatReasonHe(a)}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
       {groups.map((group) => (
-        <section key={group.id} className="grid gap-2">
-          <h3 className="text-sm font-semibold text-fg">{group.label}</h3>
+        <section key={group.id} className="cpq-cctv-designer-group">
+          <h3 className="cpq-cctv-designer-group-title">{group.label}</h3>
           {group.components.map((component) => {
-            const kind = componentKindLabel(component);
             const picked = resolveComponentProduct(component, selection);
+            const status = componentStatusMeta(component, picked);
             const selectableCandidates = component.candidates.filter(isCandidateSelectable);
             const textAssisted = component.candidates.filter((c) => c.confidence === "TEXT_ASSISTED");
             const openSwap = swapRole === component.role;
             const specs = compactCompatibilityLines(
               picked?.compatibility ?? component.selected_compatibility,
             );
+            const requirement = formatUnresolvedRequirementHe(component);
+            const whyRaw = (component.reason_codes || [])[0];
+            const whyText = whyRaw ? formatReasonHe(whyRaw) : "";
+            const reqText =
+              requirement ||
+              (component.role === "recorder" && summary.channelTier != null
+                ? he.cpqCctvNeedNvrChannels(summary.channelTier)
+                : "");
+            const showPick =
+              !picked && !component.optional && selectableCandidates.length === 0;
 
             return (
-              <article
-                key={component.role}
-                className="rounded-[var(--radius-control)] border border-border p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-fg">
+              <article key={component.role} className="cpq-cctv-designer-card">
+                <div className="cpq-cctv-designer-card-top">
+                  <div className="cpq-cctv-designer-card-identity">
+                    <p className="cpq-cctv-designer-role">
                       {roleLabelHe(component.role)}
-                      {component.quantity > 1 ? ` · ×${component.quantity}` : ""}
+                      {component.quantity > 1 ? ` ×${component.quantity}` : ""}
                     </p>
-                    <p className="mt-0.5 text-xs text-fg-muted">
-                      {kind === "CORE"
-                        ? he.cpqCctvKindCore
-                        : kind === "OPTIONAL"
-                          ? he.cpqCctvKindOptional
-                          : he.cpqCctvKindManual}
-                      {picked?.confidence
-                        ? ` · ${confidenceLabelHe(picked.confidence)}`
-                        : ` · ${he.cpqCctvNeedsManual}`}
-                    </p>
+                    {reqText ? <p className="cpq-cctv-designer-req">{reqText}</p> : null}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="cpq-cctv-designer-card-actions">
+                    <span className={`cpq-cctv-designer-chip is-${status.chip}`}>{status.label}</span>
                     {component.optional ? (
                       <Button
                         type="button"
@@ -1087,47 +1092,37 @@ function RecommendationReview({
                       >
                         {he.cpqCctvReplace}
                       </Button>
+                    ) : showPick ? (
+                      <Link to="/app/catalog" className="cpq-cctv-designer-pick">
+                        {he.cpqCctvPickShort}
+                      </Link>
                     ) : null}
                   </div>
                 </div>
 
                 {picked ? (
-                  <div className="mt-2">
-                    <p className="text-sm text-fg">{picked.product.name}</p>
-                    <p className="text-xs text-fg-muted">
+                  <div className="cpq-cctv-designer-product">
+                    <p className="cpq-cctv-designer-product-name">{picked.product.name}</p>
+                    <p className="cpq-cctv-designer-product-meta">
                       {[picked.product.manufacturer, picked.product.model, picked.product.sku]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
                     {specs.length ? (
-                      <p className="mt-1 text-xs text-fg-muted">✓ {specs.join(" · ")}</p>
+                      <p className="cpq-cctv-designer-specs">✓ {specs.join(" · ")}</p>
                     ) : null}
                   </div>
-                ) : (
-                  <div className="mt-2">
-                    <p className="text-sm text-warning">{he.cpqCctvNoStructuredProduct}</p>
-                    {component.role === "recorder" && summary.channelTier != null ? (
-                      <p className="mt-1 text-xs text-fg-muted">
-                        {he.cpqCctvNeedNvrChannels(summary.channelTier)}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
+                ) : null}
 
-                {(component.reason_codes || []).slice(0, 2).map((r) => (
-                  <p key={r.code} className="mt-1 text-xs text-fg-muted">
-                    {formatReasonHe(r)}
-                  </p>
-                ))}
+                {whyText && whyText !== reqText ? (
+                  <p className="cpq-cctv-designer-why">{whyText}</p>
+                ) : null}
 
                 {openSwap ? (
-                  <div className="mt-2 grid gap-2 border-t border-border pt-2">
-                    <p className="text-xs font-medium text-fg">{he.cpqCctvCandidates}</p>
+                  <div className="cpq-cctv-designer-swap">
+                    <p className="cpq-cctv-designer-swap-title">{he.cpqCctvCandidates}</p>
                     {selectableCandidates.map((cand) => (
-                      <label
-                        key={cand.product.id}
-                        className="flex cursor-pointer items-start gap-2 rounded-[var(--radius-control)] border border-border px-2 py-2 text-sm"
-                      >
+                      <label key={cand.product.id} className="cpq-cctv-designer-swap-option">
                         <input
                           type="radio"
                           name={`swap-${component.role}`}
@@ -1161,6 +1156,19 @@ function RecommendationReview({
           })}
         </section>
       ))}
+
+      {assumptions.length ? (
+        <details className="cpq-cctv-designer-assumptions">
+          <summary>
+            {he.cpqCctvAssumptionsCount(Math.min(assumptions.length, 12))}
+          </summary>
+          <ul>
+            {assumptions.slice(0, 12).map((a) => (
+              <li key={a.code}>{formatReasonHe(a)}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

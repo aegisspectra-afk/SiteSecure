@@ -1995,6 +1995,22 @@ export const he = {
   cpqCctvChannels: "ערוצים",
   cpqCctvPorts: "פורטים",
   cpqCctvAssumptions: "הנחות תכנון",
+  cpqCctvAssumptionsCount: (n: number) => `הנחות תכנון (${n})`,
+  cpqCctvHeaderStatusComplete: "הנדסה הושלמה · ציוד מוכן",
+  cpqCctvHeaderStatusPending: (n: number) =>
+    `הנדסה הושלמה · ${n} רכיבי חובה ממתינים לציוד`,
+  cpqCctvChipReady: "מוכן",
+  cpqCctvChipNeedsEquipment: "נדרש ציוד",
+  cpqCctvChipOptional: "אופציונלי",
+  cpqCctvChipVerify: "דורש אימות",
+  cpqCctvPickShort: "בחר",
+  cpqCctvCatalogComplete: "השלם קטלוג",
+  cpqCctvCatalogEmptyShort:
+    "אין מוצרים תואמים בקטלוג — אפשר להוסיף את התכנון כ«נדרש ציוד» ולהשלים אחר כך.",
+  cpqCctvAddPlanHint: (planned: number, resolved: number) =>
+    resolved > 0
+      ? `יתווספו ${resolved} פריטי קטלוג ו־${planned} שורות «נדרש ציוד».`
+      : `יתווספו ${planned} שורות «נדרש ציוד».`,
   cpqCctvKindCore: "ליבה",
   cpqCctvKindOptional: "אופציונלי",
   cpqCctvKindManual: "ממתין לציוד",

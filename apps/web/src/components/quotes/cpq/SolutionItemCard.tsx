@@ -13,6 +13,7 @@ import {
   type QuoteLineField,
   type QuoteLinePatch,
 } from "../../../lib/quote-line-edit";
+import { isCctvPlannedQuoteItem } from "../../../lib/cctv-recommend-projection";
 
 const PERSIST_DEBOUNCE_MS = 450;
 const SOLUTION_FIELDS: QuoteLineField[] = ["description", "sku", "qty"];
@@ -185,6 +186,7 @@ export const SolutionItemCard = memo(function SolutionItemCard({
   const isNote = isSolutionNoteItem(item);
   const isLabor = isSolutionServiceItem(item);
   const fromCatalog = Boolean(item.product_id);
+  const isPlannedEquipment = isCctvPlannedQuoteItem(item);
   const title = (draft.description || item.name || "").trim() || he.cpqSolutionUntitledItem;
 
   if (isNote) {
@@ -240,14 +242,16 @@ export const SolutionItemCard = memo(function SolutionItemCard({
             <h4 className="cpq-solution-card-title">{title}</h4>
           )}
           <div className="cpq-solution-card-meta">
-            {isLabor ? (
+            {isPlannedEquipment ? (
+              <span className="cpq-solution-chip is-warning">{he.cpqCctvPlannedBadge}</span>
+            ) : isLabor ? (
               <span className="cpq-solution-chip">{he.quoteLaborBadge}</span>
             ) : fromCatalog ? (
               <span className="cpq-solution-chip">{he.cpqSolutionFromCatalog}</span>
             ) : (
               <span className="cpq-solution-chip">{he.cpqSolutionManualItem}</span>
             )}
-            {item.package_name ? (
+            {item.package_name && !isPlannedEquipment ? (
               <span className="cpq-solution-chip">
                 {he.cpqPackageBadge}: {item.package_name}
               </span>

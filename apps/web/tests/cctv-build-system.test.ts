@@ -243,11 +243,12 @@ describe("cctv recommendation review helpers", () => {
     if (gate.ok) {
       expect(gate.incomplete).toBe(true);
       expect(gate.lines.map((l) => l.role)).toEqual(["camera"]);
+      expect(gate.planned.map((p) => p.role).sort()).toEqual(["recorder", "storage"]);
       expect(gate.lines.every((l) => l.productId.startsWith("c"))).toBe(true);
     }
   });
 
-  it("blocks add when zero catalog products resolve", () => {
+  it("allows planned free-lines when zero catalog products resolve", () => {
     const rec = sampleRec({
       blocking: true,
       status: "BLOCKED",
@@ -258,10 +259,19 @@ describe("cctv recommendation review helpers", () => {
         candidates: [],
         resolution_status: "UNRESOLVED",
         blocking: true,
+        optional: false,
       })),
     });
     const selection = initialReviewSelection(rec);
-    expect(canAddRecommendationToQuote(rec, selection)).toEqual({ ok: false, reason: "empty" });
+    const gate = canAddRecommendationToQuote(rec, selection);
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.lines).toEqual([]);
+      expect(gate.planned.length).toBeGreaterThan(0);
+      expect(gate.incomplete).toBe(true);
+      expect(gate.planned.every((p) => p.description.startsWith("נדרש ציוד"))).toBe(true);
+      expect(gate.planned.every((p) => !("productId" in p))).toBe(true);
+    }
   });
 
   it("full resolution still applies normally without incomplete flag", () => {

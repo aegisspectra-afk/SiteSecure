@@ -20,6 +20,10 @@ CONFIRMATION_TTL_SEC = 15 * 60
 CCTV_SECTION_NAME = "מערכת CCTV"
 
 PRODUCT_SELECT = (
+    "id,sku,name,description,unit,kind,list_price,vat_eligible,is_labor,is_active,"
+    "manufacturer,model,attributes"
+)
+PRODUCT_SELECT_WITH_COST = (
     "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
     "manufacturer,model,attributes"
 )

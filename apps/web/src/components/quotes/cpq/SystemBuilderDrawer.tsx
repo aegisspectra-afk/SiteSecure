@@ -53,6 +53,7 @@ import {
   isCandidateSelectable,
   resolveComponentProduct,
   type CctvBuildQuoteLine,
+  type CctvPlannedQuoteLine,
   type PartialApplyRecovery,
   type ReviewSelectionState,
 } from "../../../lib/cctv-recommend-projection";
@@ -74,9 +75,14 @@ type Props = {
   applyError?: string | null;
   recovery?: PartialApplyRecovery | null;
   /** Legacy sequential addQuoteItem — only when no durable Design exists. */
-  onApply: (lines: CctvBuildQuoteLine[], opts?: { resume?: PartialApplyRecovery }) => void | Promise<void>;
+  onApply: (
+    lines: CctvBuildQuoteLine[],
+    opts?: { resume?: PartialApplyRecovery; planned?: CctvPlannedQuoteLine[] },
+  ) => void | Promise<void>;
   /** After successful atomic Design Apply — authoritative Quote. */
   onAppliedQuote?: (quote: QuoteOut) => void | Promise<void>;
+  /** Add/replace planned free lines (unresolved required) onto the live quote. */
+  onApplyPlanned?: (planned: CctvPlannedQuoteLine[], quote?: QuoteOut | null) => Promise<QuoteOut | void>;
   onClearRecovery?: () => void;
 };
 
@@ -103,6 +109,7 @@ export function SystemBuilderDrawer({
   recovery = null,
   onApply,
   onAppliedQuote,
+  onApplyPlanned,
   onClearRecovery,
 }: Props) {
   const [systemType, setSystemType] = useState<SystemBuilderType>("cctv");
@@ -383,11 +390,13 @@ export function SystemBuilderDrawer({
     setLocalApplyError(null);
 
     const design = designRef.current;
+    const planned = addGate.ok ? addGate.planned : [];
+    const resolved = addGate.ok ? addGate.lines : [];
+
     if (design) {
-      // Durable atomic Apply — Design → RPC (no sequential addQuoteItem).
+      // Durable atomic Apply for resolved catalog products; planned free-lines separately.
       setLocalApplying(true);
       try {
-        // Persist latest selection before apply so server sees current choices.
         if (recommendation) {
           try {
             await persistRecommendationState(recommendation, selection, req, new Set());
@@ -395,18 +404,32 @@ export function SystemBuilderDrawer({
             // Apply still uses server Design state from last successful persist.
           }
         }
-        const fresh = designRef.current ?? design;
-        const result = await api.applySystemDesign(workspaceId, fresh.id, {
-          revision: fresh.revision,
-          confirmation_token: confirmationToken ?? undefined,
-          section_name: he.cpqCctvSystemSection,
-        });
-        designRef.current = result.design;
+        let quoteAfter: QuoteOut | null = null;
+        if (resolved.length > 0) {
+          const fresh = designRef.current ?? design;
+          const result = await api.applySystemDesign(workspaceId, fresh.id, {
+            revision: fresh.revision,
+            confirmation_token: confirmationToken ?? undefined,
+            section_name: he.cpqCctvSystemSection,
+          });
+          designRef.current = result.design;
+          quoteAfter = result.quote;
+        }
+        if (planned.length && onApplyPlanned) {
+          const next = await onApplyPlanned(planned, quoteAfter);
+          if (next) quoteAfter = next;
+        }
         setDivergence(null);
         setLocalApplyError(null);
         onClearRecovery?.();
-        if (onAppliedQuote) {
-          await onAppliedQuote(result.quote);
+        if (quoteAfter && onAppliedQuote) {
+          await onAppliedQuote(quoteAfter);
+        } else if (!resolved.length && !planned.length) {
+          setLocalApplyError(he.cpqCctvAddNeedsEquipment);
+          setAppliedOnce(false);
+          return;
+        } else if (!quoteAfter && onAppliedQuote && quoteId) {
+          // Planned-only path without returned quote — parent refreshed via onApplyPlanned.
         }
       } catch (err) {
         if (err instanceof ApiClientError && err.code === "DESIGN_APPLY_DIVERGED") {
@@ -439,7 +462,7 @@ export function SystemBuilderDrawer({
 
     // Legacy fallback: no durable Design yet (pre-persist / failed persist).
     try {
-      await onApply(addGate.lines, resume ? { resume } : undefined);
+      await onApply(resolved, { resume: resume ?? undefined, planned });
     } catch {
       if (!resume) setAppliedOnce(false);
     }
@@ -508,9 +531,13 @@ export function SystemBuilderDrawer({
           >
             {busy
               ? he.cpqCctvApplying
-              : addGate.ok && addGate.incomplete
-                ? he.cpqAddResolvedToQuote
-                : he.cpqAddPlanToQuote}
+              : !addGate.ok
+                ? he.cpqCctvResolveEquipmentFirst
+                : addGate.lines.length === 0 && addGate.planned.length > 0
+                  ? he.cpqAddPlanToQuote
+                  : addGate.incomplete
+                    ? he.cpqAddResolvedToQuote
+                    : he.cpqAddPlanToQuote}
           </Button>
         )}
       </div>

@@ -159,6 +159,11 @@ export function formatReasonHe(reason: CctvReasonCode): string {
       return `שירות לפי קטגוריה: ${roleLabelHe(String(p.role ?? ""))}`;
     case "HDD_BAYS_UNKNOWN":
       return "מספר מפרצי HDD ב־NVR לא ידוע";
+    case "HDD_OPTIONS_EMPTY": {
+      const tb = num(p, "requiredTb");
+      if (tb != null) return `לא נמצא כונן אחסון מתאים בקטלוג (נדרש ≈${tb}TB)`;
+      return "לא נמצא כונן אחסון מתאים בקטלוג";
+    }
     case "ENVIRONMENT_UNSPECIFIED":
       return "סביבת ההתקנה לא צוינה";
     case "CAMERA_ENVIRONMENT_UNVERIFIED": {

@@ -251,9 +251,36 @@ def margin_rule(quote: dict, items: list[dict], workspace: dict, settings: dict)
     ]
 
 
+def planned_equipment_rule(quote: dict, items: list[dict], workspace: dict, settings: dict) -> list[dict]:
+    """Block send when required CCTV planned free-lines remain unresolved."""
+    pending: list[str] = []
+    for item in items:
+        if item.get("is_optional"):
+            continue
+        pkg = _text(item.get("package_name"))
+        desc = _text(item.get("description"))
+        name = _text(item.get("name"))
+        if pkg.startswith("cctv-planned:") or desc.startswith("נדרש ציוד"):
+            pending.append(name or desc or pkg)
+    if not pending:
+        return []
+    listed = " · ".join(pending[:6])
+    more = f" (+{len(pending) - 6})" if len(pending) > 6 else ""
+    return [
+        gap(
+            "items",
+            "cctv_planned_equipment",
+            f"יש להשלים ציוד חובה לפני שליחת ההצעה: {listed}{more}",
+            severity="critical",
+            action="fix",
+        )
+    ]
+
+
 CRITICAL_RULES: list[Callable[..., list[dict]]] = [
     required_field_rule,
     line_price_rule,
+    planned_equipment_rule,
     camera_recorder_capacity_rule,  # may emit critical channel mismatch
 ]
 

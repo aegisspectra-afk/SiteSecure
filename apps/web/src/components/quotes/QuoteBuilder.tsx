@@ -29,9 +29,12 @@ import {
 import { recalculateQuotePricing } from "../../lib/quote-pricing";
 import { resolveSystemSectionName } from "../../lib/system-section";
 import {
+  CCTV_PLANNED_PACKAGE_PREFIX,
+  isCctvPlannedQuoteItem,
   linesFingerprint,
   remainingLinesAfterPartial,
   type CctvBuildQuoteLine,
+  type CctvPlannedQuoteLine,
   type PartialApplyRecovery,
 } from "../../lib/cctv-recommend-projection";
 import { formatMoney } from "../../lib/quotes";
@@ -855,7 +858,10 @@ export function QuoteBuilder({
   );
   const currency = live.currency ?? "ILS";
   const vatPercent = live.vat_percent ?? 18;
-  const templateOptions = templatesQuery.data?.items ?? [];
+  const templateOptions = useMemo(
+    () => (templatesQuery.data?.items ?? []).filter((row) => (row.item_count ?? 0) > 0),
+    [templatesQuery.data?.items],
+  );
   const hasCustomerContext = Boolean(draft.customer_id || live.customer_id);
   const showTemplateFastPath =
     canCatalog && canEdit && hasCustomerContext && items.length === 0 && templateOptions.length > 0;
@@ -1199,9 +1205,13 @@ export function QuoteBuilder({
     }
   }
 
-  async function applyCctvBuildLines(lines: CctvBuildQuoteLine[], opts?: { resume?: PartialApplyRecovery }) {
+  async function applyCctvBuildLines(
+    lines: CctvBuildQuoteLine[],
+    opts?: { resume?: PartialApplyRecovery; planned?: CctvPlannedQuoteLine[] },
+  ) {
     if (buildSystemApplyLock.current) return;
-    const fingerprint = linesFingerprint(lines);
+    const planned = opts?.planned ?? [];
+    const fingerprint = linesFingerprint(lines, planned);
     if (!opts?.resume && buildSystemLastFingerprint === fingerprint) {
       setBuildSystemApplyError(he.cpqCctvDuplicateBlocked);
       return;
@@ -1237,10 +1247,14 @@ export function QuoteBuilder({
           item_type: "catalog",
           qty: line.qty,
           section_id: sectionId,
+          is_optional: line.optional,
         });
         applyRow(row);
         commitRoute(row.id);
         addedRoles.push(line.role);
+      }
+      if (planned.length) {
+        await applyCctvPlannedLines(planned, liveRef.current);
       }
       setBuildSystemRecovery(null);
       setBuildSystemLastFingerprint(fingerprint);
@@ -1268,6 +1282,63 @@ export function QuoteBuilder({
       setBuildSystemApplying(false);
       buildSystemApplyLock.current = false;
     }
+  }
+
+  /** Replace prior cctv-planned:* free lines, then insert current planned BOM (no fake SKU/price). */
+  async function applyCctvPlannedLines(
+    planned: CctvPlannedQuoteLine[],
+    quoteHint?: QuoteOut | null,
+  ): Promise<QuoteOut> {
+    const current = quoteHint?.id ? quoteHint : await createOnce();
+    let working = current;
+    const sectionName = resolveSystemSectionName(he.cpqCctvSystemSection, working.sections ?? []);
+    let sectionId =
+      working.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ?? null;
+    if (!sectionId) {
+      const sortBase = Math.max(0, ...(working.sections ?? []).map((section) => section.sort_order ?? 0));
+      const withSection = await api.createQuoteSection(workspaceId, working.id, {
+        name: sectionName,
+        sort_order: sortBase + 10,
+      });
+      applyRow(withSection);
+      working = withSection;
+      sectionId =
+        withSection.section?.id ??
+        withSection.sections?.find((section) => (section.name || "").trim() === sectionName)?.id ??
+        withSection.sections?.[withSection.sections.length - 1]?.id ??
+        null;
+    }
+    if (!sectionId) {
+      throw new Error(he.quotesError);
+    }
+
+    const stale = (working.items ?? []).filter(
+      (item) =>
+        isCctvPlannedQuoteItem(item) ||
+        String(item.package_name || "").startsWith(CCTV_PLANNED_PACKAGE_PREFIX),
+    );
+    for (const item of stale) {
+      working = await api.deleteQuoteItem(workspaceId, working.id, item.id);
+      applyRow(working);
+    }
+
+    for (const line of planned) {
+      working = await api.addQuoteItem(workspaceId, working.id, {
+        item_type: "free",
+        description: line.description,
+        name: line.name,
+        qty: line.qty,
+        unit_price: 0,
+        section_id: sectionId,
+        package_name: line.package_name,
+        is_optional: line.optional,
+      });
+      applyRow(working);
+      commitRoute(working.id);
+    }
+    setBuildSystemLastFingerprint(linesFingerprint([], planned));
+    setSystemBuilderOpen(false);
+    return working;
   }
 
   useEffect(() => {
@@ -2448,7 +2519,7 @@ export function QuoteBuilder({
                   }}
                 >
                   <option value="">{he.quoteTemplateNone}</option>
-                  {(templatesQuery.data?.items ?? []).map((row) => (
+                  {templateOptions.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.name_he}
                     </option>
@@ -2458,7 +2529,7 @@ export function QuoteBuilder({
               {canEdit ? (
                 <Button
                   variant="secondary"
-                  disabled={!draft.template_id}
+                  disabled={!draft.template_id || !templateOptions.some((row) => row.id === draft.template_id)}
                   loading={applyTemplate.isPending}
                   onClick={() => applyTemplate.mutate(draft.template_id)}
                 >
@@ -2851,6 +2922,7 @@ export function QuoteBuilder({
         recovery={buildSystemRecovery}
         onClearRecovery={() => setBuildSystemRecovery(null)}
         onApply={(lines, opts) => applyCctvBuildLines(lines, opts)}
+        onApplyPlanned={(planned, quote) => applyCctvPlannedLines(planned, quote)}
         onAppliedQuote={(quote) => {
           applyRow(quote);
           commitRoute(quote.id);
@@ -2858,6 +2930,7 @@ export function QuoteBuilder({
           setBuildSystemApplyError(null);
           setBuildSystemLastFingerprint(null);
           setSystemBuilderOpen(false);
+          goToStep("items");
         }}
       />
     </div>

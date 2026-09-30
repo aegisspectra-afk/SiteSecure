@@ -1,6 +1,8 @@
 /**
  * Project a reviewed SystemRecommendation into quote catalog lines.
  * Prices are NOT taken from the recommendation — Quote APIs remain authoritative.
+ *
+ * Unresolved required roles become planned free lines (no fake SKU / price).
  */
 
 import type {
@@ -8,6 +10,11 @@ import type {
   CctvRecommendationComponent,
   SystemRecommendation,
 } from "@site-secure/api-client";
+import { formatUnresolvedRequirementHe, roleLabelHe } from "./cctv-recommend-copy";
+
+/** Stable marker for planned CCTV equipment free-lines (send-block + idempotent replace). */
+export const CCTV_PLANNED_PACKAGE_PREFIX = "cctv-planned:";
+export const CCTV_PLANNED_DESCRIPTION_PREFIX = "נדרש ציוד";
 
 export type CctvBuildQuoteLine = {
   role: string;
@@ -16,11 +23,20 @@ export type CctvBuildQuoteLine = {
   optional: boolean;
 };
 
-export function linesFingerprint(lines: CctvBuildQuoteLine[]): string {
-  return lines
-    .map((l) => `${l.role}:${l.productId}:${l.qty}`)
-    .sort()
-    .join("|");
+/** Unresolved engineering requirement as a commercial free line (no product_id). */
+export type CctvPlannedQuoteLine = {
+  role: string;
+  qty: number;
+  optional: boolean;
+  name: string;
+  description: string;
+  package_name: string;
+};
+
+export function linesFingerprint(lines: CctvBuildQuoteLine[], planned: CctvPlannedQuoteLine[] = []): string {
+  const resolved = lines.map((l) => `${l.role}:${l.productId}:${l.qty}`).sort();
+  const pending = planned.map((l) => `plan:${l.role}:${l.qty}`).sort();
+  return [...resolved, ...pending].join("|");
 }
 
 export type PartialApplyRecovery = {
@@ -83,15 +99,33 @@ export function resolveComponentProduct(
   return null;
 }
 
+export function plannedLineFromComponent(component: CctvRecommendationComponent): CctvPlannedQuoteLine {
+  const qty = Math.max(0.001, Number(component.quantity) || 1);
+  const label = roleLabelHe(component.role);
+  const detail = formatUnresolvedRequirementHe(component);
+  const description = detail
+    ? `${CCTV_PLANNED_DESCRIPTION_PREFIX} · ${label} · ${detail}`
+    : `${CCTV_PLANNED_DESCRIPTION_PREFIX} · ${label}`;
+  return {
+    role: component.role,
+    qty,
+    optional: Boolean(component.optional),
+    name: label,
+    description,
+    package_name: `${CCTV_PLANNED_PACKAGE_PREFIX}${component.role}`,
+  };
+}
+
 export type AddRecommendationGate =
-  | { ok: true; lines: CctvBuildQuoteLine[]; incomplete: boolean }
+  | { ok: true; lines: CctvBuildQuoteLine[]; planned: CctvPlannedQuoteLine[]; incomplete: boolean }
   | { ok: false; reason: "blocking" | "empty" };
 
 /**
  * Apply gate: engineering INVALID_INPUT blocks entirely.
- * Catalog gaps (unresolved required roles) do NOT block applying resolved
- * workspace products — incomplete flag stays true for UI warning.
- * TEXT_ASSISTED never auto-satisfies a required core role.
+ * Resolved catalog products become quote catalog lines.
+ * Unresolved REQUIRED (non-optional) roles become planned free lines — no fake SKU/price.
+ * Optional unresolved roles are omitted (user may remove or leave out).
+ * TEXT_ASSISTED never auto-satisfies a required core role (treated as planned).
  */
 export function canAddRecommendationToQuote(
   rec: SystemRecommendation,
@@ -102,35 +136,36 @@ export function canAddRecommendationToQuote(
   }
 
   const lines: CctvBuildQuoteLine[] = [];
+  const planned: CctvPlannedQuoteLine[] = [];
   let incomplete = false;
   for (const c of rec.components) {
     if (selection.removedRoles.has(c.role)) continue;
     const picked = resolveComponentProduct(c, selection);
-    if (!picked) {
-      if (c.blocking && !c.optional) incomplete = true;
+    const textAssistedCore =
+      Boolean(picked) && picked!.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional;
+
+    if (picked && !textAssistedCore) {
+      lines.push({
+        role: c.role,
+        productId: picked.product.id,
+        qty: Math.max(
+          0.001,
+          Number((picked as { quantity?: number }).quantity ?? c.quantity ?? 1) || 1,
+        ),
+        optional: Boolean(c.optional),
+      });
       continue;
     }
-    if (picked.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional) {
+
+    // Unresolved or text-assisted core → planned free line for required roles only
+    if (c.blocking && !c.optional) {
       incomplete = true;
-      continue;
+      planned.push(plannedLineFromComponent(c));
     }
-    lines.push({
-      role: c.role,
-      productId: picked.product.id,
-      qty: Math.max(
-        0.001,
-        Number(
-          (picked as { quantity?: number }).quantity ??
-            c.quantity ??
-            1,
-        ) || 1,
-      ),
-      optional: Boolean(c.optional),
-    });
   }
-  if (!lines.length) return { ok: false, reason: "empty" };
+  if (!lines.length && !planned.length) return { ok: false, reason: "empty" };
   if (rec.blocking || rec.status === "BLOCKED") incomplete = true;
-  return { ok: true, lines, incomplete };
+  return { ok: true, lines, planned, incomplete };
 }
 
 /** Drop roles already inserted during a partial apply. */
@@ -153,4 +188,13 @@ export function componentKindLabel(
     return "MANUAL";
   }
   return "CORE";
+}
+
+export function isCctvPlannedQuoteItem(item: {
+  package_name?: string | null;
+  description?: string | null;
+}): boolean {
+  const pkg = String(item.package_name || "");
+  if (pkg.startsWith(CCTV_PLANNED_PACKAGE_PREFIX)) return true;
+  return String(item.description || "").startsWith(CCTV_PLANNED_DESCRIPTION_PREFIX);
 }

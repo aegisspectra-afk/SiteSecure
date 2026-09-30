@@ -25,7 +25,7 @@ from ..system_designs import (
 )
 from ..system_designs.apply import (
     CCTV_SECTION_NAME,
-    PRODUCT_SELECT,
+    PRODUCT_SELECT_WITH_COST,
     detect_divergence,
     divergence_hash,
     ensure_cctv_section_id,
@@ -590,15 +590,15 @@ def apply_system_design(
             proposed_hash_value=prop_hash,
         )
 
-    # Resolve catalog products server-side (money authority).
+    # Resolve catalog products server-side (money authority). cost via service_role (Q4-S).
     product_ids = sorted({p["product_id"] for p in proposed})
     products = as_list(
-        client.get(
+        quotes_mod._service().get(
             "products",
             params={
                 "workspace_id": f"eq.{workspace_id}",
                 "id": f"in.({','.join(product_ids)})",
-                "select": PRODUCT_SELECT,
+                "select": PRODUCT_SELECT_WITH_COST,
             },
         )
     )

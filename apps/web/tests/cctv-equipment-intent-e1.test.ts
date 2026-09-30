@@ -200,14 +200,19 @@ describe("E1 engineering vs equipment resolution", () => {
     expect(services.map((c) => c.role).sort()).toEqual(["camera_install", "testing"]);
   });
 
-  it("keeps Apply gate unchanged for empty catalog", () => {
+  it("allows planned free-lines for empty catalog (QUOTE-11)", () => {
     const rec = emptyCatalogRec();
     const selection = initialReviewSelection(rec);
     const gate = canAddRecommendationToQuote(rec, selection);
-    expect(gate).toEqual({ ok: false, reason: "empty" });
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.lines).toEqual([]);
+      expect(gate.planned.length).toBeGreaterThan(0);
+      expect(gate.incomplete).toBe(true);
+    }
     const presentation = applyEligibilityPresentation(rec, selection, gate);
     expect(presentation.engineeringComplete).toBe(true);
-    expect(presentation.gateOk).toBe(false);
+    expect(presentation.gateOk).toBe(true);
     expect(presentation.pendingEquipmentCount).toBeGreaterThan(0);
   });
 
@@ -237,6 +242,7 @@ describe("E1 engineering vs equipment resolution", () => {
     if (gate.ok) {
       expect(gate.incomplete).toBe(true);
       expect(gate.lines.map((l) => l.role)).toEqual(["camera"]);
+      expect(gate.planned.length).toBeGreaterThan(0);
       expect(gate.lines.every((l) => Boolean(l.productId))).toBe(true);
     }
   });
@@ -245,6 +251,11 @@ describe("E1 engineering vs equipment resolution", () => {
     const rec = emptyCatalogRec();
     const selection = initialReviewSelection(rec);
     const gate = canAddRecommendationToQuote(rec, selection);
-    expect(gate.ok).toBe(false);
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.lines.every((l) => Boolean(l.productId))).toBe(true);
+      expect(gate.planned.length).toBeGreaterThan(0);
+      expect(JSON.stringify(gate.planned)).not.toMatch(/productId|sku/i);
+    }
   });
 });

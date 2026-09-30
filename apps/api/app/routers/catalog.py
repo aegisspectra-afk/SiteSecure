@@ -23,10 +23,12 @@ from ..rest import as_list, created_or_403, one_or_404, patched_or_403
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["catalog"])
 
+# Q4-S: authenticated cannot SELECT products.cost — never request it via UserClient JWT.
 PRODUCT_SELECT = (
-    "id,workspace_id,category_id,sku,name,description,unit,kind,list_price,cost,"
+    "id,workspace_id,category_id,sku,name,description,unit,kind,list_price,"
     "vat_eligible,is_labor,is_active,manufacturer,model,attributes,created_at,updated_at"
 )
+PRODUCT_COST_SELECT = "id,cost"
 CATEGORY_SELECT = "id,workspace_id,key,name_he,sort_order,parent_id,archived_at"
 TEMPLATE_SELECT = "id,workspace_id,key,name_he,quote_template_items(count)"
 COST_FIELDS = ("cost",)
@@ -106,6 +108,39 @@ def _ctx(client: UserClient, user: dict, workspace_id: UUID):
 
 def _can_view_cost(ctx) -> bool:
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
+
+
+def _merge_product_costs(service: ServiceClient, workspace_id: UUID, rows: list[dict]) -> list[dict]:
+    """Attach cost from service_role after quotes.view_cost authorize (column lockdown)."""
+    ids = [str(r["id"]) for r in rows if r.get("id")]
+    if not ids:
+        return rows
+    by_id: dict[str, float] = {}
+    chunk_size = 50
+    for i in range(0, len(ids), chunk_size):
+        chunk = ids[i : i + chunk_size]
+        batch = as_list(
+            service.get(
+                "products",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "id": f"in.({','.join(chunk)})",
+                    "select": PRODUCT_COST_SELECT,
+                },
+            )
+        )
+        for row in batch:
+            rid = str(row.get("id") or "")
+            if rid:
+                by_id[rid] = float(row.get("cost") or 0)
+    out: list[dict] = []
+    for row in rows:
+        merged = dict(row)
+        rid = str(merged.get("id") or "")
+        if rid in by_id:
+            merged["cost"] = by_id[rid]
+        out.append(merged)
+    return out
 
 
 def _strip_cost(row: dict, *, show_cost: bool, categories_by_id: dict[str, dict] | None = None) -> dict:
@@ -220,6 +255,7 @@ def list_products(
     workspace_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
     limit: int | None = Query(default=50),
     cursor: str | None = Query(default=None),
     q: str | None = Query(default=None),
@@ -265,8 +301,11 @@ def list_products(
     rows = as_list(client.get("products", params=params))
     page = page_from_rows(rows, page_size, cursor_field="name")
     show_cost = _can_view_cost(ctx)
+    items = page.items
+    if show_cost:
+        items = _merge_product_costs(service, workspace_id, items)
     return {
-        "items": [_strip_cost(row, show_cost=show_cost, categories_by_id=cat_index) for row in page.items],
+        "items": [_strip_cost(row, show_cost=show_cost, categories_by_id=cat_index) for row in items],
         "next_cursor": page.next_cursor,
     }
 
@@ -277,6 +316,7 @@ def get_product(
     product_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "catalog.view")
@@ -286,8 +326,11 @@ def get_product(
             params={"id": f"eq.{product_id}", "workspace_id": f"eq.{workspace_id}", "select": PRODUCT_SELECT},
         )
     )
+    show_cost = _can_view_cost(ctx)
+    if show_cost:
+        row = _merge_product_costs(service, workspace_id, [row])[0]
     cats = _category_index(_load_categories(client, workspace_id, include_archived=True))
-    return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
+    return _strip_cost(row, show_cost=show_cost, categories_by_id=cats)
 
 
 @router.post("/catalog/products")
@@ -438,6 +481,7 @@ def bulk_pricing(
     body: BulkPricingIn,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
 ):
     """Set list_price from cost via markup % or multiplier for many products at once."""
     ctx = _ctx(client, user, workspace_id)
@@ -462,7 +506,7 @@ def bulk_pricing(
     if body.manufacturer and body.manufacturer.strip():
         params["manufacturer"] = f"ilike.*{body.manufacturer.strip()}*"
 
-    rows = as_list(client.get("products", params=params))
+    rows = as_list(service.get("products", params=params))
     preview: list[dict[str, Any]] = []
     updated = 0
     skipped = 0

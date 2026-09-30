@@ -331,13 +331,17 @@ describe("E2 hydration / transitions / recalc", () => {
     expect(intentFromDesign(design).camera?.manufacturer).toBe("Dahua");
   });
 
-  it("Q — Apply remains blocked for non-catalog intent", () => {
+  it("Q — Apply allows planned free-lines for non-catalog intent (QUOTE-11)", () => {
     const rec = emptyCatalogRec();
     const selection = initialReviewSelection(rec);
     const intentByRole = { camera: { manufacturer: "Hikvision" } };
     expect(hasIntentOnlyEquipment(rec, selection, intentByRole)).toBe(true);
     const gate = canAddRecommendationToQuote(rec, selection);
-    expect(gate.ok).toBe(false);
+    expect(gate.ok).toBe(true);
+    if (gate.ok) {
+      expect(gate.planned.length).toBeGreaterThan(0);
+      expect(gate.lines).toEqual([]);
+    }
     expect(countPendingEquipment(rec, selection, { intentByRole })).toBeGreaterThan(0);
   });
 

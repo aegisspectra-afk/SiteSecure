@@ -9,6 +9,7 @@ import {
   Package,
   Plus,
   Search,
+  Shield,
   UserPlus,
   Wrench,
   X,
@@ -36,6 +37,7 @@ const entityIcon: Record<GlobalSearchHit["entity_type"], LucideIcon> = {
   project: FolderKanban,
   service: Wrench,
   equipment: Package,
+  warranty: Shield,
 };
 
 function entityLabel(type: GlobalSearchHit["entity_type"]): string {
@@ -52,6 +54,8 @@ function entityLabel(type: GlobalSearchHit["entity_type"]): string {
       return he.navProjects;
     case "service":
       return he.navServiceShort;
+    case "warranty":
+      return he.navWarranties ?? "Warranties";
     case "equipment":
       return he.commandEquipment;
     default:

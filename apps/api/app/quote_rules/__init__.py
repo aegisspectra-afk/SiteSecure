@@ -261,16 +261,27 @@ def planned_equipment_rule(quote: dict, items: list[dict], workspace: dict, sett
         desc = _text(item.get("description"))
         name = _text(item.get("name"))
         if pkg.startswith("cctv-planned:") or desc.startswith("נדרש ציוד"):
-            pending.append(name or desc or pkg)
+            # Prefer clean commercial name; never surface package_name / debug keys.
+            label = name or desc
+            if label.startswith("נדרש ציוד"):
+                # Legacy polluted description — prefer commercial segment.
+                parts = [p.strip() for p in label.split("·") if p.strip()]
+                if len(parts) >= 2:
+                    label = parts[1]
+                elif parts:
+                    label = parts[0]
+            if label:
+                pending.append(label)
     if not pending:
         return []
-    listed = " · ".join(pending[:6])
-    more = f" (+{len(pending) - 6})" if len(pending) > 6 else ""
+    n = len(pending)
+    listed = "\n".join(f"• {label}" for label in pending[:8])
+    more = f"\n(+{n - 8} נוספים)" if n > 8 else ""
     return [
         gap(
             "items",
             "cctv_planned_equipment",
-            f"יש להשלים ציוד חובה לפני שליחת ההצעה: {listed}{more}",
+            f"יש להשלים {n} רכיבי חובה לפני שליחת ההצעה.\n{listed}{more}",
             severity="critical",
             action="fix",
         )

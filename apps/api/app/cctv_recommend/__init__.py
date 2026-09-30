@@ -105,11 +105,13 @@ def resolve_cameras(
     form_factor: str | None,
     poe_required: bool,
     manufacturer_preference: str | None,
+    allowed_category_keys: frozenset[str] | None = None,
 ) -> dict[str, Any]:
+    allowed = allowed_category_keys or CAMERA_LEAF_KEYS
     structured: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
     for p in products:
-        if p.get("category_key") not in CAMERA_LEAF_KEYS:
+        if p.get("category_key") not in allowed:
             continue
         cam = parse_camera_technical_attrs(p.get("attributes") or {})
         checks: dict[str, str] = {}
@@ -165,7 +167,6 @@ def resolve_cameras(
             overspec = max(0.0, float(cam.resolution_mp) - float(requested_mp))
 
         pref = _manufacturer_match(manufacturer_preference, p.get("manufacturer"))
-        completeness = sum(1 for v in checks.values() if v == "PASS")
         structured.append(
             {
                 "product": _product_summary(p),
@@ -230,15 +231,20 @@ def resolve_recorders(
     min_drive_bays: int | None,
     min_max_hdd_tb: float | None,
     manufacturer_preference: str | None,
+    allowed_category_keys: frozenset[str] | None = None,
+    min_ip_channels: int | None = None,
+    min_analog_channels: int | None = None,
 ) -> dict[str, Any]:
+    allowed = allowed_category_keys or NVR_LEAF_KEYS
     structured: list[dict[str, Any]] = []
     text_assisted: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
 
     for p in products:
-        if p.get("category_key") not in NVR_LEAF_KEYS:
+        if p.get("category_key") not in allowed:
             continue
         nvr = parse_nvr_technical_attrs(p.get("attributes") or {})
+        attrs = p.get("attributes") if isinstance(p.get("attributes"), dict) else {}
         checks: dict[str, str] = {}
 
         if nvr.channels is None:
@@ -256,6 +262,26 @@ def resolve_recorders(
         if nvr.channels + 1e-9 < min_channels:
             continue
         checks["channels"] = "PASS"
+
+        # Hybrid split — PASS only when metadata proves; else UNKNOWN (never fabricate).
+        if min_ip_channels is not None:
+            ip_ch = _num(attrs, "ip_channels", "ip_channel_count", "network_channels")
+            if ip_ch is None:
+                checks["ip_channels"] = "UNKNOWN"
+            elif ip_ch + 1e-9 < float(min_ip_channels):
+                checks["ip_channels"] = "FAIL"
+                continue
+            else:
+                checks["ip_channels"] = "PASS"
+        if min_analog_channels is not None:
+            an_ch = _num(attrs, "analog_channels", "analog_channel_count", "bnc_channels")
+            if an_ch is None:
+                checks["analog_channels"] = "UNKNOWN"
+            elif an_ch + 1e-9 < float(min_analog_channels):
+                checks["analog_channels"] = "FAIL"
+                continue
+            else:
+                checks["analog_channels"] = "PASS"
 
         if min_drive_bays is not None:
             if nvr.drive_bays is None:
@@ -295,6 +321,9 @@ def resolve_recorders(
 
         excess_ch = float(nvr.channels) - float(min_channels)
         pref = _manufacturer_match(manufacturer_preference, p.get("manufacturer"))
+        # Prefer dvr_xvr when allowed set is hybrid/analog-focused
+        cat_rank = 0 if p.get("category_key") == "dvr_xvr" and "dvr_xvr" in allowed else 1
+        unknown_rank = 0 if "UNKNOWN" not in checks.values() else 1
         structured.append(
             {
                 "product": _product_summary(p),
@@ -303,10 +332,16 @@ def resolve_recorders(
                 "reason_codes": [
                     {
                         "code": "RECORDER_STRUCTURED_MATCH",
-                        "params": {"minChannels": min_channels, "channels": nvr.channels},
+                        "params": {
+                            "minChannels": min_channels,
+                            "channels": nvr.channels,
+                            "minIpChannels": min_ip_channels,
+                            "minAnalogChannels": min_analog_channels,
+                            "categoryKey": p.get("category_key"),
+                        },
                     }
                 ],
-                "_rank": (0 if pref else 1, excess_ch, *_rank_key_stable(p)),
+                "_rank": (unknown_rank, cat_rank, 0 if pref else 1, excess_ch, *_rank_key_stable(p)),
             }
         )
 
@@ -348,6 +383,8 @@ def resolve_recorders(
             "requireIntegratedPoe": require_integrated_poe,
             "requiredPoePorts": required_poe_ports,
             "requiredPoeBudgetW": required_poe_budget_w,
+            "minIpChannels": min_ip_channels,
+            "minAnalogChannels": min_analog_channels,
         },
     }
 
@@ -547,7 +584,9 @@ def resolve_cable(
     *,
     products: list[dict[str, Any]],
     meters: float | None,
+    preferred_category_keys: frozenset[str] | None = None,
 ) -> dict[str, Any]:
+    allowed = preferred_category_keys or CABLE_LEAF_KEYS
     if meters is None:
         return {
             "role": "cable",
@@ -558,7 +597,7 @@ def resolve_cable(
             "blocking": False,
             "quantity": None,
         }
-    cables = [p for p in products if p.get("category_key") in CABLE_LEAF_KEYS]
+    cables = [p for p in products if p.get("category_key") in allowed]
     ranked: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
     for p in cables:
@@ -722,8 +761,32 @@ def build_system_recommendation(
     """
     Authoritative flow:
     sizing → (re)pack HDD using actual catalog capacities → resolve products → SystemRecommendation
+
+    SYSTEM-DESIGNER-1 Slice B: technology-aware IP / Analog HD / Hybrid with stable component_key.
     """
-    # First pass sizing without HDD capacities from catalog — storage TB still computed
+    COMPONENT_KEYS = {
+        "camera_ip": "camera_ip_main",
+        "camera_analog": "camera_analog_main",
+        "recorder": "recorder_main",
+        "storage": "storage_main",
+        "poe_switch": "poe_switch_main",
+        "cable_ip": "cable_ip_main",
+        "cable_analog": "cable_analog_main",
+        "power_supply": "power_supply_main",
+        "ups": "ups_main",
+        "camera_install": "installation_camera",
+        "recorder_setup": "recorder_setup_main",
+        "remote_viewing_setup": "remote_viewing_main",
+        "testing": "testing_main",
+        "commissioning": "commissioning_main",
+    }
+    IP_CAMERA_KEYS = frozenset({"cameras_ip", "cameras_ptz", "cameras_thermal", "cameras_special"})
+    ANALOG_CAMERA_KEYS = frozenset({"cameras_analog"})
+    IP_CABLE_KEYS = frozenset({"cat5e", "cat6", "cat6a", "cat7", "fiber", "outdoor_network_cable"})
+    ANALOG_CABLE_KEYS = frozenset({"coax"})
+    NVR_ONLY = frozenset({"nvr"})
+    DVR_XVR = frozenset({"dvr_xvr"})
+
     engineering = build_cctv_requirements(raw_input)
     if not engineering.get("valid"):
         return {
@@ -740,15 +803,13 @@ def build_system_recommendation(
         }
 
     inp = engineering["input"]
+    tech = inp.get("cctvTechnology") or "ip"
     manufacturer_preference = inp.get("manufacturerPreference")
     poe = engineering.get("poe") or {}
     intent = inp.get("architectureIntent") or "unknown"
-    poe_required = inp.get("poeRequired") is not False
-
-    # Prefer integrated NVR PoE when requested; only force external switch if no adequate NVR
-    # or user explicitly prefers external switching.
-    force_external = intent == "prefer_external_switch"
-    try_integrated = poe_required and not force_external
+    poe_required = bool(inp.get("poeRequired")) and tech != "analog_hd"
+    force_external = intent == "prefer_external_switch" and tech != "analog_hd"
+    try_integrated = poe_required and not force_external and tech == "ip"
 
     env = inp.get("environment")
     if not env and inp.get("outdoorCount") and inp.get("cameraCount") and inp["outdoorCount"] == inp["cameraCount"]:
@@ -756,25 +817,14 @@ def build_system_recommendation(
     elif not env and inp.get("indoorCount") and inp.get("cameraCount") and inp["indoorCount"] == inp["cameraCount"]:
         env = "indoor"
 
-    camera = resolve_cameras(
-        products=catalog_products,
-        requested_mp=float(inp["resolutionMp"]) if inp.get("resolutionMp") is not None else None,
-        environment=env,
-        form_factor=inp.get("formFactor"),
-        poe_required=poe_required,
-        manufacturer_preference=manufacturer_preference,
-    )
-    camera["quantity"] = inp["cameraCount"]
-    camera["label"] = "camera"
-    camera["optional"] = False
-    camera["editable"] = True
-    camera["technical_requirements"] = {
-        "resolutionMpMin": inp.get("resolutionMp"),
-        "environment": env,
-        "formFactor": inp.get("formFactor"),
-        "poe": poe_required,
-    }
-    camera["reason_codes"] = [{"code": "ROLE_CAMERA_FROM_COUNT", "params": {"qty": inp["cameraCount"]}}]
+    ip_count = int(inp["ipCameraCount"]) if inp.get("ipCameraCount") is not None else (inp["cameraCount"] if tech == "ip" else 0)
+    analog_count = int(inp["analogCameraCount"]) if inp.get("analogCameraCount") is not None else (inp["cameraCount"] if tech == "analog_hd" else 0)
+    if tech == "ip":
+        ip_count = int(inp["cameraCount"])
+        analog_count = 0
+    elif tech == "analog_hd":
+        analog_count = int(inp["cameraCount"])
+        ip_count = 0
 
     min_channels = (engineering.get("recorder") or {}).get("selectedChannelTier") or 4
     storage = engineering.get("storage") or {}
@@ -783,11 +833,10 @@ def build_system_recommendation(
     hdd_products = [p for p in catalog_products if p.get("category_key") in HDD_LEAF_KEYS]
     capacities = []
     for p in hdd_products:
-        hdd = parse_hdd_technical_attrs(p.get("attributes") or {})
-        if hdd.capacity_tb is not None:
-            capacities.append(float(hdd.capacity_tb))
+        hdd_attrs = parse_hdd_technical_attrs(p.get("attributes") or {})
+        if hdd_attrs.capacity_tb is not None:
+            capacities.append(float(hdd_attrs.capacity_tb))
 
-    # Provisional pack to know bay/size needs when capacities exist
     provisional_pack = None
     if required_tb is not None and capacities:
         provisional_pack = pack_hdds(
@@ -796,29 +845,118 @@ def build_system_recommendation(
             drive_bays=(inp.get("recorder") or {}).get("driveBays") or 8,
             max_hdd_tb=(inp.get("recorder") or {}).get("maxHddTb"),
         )
-
     min_bays = int(provisional_pack["driveCount"]) if provisional_pack and provisional_pack.get("status") == "ok" else None
     min_drive_tb = float(provisional_pack["driveCapacityTb"]) if provisional_pack and provisional_pack.get("status") == "ok" else None
 
-    recorder = None
-    external_switch = force_external
-    if try_integrated and poe.get("status") == "ok":
-        recorder = resolve_recorders(
-            products=catalog_products,
-            min_channels=int(min_channels),
-            require_integrated_poe=True,
-            required_poe_ports=poe.get("requiredPorts"),
-            required_poe_budget_w=poe.get("requiredBudgetW"),
-            min_drive_bays=min_bays,
-            min_max_hdd_tb=min_drive_tb,
-            manufacturer_preference=manufacturer_preference,
-        )
-        if recorder.get("selected"):
-            external_switch = False
-        else:
-            external_switch = True
+    components: list[dict[str, Any]] = []
 
-    if recorder is None or (external_switch and not recorder.get("selected")):
+    def _stamp(comp: dict[str, Any], *, component_key: str, role: str, qty: Any, optional: bool, reason_codes: list | None = None) -> dict[str, Any]:
+        out = dict(comp)
+        out["component_key"] = component_key
+        out["role"] = role
+        out["label"] = role
+        out["quantity"] = qty
+        out["optional"] = optional
+        out["editable"] = True
+        tech_req = dict(out.get("technical_requirements") or {})
+        tech_req["component_key"] = component_key
+        tech_req["semantic_role"] = role
+        tech_req["cctvTechnology"] = tech
+        out["technical_requirements"] = tech_req
+        if reason_codes is not None:
+            out["reason_codes"] = reason_codes
+        return out
+
+    # --- Cameras ---
+    if tech in {"ip", "hybrid"} and ip_count > 0:
+        cam_ip = resolve_cameras(
+            products=catalog_products,
+            requested_mp=float(inp["resolutionMp"]) if inp.get("resolutionMp") is not None else None,
+            environment=env,
+            form_factor=inp.get("formFactor"),
+            poe_required=True if tech == "ip" else poe_required,
+            manufacturer_preference=manufacturer_preference,
+            allowed_category_keys=IP_CAMERA_KEYS,
+        )
+        cam_ip["technical_requirements"] = {
+            "resolutionMpMin": inp.get("resolutionMp"),
+            "environment": env,
+            "formFactor": inp.get("formFactor"),
+            "poe": True,
+            "technology": "ip",
+        }
+        components.append(
+            _stamp(
+                cam_ip,
+                component_key=COMPONENT_KEYS["camera_ip"],
+                role="camera",
+                qty=ip_count,
+                optional=False,
+                reason_codes=[
+                    {
+                        "code": "ROLE_CAMERA_IP_FROM_COUNT",
+                        "params": {"qty": ip_count, "technology": tech},
+                    }
+                ],
+            )
+        )
+
+    if tech in {"analog_hd", "hybrid"} and analog_count > 0:
+        cam_an = resolve_cameras(
+            products=catalog_products,
+            requested_mp=float(inp["resolutionMp"]) if inp.get("resolutionMp") is not None else None,
+            environment=env,
+            form_factor=inp.get("formFactor"),
+            poe_required=False,
+            manufacturer_preference=manufacturer_preference,
+            allowed_category_keys=ANALOG_CAMERA_KEYS,
+        )
+        cam_an["technical_requirements"] = {
+            "resolutionMpMin": inp.get("resolutionMp"),
+            "environment": env,
+            "formFactor": inp.get("formFactor"),
+            "poe": False,
+            "technology": "analog_hd",
+            "analogSignal": inp.get("analogSignal"),
+        }
+        components.append(
+            _stamp(
+                cam_an,
+                component_key=COMPONENT_KEYS["camera_analog"],
+                role="camera",
+                qty=analog_count,
+                optional=False,
+                reason_codes=[
+                    {
+                        "code": "ROLE_CAMERA_ANALOG_FROM_COUNT",
+                        "params": {
+                            "qty": analog_count,
+                            "technology": tech,
+                            "analogSignal": inp.get("analogSignal"),
+                        },
+                    }
+                ],
+            )
+        )
+
+    # --- Recorder ---
+    if tech == "ip":
+        recorder_keys = NVR_ONLY
+        min_ip_ch = None
+        min_an_ch = None
+    elif tech == "analog_hd":
+        recorder_keys = DVR_XVR
+        min_ip_ch = None
+        min_an_ch = analog_count
+    else:
+        recorder_keys = DVR_XVR | NVR_ONLY
+        min_ip_ch = ip_count
+        min_an_ch = analog_count
+
+    recorder = None
+    external_switch = False
+    if tech == "analog_hd":
+        external_switch = False
         recorder = resolve_recorders(
             products=catalog_products,
             min_channels=int(min_channels),
@@ -828,19 +966,66 @@ def build_system_recommendation(
             min_drive_bays=min_bays,
             min_max_hdd_tb=min_drive_tb,
             manufacturer_preference=manufacturer_preference,
+            allowed_category_keys=recorder_keys,
+            min_analog_channels=min_an_ch,
         )
-        if try_integrated and not force_external and not recorder.get("selected"):
-            external_switch = True
-        elif force_external:
-            external_switch = True
-        elif recorder.get("selected") and try_integrated and poe.get("status") != "ok":
-            # PoE budget unknown → cannot certify integrated; require switch path
-            external_switch = True
+    elif tech == "hybrid":
+        # Hybrid recorders are not assumed to provide integrated PoE for the IP subset.
+        external_switch = bool(poe_required and ip_count > 0) or force_external
+        recorder = resolve_recorders(
+            products=catalog_products,
+            min_channels=int(min_channels),
+            require_integrated_poe=False,
+            required_poe_ports=None,
+            required_poe_budget_w=None,
+            min_drive_bays=min_bays,
+            min_max_hdd_tb=min_drive_tb,
+            manufacturer_preference=manufacturer_preference,
+            allowed_category_keys=recorder_keys,
+            min_ip_channels=min_ip_ch,
+            min_analog_channels=min_an_ch,
+        )
+    else:
+        # IP
+        external_switch = force_external
+        if try_integrated and poe.get("status") == "ok":
+            recorder = resolve_recorders(
+                products=catalog_products,
+                min_channels=int(min_channels),
+                require_integrated_poe=True,
+                required_poe_ports=poe.get("requiredPorts"),
+                required_poe_budget_w=poe.get("requiredBudgetW"),
+                min_drive_bays=min_bays,
+                min_max_hdd_tb=min_drive_tb,
+                manufacturer_preference=manufacturer_preference,
+                allowed_category_keys=recorder_keys,
+            )
+            if recorder.get("selected"):
+                external_switch = False
+            else:
+                external_switch = True
+        if recorder is None or (external_switch and not recorder.get("selected")):
+            recorder = resolve_recorders(
+                products=catalog_products,
+                min_channels=int(min_channels),
+                require_integrated_poe=False,
+                required_poe_ports=None,
+                required_poe_budget_w=None,
+                min_drive_bays=min_bays,
+                min_max_hdd_tb=min_drive_tb,
+                manufacturer_preference=manufacturer_preference,
+                allowed_category_keys=recorder_keys,
+            )
+            if try_integrated and not force_external and not recorder.get("selected"):
+                external_switch = True
+            elif force_external:
+                external_switch = True
+            elif recorder.get("selected") and try_integrated and poe.get("status") != "ok":
+                external_switch = True
 
-    # Re-pack using selected recorder bay limits when available
     drive_bays = (inp.get("recorder") or {}).get("driveBays")
     max_hdd = (inp.get("recorder") or {}).get("maxHddTb")
-    if recorder.get("selected"):
+    if recorder and recorder.get("selected"):
         nvr_attrs = parse_nvr_technical_attrs(recorder["selected"]["product"].get("attributes") or {})
         if nvr_attrs.drive_bays is not None:
             drive_bays = nvr_attrs.drive_bays
@@ -854,27 +1039,52 @@ def build_system_recommendation(
         max_hdd_tb=float(max_hdd) if max_hdd is not None else None,
         manufacturer_preference=manufacturer_preference,
     )
-    hdd["label"] = "storage"
-    hdd["optional"] = False
-    hdd["editable"] = True
     hdd["technical_requirements"] = {"requiredTb": required_tb}
-    hdd["reason_codes"] = [{"code": "ROLE_STORAGE_FROM_RETENTION", "params": {"requiredTb": required_tb}}]
+    hdd_reasons = [{"code": "ROLE_STORAGE_FROM_RETENTION", "params": {"requiredTb": required_tb}}]
 
-    recorder["quantity"] = 1
-    recorder["label"] = "recorder"
-    recorder["optional"] = False
-    recorder["editable"] = True
-    recorder["reason_codes"] = list(recorder.get("reason_codes") or []) + list(
+    recorder_reasons = list(recorder.get("reason_codes") or []) + list(
         (engineering.get("recorder") or {}).get("reasons") or []
     )
+    recorder_reasons.append(
+        {
+            "code": "RECORDER_TECHNOLOGY_PATH",
+            "params": {
+                "technology": tech,
+                "minChannels": min_channels,
+                "ipCameraCount": ip_count,
+                "analogCameraCount": analog_count,
+                "allowedCategories": sorted(recorder_keys),
+            },
+        }
+    )
 
-    components: list[dict[str, Any]] = [camera, recorder, hdd]
+    components.append(
+        _stamp(
+            recorder,
+            component_key=COMPONENT_KEYS["recorder"],
+            role="recorder",
+            qty=1,
+            optional=False,
+            reason_codes=recorder_reasons,
+        )
+    )
+    components.append(
+        _stamp(
+            hdd,
+            component_key=COMPONENT_KEYS["storage"],
+            role="storage",
+            qty=hdd.get("quantity") or 1,
+            optional=False,
+            reason_codes=hdd_reasons,
+        )
+    )
 
-    # Align engineering.poeArchitecture with final external_switch decision
-    if external_switch:
+    # --- PoE switch (IP / Hybrid IP subset only) ---
+    if tech != "analog_hd" and external_switch and poe_required:
+        sw_ports = poe.get("requiredPorts") or ip_count or inp["cameraCount"]
         sw_req = {
-            "minPorts": poe.get("requiredPorts") or inp["cameraCount"],
-            "minPoePorts": poe.get("requiredPorts") or inp["cameraCount"],
+            "minPorts": sw_ports,
+            "minPoePorts": sw_ports,
             "minPoeBudgetW": poe.get("requiredBudgetW"),
         }
         engineering = {
@@ -883,7 +1093,18 @@ def build_system_recommendation(
                 "evaluation": "INSUFFICIENT_PORTS" if force_external else "UNKNOWN",
                 "externalSwitchRequired": True,
                 "switchRequirement": sw_req,
-                "reasons": [{"code": "EXTERNAL_SWITCH_REQUIRED", "params": {"forced": force_external}}],
+                "reasons": [
+                    {
+                        "code": "EXTERNAL_SWITCH_REQUIRED",
+                        "params": {
+                            "forced": force_external,
+                            "technology": tech,
+                            "ipCameraCount": ip_count,
+                            "requiredPorts": sw_ports,
+                            "requiredBudgetW": poe.get("requiredBudgetW"),
+                        },
+                    }
+                ],
             },
         }
         switch = resolve_switches(
@@ -893,32 +1114,126 @@ def build_system_recommendation(
             min_budget_w=sw_req.get("minPoeBudgetW"),
             manufacturer_preference=manufacturer_preference,
         )
-        switch["quantity"] = 1
-        switch["label"] = "poe_switch"
-        switch["optional"] = False
-        switch["editable"] = True
-        switch["reason_codes"] = [{"code": "EXTERNAL_SWITCH_REQUIRED", "params": {}}]
-        components.append(switch)
+        components.append(
+            _stamp(
+                switch,
+                component_key=COMPONENT_KEYS["poe_switch"],
+                role="poe_switch",
+                qty=1,
+                optional=False,
+                reason_codes=[
+                    {
+                        "code": "EXTERNAL_SWITCH_REQUIRED",
+                        "params": {
+                            "technology": tech,
+                            "ipCameraCount": ip_count,
+                            "requiredPorts": sw_ports,
+                            "requiredBudgetW": poe.get("requiredBudgetW"),
+                        },
+                    }
+                ],
+            )
+        )
+    elif tech != "analog_hd":
+        engineering = {
+            **engineering,
+            "poeArchitecture": {
+                "evaluation": "SUFFICIENT" if not external_switch else "UNKNOWN",
+                "externalSwitchRequired": False,
+                "switchRequirement": None,
+                "reasons": [
+                    {
+                        "code": "EXTERNAL_SWITCH_NOT_REQUIRED",
+                        "params": {"reason": "integrated_nvr_poe" if tech == "ip" else "not_applicable"},
+                    }
+                ],
+            },
+        }
     else:
         engineering = {
             **engineering,
             "poeArchitecture": {
-                "evaluation": "SUFFICIENT",
+                "evaluation": "NOT_APPLICABLE",
                 "externalSwitchRequired": False,
                 "switchRequirement": None,
-                "reasons": [{"code": "EXTERNAL_SWITCH_NOT_REQUIRED", "params": {"reason": "integrated_nvr_poe"}}],
+                "reasons": [{"code": "POE_NOT_APPLICABLE_ANALOG", "params": {}}],
             },
         }
 
-    cable = resolve_cable(
-        products=catalog_products,
-        meters=(engineering.get("infrastructure") or {}).get("cableMeters"),
-    )
-    cable["label"] = "cable"
-    cable["optional"] = True
-    cable["editable"] = True
-    components.append(cable)
+    # --- Cabling ---
+    cable_meters = (engineering.get("infrastructure") or {}).get("cableMeters")
+    if tech in {"ip", "hybrid"} and ip_count > 0:
+        cable_ip = resolve_cable(
+            products=catalog_products,
+            meters=cable_meters,
+            preferred_category_keys=IP_CABLE_KEYS,
+        )
+        components.append(
+            _stamp(
+                cable_ip,
+                component_key=COMPONENT_KEYS["cable_ip"],
+                role="cable",
+                qty=cable_ip.get("quantity"),
+                optional=True,
+                reason_codes=[{"code": "CABLE_IP_PATH", "params": {"technology": tech, "meters": cable_meters}}],
+            )
+        )
+    if tech in {"analog_hd", "hybrid"} and analog_count > 0:
+        cable_an = resolve_cable(
+            products=catalog_products,
+            meters=cable_meters,
+            preferred_category_keys=ANALOG_CABLE_KEYS,
+        )
+        components.append(
+            _stamp(
+                cable_an,
+                component_key=COMPONENT_KEYS["cable_analog"],
+                role="cable",
+                qty=cable_an.get("quantity"),
+                optional=True,
+                reason_codes=[{"code": "CABLE_ANALOG_PATH", "params": {"technology": tech, "meters": cable_meters}}],
+            )
+        )
 
+    # --- Central power supply for analog / hybrid ---
+    need_psu = tech in {"analog_hd", "hybrid"} and analog_count > 0
+    if need_psu or inp.get("powerSupplyRequested"):
+        psu = {
+            "role": "power_supply",
+            "status": "UNRESOLVED",
+            "selected": None,
+            "candidates": [],
+            "warnings": [],
+            "blocking": tech in {"analog_hd", "hybrid"} and analog_count > 0,
+            "technical_requirements": {
+                "analogCameraCount": analog_count,
+                "cameraMaxPowerW": inp.get("cameraMaxPowerW"),
+            },
+        }
+        components.append(
+            _stamp(
+                psu,
+                component_key=COMPONENT_KEYS["power_supply"],
+                role="power_supply",
+                qty=1,
+                optional=not psu["blocking"],
+                reason_codes=[
+                    {
+                        "code": "POWER_SUPPLY_FOR_ANALOG",
+                        "params": {"analogCameraCount": analog_count, "technology": tech},
+                    }
+                ],
+            )
+        )
+
+    SERVICE_KEY = {
+        "camera_install": COMPONENT_KEYS["camera_install"],
+        "recorder_setup": COMPONENT_KEYS["recorder_setup"],
+        "remote_viewing_setup": COMPONENT_KEYS["remote_viewing_setup"],
+        "testing": COMPONENT_KEYS["testing"],
+        "commissioning": COMPONENT_KEYS["commissioning"],
+        "ups": COMPONENT_KEYS["ups"],
+    }
     for svc in engineering.get("serviceRequirements") or []:
         role = svc["role"]
         resolved = resolve_service(
@@ -927,27 +1242,47 @@ def build_system_recommendation(
             products=catalog_products,
             preferred_keys=SERVICE_ROLE_CATEGORIES.get(role, frozenset()),
         )
-        resolved["label"] = role
-        resolved["optional"] = role in {"ups", "commissioning", "remote_viewing_setup"}
-        resolved["editable"] = True
-        components.append(resolved)
+        components.append(
+            _stamp(
+                resolved,
+                component_key=SERVICE_KEY.get(role, role),
+                role=role,
+                qty=int(svc["qty"]),
+                optional=role in {"ups", "commissioning", "remote_viewing_setup"},
+            )
+        )
 
     warnings = list(engineering.get("warnings") or [])
     assumptions = list(engineering.get("assumptions") or [])
     unresolved = list(engineering.get("unresolved") or [])
-    # Drop stale NVR_POE_UNKNOWN if we resolved integrated path
     if not external_switch:
         unresolved = [u for u in unresolved if u.get("code") != "NVR_POE_UNKNOWN"]
 
     for c in components:
         warnings.extend(c.get("warnings") or [])
         if c.get("status") == "UNRESOLVED" and c.get("blocking"):
-            unresolved.append({"code": "COMPONENT_UNRESOLVED", "params": {"role": c["role"]}})
+            unresolved.append(
+                {
+                    "code": "COMPONENT_UNRESOLVED",
+                    "params": {"role": c["role"], "component_key": c.get("component_key")},
+                }
+            )
 
-    blocking_roles = {"camera", "recorder", "storage"}
-    if external_switch:
-        blocking_roles.add("poe_switch")
-    blocking = any(c.get("blocking") for c in components if c.get("role") in blocking_roles)
+    blocking_keys = {COMPONENT_KEYS["recorder"], COMPONENT_KEYS["storage"]}
+    for c in components:
+        if c.get("component_key") in {COMPONENT_KEYS["camera_ip"], COMPONENT_KEYS["camera_analog"]} and c.get("blocking"):
+            blocking_keys.add(c["component_key"])
+    if external_switch and tech != "analog_hd":
+        blocking_keys.add(COMPONENT_KEYS["poe_switch"])
+    if need_psu:
+        blocking_keys.add(COMPONENT_KEYS["power_supply"])
+    blocking = any(c.get("blocking") for c in components if c.get("component_key") in blocking_keys)
+    hybrid_split_bad = any(
+        u.get("code") in {"HYBRID_CAMERA_SPLIT_UNRESOLVED", "HYBRID_CAMERA_SPLIT_MISMATCH"}
+        for u in unresolved
+    )
+    if hybrid_split_bad:
+        blocking = True
 
     if hdd.get("packing"):
         engineering = {**engineering, "hdd": hdd["packing"]}
@@ -970,6 +1305,7 @@ def build_system_recommendation(
         "engineering": engineering,
         "components": [
             {
+                "component_key": c.get("component_key"),
                 "role": c["role"],
                 "label": c.get("label") or c["role"],
                 "quantity": c.get("quantity")
@@ -1013,5 +1349,6 @@ def build_system_recommendation(
                 "cable": sum(1 for p in catalog_products if p.get("category_key") in CABLE_LEAF_KEYS),
                 "labor": sum(1 for p in catalog_products if p.get("category_key") in LABOR_LEAF_KEYS),
             },
+            "technology": tech,
         },
     }

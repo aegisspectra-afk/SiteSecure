@@ -142,42 +142,42 @@ describe("cctv-design-persistence R2", () => {
   it("persists user override distinctly from engine preferred", () => {
     const rec = sampleRec();
     const selection = {
-      selectedByRole: { camera: "c2", cable: "k1" },
-      removedRoles: new Set<string>(),
+      selectedByComponentId: { camera_ip_main: "c2", cable_ip_main: "k1" },
+      removedComponentIds: new Set<string>(),
     };
     expect(selectionOriginForRole("camera", selection, "c1")).toBe("USER_OVERRIDE");
     expect(selectionOriginForRole("cable", selection, "k1")).toBe("ENGINE_PREFERRED");
     const design = designFromRec(rec, selection);
-    const cam = design.components.find((c) => c.role_key === "camera")!;
+    const cam = design.components.find((c) => c.role_key === "camera_ip_main")!;
     expect(cam.engine_preferred_product_id).toBe("c1");
     expect(cam.user_selected_product_id).toBe("c2");
     expect(cam.selection_origin).toBe("USER_OVERRIDE");
     const restored = selectionFromDesign(design);
-    expect(restored.selectedByRole.camera).toBe("c2");
+    expect(restored.selectedByComponentId.camera_ip_main).toBe("c2");
   });
 
   it("persists optional removal across reopen mapping", () => {
     const rec = sampleRec();
     const selection = {
-      selectedByRole: { camera: "c1" },
-      removedRoles: new Set(["cable"]),
+      selectedByComponentId: { camera_ip_main: "c1" },
+      removedComponentIds: new Set(["cable_ip_main"]),
     };
     const design = designFromRec(rec, selection);
-    const cable = design.components.find((c) => c.role_key === "cable")!;
+    const cable = design.components.find((c) => c.role_key === "cable_ip_main")!;
     expect(cable.removed).toBe(true);
     const restored = selectionFromDesign(design);
-    expect(restored.removedRoles.has("cable")).toBe(true);
-    expect(restored.selectedByRole.cable).toBeUndefined();
+    expect(restored.removedComponentIds.has("cable_ip_main")).toBe(true);
+    expect(restored.selectedByComponentId.cable_ip_main).toBeUndefined();
   });
 
   it("recalculate preserves valid override and flags invalid selection for review", () => {
     const prior = {
-      selectedByRole: { camera: "c2", gone: "x1" },
-      removedRoles: new Set(["cable"]),
+      selectedByComponentId: { camera_ip_main: "c2", gone: "x1" },
+      removedComponentIds: new Set(["cable_ip_main"]),
     };
     const merged = mergeSelectionAfterRecalculate(sampleRec(), prior);
-    expect(merged.selection.selectedByRole.camera).toBe("c2");
-    expect(merged.selection.removedRoles.has("cable")).toBe(true);
+    expect(merged.selection.selectedByComponentId.camera_ip_main).toBe("c2");
+    expect(merged.selection.removedComponentIds.has("cable_ip_main")).toBe(true);
     expect(merged.needsReviewRoles.has("gone")).toBe(true);
   });
 
@@ -193,8 +193,8 @@ describe("cctv-design-persistence R2", () => {
   it("legacy apply fingerprint still works on projected lines (Apply boundary)", () => {
     // Ensure projection helpers remain usable for existing Apply path.
     const lines = [
-      { role: "camera", productId: "c1", qty: 8, optional: false },
-      { role: "cable", productId: "k1", qty: 1, optional: true },
+      { componentKey: "camera_ip_main", role: "camera", productId: "c1", qty: 8, optional: false },
+      { componentKey: "cable_ip_main", role: "cable", productId: "k1", qty: 1, optional: true },
     ];
     expect(linesFingerprint(lines).length).toBeGreaterThan(0);
   });

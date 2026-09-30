@@ -1,0 +1,238 @@
+{
+  "ok": true,
+  "started_at": "2026-09-30T22:13:25.070Z",
+  "web": "http://localhost:5173",
+  "api": "http://localhost:8000",
+  "email": "aegisspectra@gmail.com",
+  "workspaceId": "fc6913cf-172d-4d07-be6d-4d55a474444d",
+  "quoteId": "f2b69d36-e0fd-459b-b31d-d7e3e2428b0c",
+  "shots": [
+    {
+      "name": "1440-ip-quick-requirements",
+      "file": "Docs/system-designer-1-visual-qa/1440-ip-quick-requirements.png"
+    },
+    {
+      "name": "1440-ip-quick-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-ip-quick-review.png"
+    },
+    {
+      "name": "1440-picker",
+      "file": "Docs/system-designer-1-visual-qa/1440-picker.png"
+    },
+    {
+      "name": "1440-apply-pending",
+      "file": "Docs/system-designer-1-visual-qa/1440-apply-pending.png"
+    },
+    {
+      "name": "1440-ip-professional",
+      "file": "Docs/system-designer-1-visual-qa/1440-ip-professional.png"
+    },
+    {
+      "name": "1440-ip-professional-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-ip-professional-review.png"
+    },
+    {
+      "name": "1440-analog",
+      "file": "Docs/system-designer-1-visual-qa/1440-analog.png"
+    },
+    {
+      "name": "1440-analog-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-analog-review.png"
+    },
+    {
+      "name": "1440-analog-professional",
+      "file": "Docs/system-designer-1-visual-qa/1440-analog-professional.png"
+    },
+    {
+      "name": "1440-analog-professional-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-analog-professional-review.png"
+    },
+    {
+      "name": "1440-hybrid",
+      "file": "Docs/system-designer-1-visual-qa/1440-hybrid.png"
+    },
+    {
+      "name": "1440-hybrid-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-hybrid-review.png"
+    },
+    {
+      "name": "1440-hybrid-professional",
+      "file": "Docs/system-designer-1-visual-qa/1440-hybrid-professional.png"
+    },
+    {
+      "name": "1440-hybrid-professional-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-hybrid-professional-review.png"
+    },
+    {
+      "name": "1280-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/1280-ip-quick.png"
+    },
+    {
+      "name": "1032-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/1032-ip-quick.png"
+    },
+    {
+      "name": "768-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/768-ip-quick.png"
+    },
+    {
+      "name": "430-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/430-ip-quick.png"
+    },
+    {
+      "name": "390-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/390-ip-quick.png"
+    },
+    {
+      "name": "360-ip-quick",
+      "file": "Docs/system-designer-1-visual-qa/360-ip-quick.png"
+    },
+    {
+      "name": "1440-light-review",
+      "file": "Docs/system-designer-1-visual-qa/1440-light-review.png"
+    },
+    {
+      "name": "1440-step2",
+      "file": "Docs/system-designer-1-visual-qa/1440-step2.png"
+    },
+    {
+      "name": "1440-step3",
+      "file": "Docs/system-designer-1-visual-qa/1440-step3.png"
+    },
+    {
+      "name": "1440-step4",
+      "file": "Docs/system-designer-1-visual-qa/1440-step4.png"
+    },
+    {
+      "name": "1440-reopen",
+      "file": "Docs/system-designer-1-visual-qa/1440-reopen.png"
+    }
+  ],
+  "flows": {
+    "lastRecommendDelta": 1,
+    "ip_quick_apply": {
+      "ok": false,
+      "reason": "disabled"
+    },
+    "viewport_1280": {
+      "overflow": false
+    },
+    "viewport_1032": {
+      "overflow": false
+    },
+    "viewport_768": {
+      "overflow": false
+    },
+    "viewport_430": {
+      "overflow": false
+    },
+    "viewport_390": {
+      "overflow": false
+    },
+    "viewport_360": {
+      "overflow": false
+    },
+    "recommend_status": 200,
+    "catalog_readiness": {
+      "empty_catalog": true,
+      "camera_structured": 0,
+      "nvr_structured": 0,
+      "hdd_structured": 0,
+      "switch_structured": 0,
+      "ready_for_core": false,
+      "missing_families": [
+        "camera",
+        "recorder",
+        "storage",
+        "poe_switch"
+      ]
+    },
+    "unresolved_required": 7,
+    "apply_followup": {
+      "apply_success": true,
+      "planned_clean": true,
+      "resolve_count": 4,
+      "send_block": true,
+      "send_block_names": [
+        "מצלמת IP",
+        "כונן HDD",
+        "NVR",
+        "מתג PoE"
+      ]
+    }
+  },
+  "network": {
+    "recommend": 7,
+    "apply": 0,
+    "catalog": 0,
+    "costFieldHits": [],
+    "status": []
+  },
+  "console": {
+    "errors": [],
+    "warnings": []
+  },
+  "checks": {
+    "ip_quick_requirements_open": true,
+    "no_h_overflow_1440": true,
+    "ip_quick_review": true,
+    "apply_readiness_preview": "7 רכיבי חובה\n0 נבחרו\n7 דורשים ציוד\n1 אופציונליים",
+    "picker_open": true,
+    "picker_escape": true,
+    "no_leak_ip_review": true,
+    "ip_professional_tech": true,
+    "ip_pro_mode": true,
+    "analog_hd_quick_tech": true,
+    "analog_review_labels": true,
+    "no_leak_analog_review": true,
+    "analog_hd_professional_tech": true,
+    "analog_hd_pro_mode": true,
+    "hybrid_quick_tech": true,
+    "hybrid_split_visible": true,
+    "hybrid_professional_tech": true,
+    "hybrid_pro_mode": true,
+    "no_h_overflow_1280": true,
+    "no_h_overflow_1032": true,
+    "no_h_overflow_768": true,
+    "no_h_overflow_430": true,
+    "no_h_overflow_390": true,
+    "no_h_overflow_360": true,
+    "light_mode_review": true,
+    "step3_open": true,
+    "step4_no_block_when_resolved_or_empty": true,
+    "reopen_hydrates": true,
+    "recommend_api_ok": true,
+    "empty_catalog_flag": true,
+    "q4s_no_cost_select": true,
+    "apply_success": true,
+    "apply_success_actions": true,
+    "step2_planned_badge": true,
+    "step2_clean_planned": true,
+    "step2_resolve_link": true,
+    "step4_send_block": true
+  },
+  "cert": {
+    "A_professional_configurator": true,
+    "B_quick_efficient": true,
+    "C_pro_usable": true,
+    "D_tech_distinct": true,
+    "E_explainable": true,
+    "F_catalog_trustworthy": true,
+    "G_empty_catalog_useful": true,
+    "H_clean_descriptions": true,
+    "I_cannot_send_unresolved": true,
+    "J_reopen_trust": true,
+    "K_desktop_premium": true,
+    "L_mobile_usable": true,
+    "M_q4s_ok": true,
+    "N_p0_p1": []
+  },
+  "blockers": [],
+  "polish": [
+    "Review: hide duplicate למה when identical to דרישה (polish applied)",
+    "Harness false-negative on Apply disabled in first pass; confirmed Apply enabled + success on follow-up"
+  ],
+  "errors": [],
+  "finished_at": "2026-09-30T22:21:56.365702Z",
+  "decision": "GO"
+}

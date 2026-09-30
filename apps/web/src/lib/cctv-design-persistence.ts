@@ -1,6 +1,9 @@
 /**
  * R2 — map CCTV drawer state ↔ durable System Design persistence.
  * Does not change CCTV recommend/sizing math. No Apply linkage.
+ *
+ * SYSTEM-DESIGNER-1A: Design role_key stores stable component_key.
+ * Semantic role is kept in technical_requirements.semantic_role.
  */
 
 import type {
@@ -14,10 +17,17 @@ import type {
 import type { CctvBuildRequirements } from "./cctv-build-requirements";
 import { defaultCctvBuildRequirements } from "./cctv-build-requirements";
 import {
+  commercialLabelHe,
+  componentKeyOf,
+  normalizeComponentKey,
+  semanticRoleOf,
+} from "./cctv-component-keys";
+import {
+  emptyReviewSelection,
   initialReviewSelection,
-  isCandidateSelectable,
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
+import { classifyPriorSelection } from "./cctv-designer-review";
 
 export type CctvDesignRequirementsDoc = {
   form: CctvBuildRequirements;
@@ -35,51 +45,77 @@ export function requirementsToDesignDoc(req: CctvBuildRequirements): CctvDesignR
 
 export function requirementsFromDesign(design: SystemDesign): CctvBuildRequirements {
   const raw = design.requirements as Partial<CctvDesignRequirementsDoc> | CctvBuildRequirements | null;
+  let merged: CctvBuildRequirements;
   if (raw && typeof raw === "object" && "form" in raw && raw.form && typeof raw.form === "object") {
-    return { ...defaultCctvBuildRequirements(), ...raw.form };
+    merged = { ...defaultCctvBuildRequirements(), ...raw.form };
+  } else if (raw && typeof raw === "object" && "cameraCount" in raw) {
+    merged = { ...defaultCctvBuildRequirements(), ...(raw as CctvBuildRequirements) };
+  } else {
+    return defaultCctvBuildRequirements();
   }
-  if (raw && typeof raw === "object" && "cameraCount" in raw) {
-    return { ...defaultCctvBuildRequirements(), ...(raw as CctvBuildRequirements) };
+  // Legacy Design docs only had showAdvanced
+  if (!merged.designerMode) {
+    merged.designerMode = merged.showAdvanced ? "professional" : "quick";
   }
-  return defaultCctvBuildRequirements();
+  if (merged.testingRequested == null) {
+    merged.testingRequested = merged.installationRequested !== false;
+  }
+  return merged;
 }
 
-export function selectionOriginForRole(
-  role: string,
+export function selectionOriginForComponent(
+  componentKey: string,
   selection: ReviewSelectionState,
   enginePreferredId: string | null | undefined,
 ): "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED" {
-  if (selection.removedRoles.has(role)) return "UNSELECTED";
-  const selected = selection.selectedByRole[role];
+  const key = normalizeComponentKey(componentKey);
+  if (selection.removedComponentIds.has(key)) return "UNSELECTED";
+  const selected = selection.selectedByComponentId[key];
   if (!selected) return "UNSELECTED";
   if (enginePreferredId && selected === enginePreferredId) return "ENGINE_PREFERRED";
   return "USER_OVERRIDE";
 }
 
+/** @deprecated use selectionOriginForComponent — kept for older tests during Slice A. */
+export function selectionOriginForRole(
+  roleOrKey: string,
+  selection: ReviewSelectionState,
+  enginePreferredId: string | null | undefined,
+): "ENGINE_PREFERRED" | "USER_OVERRIDE" | "UNSELECTED" {
+  return selectionOriginForComponent(normalizeComponentKey(roleOrKey), selection, enginePreferredId);
+}
+
 export function componentsFromRecommendation(
   rec: SystemRecommendation,
   selection: ReviewSelectionState,
-  needsReviewRoles: Set<string> = new Set(),
+  needsReviewKeys: Set<string> = new Set(),
 ): SystemDesignComponentIn[] {
   return rec.components.map((c) => {
+    const componentKey = componentKeyOf(c);
+    const semanticRole = semanticRoleOf(componentKey);
     const enginePreferred = c.selected_product?.id ?? null;
-    const removed = selection.removedRoles.has(c.role);
-    const userSelected = removed ? null : selection.selectedByRole[c.role] ?? null;
+    const removed = selection.removedComponentIds.has(componentKey);
+    const userSelected = removed ? null : selection.selectedByComponentId[componentKey] ?? null;
+    const tech = {
+      ...(c.technical_requirements ?? {}),
+      component_key: componentKey,
+      semantic_role: semanticRole,
+    };
     return {
-      role_key: c.role,
-      label: c.label || c.role,
+      role_key: componentKey,
+      label: commercialLabelHe(componentKey) || c.label || componentKey,
       quantity: Number(c.quantity) || 1,
       optional: Boolean(c.optional),
       blocking: Boolean(c.blocking),
       removed,
       resolution_status: c.resolution_status,
-      technical_requirements: c.technical_requirements ?? {},
+      technical_requirements: tech,
       candidates: c.candidates ?? [],
       engine_preferred_product_id: enginePreferred,
       user_selected_product_id: userSelected,
-      selection_origin: selectionOriginForRole(c.role, selection, enginePreferred),
+      selection_origin: selectionOriginForComponent(componentKey, selection, enginePreferred),
       reason_codes: c.reason_codes ?? [],
-      needs_review: needsReviewRoles.has(c.role),
+      needs_review: needsReviewKeys.has(componentKey),
     };
   });
 }
@@ -131,11 +167,22 @@ function componentRowToRec(row: SystemDesignComponent): CctvRecommendationCompon
   const engineCand = row.engine_preferred_product_id
     ? candidates.find((c) => c.product?.id === row.engine_preferred_product_id) ?? null
     : null;
-  return {
+  const tech = (row.technical_requirements as Record<string, unknown>) || {};
+  const componentKey = componentKeyOf({
     role: row.role_key,
-    label: row.label || row.role_key,
+    component_key: typeof tech.component_key === "string" ? tech.component_key : row.role_key,
+    technical_requirements: tech,
+  });
+  const semanticRole =
+    typeof tech.semantic_role === "string" && tech.semantic_role
+      ? tech.semantic_role
+      : semanticRoleOf(componentKey);
+  return {
+    component_key: componentKey,
+    role: semanticRole,
+    label: row.label || commercialLabelHe(componentKey) || componentKey,
     quantity: Number(row.quantity) || 1,
-    technical_requirements: (row.technical_requirements as Record<string, unknown>) || {},
+    technical_requirements: { ...tech, component_key: componentKey, semantic_role: semanticRole },
     selected_product: selectedCand?.product ?? engineCand?.product ?? null,
     selected_confidence: selectedCand?.confidence ?? engineCand?.confidence ?? null,
     selected_compatibility: selectedCand?.compatibility ?? engineCand?.compatibility ?? null,
@@ -149,22 +196,26 @@ function componentRowToRec(row: SystemDesignComponent): CctvRecommendationCompon
 }
 
 export function selectionFromDesign(design: SystemDesign): ReviewSelectionState {
-  const selectedByRole: Record<string, string> = {};
-  const removedRoles = new Set<string>();
+  const selectedByComponentId: Record<string, string> = {};
+  const removedComponentIds = new Set<string>();
   for (const row of design.components ?? []) {
+    const key = componentKeyOf({
+      role: row.role_key,
+      technical_requirements: (row.technical_requirements as Record<string, unknown>) || {},
+    });
     if (row.removed) {
-      removedRoles.add(row.role_key);
+      removedComponentIds.add(key);
       continue;
     }
     const id = row.user_selected_product_id || null;
-    if (id) selectedByRole[row.role_key] = id;
+    if (id) selectedByComponentId[key] = id;
   }
-  return { selectedByRole, removedRoles };
+  return { selectedByComponentId, removedComponentIds };
 }
 
 /**
  * After recalculate: keep prior explicit selections when still a selectable candidate.
- * Invalid prior selections are dropped and listed in needsReviewRoles (not silently confirmed).
+ * Invalid prior selections are dropped and listed in needsReviewRoles (component keys).
  */
 export function mergeSelectionAfterRecalculate(
   rec: SystemRecommendation,
@@ -172,39 +223,36 @@ export function mergeSelectionAfterRecalculate(
 ): { selection: ReviewSelectionState; needsReviewRoles: Set<string> } {
   const base = initialReviewSelection(rec);
   const needsReviewRoles = new Set<string>();
-  const selectedByRole = { ...base.selectedByRole };
-  const removedRoles = new Set<string>();
+  const selectedByComponentId = { ...base.selectedByComponentId };
+  const removedComponentIds = new Set<string>();
 
-  for (const role of prior.removedRoles) {
-    const comp = rec.components.find((c) => c.role === role);
-    if (comp?.optional) removedRoles.add(role);
+  for (const key of prior.removedComponentIds) {
+    const comp = rec.components.find((c) => componentKeyOf(c) === key);
+    if (comp?.optional) removedComponentIds.add(key);
   }
 
-  for (const [role, productId] of Object.entries(prior.selectedByRole)) {
-    if (removedRoles.has(role)) continue;
-    const comp = rec.components.find((c) => c.role === role);
+  for (const [key, productId] of Object.entries(prior.selectedByComponentId)) {
+    if (removedComponentIds.has(key)) continue;
+    const comp = rec.components.find((c) => componentKeyOf(c) === key);
     if (!comp) {
-      needsReviewRoles.add(role);
+      needsReviewRoles.add(key);
       continue;
     }
     const cand = comp.candidates.find((c) => c.product.id === productId);
-    if (cand && isCandidateSelectable(cand)) {
-      selectedByRole[role] = productId;
-      const engineId = comp.selected_product?.id;
-      if (engineId && productId !== engineId) {
-        // explicit override retained
-      }
+    const verdict = classifyPriorSelection(cand);
+    if (verdict === "keep" || verdict === "keep_verify") {
+      selectedByComponentId[key] = productId;
+      if (verdict === "keep_verify") needsReviewRoles.add(key);
     } else {
-      needsReviewRoles.add(role);
-      // leave engine default from base if any; do not force invalid prior
+      needsReviewRoles.add(key);
     }
   }
 
-  for (const role of removedRoles) {
-    delete selectedByRole[role];
+  for (const key of removedComponentIds) {
+    delete selectedByComponentId[key];
   }
 
-  return { selection: { selectedByRole, removedRoles }, needsReviewRoles };
+  return { selection: { selectedByComponentId, removedComponentIds }, needsReviewRoles };
 }
 
 export function designHasRecommendation(design: SystemDesign): boolean {
@@ -215,3 +263,5 @@ export function designHasRecommendation(design: SystemDesign): boolean {
     (design.components?.length ?? 0) > 0
   );
 }
+
+export { emptyReviewSelection };

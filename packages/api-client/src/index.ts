@@ -745,6 +745,12 @@ export type CctvRecommendIn = {
   camera_count: number;
   indoor_count?: number | null;
   outdoor_count?: number | null;
+  /** SYSTEM-DESIGNER-1: ip | analog_hd | hybrid */
+  cctv_technology?: string | null;
+  ip_camera_count?: number | null;
+  analog_camera_count?: number | null;
+  analog_signal?: string | null;
+  power_supply_requested?: boolean | null;
   resolution_mp?: number | null;
   environment?: string | null;
   form_factor?: string | null;
@@ -793,6 +799,8 @@ export type CctvRecommendationCandidate = {
 };
 
 export type CctvRecommendationComponent = {
+  /** Stable DesignComponent identity (SYSTEM-DESIGNER-1). Prefer over role for selection/linkage. */
+  component_key?: string | null;
   role: string;
   label: string;
   quantity: number;

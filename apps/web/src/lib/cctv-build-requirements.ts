@@ -7,13 +7,25 @@ import type { CctvRecommendIn } from "@site-secure/api-client";
 
 export type CctvBuildRequirements = {
   cameraCount: number;
+  /** SYSTEM-DESIGNER-1 — same engine, different component paths */
+  cctvTechnology: "ip" | "analog_hd" | "hybrid";
+  ipCameraCount: number;
+  analogCameraCount: number;
+  analogSignal: "" | "tvi" | "cvi" | "ahd" | "cvbs";
+  powerSupplyRequested: boolean;
   environment: "indoor" | "outdoor" | "indoor_outdoor" | "";
   resolutionMp: number;
   retentionDays: number;
   recordingMode: "continuous" | "scheduled" | "motion";
   poeRequired: boolean;
   installationRequested: boolean;
-  // Advanced
+  /** Slice C — independent of installation; defaults true when install on */
+  testingRequested: boolean;
+  /**
+   * Slice C workspace density. showAdvanced mirrors professional for Design doc compat.
+   */
+  designerMode: "quick" | "professional";
+  // Advanced (preserved across Quick↔Pro)
   showAdvanced: boolean;
   fps: string;
   codec: "" | "h264" | "h265";
@@ -29,6 +41,12 @@ export type CctvBuildRequirements = {
   cameraMaxPowerW: string;
   formFactor: "" | "dome" | "bullet" | "turret" | "ptz";
   architectureIntent: "prefer_nvr_integrated" | "prefer_external_switch" | "unknown";
+  /** Optional infrastructure intents — persist; only cable/UPS/PSU hit recommend today */
+  infraRackRequested: boolean;
+  infraConduitRequested: boolean;
+  infraSurgeRequested: boolean;
+  infraJunctionRequested: boolean;
+  infraMountsRequested: boolean;
 };
 
 export type LeadPrefillSource = {
@@ -55,6 +73,11 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
 
   return {
     cameraCount,
+    cctvTechnology: "ip",
+    ipCameraCount: cameraCount,
+    analogCameraCount: 0,
+    analogSignal: "",
+    powerSupplyRequested: false,
     // Unspecified by default — do not invent outdoor when the user has not chosen.
     environment: environment || "",
     resolutionMp: 4,
@@ -62,6 +85,8 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
     recordingMode: lead?.recording === false ? "motion" : "continuous",
     poeRequired: true,
     installationRequested: true,
+    testingRequested: true,
+    designerMode: "quick",
     showAdvanced: false,
     fps: "",
     codec: "",
@@ -78,16 +103,32 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
     cameraMaxPowerW: "",
     formFactor: "",
     architectureIntent: "prefer_nvr_integrated",
+    infraRackRequested: false,
+    infraConduitRequested: false,
+    infraSurgeRequested: false,
+    infraJunctionRequested: false,
+    infraMountsRequested: false,
   };
 }
 
 export type RequirementsValidation =
   | { ok: true }
-  | { ok: false; field: string; messageKey: "cameras" | "retention" | "resolution" | "hours" };
+  | {
+      ok: false;
+      field: string;
+      messageKey: "cameras" | "retention" | "resolution" | "hours" | "hybridSplit";
+    };
 
 export function validateCctvBuildRequirements(req: CctvBuildRequirements): RequirementsValidation {
   if (!Number.isFinite(req.cameraCount) || req.cameraCount < 1) {
     return { ok: false, field: "cameraCount", messageKey: "cameras" };
+  }
+  if (req.cctvTechnology === "hybrid") {
+    const ip = Math.floor(req.ipCameraCount);
+    const an = Math.floor(req.analogCameraCount);
+    if (!Number.isFinite(ip) || !Number.isFinite(an) || ip < 1 || an < 1 || ip + an !== req.cameraCount) {
+      return { ok: false, field: "ipCameraCount", messageKey: "hybridSplit" };
+    }
   }
   if (!Number.isFinite(req.retentionDays) || req.retentionDays <= 0) {
     return { ok: false, field: "retentionDays", messageKey: "retention" };
@@ -113,21 +154,39 @@ function optNumber(raw: string): number | undefined {
 
 export function requirementsToRecommendBody(req: CctvBuildRequirements): CctvRecommendIn {
   const headroomPct = optNumber(req.expansionHeadroomPercent);
+  const tech = req.cctvTechnology || "ip";
+  const cameraCount = Math.max(1, Math.floor(req.cameraCount));
   const body: CctvRecommendIn = {
-    camera_count: Math.max(1, Math.floor(req.cameraCount)),
+    camera_count: cameraCount,
+    cctv_technology: tech,
     resolution_mp: req.resolutionMp,
     environment: req.environment || null,
     retention_days: req.retentionDays,
     recording_mode: req.recordingMode,
-    poe_required: req.poeRequired,
+    // Analog HD never requests PoE; Hybrid sizes PoE for IP subset only on the server.
+    poe_required: tech === "analog_hd" ? false : req.poeRequired,
     installation_requested: req.installationRequested,
-    testing_requested: req.installationRequested,
+    testing_requested: req.testingRequested,
     remote_viewing: req.remoteViewing,
     ups_requested: req.upsRequested,
     commissioning_requested: req.commissioningRequested,
     architecture_intent: req.architectureIntent,
     expansion_headroom: headroomPct != null ? headroomPct / 100 : 0,
+    power_supply_requested: req.powerSupplyRequested || tech === "analog_hd" || tech === "hybrid",
   };
+
+  if (tech === "hybrid") {
+    body.ip_camera_count = Math.max(0, Math.floor(req.ipCameraCount));
+    body.analog_camera_count = Math.max(0, Math.floor(req.analogCameraCount));
+    body.camera_count = Math.max(1, (body.ip_camera_count ?? 0) + (body.analog_camera_count ?? 0));
+  } else if (tech === "analog_hd") {
+    body.analog_camera_count = cameraCount;
+    body.ip_camera_count = 0;
+  } else {
+    body.ip_camera_count = cameraCount;
+    body.analog_camera_count = 0;
+  }
+  if (req.analogSignal) body.analog_signal = req.analogSignal;
 
   const fps = optNumber(req.fps);
   if (fps != null) body.fps = fps;

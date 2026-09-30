@@ -613,8 +613,49 @@ def _get(inp: dict[str, Any], *keys: str) -> Any:
 def normalize_input(inp: dict[str, Any]) -> dict[str, Any]:
     """Accept camelCase or snake_case API payloads."""
     recorder = _get(inp, "recorder") or {}
+    tech_raw = (_get(inp, "cctv_technology", "cctvTechnology") or "ip")
+    tech = str(tech_raw).strip().lower().replace("-", "_")
+    if tech in {"analog", "analoghd", "analogue", "analogue_hd"}:
+        tech = "analog_hd"
+    if tech not in {"ip", "analog_hd", "hybrid"}:
+        tech = "ip"
+
+    ip_count = _get(inp, "ip_camera_count", "ipCameraCount")
+    analog_count = _get(inp, "analog_camera_count", "analogCameraCount")
+    camera_count = int(_get(inp, "camera_count", "cameraCount") or 0)
+    if tech == "hybrid":
+        ip_n = int(ip_count) if _finite(ip_count) else None
+        an_n = int(analog_count) if _finite(analog_count) else None
+        if ip_n is not None and an_n is not None:
+            camera_count = max(0, ip_n) + max(0, an_n)
+        elif ip_n is not None and camera_count > 0:
+            an_n = max(0, camera_count - ip_n)
+            analog_count = an_n
+        elif an_n is not None and camera_count > 0:
+            ip_n = max(0, camera_count - an_n)
+            ip_count = ip_n
+    elif tech == "analog_hd":
+        if analog_count is None and camera_count:
+            analog_count = camera_count
+        ip_count = 0 if ip_count is None else ip_count
+    else:  # ip
+        if ip_count is None and camera_count:
+            ip_count = camera_count
+        analog_count = 0 if analog_count is None else analog_count
+
+    poe_required = _get(inp, "poe_required", "poeRequired")
+    if tech == "analog_hd":
+        poe_required = False
+    elif poe_required is None:
+        poe_required = True
+
     return {
-        "cameraCount": int(_get(inp, "camera_count", "cameraCount") or 0),
+        "cameraCount": camera_count,
+        "cctvTechnology": tech,
+        "ipCameraCount": int(ip_count) if _finite(ip_count) else None,
+        "analogCameraCount": int(analog_count) if _finite(analog_count) else None,
+        "analogSignal": _get(inp, "analog_signal", "analogSignal"),
+        "powerSupplyRequested": bool(_get(inp, "power_supply_requested", "powerSupplyRequested") or False),
         "indoorCount": _get(inp, "indoor_count", "indoorCount"),
         "outdoorCount": _get(inp, "outdoor_count", "outdoorCount"),
         "resolutionMp": _get(inp, "resolution_mp", "resolutionMp"),
@@ -626,7 +667,7 @@ def normalize_input(inp: dict[str, Any]) -> dict[str, Any]:
         "codec": _get(inp, "codec"),
         "bitrateMbpsOverride": _get(inp, "bitrate_mbps_override", "bitrateMbpsOverride"),
         "bitrateMbps": _get(inp, "bitrate_mbps", "bitrateMbps"),
-        "poeRequired": _get(inp, "poe_required", "poeRequired"),
+        "poeRequired": poe_required,
         "architectureIntent": _get(inp, "architecture_intent", "architectureIntent") or "unknown",
         "expansionHeadroom": _get(inp, "expansion_headroom", "expansionHeadroom") or 0,
         "cableDistanceMeters": _get(inp, "cable_distance_meters", "cableDistanceMeters"),
@@ -706,24 +747,67 @@ def build_cctv_requirements(raw_input: dict[str, Any]) -> dict[str, Any]:
             unresolved.extend(hdd["reasons"])
 
     poe_required = inp.get("poeRequired") is not False
-    poe = calculate_poe(inp)
-    if poe.get("powerSource") == "ENGINEERING_DEFAULT":
-        warnings.extend([r for r in poe["reasons"] if r["code"] == "POE_POWER_ENGINEERING_DEFAULT"])
-    if poe["status"] == "unresolved":
-        unresolved.extend([r for r in poe["reasons"] if r["code"] == "POE_POWER_UNRESOLVED"])
-
-    poe_architecture = evaluate_poe_architecture(
-        {
-            "poe_required": poe_required,
-            "intent": inp.get("architectureIntent") or "unknown",
-            "required_ports": poe["requiredPorts"],
-            "required_budget_w": poe.get("requiredBudgetW"),
-            "recorder_poe_ports": (inp.get("recorder") or {}).get("poePorts"),
-            "recorder_poe_budget_w": (inp.get("recorder") or {}).get("poeBudgetW"),
+    tech = inp.get("cctvTechnology") or "ip"
+    if tech == "analog_hd":
+        poe_required = False
+        poe = {
+            "status": "not_applicable",
+            "requiredPorts": 0,
+            "requiredBudgetW": 0,
+            "powerSource": "NOT_APPLICABLE",
+            "reasons": [{"code": "POE_NOT_APPLICABLE_ANALOG", "params": {"technology": tech}}],
         }
-    )
-    if poe_architecture["evaluation"] == "UNKNOWN" and poe_required:
-        unresolved.append({"code": "NVR_POE_UNKNOWN", "params": {}})
+        poe_architecture = {
+            "evaluation": "NOT_APPLICABLE",
+            "externalSwitchRequired": False,
+            "switchRequirement": None,
+            "reasons": [{"code": "POE_NOT_APPLICABLE_ANALOG", "params": {}}],
+        }
+    else:
+        # Hybrid: size PoE for IP cameras only.
+        poe_input = dict(inp)
+        if tech == "hybrid" and inp.get("ipCameraCount") is not None:
+            poe_input = {**inp, "cameraCount": int(inp["ipCameraCount"])}
+        poe = calculate_poe(poe_input)
+        if poe.get("powerSource") == "ENGINEERING_DEFAULT":
+            warnings.extend([r for r in poe["reasons"] if r["code"] == "POE_POWER_ENGINEERING_DEFAULT"])
+        if poe["status"] == "unresolved":
+            unresolved.extend([r for r in poe["reasons"] if r["code"] == "POE_POWER_UNRESOLVED"])
+
+        poe_architecture = evaluate_poe_architecture(
+            {
+                "poe_required": poe_required,
+                "intent": inp.get("architectureIntent") or "unknown",
+                "required_ports": poe["requiredPorts"],
+                "required_budget_w": poe.get("requiredBudgetW"),
+                "recorder_poe_ports": (inp.get("recorder") or {}).get("poePorts"),
+                "recorder_poe_budget_w": (inp.get("recorder") or {}).get("poeBudgetW"),
+            }
+        )
+        if poe_architecture["evaluation"] == "UNKNOWN" and poe_required:
+            unresolved.append({"code": "NVR_POE_UNKNOWN", "params": {}})
+
+    if tech == "hybrid":
+        ip_n = inp.get("ipCameraCount")
+        an_n = inp.get("analogCameraCount")
+        if ip_n is None or an_n is None or int(ip_n) < 1 or int(an_n) < 1:
+            unresolved.append(
+                {
+                    "code": "HYBRID_CAMERA_SPLIT_UNRESOLVED",
+                    "params": {"ipCameraCount": ip_n, "analogCameraCount": an_n},
+                }
+            )
+        elif int(ip_n) + int(an_n) != int(inp["cameraCount"]):
+            unresolved.append(
+                {
+                    "code": "HYBRID_CAMERA_SPLIT_MISMATCH",
+                    "params": {
+                        "ipCameraCount": ip_n,
+                        "analogCameraCount": an_n,
+                        "cameraCount": inp["cameraCount"],
+                    },
+                }
+            )
 
     infrastructure = evaluate_infrastructure(inp.get("cableDistanceMeters"))
     if infrastructure["cableStatus"] == "unresolved":

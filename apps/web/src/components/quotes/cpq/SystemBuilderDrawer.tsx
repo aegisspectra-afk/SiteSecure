@@ -15,8 +15,7 @@ import {
   type SystemDesignApplyDiverged,
   type SystemRecommendation,
 } from "@site-secure/api-client";
-import { Button, Input, Select } from "@site-secure/ui";
-import { Link } from "@tanstack/react-router";
+import { Button } from "@site-secure/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QuoteFlowSheet } from "../quote-creation/QuoteFlowSheet";
 import { he } from "../../../i18n/he";
@@ -26,6 +25,14 @@ import {
   validateCctvBuildRequirements,
   type CctvBuildRequirements,
 } from "../../../lib/cctv-build-requirements";
+import { requirementsCalcFingerprint } from "../../../lib/cctv-designer-workspace";
+import {
+  deriveDesignerReadiness,
+  type PersistTrustState,
+} from "../../../lib/cctv-designer-summary";
+import { CctvRequirementsWorkspace } from "./CctvRequirementsWorkspace";
+import { CctvEngineeringSummaryPanel } from "./CctvEngineeringSummaryPanel";
+import { CctvReviewPanel } from "./CctvReviewPanel";
 import {
   componentsFromRecommendation,
   designHasRecommendation,
@@ -37,20 +44,10 @@ import {
   requirementsToDesignDoc,
   selectionFromDesign,
 } from "../../../lib/cctv-design-persistence";
-import {
-  buildEngineeringSummary,
-  compactCompatibilityLines,
-  confidenceLabelHe,
-  formatReasonHe,
-  formatUnresolvedRequirementHe,
-  groupComponents,
-  roleLabelHe,
-} from "../../../lib/cctv-recommend-copy";
+import { commercialLabelHe } from "../../../lib/cctv-component-keys";
 import {
   canAddRecommendationToQuote,
-  initialReviewSelection,
-  isCandidateSelectable,
-  resolveComponentProduct,
+  emptyReviewSelection,
   type CctvBuildQuoteLine,
   type CctvPlannedQuoteLine,
   type PartialApplyRecovery,
@@ -70,6 +67,12 @@ type Props = {
   ensureQuoteId?: () => Promise<string>;
   api: ApiClient;
   lead?: LeadOut | null;
+  /** Real quote customer name — header/summary chips only. */
+  customerName?: string | null;
+  /** Real quote site name — header/summary chips only. */
+  siteName?: string | null;
+  /** Open review picker for this component_key after hydrate (Step 2 resolve). */
+  focusComponentKey?: string | null;
   applying?: boolean;
   applyError?: string | null;
   recovery?: PartialApplyRecovery | null;
@@ -78,7 +81,7 @@ type Props = {
     lines: CctvBuildQuoteLine[],
     opts?: { resume?: PartialApplyRecovery; planned?: CctvPlannedQuoteLine[] },
   ) => void | Promise<void>;
-  /** After successful atomic Design Apply — authoritative Quote. */
+  /** After successful atomic Design Apply — authoritative Quote (do not close drawer). */
   onAppliedQuote?: (quote: QuoteOut) => void | Promise<void>;
   /** Add/replace planned free lines (unresolved required) onto the live quote. */
   onApplyPlanned?: (planned: CctvPlannedQuoteLine[], quote?: QuoteOut | null) => Promise<QuoteOut | void>;
@@ -103,6 +106,9 @@ export function SystemBuilderDrawer({
   ensureQuoteId,
   api,
   lead,
+  customerName = null,
+  siteName = null,
+  focusComponentKey = null,
   applying = false,
   applyError = null,
   recovery = null,
@@ -121,22 +127,57 @@ export function SystemBuilderDrawer({
   const [hydrating, setHydrating] = useState(false);
   const [needsReviewHint, setNeedsReviewHint] = useState(false);
   const [recommendation, setRecommendation] = useState<SystemRecommendation | null>(null);
-  const [selection, setSelection] = useState<ReviewSelectionState>({
-    selectedByRole: {},
-    removedRoles: new Set(),
-  });
-  const [swapRole, setSwapRole] = useState<string | null>(null);
+  const [selection, setSelection] = useState<ReviewSelectionState>(emptyReviewSelection());
+  const [needsReviewKeys, setNeedsReviewKeys] = useState<Set<string>>(() => new Set());
   const [appliedOnce, setAppliedOnce] = useState(false);
+  const [applySucceeded, setApplySucceeded] = useState(false);
   const [lastLines, setLastLines] = useState<CctvBuildQuoteLine[] | null>(null);
   const [localApplying, setLocalApplying] = useState(false);
   const [localApplyError, setLocalApplyError] = useState<string | null>(null);
   const [divergence, setDivergence] = useState<SystemDesignApplyDiverged | null>(null);
+  const [lastCalcFingerprint, setLastCalcFingerprint] = useState<string | null>(null);
+  const [persistState, setPersistState] = useState<PersistTrustState>("idle");
+  const savedReqFingerprintRef = useRef<string | null>(null);
 
   const designRef = useRef<SystemDesign | null>(null);
   const revisionRef = useRef(1);
   const hydratingRef = useRef(false);
   const selectionPersistTimer = useRef<number | null>(null);
   const openGen = useRef(0);
+
+  const currentFingerprint = useMemo(() => requirementsCalcFingerprint(req), [req]);
+  const requirementsStale = Boolean(
+    lastCalcFingerprint && lastCalcFingerprint !== currentFingerprint,
+  );
+  const calcState: "draft" | "fresh" | "stale" = !lastCalcFingerprint
+    ? "draft"
+    : requirementsStale
+      ? "stale"
+      : "fresh";
+
+  const designerReadiness = useMemo(
+    () =>
+      deriveDesignerReadiness({
+        req,
+        calcState,
+        recommendation,
+        selection,
+        appliedOnce,
+      }),
+    [req, calcState, recommendation, selection, appliedOnce],
+  );
+
+  function updateRequirements(next: CctvBuildRequirements) {
+    setReq(next);
+    if (applySucceeded || appliedOnce) {
+      setApplySucceeded(false);
+      setAppliedOnce(false);
+    }
+    const fp = requirementsCalcFingerprint(next);
+    if (savedReqFingerprintRef.current != null && fp !== savedReqFingerprintRef.current) {
+      setPersistState((prev) => (prev === "error" ? prev : "dirty"));
+    }
+  }
 
   const addGate = useMemo(() => {
     if (!recommendation) return { ok: false as const, reason: "empty" as const };
@@ -150,18 +191,25 @@ export function SystemBuilderDrawer({
 
   function applyHydratedDesign(design: SystemDesign) {
     adoptDesign(design);
-    setReq(requirementsFromDesign(design));
+    const hydratedReq = requirementsFromDesign(design);
+    setReq(hydratedReq);
     const rec = recommendationFromDesign(design);
     if (rec && designHasRecommendation(design)) {
       setRecommendation(rec);
       setSelection(selectionFromDesign(design));
       setStep("review");
       setNeedsReviewHint((design.components ?? []).some((c) => c.needs_review));
+      setLastCalcFingerprint(requirementsCalcFingerprint(hydratedReq));
+      savedReqFingerprintRef.current = requirementsCalcFingerprint(hydratedReq);
+      setPersistState("saved");
     } else {
       setRecommendation(null);
-      setSelection({ selectedByRole: {}, removedRoles: new Set() });
+      setSelection(emptyReviewSelection());
       setStep("requirements");
       setNeedsReviewHint(false);
+      setLastCalcFingerprint(null);
+      savedReqFingerprintRef.current = null;
+      setPersistState("idle");
     }
   }
 
@@ -203,6 +251,7 @@ export function SystemBuilderDrawer({
   async function patchDesign(body: Parameters<ApiClient["patchSystemDesign"]>[2]): Promise<SystemDesign | null> {
     const current = designRef.current;
     if (!current) return null;
+    setPersistState("saving");
     try {
       const next = await api.patchSystemDesign(workspaceId, current.id, {
         ...body,
@@ -211,14 +260,20 @@ export function SystemBuilderDrawer({
       adoptDesign(next);
       setConflict(false);
       setPersistError(null);
+      if (body.requirements) {
+        savedReqFingerprintRef.current = requirementsCalcFingerprint(req);
+      }
+      setPersistState("saved");
       return next;
     } catch (err) {
       if (err instanceof ApiClientError && (err.status === 409 || err.code === "CONFLICT_REVISION")) {
         setConflict(true);
         setPersistError(he.cpqCctvDesignConflict);
+        setPersistState("error");
         return null;
       }
       setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignSaveError);
+      setPersistState("error");
       return null;
     }
   }
@@ -236,7 +291,7 @@ export function SystemBuilderDrawer({
     }
     await ensureDesign(quote, requirements);
     const calculatedAt = new Date().toISOString();
-    await patchDesign({
+    const next = await patchDesign({
       revision: revisionRef.current,
       requirements: requirementsToDesignDoc(requirements) as unknown as Record<string, unknown>,
       engineering_result: rec.engineering ?? {},
@@ -247,6 +302,10 @@ export function SystemBuilderDrawer({
       components: componentsFromRecommendation(rec, nextSelection, needsReviewRoles),
       components_replace: true,
     });
+    if (next) {
+      savedReqFingerprintRef.current = requirementsCalcFingerprint(requirements);
+      setPersistState("saved");
+    }
   }
 
   function schedulePersistSelection(next: ReviewSelectionState) {
@@ -263,6 +322,11 @@ export function SystemBuilderDrawer({
 
   function updateSelection(next: ReviewSelectionState) {
     setSelection(next);
+    // Editing after a successful Apply unlocks re-apply (idempotent replace, not append).
+    if (applySucceeded || appliedOnce) {
+      setApplySucceeded(false);
+      setAppliedOnce(false);
+    }
     schedulePersistSelection(next);
   }
 
@@ -275,10 +339,11 @@ export function SystemBuilderDrawer({
     setServerError(null);
     setPersistError(null);
     setConflict(false);
-    setSwapRole(null);
-    setAppliedOnce(false);
-    setLastLines(null);
     setNeedsReviewHint(false);
+    setNeedsReviewKeys(new Set());
+    setAppliedOnce(false);
+    setApplySucceeded(false);
+    setLastLines(null);
     setDivergence(null);
     setLocalApplyError(null);
     setLocalApplying(false);
@@ -290,7 +355,10 @@ export function SystemBuilderDrawer({
       if (!quoteId) {
         setReq(leadDefaults(lead));
         setRecommendation(null);
-        setSelection({ selectedByRole: {}, removedRoles: new Set() });
+        setSelection(emptyReviewSelection());
+        setLastCalcFingerprint(null);
+        setPersistState("idle");
+        savedReqFingerprintRef.current = null;
         setStep("requirements");
         return;
       }
@@ -307,14 +375,20 @@ export function SystemBuilderDrawer({
         } else {
           setReq(leadDefaults(lead));
           setRecommendation(null);
-          setSelection({ selectedByRole: {}, removedRoles: new Set() });
+          setSelection(emptyReviewSelection());
+          setLastCalcFingerprint(null);
+          setPersistState("idle");
+          savedReqFingerprintRef.current = null;
           setStep("requirements");
         }
       } catch (err) {
         if (cancelled || openGen.current !== gen) return;
         setReq(leadDefaults(lead));
         setRecommendation(null);
-        setSelection({ selectedByRole: {}, removedRoles: new Set() });
+        setSelection(emptyReviewSelection());
+        setLastCalcFingerprint(null);
+        setPersistState("idle");
+        savedReqFingerprintRef.current = null;
         setStep("requirements");
         setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignLoadError);
       } finally {
@@ -347,7 +421,9 @@ export function SystemBuilderDrawer({
             ? he.cpqCctvErrRetention
             : validation.messageKey === "hours"
               ? he.cpqCctvErrHours
-              : he.cpqCctvErrResolution,
+              : validation.messageKey === "hybridSplit"
+                ? he.cpqCctvErrHybridSplit
+                : he.cpqCctvErrResolution,
       );
       setServerError(null);
       return;
@@ -366,7 +442,9 @@ export function SystemBuilderDrawer({
       const merged = mergeSelectionAfterRecalculate(rec, priorSelection);
       setRecommendation(rec);
       setSelection(merged.selection);
+      setNeedsReviewKeys(merged.needsReviewRoles);
       setNeedsReviewHint(merged.needsReviewRoles.size > 0);
+      setLastCalcFingerprint(requirementsCalcFingerprint(req));
       setStep("review");
       // Persist after successful recommend — failure must not erase local review state.
       try {
@@ -421,16 +499,20 @@ export function SystemBuilderDrawer({
         setDivergence(null);
         setLocalApplyError(null);
         onClearRecovery?.();
+        setApplySucceeded(true);
+        setAppliedOnce(true);
         if (quoteAfter && onAppliedQuote) {
           await onAppliedQuote(quoteAfter);
         } else if (!resolved.length && !planned.length) {
           setLocalApplyError(he.cpqCctvAddNeedsEquipment);
           setAppliedOnce(false);
+          setApplySucceeded(false);
           return;
         } else if (!quoteAfter && onAppliedQuote && quoteId) {
           // Planned-only path without returned quote — parent refreshed via onApplyPlanned.
         }
       } catch (err) {
+        setApplySucceeded(false);
         if (err instanceof ApiClientError && err.code === "DESIGN_APPLY_DIVERGED") {
           const details = err.details as SystemDesignApplyDiverged;
           if (details?.confirmation_token) {
@@ -451,7 +533,9 @@ export function SystemBuilderDrawer({
           setAppliedOnce(false);
           return;
         }
-        setLocalApplyError(err instanceof ApiClientError ? err.message : he.quotesError);
+        setLocalApplyError(
+          `${he.cpqCctvApplyError}: ${err instanceof ApiClientError ? err.message : he.quotesError}`,
+        );
         if (!resume && !confirmationToken) setAppliedOnce(false);
       } finally {
         setLocalApplying(false);
@@ -462,7 +546,10 @@ export function SystemBuilderDrawer({
     // Legacy fallback: no durable Design yet (pre-persist / failed persist).
     try {
       await onApply(resolved, { resume: resume ?? undefined, planned });
+      setApplySucceeded(true);
+      setAppliedOnce(true);
     } catch {
+      setApplySucceeded(false);
       if (!resume) setAppliedOnce(false);
     }
   }
@@ -471,7 +558,34 @@ export function SystemBuilderDrawer({
   const shownApplyError = localApplyError || applyError;
 
   const footer =
-    step === "review" && recommendation ? (
+    applySucceeded && step === "review" ? (
+      <div className="cpq-cctv-designer-footer flex w-full flex-col gap-3" data-testid="cctv-apply-success">
+        <div className="rounded-md border border-success/40 bg-success/5 p-3 text-sm" role="status">
+          <p className="font-medium text-fg">{he.cpqCctvApplySuccessTitle}</p>
+          <p className="mt-1 text-fg-muted">{he.cpqCctvApplySuccessBody}</p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setApplySucceeded(false);
+              setAppliedOnce(false);
+            }}
+          >
+            {he.cpqCctvContinueEquipment}
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              onClose();
+            }}
+          >
+            {he.cpqCctvReturnToQuote}
+          </Button>
+        </div>
+      </div>
+    ) : step === "review" && recommendation ? (
       <div className="cpq-cctv-designer-footer flex w-full flex-col gap-2">
         {!divergence && !(recovery && lastLines) && addGate.ok && addGate.planned.length > 0 ? (
           <p className="text-xs text-fg-muted ms-auto" role="status">
@@ -484,8 +598,9 @@ export function SystemBuilderDrawer({
             variant="secondary"
             onClick={() => {
               setStep("requirements");
-              setRecommendation(null);
+              // Keep last recommendation so stale metrics remain visible until recalc.
               setAppliedOnce(false);
+              setApplySucceeded(false);
               setLastLines(null);
               setDivergence(null);
               setLocalApplyError(null);
@@ -563,7 +678,7 @@ export function SystemBuilderDrawer({
           disabled={systemType !== "cctv" || conflict}
           onClick={() => void calculate()}
         >
-          {he.cpqCctvCalculate}
+          {lastCalcFingerprint ? he.cpqCctvRecalculate : he.cpqCctvCalculate}
         </Button>
       </div>
     );
@@ -590,9 +705,10 @@ export function SystemBuilderDrawer({
           </div>
         ) : null}
         {persistError && !conflict ? (
-          <p className="text-sm text-danger" role="alert">
-            {persistError}
-          </p>
+          <div className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm" role="alert">
+            <p className="font-medium text-danger">{he.cpqCctvSaveErrorTitle}</p>
+            <p className="mt-1 text-fg-muted">{persistError}</p>
+          </div>
         ) : null}
         {needsReviewHint && step === "review" ? (
           <p className="text-sm text-fg-muted" role="status">
@@ -606,7 +722,7 @@ export function SystemBuilderDrawer({
             <ul className="mt-2 list-disc space-y-1 pe-5 text-fg-muted">
               {divergence.diverged.map((d) => (
                 <li key={d.component_id}>
-                  {roleLabelHe(d.role_key)}:{" "}
+                  {commercialLabelHe(d.role_key)}:{" "}
                   {d.kind === "MISSING"
                     ? he.cpqCctvApplyDivergedMissing
                     : he.cpqCctvApplyDivergedChanged}
@@ -619,20 +735,33 @@ export function SystemBuilderDrawer({
 
         {step === "requirements" || step === "loading" || hydrating ? (
           <>
-            <Select
-              id="cpq-system-type"
-              label={he.cpqSystemType}
-              value="cctv"
-              onChange={() => setSystemType("cctv")}
-              disabled={step === "loading" || hydrating}
-            >
-              <option value="cctv">{he.leadServiceTypes.cctv}</option>
-            </Select>
-
             {step === "loading" || hydrating ? (
               <CctvBuildProgress label={hydrating ? he.cpqCctvDesignHydrating : undefined} />
             ) : (
-              <RequirementsForm req={req} setReq={setReq} inputError={inputError} />
+              <div className="cpq-cctv-designer-shell" data-testid="cctv-designer-requirements-shell">
+                <CctvEngineeringSummaryPanel
+                  req={req}
+                  recommendation={recommendation}
+                  calcState={calcState}
+                  readiness={designerReadiness}
+                  persistState={persistState}
+                  stale={requirementsStale}
+                />
+                <CctvRequirementsWorkspace
+                  req={req}
+                  setReq={updateRequirements}
+                  inputError={inputError}
+                  stale={requirementsStale}
+                  calcState={calcState}
+                  disabled={conflict}
+                  siteContext={{
+                    customerName,
+                    siteName,
+                    leadLocation: lead?.requirements?.location,
+                    leadInfra: lead?.requirements?.infrastructure,
+                  }}
+                />
+              </div>
             )}
             {serverError ? (
               <p className="text-sm text-danger" role="alert">
@@ -643,13 +772,15 @@ export function SystemBuilderDrawer({
         ) : null}
 
         {step === "review" && recommendation && !hydrating ? (
-          <RecommendationReview
+          <CctvReviewPanel
             rec={recommendation}
             selection={selection}
             setSelection={updateSelection}
-            swapRole={swapRole}
-            setSwapRole={setSwapRole}
+            needsReviewKeys={needsReviewKeys}
             applyError={shownApplyError}
+            focusComponentKey={focusComponentKey}
+            workspaceId={workspaceId}
+            api={api}
           />
         ) : null}
       </div>
@@ -679,513 +810,5 @@ function CctvBuildProgress({ label }: { label?: string }) {
       <p className="text-sm font-semibold text-fg">{label ?? stages[index]}</p>
       <p className="text-xs text-fg-muted">{he.cpqCctvPlanningHint}</p>
     </div>
-  );
-}
-
-function RequirementsForm({
-  req,
-  setReq,
-  inputError,
-}: {
-  req: CctvBuildRequirements;
-  setReq: (next: CctvBuildRequirements) => void;
-  inputError: string | null;
-}) {
-  return (
-    <div className="grid gap-3">
-      <Input
-        id="cpq-camera-count"
-        label={he.leadsReqCamerasLabel}
-        value={String(req.cameraCount || "")}
-        onChange={(ev) =>
-          setReq({ ...req, cameraCount: Number(ev.target.value.replace(/\D/g, "") || 0) })
-        }
-        inputMode="numeric"
-      />
-      <Select
-        id="cpq-environment"
-        label={he.cpqCctvEnvironment}
-        value={req.environment}
-        onChange={(ev) =>
-          setReq({ ...req, environment: ev.target.value as CctvBuildRequirements["environment"] })
-        }
-      >
-        <option value="">{he.cpqCctvEnvironmentUnspecified}</option>
-        <option value="indoor">{he.leadsReqLocationIndoor}</option>
-        <option value="outdoor">{he.leadsReqLocationOutdoor}</option>
-        <option value="indoor_outdoor">{he.leadsReqLocationBoth}</option>
-      </Select>
-      <Select
-        id="cpq-resolution"
-        label={he.cpqCctvResolution}
-        value={String(req.resolutionMp)}
-        onChange={(ev) => setReq({ ...req, resolutionMp: Number(ev.target.value) })}
-      >
-        <option value="2">2MP</option>
-        <option value="4">4MP</option>
-        <option value="5">5MP</option>
-        <option value="8">8MP</option>
-        <option value="12">12MP</option>
-      </Select>
-      <Input
-        id="cpq-retention"
-        label={he.cpqCctvRetention}
-        value={String(req.retentionDays || "")}
-        onChange={(ev) =>
-          setReq({ ...req, retentionDays: Number(ev.target.value.replace(/\D/g, "") || 0) })
-        }
-        inputMode="numeric"
-      />
-      <Select
-        id="cpq-recording-mode"
-        label={he.cpqCctvRecordingMode}
-        value={req.recordingMode}
-        onChange={(ev) =>
-          setReq({
-            ...req,
-            recordingMode: ev.target.value as CctvBuildRequirements["recordingMode"],
-          })
-        }
-      >
-        <option value="continuous">{he.cpqCctvModeContinuous}</option>
-        <option value="scheduled">{he.cpqCctvModeScheduled}</option>
-        <option value="motion">{he.cpqCctvModeMotion}</option>
-      </Select>
-      <ToggleRow
-        label={he.cpqNeedPoe}
-        checked={req.poeRequired}
-        onChange={(checked) => setReq({ ...req, poeRequired: checked })}
-      />
-      <ToggleRow
-        label={he.cpqNeedInstall}
-        checked={req.installationRequested}
-        onChange={(checked) => setReq({ ...req, installationRequested: checked })}
-      />
-
-      <button
-        type="button"
-        className="justify-self-start text-sm text-fg-muted underline"
-        onClick={() => setReq({ ...req, showAdvanced: !req.showAdvanced })}
-        aria-expanded={req.showAdvanced}
-      >
-        {req.showAdvanced ? he.cpqCctvHideAdvanced : he.cpqCctvShowAdvanced}
-      </button>
-
-      {req.showAdvanced ? (
-        <div className="grid gap-3 rounded-[var(--radius-control)] border border-border p-3">
-          <Select
-            id="cpq-form-factor"
-            label={he.cpqCameraType}
-            value={req.formFactor}
-            onChange={(ev) =>
-              setReq({ ...req, formFactor: ev.target.value as CctvBuildRequirements["formFactor"] })
-            }
-          >
-            <option value="">{he.cpqCameraMixed}</option>
-            <option value="dome">{he.cpqCameraDome}</option>
-            <option value="bullet">{he.cpqCameraBullet}</option>
-            <option value="turret">Turret</option>
-            <option value="ptz">PTZ</option>
-          </Select>
-          <Input
-            id="cpq-fps"
-            label="FPS"
-            value={req.fps}
-            onChange={(ev) => setReq({ ...req, fps: ev.target.value })}
-            inputMode="decimal"
-          />
-          <Select
-            id="cpq-codec"
-            label="Codec"
-            value={req.codec}
-            onChange={(ev) =>
-              setReq({ ...req, codec: ev.target.value as CctvBuildRequirements["codec"] })
-            }
-          >
-            <option value="">ברירת מחדל הנדסית</option>
-            <option value="h265">H.265</option>
-            <option value="h264">H.264</option>
-          </Select>
-          <Input
-            id="cpq-bitrate"
-            label={he.cpqCctvBitrateOverride}
-            value={req.bitrateMbpsOverride}
-            onChange={(ev) => setReq({ ...req, bitrateMbpsOverride: ev.target.value })}
-            inputMode="decimal"
-          />
-          {req.recordingMode === "scheduled" ? (
-            <Input
-              id="cpq-hours"
-              label={he.cpqCctvRecordingHours}
-              value={req.recordingHoursPerDay}
-              onChange={(ev) => setReq({ ...req, recordingHoursPerDay: ev.target.value })}
-              inputMode="decimal"
-            />
-          ) : null}
-          {req.recordingMode === "motion" ? (
-            <Input
-              id="cpq-duty"
-              label={he.cpqCctvMotionDuty}
-              value={req.motionDutyCycle}
-              onChange={(ev) => setReq({ ...req, motionDutyCycle: ev.target.value })}
-              inputMode="decimal"
-            />
-          ) : null}
-          <Input
-            id="cpq-headroom"
-            label={he.cpqCctvHeadroom}
-            value={req.expansionHeadroomPercent}
-            onChange={(ev) => setReq({ ...req, expansionHeadroomPercent: ev.target.value })}
-            inputMode="decimal"
-          />
-          <Input
-            id="cpq-mfr"
-            label={he.cpqCctvManufacturerPref}
-            value={req.manufacturerPreference}
-            onChange={(ev) => setReq({ ...req, manufacturerPreference: ev.target.value })}
-          />
-          <Input
-            id="cpq-cable-m"
-            label={he.cpqCctvCableMeters}
-            value={req.cableDistanceMeters}
-            onChange={(ev) => setReq({ ...req, cableDistanceMeters: ev.target.value })}
-            inputMode="decimal"
-          />
-          <Input
-            id="cpq-cam-power"
-            label={he.cpqCctvCameraPower}
-            value={req.cameraMaxPowerW}
-            onChange={(ev) => setReq({ ...req, cameraMaxPowerW: ev.target.value })}
-            inputMode="decimal"
-          />
-          <Select
-            id="cpq-arch"
-            label={he.cpqCctvArchitecture}
-            value={req.architectureIntent}
-            onChange={(ev) =>
-              setReq({
-                ...req,
-                architectureIntent: ev.target.value as CctvBuildRequirements["architectureIntent"],
-              })
-            }
-          >
-            <option value="prefer_nvr_integrated">{he.cpqCctvArchIntegrated}</option>
-            <option value="prefer_external_switch">{he.cpqCctvArchExternal}</option>
-            <option value="unknown">{he.cpqCctvArchUnknown}</option>
-          </Select>
-          <ToggleRow
-            label={he.leadsReqRemote}
-            checked={req.remoteViewing}
-            onChange={(checked) => setReq({ ...req, remoteViewing: checked })}
-          />
-          <ToggleRow
-            label={he.cpqCctvUps}
-            checked={req.upsRequested}
-            onChange={(checked) => setReq({ ...req, upsRequested: checked })}
-          />
-          <ToggleRow
-            label={he.cpqCctvCommissioning}
-            checked={req.commissioningRequested}
-            onChange={(checked) => setReq({ ...req, commissioningRequested: checked })}
-          />
-        </div>
-      ) : null}
-
-      {inputError ? (
-        <p className="text-sm text-danger" role="alert">
-          {inputError}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function componentStatusMeta(
-  component: SystemRecommendation["components"][number],
-  picked: ReturnType<typeof resolveComponentProduct>,
-): { chip: "ready" | "needs" | "optional" | "verify"; label: string } {
-  if (picked?.confidence === "TEXT_ASSISTED") {
-    return { chip: "verify", label: he.cpqCctvChipVerify };
-  }
-  if (picked) {
-    return { chip: "ready", label: he.cpqCctvChipReady };
-  }
-  if (component.optional) {
-    return { chip: "optional", label: he.cpqCctvChipOptional };
-  }
-  return { chip: "needs", label: he.cpqCctvChipNeedsEquipment };
-}
-
-function RecommendationReview({
-  rec,
-  selection,
-  setSelection,
-  swapRole,
-  setSwapRole,
-  applyError,
-}: {
-  rec: SystemRecommendation;
-  selection: ReviewSelectionState;
-  setSelection: (next: ReviewSelectionState) => void;
-  swapRole: string | null;
-  setSwapRole: (role: string | null) => void;
-  applyError: string | null;
-}) {
-  const summary = buildEngineeringSummary(rec);
-  const visible = rec.components.filter((c) => !selection.removedRoles.has(c.role));
-  const groups = groupComponents(visible);
-  const readiness = (
-    rec as {
-      catalog_readiness?: {
-        empty_catalog?: boolean;
-        ready_for_core?: boolean;
-        missing_families?: string[];
-      };
-    }
-  ).catalog_readiness;
-  const assumptions = [...(rec.assumptions || []), ...(rec.warnings || [])]
-    .filter((r, i, arr) => arr.findIndex((x) => x.code === r.code) === i)
-    .filter((r) => {
-      // Shown in the catalog action strip — don't repeat in assumptions.
-      if (readiness?.empty_catalog && r.code === "CATALOG_EMPTY") return false;
-      if (readiness && !readiness.ready_for_core && r.code === "CATALOG_CORE_INCOMPLETE") {
-        return false;
-      }
-      return true;
-    });
-  const pendingRequired = visible.filter(
-    (c) => !c.optional && !resolveComponentProduct(c, selection),
-  ).length;
-  const archLabel =
-    summary.architecture === "external_switch"
-      ? he.cpqCctvArchExternalShort
-      : summary.architecture === "integrated"
-        ? he.cpqCctvArchIntegratedShort
-        : he.cpqCctvArchUnknown;
-
-  const metrics: string[] = [];
-  if (summary.channelTier != null) metrics.push(`${summary.channelTier}ch`);
-  if (summary.requiredTb != null) {
-    metrics.push(
-      `≈${summary.requiredTb.toFixed(1)}TB${summary.hddPacking ? ` (${summary.hddPacking})` : ""}`,
-    );
-  }
-  if (summary.poePorts != null) {
-    metrics.push(
-      `${summary.poePorts} PoE${summary.poeBudgetW != null ? ` · ≥${Math.round(summary.poeBudgetW)}W` : ""}`,
-    );
-  }
-  metrics.push(archLabel);
-
-  return (
-    <div className="cpq-cctv-designer" data-testid="cctv-designer-review">
-      <header className="cpq-cctv-designer-header">
-        <div>
-          <p className="cpq-cctv-designer-title">{he.cpqCctvSummaryTitle(summary.cameraCount)}</p>
-          <p
-            className={
-              pendingRequired > 0
-                ? "cpq-cctv-designer-status is-pending"
-                : "cpq-cctv-designer-status is-complete"
-            }
-            role="status"
-          >
-            {pendingRequired > 0
-              ? he.cpqCctvHeaderStatusPending(pendingRequired)
-              : he.cpqCctvHeaderStatusComplete}
-          </p>
-        </div>
-      </header>
-
-      {readiness?.empty_catalog ? (
-        <div className="cpq-cctv-designer-catalog" role="status">
-          <p className="cpq-cctv-designer-catalog-copy">{he.cpqCctvCatalogEmptyShort}</p>
-          <div className="cpq-cctv-designer-catalog-actions">
-            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-primary">
-              {he.cpqCctvCatalogComplete}
-            </Link>
-            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-secondary">
-              {he.cpqCctvCatalogImport}
-            </Link>
-          </div>
-        </div>
-      ) : readiness && !readiness.ready_for_core ? (
-        <div className="cpq-cctv-designer-catalog" role="status">
-          <p className="cpq-cctv-designer-catalog-copy">{he.cpqCctvCatalogIncomplete}</p>
-          <div className="cpq-cctv-designer-catalog-actions">
-            <Link to="/app/catalog" className="cpq-cctv-designer-catalog-primary">
-              {he.cpqCctvCatalogComplete}
-            </Link>
-          </div>
-        </div>
-      ) : null}
-
-      {metrics.length ? (
-        <div className="cpq-cctv-designer-metrics" aria-label={he.cpqCctvPlanSection}>
-          {metrics.map((m) => (
-            <span key={m} className="cpq-cctv-designer-metric">
-              {m}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      {applyError ? (
-        <p className="text-sm text-danger" role="alert">
-          {applyError}
-        </p>
-      ) : null}
-
-      {groups.map((group) => (
-        <section key={group.id} className="cpq-cctv-designer-group">
-          <h3 className="cpq-cctv-designer-group-title">{group.label}</h3>
-          {group.components.map((component) => {
-            const picked = resolveComponentProduct(component, selection);
-            const status = componentStatusMeta(component, picked);
-            const selectableCandidates = component.candidates.filter(isCandidateSelectable);
-            const textAssisted = component.candidates.filter((c) => c.confidence === "TEXT_ASSISTED");
-            const openSwap = swapRole === component.role;
-            const specs = compactCompatibilityLines(
-              picked?.compatibility ?? component.selected_compatibility,
-            );
-            const requirement = formatUnresolvedRequirementHe(component);
-            const whyRaw = (component.reason_codes || [])[0];
-            const whyText = whyRaw ? formatReasonHe(whyRaw) : "";
-            const reqText =
-              requirement ||
-              (component.role === "recorder" && summary.channelTier != null
-                ? he.cpqCctvNeedNvrChannels(summary.channelTier)
-                : "");
-            const showPick =
-              !picked && !component.optional && selectableCandidates.length === 0;
-
-            return (
-              <article key={component.role} className="cpq-cctv-designer-card">
-                <div className="cpq-cctv-designer-card-top">
-                  <div className="cpq-cctv-designer-card-identity">
-                    <p className="cpq-cctv-designer-role">
-                      {roleLabelHe(component.role)}
-                      {component.quantity > 1 ? ` ×${component.quantity}` : ""}
-                    </p>
-                    {reqText ? <p className="cpq-cctv-designer-req">{reqText}</p> : null}
-                  </div>
-                  <div className="cpq-cctv-designer-card-actions">
-                    <span className={`cpq-cctv-designer-chip is-${status.chip}`}>{status.label}</span>
-                    {component.optional ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          const removed = new Set(selection.removedRoles);
-                          removed.add(component.role);
-                          setSelection({ ...selection, removedRoles: removed });
-                        }}
-                      >
-                        {he.cpqCctvRemoveOptional}
-                      </Button>
-                    ) : null}
-                    {selectableCandidates.length > 1 ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setSwapRole(openSwap ? null : component.role)}
-                      >
-                        {he.cpqCctvReplace}
-                      </Button>
-                    ) : showPick ? (
-                      <Link to="/app/catalog" className="cpq-cctv-designer-pick">
-                        {he.cpqCctvPickShort}
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-
-                {picked ? (
-                  <div className="cpq-cctv-designer-product">
-                    <p className="cpq-cctv-designer-product-name">{picked.product.name}</p>
-                    <p className="cpq-cctv-designer-product-meta">
-                      {[picked.product.manufacturer, picked.product.model, picked.product.sku]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                    {specs.length ? (
-                      <p className="cpq-cctv-designer-specs">✓ {specs.join(" · ")}</p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {whyText && whyText !== reqText ? (
-                  <p className="cpq-cctv-designer-why">{whyText}</p>
-                ) : null}
-
-                {openSwap ? (
-                  <div className="cpq-cctv-designer-swap">
-                    <p className="cpq-cctv-designer-swap-title">{he.cpqCctvCandidates}</p>
-                    {selectableCandidates.map((cand) => (
-                      <label key={cand.product.id} className="cpq-cctv-designer-swap-option">
-                        <input
-                          type="radio"
-                          name={`swap-${component.role}`}
-                          checked={selection.selectedByRole[component.role] === cand.product.id}
-                          onChange={() =>
-                            setSelection({
-                              ...selection,
-                              selectedByRole: {
-                                ...selection.selectedByRole,
-                                [component.role]: cand.product.id,
-                              },
-                            })
-                          }
-                        />
-                        <span>
-                          <span className="block font-medium">{cand.product.name}</span>
-                          <span className="block text-xs text-fg-muted">
-                            {confidenceLabelHe(cand.confidence)}
-                            {cand.confidence === "TEXT_ASSISTED" ? ` — ${he.cpqCctvNeedsVerify}` : ""}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                    {textAssisted.length ? (
-                      <p className="text-xs text-fg-muted">{he.cpqCctvTextAssistedHint}</p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
-        </section>
-      ))}
-
-      {assumptions.length ? (
-        <details className="cpq-cctv-designer-assumptions">
-          <summary>
-            {he.cpqCctvAssumptionsCount(Math.min(assumptions.length, 12))}
-          </summary>
-          <ul>
-            {assumptions.slice(0, 12).map((a) => (
-              <li key={a.code}>{formatReasonHe(a)}</li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-border px-3 py-2 text-sm">
-      <span>{label}</span>
-      <input type="checkbox" checked={checked} onChange={(ev) => onChange(ev.target.checked)} />
-    </label>
   );
 }

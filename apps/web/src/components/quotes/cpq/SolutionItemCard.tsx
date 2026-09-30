@@ -42,6 +42,8 @@ export const SolutionItemCard = memo(function SolutionItemCard({
   onPersist,
   onDelete,
   onReorder,
+  engineeringRequirement,
+  onResolvePlanned,
 }: {
   item: QuoteItemOut;
   canEdit: boolean;
@@ -50,6 +52,10 @@ export const SolutionItemCard = memo(function SolutionItemCard({
   onPersist: (itemId: string, body: QuoteLinePatch) => Promise<void>;
   onDelete: (itemId: string) => void;
   onReorder: (itemId: string, direction: "up" | "down") => void;
+  /** Durable eng context from Design (planned CCTV) — never written into description. */
+  engineeringRequirement?: string | null;
+  /** Open Designer focused on this planned component (no full CCTV restart). */
+  onResolvePlanned?: () => void;
 }) {
   const [draft, setDraft] = useState<QuoteLineDraft>(() => lineDraftFromItem(item));
   const [persistError, setPersistError] = useState<string | null>(null);
@@ -62,6 +68,8 @@ export const SolutionItemCard = memo(function SolutionItemCard({
   const persistQueued = useRef(false);
   const persistGen = useRef(0);
   const mountedItemId = useRef(item.id);
+  /** Set when user deletes — skip unmount flush so a late PATCH cannot resurrect the line. */
+  const abandoned = useRef(false);
   const flushRef = useRef<(blurredField?: QuoteLineField) => Promise<void>>(async () => undefined);
 
   draftRef.current = draft;
@@ -87,8 +95,21 @@ export const SolutionItemCard = memo(function SolutionItemCard({
     });
   }, []);
 
+  const abandonPersist = useCallback(() => {
+    abandoned.current = true;
+    persistGen.current += 1;
+    dirty.current.clear();
+    focused.current.clear();
+    persistQueued.current = false;
+    if (persistTimer.current != null) {
+      window.clearTimeout(persistTimer.current);
+      persistTimer.current = null;
+    }
+  }, []);
+
   const flushPersist = useCallback(
     async (blurredField?: QuoteLineField) => {
+      if (abandoned.current) return;
       if (persistTimer.current != null) {
         window.clearTimeout(persistTimer.current);
         persistTimer.current = null;
@@ -157,9 +178,18 @@ export const SolutionItemCard = memo(function SolutionItemCard({
   useEffect(() => {
     return () => {
       if (persistTimer.current != null) window.clearTimeout(persistTimer.current);
-      void flushRef.current();
+      // Flush pending edits on stage switch — but never after delete (would race-restore the line).
+      if (!abandoned.current) void flushRef.current();
     };
   }, []);
+
+  const handleDelete = useCallback(
+    (itemId: string) => {
+      abandonPersist();
+      onDelete(itemId);
+    },
+    [abandonPersist, onDelete],
+  );
 
   function updateField(field: QuoteLineField, value: string) {
     dirty.current.add(field);
@@ -213,7 +243,7 @@ export const SolutionItemCard = memo(function SolutionItemCard({
               globalIndex={globalIndex}
               rowCount={rowCount}
               onReorder={onReorder}
-              onDelete={onDelete}
+              onDelete={handleDelete}
             />
           </div>
         ) : null}
@@ -251,6 +281,14 @@ export const SolutionItemCard = memo(function SolutionItemCard({
             ) : (
               <span className="cpq-solution-chip">{he.cpqSolutionManualItem}</span>
             )}
+            {isPlannedEquipment && engineeringRequirement ? (
+              <span className="cpq-solution-eng-req text-xs text-fg-muted">{engineeringRequirement}</span>
+            ) : null}
+            {isPlannedEquipment && canEdit && onResolvePlanned ? (
+              <Button type="button" variant="secondary" className="mt-1" onClick={onResolvePlanned}>
+                {he.cpqCctvResolveInDesigner}
+              </Button>
+            ) : null}
             {item.package_name && !isPlannedEquipment ? (
               <span className="cpq-solution-chip">
                 {he.cpqPackageBadge}: {item.package_name}
@@ -294,7 +332,7 @@ export const SolutionItemCard = memo(function SolutionItemCard({
             globalIndex={globalIndex}
             rowCount={rowCount}
             onReorder={onReorder}
-            onDelete={onDelete}
+            onDelete={handleDelete}
           />
         </div>
       ) : null}
@@ -316,6 +354,14 @@ function ReorderDelete({
   onDelete: (itemId: string) => void;
 }) {
   const deleteLock = useRef(false);
+  function triggerDelete() {
+    if (deleteLock.current) return;
+    deleteLock.current = true;
+    onDelete(itemId);
+    window.setTimeout(() => {
+      deleteLock.current = false;
+    }, 400);
+  }
   return (
     <>
       <Button
@@ -341,13 +387,13 @@ function ReorderDelete({
         variant="ghost"
         onPointerDown={(ev) => {
           if (ev.button !== 0) return;
+          // Prevent input blur→flush racing ahead of delete.
           ev.preventDefault();
-          if (deleteLock.current) return;
-          deleteLock.current = true;
-          onDelete(itemId);
-          window.setTimeout(() => {
-            deleteLock.current = false;
-          }, 400);
+          triggerDelete();
+        }}
+        onClick={(ev) => {
+          ev.preventDefault();
+          triggerDelete();
         }}
       >
         {he.quoteDeleteItem}

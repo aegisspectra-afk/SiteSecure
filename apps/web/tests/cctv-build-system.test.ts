@@ -269,7 +269,10 @@ describe("cctv recommendation review helpers", () => {
       expect(gate.lines).toEqual([]);
       expect(gate.planned.length).toBeGreaterThan(0);
       expect(gate.incomplete).toBe(true);
-      expect(gate.planned.every((p) => p.description.startsWith("נדרש ציוד"))).toBe(true);
+      expect(gate.planned.every((p) => p.description === p.name)).toBe(true);
+      expect(gate.planned.every((p) => !p.description.includes("נדרש ציוד"))).toBe(true);
+      expect(gate.planned.every((p) => p.package_name.startsWith("cctv-planned:"))).toBe(true);
+      expect(gate.planned.every((p) => Boolean(p.componentKey))).toBe(true);
       expect(gate.planned.every((p) => !("productId" in p))).toBe(true);
     }
   });
@@ -287,13 +290,13 @@ describe("cctv recommendation review helpers", () => {
 
   it("supports partial-apply recovery without duplicating roles", () => {
     const lines = [
-      { role: "camera", productId: "c1", qty: 4, optional: false },
-      { role: "recorder", productId: "n1", qty: 1, optional: false },
-      { role: "storage", productId: "h1", qty: 2, optional: false },
+      { componentKey: "camera_ip_main", role: "camera", productId: "c1", qty: 4, optional: false },
+      { componentKey: "recorder_main", role: "recorder", productId: "n1", qty: 1, optional: false },
+      { componentKey: "storage_main", role: "storage", productId: "h1", qty: 2, optional: false },
     ];
-    expect(remainingLinesAfterPartial(lines, ["camera"]).map((l) => l.role)).toEqual([
-      "recorder",
-      "storage",
+    expect(remainingLinesAfterPartial(lines, ["camera_ip_main"]).map((l) => l.componentKey)).toEqual([
+      "recorder_main",
+      "storage_main",
     ]);
     expect(linesFingerprint(lines)).toBe(linesFingerprint([...lines].reverse()));
   });

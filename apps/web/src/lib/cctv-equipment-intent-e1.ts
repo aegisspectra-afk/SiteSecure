@@ -12,6 +12,7 @@ import type {
   SystemRecommendation,
 } from "@site-secure/api-client";
 import { groupIdForRole } from "./cctv-recommend-copy";
+import { componentKeyOf } from "./cctv-component-keys";
 import {
   resolveComponentProduct,
   type ReviewSelectionState,
@@ -165,7 +166,7 @@ export function equipmentResolutionForComponent(
     equipmentIntent?: EquipmentIntent | null;
   },
 ): EquipmentResolutionStatus {
-  if (opts?.needsReviewRoles?.has(component.role) || (component as { needs_review?: boolean }).needs_review) {
+  if (opts?.needsReviewRoles?.has(componentKeyOf(component)) || (component as { needs_review?: boolean }).needs_review) {
     return "NEEDS_REVIEW";
   }
 
@@ -196,7 +197,7 @@ export function countPendingEquipment(
 ): number {
   let n = 0;
   for (const c of rec.components) {
-    if (selection.removedRoles.has(c.role)) continue;
+    if (selection.removedComponentIds.has(componentKeyOf(c))) continue;
     if (isServiceRole(c.role)) continue;
     if (c.optional && !c.blocking) continue;
     const status = equipmentResolutionForComponent(c, selection, {
@@ -316,7 +317,7 @@ export function hasIntentOnlyEquipment(
   needsReviewRoles?: Set<string>,
 ): boolean {
   for (const c of rec.components) {
-    if (selection.removedRoles.has(c.role) || isServiceRole(c.role)) continue;
+    if (selection.removedComponentIds.has(componentKeyOf(c)) || isServiceRole(c.role)) continue;
     const status = equipmentResolutionForComponent(c, selection, {
       needsReviewRoles,
       equipmentIntent: intentByRole[c.role],

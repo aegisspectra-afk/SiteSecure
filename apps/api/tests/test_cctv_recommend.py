@@ -11,7 +11,7 @@ from app.cctv_recommend import (
 )
 
 
-def _prod(pid: str, key: str, name: str, attrs: dict, mfr: str = "Acme") -> dict:
+def _prod(pid: str, key: str, name: str, attrs: dict, mfr: str = "Acme", unit: str = "unit") -> dict:
     return {
         "id": pid,
         "sku": f"SKU-{pid}",
@@ -19,7 +19,7 @@ def _prod(pid: str, key: str, name: str, attrs: dict, mfr: str = "Acme") -> dict
         "manufacturer": mfr,
         "model": name,
         "category_key": key,
-        "unit": "unit",
+        "unit": unit,
         "list_price": 100,
         "attributes": attrs,
         "kind": "product",
@@ -406,3 +406,249 @@ def test_empty_catalog_does_not_fabricate_products():
     rec = build_system_recommendation(raw_input=raw, catalog_products=[])
     assert all(c.get("selected_product") is None for c in rec["components"])
     assert rec["engineering"]["storage"]["requiredTbWithOverhead"] is not None
+    # Slice B: server emits stable component_key (client must not invent from role alone)
+    keys = {c["component_key"] for c in rec["components"]}
+    assert "camera_ip_main" in keys
+    assert "recorder_main" in keys
+    assert "storage_main" in keys
+
+
+def _slice_b_catalog():
+    return [
+        _prod(
+            "ip1",
+            "cameras_ip",
+            "IP Cam 4MP",
+            {"resolution_mp": 4, "environment": "outdoor", "poe": True, "max_power_w": 8},
+        ),
+        _prod(
+            "an1",
+            "cameras_analog",
+            "Analog Cam 4MP",
+            {"resolution_mp": 4, "environment": "outdoor", "poe": False, "max_power_w": 12},
+        ),
+        _prod(
+            "nvr1",
+            "nvr",
+            "NVR 16",
+            {"channels": 16, "drive_bays": 4, "max_hdd_tb": 12, "poe_ports": 16, "poe_budget_w": 200},
+        ),
+        _prod(
+            "xvr1",
+            "dvr_xvr",
+            "XVR 16 Hybrid",
+            {
+                "channels": 16,
+                "ip_channels": 8,
+                "analog_channels": 8,
+                "drive_bays": 4,
+                "max_hdd_tb": 12,
+            },
+        ),
+        _prod(
+            "dvr1",
+            "dvr_xvr",
+            "DVR 16 Analog",
+            {"channels": 16, "analog_channels": 16, "drive_bays": 4, "max_hdd_tb": 12},
+        ),
+        _prod("h1", "hdd_recorders", "HDD 10", {"capacity_tb": 10, "surveillance_grade": True}),
+        _prod("s1", "switch", "SW 16", {"ports": 16, "poe_ports": 16, "poe_budget_w": 200}),
+        _prod("cat6", "cat6", "CAT6", {}, mfr="CableCo", unit="m"),
+        _prod("rg59", "coax", "RG59", {}, mfr="CableCo", unit="m"),
+    ]
+
+
+def test_slice_b_ip_emits_component_keys_and_nvr_path():
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 4,
+            "cctv_technology": "ip",
+            "resolution_mp": 4,
+            "environment": "outdoor",
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+            "poe_required": True,
+            "camera_max_power_w": 8,
+            "architecture_intent": "prefer_nvr_integrated",
+            "cable_distance_meters": 40,
+        },
+        catalog_products=_slice_b_catalog(),
+    )
+    by_key = {c["component_key"]: c for c in rec["components"]}
+    assert "camera_ip_main" in by_key
+    assert "camera_analog_main" not in by_key
+    assert "cable_analog_main" not in by_key
+    assert "power_supply_main" not in by_key
+    assert by_key["recorder_main"]["selected_product"]["category_key"] == "nvr"
+    assert by_key["camera_ip_main"]["quantity"] == 4
+    assert any(r["code"] == "RECORDER_TECHNOLOGY_PATH" for r in by_key["recorder_main"]["reason_codes"])
+    tech_params = next(
+        r["params"] for r in by_key["recorder_main"]["reason_codes"] if r["code"] == "RECORDER_TECHNOLOGY_PATH"
+    )
+    assert tech_params["technology"] == "ip"
+    assert "nvr" in tech_params["allowedCategories"]
+    assert "dvr_xvr" not in tech_params["allowedCategories"]
+
+
+def test_slice_b_analog_no_poe_dvr_coax_power_supply():
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 4,
+            "cctv_technology": "analog_hd",
+            "resolution_mp": 4,
+            "environment": "outdoor",
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+            "poe_required": True,  # must be forced off for analog
+            "camera_max_power_w": 12,
+            "cable_distance_meters": 40,
+            "analog_signal": "tvi",
+        },
+        catalog_products=_slice_b_catalog(),
+    )
+    by_key = {c["component_key"]: c for c in rec["components"]}
+    assert "camera_analog_main" in by_key
+    assert "camera_ip_main" not in by_key
+    assert "poe_switch_main" not in by_key
+    assert "cable_ip_main" not in by_key
+    assert "cable_analog_main" in by_key
+    assert "power_supply_main" in by_key
+    assert rec["engineering"]["poe"]["status"] == "not_applicable"
+    assert rec["engineering"]["poeArchitecture"]["evaluation"] == "NOT_APPLICABLE"
+    assert by_key["recorder_main"]["selected_product"]["category_key"] == "dvr_xvr"
+    assert by_key["recorder_main"]["selected_product"]["id"] == "dvr1"
+    assert by_key["cable_analog_main"]["selected_product"]["category_key"] == "coax"
+    # Category alone must not invent PASS for hybrid channel attrs — analog path uses analog_channels
+    compat = by_key["recorder_main"].get("selected_compatibility") or {}
+    assert compat.get("analog_channels") == "PASS"
+    assert "ip_channels" not in compat
+
+
+def test_slice_b_hybrid_split_dual_cables_poe_for_ip_only():
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 8,
+            "cctv_technology": "hybrid",
+            "ip_camera_count": 5,
+            "analog_camera_count": 3,
+            "resolution_mp": 4,
+            "environment": "outdoor",
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+            "poe_required": True,
+            "camera_max_power_w": 8,
+            "cable_distance_meters": 50,
+        },
+        catalog_products=_slice_b_catalog(),
+    )
+    by_key = {c["component_key"]: c for c in rec["components"]}
+    assert by_key["camera_ip_main"]["quantity"] == 5
+    assert by_key["camera_analog_main"]["quantity"] == 3
+    assert "poe_switch_main" in by_key
+    assert "cable_ip_main" in by_key
+    assert "cable_analog_main" in by_key
+    assert "power_supply_main" in by_key
+    assert by_key["recorder_main"]["selected_product"]["id"] == "xvr1"
+    # PoE sized for IP subset only
+    assert rec["engineering"]["poe"]["requiredPorts"] == 5
+    compat = by_key["recorder_main"].get("selected_compatibility") or {}
+    assert compat.get("ip_channels") == "PASS"
+    assert compat.get("analog_channels") == "PASS"
+    # power supply slot is emitted; unresolved until catalog PSU resolver exists
+    assert by_key["power_supply_main"]["resolution_status"] == "UNRESOLVED"
+    assert by_key["power_supply_main"]["blocking"] is True
+    assert rec["blocking"] is True
+
+
+def test_slice_b_hybrid_mismatch_blocks():
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 8,
+            "cctv_technology": "hybrid",
+            "ip_camera_count": 2,
+            "analog_camera_count": 2,  # 2+2 != 8 after normalize may adjust camera_count
+            "resolution_mp": 4,
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+        },
+        catalog_products=_slice_b_catalog(),
+    )
+    # normalize sets camera_count = ip+analog when both provided
+    assert rec["input"]["cameraCount"] == 4
+    assert rec["input"]["ipCameraCount"] == 2
+    assert rec["input"]["analogCameraCount"] == 2
+
+
+def test_slice_b_hybrid_missing_split_blocks():
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 8,
+            "cctv_technology": "hybrid",
+            "resolution_mp": 4,
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+        },
+        catalog_products=_slice_b_catalog(),
+    )
+    assert any(u["code"] == "HYBRID_CAMERA_SPLIT_UNRESOLVED" for u in rec["unresolved"])
+    assert rec["blocking"] is True
+
+
+def test_slice_b_compatibility_unknown_not_pass_without_metadata():
+    products = [
+        _prod("ip1", "cameras_ip", "IP", {"resolution_mp": 4, "poe": True, "max_power_w": 8}),
+        _prod("an1", "cameras_analog", "AN", {"resolution_mp": 4, "poe": False}),
+        # channels only — no ip_channels / analog_channels proof
+        _prod("xvr_weak", "dvr_xvr", "XVR Weak", {"channels": 16, "drive_bays": 4, "max_hdd_tb": 12}),
+        _prod("h1", "hdd_recorders", "HDD 10", {"capacity_tb": 10, "surveillance_grade": True}),
+        _prod("s1", "switch", "SW 16", {"ports": 16, "poe_ports": 16, "poe_budget_w": 200}),
+    ]
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 4,
+            "cctv_technology": "hybrid",
+            "ip_camera_count": 2,
+            "analog_camera_count": 2,
+            "resolution_mp": 4,
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+            "poe_required": True,
+            "camera_max_power_w": 8,
+        },
+        catalog_products=products,
+    )
+    recorder = next(c for c in rec["components"] if c["component_key"] == "recorder_main")
+    compat = recorder.get("selected_compatibility") or {}
+    assert compat.get("ip_channels") == "UNKNOWN"
+    assert compat.get("analog_channels") == "UNKNOWN"
+    assert recorder["selected_confidence"] == "PARTIAL"
+    assert recorder["resolution_status"] == "PARTIAL"
+
+
+def test_slice_b_analog_rejects_ip_only_nvr():
+    products = [
+        _prod("an1", "cameras_analog", "AN", {"resolution_mp": 4, "environment": "indoor"}),
+        _prod("nvr1", "nvr", "NVR Only", {"channels": 16, "drive_bays": 4, "max_hdd_tb": 12}),
+        _prod("h1", "hdd_recorders", "HDD 10", {"capacity_tb": 10, "surveillance_grade": True}),
+    ]
+    rec = build_system_recommendation(
+        raw_input={
+            "camera_count": 4,
+            "cctv_technology": "analog_hd",
+            "resolution_mp": 4,
+            "retention_days": 14,
+            "recording_mode": "continuous",
+            "expansion_headroom": 0.2,
+        },
+        catalog_products=products,
+    )
+    recorder = next(c for c in rec["components"] if c["component_key"] == "recorder_main")
+    assert recorder["selected_product"] is None
+    assert recorder["resolution_status"] == "UNRESOLVED"
+    assert "poe_switch_main" not in {c["component_key"] for c in rec["components"]}

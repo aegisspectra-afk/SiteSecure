@@ -60,6 +60,8 @@ export function QuoteLinesPanel({
   onQuoteDiscountPercent,
   validUntil,
   onValidUntil,
+  plannedEngineeringByPackage,
+  onResolvePlanned,
 }: {
   items: QuoteItemOut[];
   sections?: QuoteSection[];
@@ -94,6 +96,10 @@ export function QuoteLinesPanel({
   onQuoteDiscountPercent?: (value: string) => void;
   validUntil?: string;
   onValidUntil?: (value: string) => void;
+  /** package_name → engineering requirement from Design (planned CCTV). */
+  plannedEngineeringByPackage?: Record<string, string>;
+  /** Open Designer focused on a planned component_key (from package_name). */
+  onResolvePlanned?: (packageName: string) => void;
 }) {
   const isPricing = workspaceMode === "pricing";
   const rows = sortedQuoteItems(items);
@@ -407,6 +413,16 @@ export function QuoteLinesPanel({
                           onPersist={onPersistLine}
                           onDelete={onDelete}
                           onReorder={onReorder}
+                          engineeringRequirement={
+                            item.package_name
+                              ? plannedEngineeringByPackage?.[item.package_name] ?? null
+                              : null
+                          }
+                          onResolvePlanned={
+                            onResolvePlanned && item.package_name
+                              ? () => onResolvePlanned(item.package_name!)
+                              : undefined
+                          }
                         />
                       );
                     })}

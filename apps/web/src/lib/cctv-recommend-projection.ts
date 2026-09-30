@@ -2,21 +2,35 @@
  * Project a reviewed SystemRecommendation into quote catalog lines.
  * Prices are NOT taken from the recommendation — Quote APIs remain authoritative.
  *
- * Unresolved required roles become planned free lines (no fake SKU / price).
+ * Unresolved required components become planned free lines (no fake SKU / price).
+ * Commercial name/description stay clean; engineering lives on Design + planned.engineeringRequirement.
+ * Linkage: package_name = cctv-planned:{component_key}.
  */
 
 import type {
   CctvRecommendationCandidate,
   CctvRecommendationComponent,
+  SystemDesign,
   SystemRecommendation,
 } from "@site-secure/api-client";
-import { formatUnresolvedRequirementHe, roleLabelHe } from "./cctv-recommend-copy";
+import {
+  commercialLabelHe,
+  componentKeyFromPlannedPackage,
+  componentKeyOf,
+  plannedPackageNameFor,
+  semanticRoleOf,
+} from "./cctv-component-keys";
+import { formatUnresolvedRequirementHe } from "./cctv-recommend-copy";
 
 /** Stable marker for planned CCTV equipment free-lines (send-block + idempotent replace). */
 export const CCTV_PLANNED_PACKAGE_PREFIX = "cctv-planned:";
+/** Legacy status prefix — detection only; must NOT be written into customer-facing description. */
 export const CCTV_PLANNED_DESCRIPTION_PREFIX = "נדרש ציוד";
 
 export type CctvBuildQuoteLine = {
+  /** Stable component identity. */
+  componentKey: string;
+  /** Semantic role metadata (camera, recorder, …). */
   role: string;
   productId: string;
   qty: number;
@@ -25,46 +39,57 @@ export type CctvBuildQuoteLine = {
 
 /** Unresolved engineering requirement as a commercial free line (no product_id). */
 export type CctvPlannedQuoteLine = {
+  componentKey: string;
   role: string;
   qty: number;
   optional: boolean;
+  /** Customer-facing commercial name — clean. */
   name: string;
+  /** Customer-facing description — same commercial label (never status · name · eng). */
   description: string;
+  /** Durable Design linkage: cctv-planned:{component_key} */
   package_name: string;
+  /** Engineering requirement for UI / Design hydrate — NOT for customer description. */
+  engineeringRequirement: string;
 };
 
 export function linesFingerprint(lines: CctvBuildQuoteLine[], planned: CctvPlannedQuoteLine[] = []): string {
-  const resolved = lines.map((l) => `${l.role}:${l.productId}:${l.qty}`).sort();
-  const pending = planned.map((l) => `plan:${l.role}:${l.qty}`).sort();
+  const resolved = lines.map((l) => `${l.componentKey}:${l.productId}:${l.qty}`).sort();
+  const pending = planned.map((l) => `plan:${l.componentKey}:${l.qty}`).sort();
   return [...resolved, ...pending].join("|");
 }
 
 export type PartialApplyRecovery = {
   sectionId: string;
+  /** Stable component keys already inserted. */
   addedRoles: string[];
   remaining: CctvBuildQuoteLine[];
   fingerprint: string;
 };
 
 export type ReviewSelectionState = {
-  /** role → selected product id (user override among candidates) */
-  selectedByRole: Record<string, string>;
-  /** optional roles the user removed */
-  removedRoles: Set<string>;
+  /** component_key → selected product id */
+  selectedByComponentId: Record<string, string>;
+  /** optional component_keys the user removed */
+  removedComponentIds: Set<string>;
 };
 
+export function emptyReviewSelection(): ReviewSelectionState {
+  return { selectedByComponentId: {}, removedComponentIds: new Set() };
+}
+
 export function initialReviewSelection(rec: SystemRecommendation): ReviewSelectionState {
-  const selectedByRole: Record<string, string> = {};
+  const selectedByComponentId: Record<string, string> = {};
   for (const c of rec.components) {
+    const key = componentKeyOf(c);
     const id = c.selected_product?.id;
     if (id && c.selected_confidence !== "TEXT_ASSISTED") {
-      selectedByRole[c.role] = id;
+      selectedByComponentId[key] = id;
     } else if (id && !c.blocking) {
-      // optional/non-blocking text-assisted may still be selected if user keeps it
-      selectedByRole[c.role] = id;
+      selectedByComponentId[key] = id;
     }
   }
-  return { selectedByRole, removedRoles: new Set() };
+  return { selectedByComponentId, removedComponentIds: new Set() };
 }
 
 export function isCandidateSelectable(candidate: CctvRecommendationCandidate): boolean {
@@ -77,8 +102,9 @@ export function resolveComponentProduct(
   component: CctvRecommendationComponent,
   selection: ReviewSelectionState,
 ): CctvRecommendationCandidate | null {
-  if (selection.removedRoles.has(component.role)) return null;
-  const preferredId = selection.selectedByRole[component.role];
+  const key = componentKeyOf(component);
+  if (selection.removedComponentIds.has(key)) return null;
+  const preferredId = selection.selectedByComponentId[key];
   const fromCandidates = component.candidates.find((c) => c.product.id === preferredId);
   if (fromCandidates && isCandidateSelectable(fromCandidates)) return fromCandidates;
   if (component.selected_product?.id) {
@@ -86,7 +112,6 @@ export function resolveComponentProduct(
     if (sel && isCandidateSelectable(sel) && component.selected_confidence !== "TEXT_ASSISTED") {
       return sel;
     }
-    // structured/partial selected without FAIL
     if (component.selected_confidence === "STRUCTURED" || component.selected_confidence === "PARTIAL") {
       return {
         product: component.selected_product,
@@ -99,20 +124,25 @@ export function resolveComponentProduct(
   return null;
 }
 
+export function engineeringRequirementForComponent(component: CctvRecommendationComponent): string {
+  return formatUnresolvedRequirementHe(component).trim();
+}
+
 export function plannedLineFromComponent(component: CctvRecommendationComponent): CctvPlannedQuoteLine {
   const qty = Math.max(0.001, Number(component.quantity) || 1);
-  const label = roleLabelHe(component.role);
-  const detail = formatUnresolvedRequirementHe(component);
-  const description = detail
-    ? `${CCTV_PLANNED_DESCRIPTION_PREFIX} · ${label} · ${detail}`
-    : `${CCTV_PLANNED_DESCRIPTION_PREFIX} · ${label}`;
+  const componentKey = componentKeyOf(component);
+  const role = semanticRoleOf(componentKey);
+  const label = commercialLabelHe(componentKey);
+  const engineeringRequirement = engineeringRequirementForComponent(component);
   return {
-    role: component.role,
+    componentKey,
+    role,
     qty,
     optional: Boolean(component.optional),
     name: label,
-    description,
-    package_name: `${CCTV_PLANNED_PACKAGE_PREFIX}${component.role}`,
+    description: label,
+    package_name: plannedPackageNameFor(componentKey),
+    engineeringRequirement,
   };
 }
 
@@ -123,9 +153,9 @@ export type AddRecommendationGate =
 /**
  * Apply gate: engineering INVALID_INPUT blocks entirely.
  * Resolved catalog products become quote catalog lines.
- * Unresolved REQUIRED (non-optional) roles become planned free lines — no fake SKU/price.
- * Optional unresolved roles are omitted (user may remove or leave out).
- * TEXT_ASSISTED never auto-satisfies a required core role (treated as planned).
+ * Unresolved REQUIRED (non-optional) components become planned free lines — no fake SKU/price.
+ * Optional unresolved components are omitted.
+ * TEXT_ASSISTED never auto-satisfies a required core component (treated as planned).
  */
 export function canAddRecommendationToQuote(
   rec: SystemRecommendation,
@@ -139,14 +169,16 @@ export function canAddRecommendationToQuote(
   const planned: CctvPlannedQuoteLine[] = [];
   let incomplete = false;
   for (const c of rec.components) {
-    if (selection.removedRoles.has(c.role)) continue;
+    const key = componentKeyOf(c);
+    if (selection.removedComponentIds.has(key)) continue;
     const picked = resolveComponentProduct(c, selection);
     const textAssistedCore =
       Boolean(picked) && picked!.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional;
 
     if (picked && !textAssistedCore) {
       lines.push({
-        role: c.role,
+        componentKey: key,
+        role: semanticRoleOf(key),
         productId: picked.product.id,
         qty: Math.max(
           0.001,
@@ -157,7 +189,6 @@ export function canAddRecommendationToQuote(
       continue;
     }
 
-    // Unresolved or text-assisted core → planned free line for required roles only
     if (c.blocking && !c.optional) {
       incomplete = true;
       planned.push(plannedLineFromComponent(c));
@@ -168,13 +199,13 @@ export function canAddRecommendationToQuote(
   return { ok: true, lines, planned, incomplete };
 }
 
-/** Drop roles already inserted during a partial apply. */
+/** Drop component keys already inserted during a partial apply. */
 export function remainingLinesAfterPartial(
   lines: CctvBuildQuoteLine[],
-  addedRoles: string[],
+  addedComponentKeys: string[],
 ): CctvBuildQuoteLine[] {
-  const done = new Set(addedRoles);
-  return lines.filter((l) => !done.has(l.role));
+  const done = new Set(addedComponentKeys);
+  return lines.filter((l) => !done.has(l.componentKey));
 }
 
 export function componentKindLabel(
@@ -196,5 +227,52 @@ export function isCctvPlannedQuoteItem(item: {
 }): boolean {
   const pkg = String(item.package_name || "");
   if (pkg.startsWith(CCTV_PLANNED_PACKAGE_PREFIX)) return true;
+  // Legacy detection only (old polluted descriptions).
   return String(item.description || "").startsWith(CCTV_PLANNED_DESCRIPTION_PREFIX);
+}
+
+/** Format engineering requirement from persisted Design technical_requirements. */
+export function engineeringRequirementFromTech(
+  tech: Record<string, unknown> | null | undefined,
+  roleHint?: string,
+): string {
+  if (!tech || !Object.keys(tech).length) return "";
+  const synthetic: CctvRecommendationComponent = {
+    role: roleHint || String(tech.semantic_role || "component"),
+    component_key: typeof tech.component_key === "string" ? tech.component_key : undefined,
+    label: "",
+    quantity: 1,
+    technical_requirements: tech,
+    candidates: [],
+    resolution_status: "UNRESOLVED",
+    reason_codes: [],
+    optional: false,
+    editable: true,
+    blocking: true,
+  };
+  return formatUnresolvedRequirementHe(synthetic).trim();
+}
+
+/**
+ * Resolve durable engineering requirement for a planned quote line via Design linkage.
+ * No quote schema redesign — package_name → component_key → Design.technical_requirements.
+ */
+export function engineeringRequirementForPlannedItem(
+  design: SystemDesign | null | undefined,
+  item: { package_name?: string | null },
+): string | null {
+  if (!design) return null;
+  const key = componentKeyFromPlannedPackage(item.package_name);
+  if (!key) return null;
+  const row = (design.components ?? []).find((c) => componentKeyOf({
+    role: c.role_key,
+    component_key: typeof c.technical_requirements?.component_key === "string"
+      ? String(c.technical_requirements.component_key)
+      : c.role_key,
+    technical_requirements: (c.technical_requirements as Record<string, unknown>) || {},
+  }) === key);
+  if (!row) return null;
+  const tech = (row.technical_requirements as Record<string, unknown>) || {};
+  const text = engineeringRequirementFromTech(tech, semanticRoleOf(key));
+  return text || null;
 }

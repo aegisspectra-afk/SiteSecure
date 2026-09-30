@@ -228,7 +228,7 @@ describe("E2 resolution states", () => {
       },
     ];
     camera.selected_product = camera.candidates[0]!.product;
-    const selection = { selectedByRole: { camera: "p1" }, removedRoles: new Set<string>() };
+    const selection = { selectedByComponentId: { camera_ip_main: "p1" }, removedComponentIds: new Set<string>() };
     expect(equipmentResolutionForComponent(camera, selection)).toBe("CATALOG_RESOLVED");
     expect(deriveSelectionKind("p1", { manufacturer: "ignored" })).toBe("catalog");
   });
@@ -308,7 +308,7 @@ describe("E2 hydration / transitions / recalc", () => {
         compatibility: {},
       },
     ];
-    const selection = { selectedByRole: { camera: "p1" }, removedRoles: new Set<string>() };
+    const selection = { selectedByComponentId: { camera_ip_main: "p1" }, removedComponentIds: new Set<string>() };
     const comps = componentsFromRecommendation(rec, selection, new Set(), {
       camera: { manufacturer: "Hikvision", model_reference: "old-intent" },
     });
@@ -319,7 +319,7 @@ describe("E2 hydration / transitions / recalc", () => {
 
   it("N — catalog → intent transition is explicit (intent clears catalog on persist)", () => {
     const rec = emptyCatalogRec();
-    const selection = { selectedByRole: {}, removedRoles: new Set<string>() };
+    const selection = { selectedByComponentId: {}, removedComponentIds: new Set<string>() };
     const comps = componentsFromRecommendation(rec, selection, new Set(), {
       camera: { manufacturer: "Dahua" },
     });
@@ -327,7 +327,7 @@ describe("E2 hydration / transitions / recalc", () => {
     expect(row.user_selected_product_id).toBeNull();
     expect(row.equipment_intent?.manufacturer).toBe("Dahua");
     const design = designWithComponents(rec, selection, { camera: { manufacturer: "Dahua" } });
-    expect(selectionFromDesign(design).selectedByRole.camera).toBeUndefined();
+    expect(selectionFromDesign(design).selectedByComponentId.camera_ip_main).toBeUndefined();
     expect(intentFromDesign(design).camera?.manufacturer).toBe("Dahua");
   });
 

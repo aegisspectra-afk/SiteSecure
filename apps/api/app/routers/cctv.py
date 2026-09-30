@@ -36,6 +36,11 @@ class CctvRecommendIn(BaseModel):
     camera_count: int = Field(ge=1, le=512)
     indoor_count: int | None = Field(default=None, ge=0)
     outdoor_count: int | None = Field(default=None, ge=0)
+    cctv_technology: str | None = Field(default="ip")
+    ip_camera_count: int | None = Field(default=None, ge=0, le=512)
+    analog_camera_count: int | None = Field(default=None, ge=0, le=512)
+    analog_signal: str | None = None
+    power_supply_requested: bool | None = None
     resolution_mp: float | None = Field(default=None, gt=0)
     environment: str | None = None
     form_factor: str | None = None

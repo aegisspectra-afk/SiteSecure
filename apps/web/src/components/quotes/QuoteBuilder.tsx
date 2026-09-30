@@ -30,6 +30,7 @@ import { recalculateQuotePricing } from "../../lib/quote-pricing";
 import { resolveSystemSectionName } from "../../lib/system-section";
 import {
   CCTV_PLANNED_PACKAGE_PREFIX,
+  engineeringRequirementForPlannedItem,
   isCctvPlannedQuoteItem,
   linesFingerprint,
   remainingLinesAfterPartial,
@@ -37,6 +38,8 @@ import {
   type CctvPlannedQuoteLine,
   type PartialApplyRecovery,
 } from "../../lib/cctv-recommend-projection";
+import { componentKeyFromPlannedPackage } from "../../lib/cctv-component-keys";
+import { pickActiveCctvDesign } from "../../lib/cctv-design-persistence";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { useSession } from "../../lib/session";
@@ -196,6 +199,7 @@ export function QuoteBuilder({
   );
   const [fastPathTemplateId, setFastPathTemplateId] = useState("");
   const [systemBuilderOpen, setSystemBuilderOpen] = useState(false);
+  const [systemBuilderFocusKey, setSystemBuilderFocusKey] = useState<string | null>(null);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const [templateApplyOpen, setTemplateApplyOpen] = useState(false);
   const [applyingSystemId, setApplyingSystemId] = useState<string | null>(null);
@@ -244,6 +248,8 @@ export function QuoteBuilder({
   const actionLock = useRef(false);
   const skipHistory = useRef(false);
   const createGate = useRef<Promise<QuoteOut> | null>(null);
+  /** Line ids removed optimistically — suppress applyRow/patch from resurrecting them. */
+  const pendingDeletedItemIds = useRef(new Set<string>());
   const debouncedCatalogQ = useDebouncedValue(catalogQ, 350);
 
   useEffect(() => {
@@ -283,8 +289,14 @@ export function QuoteBuilder({
   function applyRow(row: QuoteOut, opts?: { syncList?: boolean }) {
     const customerChanged = row.customer_id !== liveRef.current.customer_id;
     const siteChanged = row.site_id !== liveRef.current.site_id;
+    const deleted = pendingDeletedItemIds.current;
+    const items =
+      deleted.size > 0
+        ? (row.items ?? []).filter((item) => !deleted.has(item.id))
+        : row.items;
     const merged: QuoteOut = {
       ...row,
+      ...(items !== row.items ? { items } : {}),
       customer_name: customerChanged
         ? row.customer_name
         : (row.customer_name ?? liveRef.current.customer_name),
@@ -554,8 +566,17 @@ export function QuoteBuilder({
         section_id?: string | null;
       };
     }) => {
+      if (pendingDeletedItemIds.current.has(itemId)) {
+        return liveRef.current;
+      }
       const current = await createOnce();
+      if (pendingDeletedItemIds.current.has(itemId)) {
+        return liveRef.current;
+      }
       const row = await api.patchQuoteItem(workspaceId, current.id, itemId, body);
+      if (pendingDeletedItemIds.current.has(itemId)) {
+        return liveRef.current;
+      }
       applyRow(row);
       return row;
     },
@@ -574,8 +595,12 @@ export function QuoteBuilder({
         sku?: string | null;
       },
     ): Promise<void> => {
+      if (pendingDeletedItemIds.current.has(itemId)) return;
+      if (!(liveRef.current.items ?? []).some((item) => item.id === itemId)) return;
       const current = await createOnce();
+      if (pendingDeletedItemIds.current.has(itemId)) return;
       const row = await api.patchQuoteItem(workspaceId, current.id, itemId, body);
+      if (pendingDeletedItemIds.current.has(itemId)) return;
       applyRow(row);
     },
     [api, workspaceId],
@@ -583,14 +608,17 @@ export function QuoteBuilder({
   const deleteItem = useMutation({
     mutationFn: async (itemId: string) => {
       if (String(itemId).startsWith("optimistic-")) {
+        pendingDeletedItemIds.current.delete(itemId);
         return liveRef.current;
       }
       const current = await createOnce();
       const row = await api.deleteQuoteItem(workspaceId, current.id, itemId);
       applyRow(row);
+      pendingDeletedItemIds.current.delete(itemId);
       return row;
     },
     onMutate: (itemId) => {
+      pendingDeletedItemIds.current.add(itemId);
       const prev = liveRef.current;
       const next = {
         ...prev,
@@ -598,12 +626,19 @@ export function QuoteBuilder({
       };
       liveRef.current = next;
       setLive(next);
+      if (next.id) {
+        queryClient.setQueryData(["quote", workspaceId, next.id], next);
+      }
       return { snapshot: prev };
     },
-    onError: (err, _itemId, ctx) => {
+    onError: (err, itemId, ctx) => {
+      pendingDeletedItemIds.current.delete(itemId);
       if (ctx?.snapshot) {
         liveRef.current = ctx.snapshot;
         setLive(ctx.snapshot);
+        if (ctx.snapshot.id) {
+          queryClient.setQueryData(["quote", workspaceId, ctx.snapshot.id], ctx.snapshot);
+        }
       }
       setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
     },
@@ -831,6 +866,7 @@ export function QuoteBuilder({
     (itemId: string) => {
       if (String(itemId).startsWith("optimistic-")) {
         // Never hit the API for a row that only exists locally.
+        pendingDeletedItemIds.current.add(itemId);
         const prev = liveRef.current;
         const next = {
           ...prev,
@@ -847,6 +883,27 @@ export function QuoteBuilder({
 
   const linkedProject = linkedProjectQuery.data ?? null;
   const items = live.items ?? [];
+  const hasCctvPlannedItems = useMemo(
+    () => items.some((item) => isCctvPlannedQuoteItem(item)),
+    [items],
+  );
+  const cctvDesignQuery = useQuery({
+    queryKey: ["system-designs", workspaceId, live.id, "cctv-planned-eng"],
+    queryFn: () => api.listSystemDesigns(workspaceId, live.id),
+    enabled: Boolean(workspaceId && live.id && hasCctvPlannedItems),
+    staleTime: 15_000,
+  });
+  const plannedEngineeringByPackage = useMemo(() => {
+    const design = pickActiveCctvDesign(cctvDesignQuery.data?.items ?? []);
+    if (!design) return {} as Record<string, string>;
+    const out: Record<string, string> = {};
+    for (const item of items) {
+      if (!isCctvPlannedQuoteItem(item) || !item.package_name) continue;
+      const eng = engineeringRequirementForPlannedItem(design, item);
+      if (eng) out[item.package_name] = eng;
+    }
+    return out;
+  }, [cctvDesignQuery.data?.items, items]);
   const handleReorderItem = useCallback(
     async (itemId: string, direction: "up" | "down") => {
       const plan = neighborSortOrders(items, itemId, direction);
@@ -1241,7 +1298,7 @@ export function QuoteBuilder({
         }
       }
       for (const line of work) {
-        if (addedRoles.includes(line.role)) continue;
+        if (addedRoles.includes(line.componentKey)) continue;
         const row = await api.addQuoteItem(workspaceId, current.id, {
           product_id: line.productId,
           item_type: "catalog",
@@ -1251,14 +1308,14 @@ export function QuoteBuilder({
         });
         applyRow(row);
         commitRoute(row.id);
-        addedRoles.push(line.role);
+        addedRoles.push(line.componentKey);
       }
       if (planned.length) {
         await applyCctvPlannedLines(planned, liveRef.current);
       }
       setBuildSystemRecovery(null);
       setBuildSystemLastFingerprint(fingerprint);
-      setSystemBuilderOpen(false);
+      // Keep drawer open — SystemBuilderDrawer shows Apply success confirmation.
     } catch (err) {
       const remaining = remainingLinesAfterPartial(lines, addedRoles);
       if (addedRoles.length > 0 && remaining.length > 0 && sectionId) {
@@ -1337,7 +1394,7 @@ export function QuoteBuilder({
       commitRoute(working.id);
     }
     setBuildSystemLastFingerprint(linesFingerprint([], planned));
-    setSystemBuilderOpen(false);
+    // Keep drawer open — SystemBuilderDrawer owns Apply success UX.
     return working;
   }
 
@@ -1448,6 +1505,7 @@ export function QuoteBuilder({
     if (id === "system") {
       setQuickCatalogKind(null);
       setQuickAddOpen(false);
+      setSystemBuilderFocusKey(null);
       setSystemBuilderOpen(true);
       return;
     }
@@ -1513,6 +1571,7 @@ export function QuoteBuilder({
       return;
     }
     if (action === "buildSystem") {
+      setSystemBuilderFocusKey(null);
       setSystemBuilderOpen(true);
     }
   }
@@ -2437,7 +2496,14 @@ export function QuoteBuilder({
           {linkedLead ? (
             <LeadRequirementsCard
               lead={linkedLead}
-              onBuildSystem={canEdit && canCatalog ? () => setSystemBuilderOpen(true) : undefined}
+              onBuildSystem={
+                canEdit && canCatalog
+                  ? () => {
+                      setSystemBuilderFocusKey(null);
+                      setSystemBuilderOpen(true);
+                    }
+                  : undefined
+              }
             />
           ) : null}
 
@@ -2617,8 +2683,19 @@ export function QuoteBuilder({
           onQuoteDiscountPercent={(value) => updateDraft({ discount_percent: value, discount_amount: "" })}
           validUntil={draft.valid_until}
           onValidUntil={(value) => updateDraft({ valid_until: value })}
+          plannedEngineeringByPackage={plannedEngineeringByPackage}
+          onResolvePlanned={(packageName) => {
+            const key = componentKeyFromPlannedPackage(packageName);
+            setSystemBuilderFocusKey(key);
+            setSystemBuilderOpen(true);
+          }}
           onOpenSystemBuilder={
-            canEdit && canCatalog && activeStep === "items" ? () => setSystemBuilderOpen(true) : undefined
+            canEdit && canCatalog && activeStep === "items"
+              ? () => {
+                  setSystemBuilderFocusKey(null);
+                  setSystemBuilderOpen(true);
+                }
+              : undefined
           }
           onOpenAddSystem={canEdit && activeStep === "items" ? () => setSystemPickerOpen(true) : undefined}
           onOpenQuickAdd={canEdit && activeStep === "items" ? () => setQuickAddOpen(true) : undefined}
@@ -2906,7 +2983,9 @@ export function QuoteBuilder({
         onClose={() => {
           if (buildSystemApplying) return;
           setSystemBuilderOpen(false);
+          setSystemBuilderFocusKey(null);
           setBuildSystemApplyError(null);
+          goToStep("items");
         }}
         workspaceId={workspaceId}
         quoteId={live.id || null}
@@ -2917,6 +2996,9 @@ export function QuoteBuilder({
         }}
         api={api}
         lead={linkedLead}
+        customerName={selectedName || live.customer_name || null}
+        siteName={selectedSite?.name || live.site_name || null}
+        focusComponentKey={systemBuilderFocusKey}
         applying={buildSystemApplying}
         applyError={buildSystemApplyError}
         recovery={buildSystemRecovery}
@@ -2929,8 +3011,7 @@ export function QuoteBuilder({
           setBuildSystemRecovery(null);
           setBuildSystemApplyError(null);
           setBuildSystemLastFingerprint(null);
-          setSystemBuilderOpen(false);
-          goToStep("items");
+          // Do not close drawer — success confirmation stays visible until user chooses.
         }}
       />
     </div>

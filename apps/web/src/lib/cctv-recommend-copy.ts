@@ -8,6 +8,7 @@ import type {
   CctvRecommendationComponent,
   SystemRecommendation,
 } from "@site-secure/api-client";
+import { componentKeyOf, semanticRoleOf } from "./cctv-component-keys";
 
 export type ReviewGroupId = "cameras" | "recording" | "network" | "infrastructure" | "services";
 
@@ -16,7 +17,9 @@ const ROLE_GROUP: Record<string, ReviewGroupId> = {
   recorder: "recording",
   storage: "recording",
   poe_switch: "network",
+  network_switch: "network",
   cable: "infrastructure",
+  power_supply: "infrastructure",
   camera_install: "services",
   recorder_setup: "services",
   remote_viewing_setup: "services",
@@ -26,8 +29,9 @@ const ROLE_GROUP: Record<string, ReviewGroupId> = {
   ups: "services",
 };
 
-export function groupIdForRole(role: string): ReviewGroupId {
-  return ROLE_GROUP[role] ?? "services";
+export function groupIdForRole(roleOrKey: string): ReviewGroupId {
+  const semantic = semanticRoleOf(roleOrKey);
+  return ROLE_GROUP[semantic] ?? ROLE_GROUP[roleOrKey] ?? "services";
 }
 
 export function groupLabelHe(id: ReviewGroupId): string {
@@ -57,6 +61,8 @@ export function roleLabelHe(role: string): string {
       return "מתג PoE";
     case "cable":
       return "כבל / תשתית";
+    case "power_supply":
+      return "ספק כוח";
     case "camera_install":
       return "התקנת מצלמות";
     case "recorder_setup":
@@ -93,26 +99,70 @@ export function formatReasonHe(reason: CctvReasonCode): string {
       const tier = num(p, "selectedChannelTier") ?? num(p, "tier") ?? num(p, "channels");
       const headroom = num(p, "expansionHeadroom") ?? num(p, "headroom");
       if (cams != null && effective != null && tier != null && headroom != null && headroom > 0) {
-        return `${cams} מצלמות + ${Math.round(headroom * 100)}% מרווח הרחבה → נדרשים ${effective} ערוצים → NVR ${tier}CH`;
+        return `נדרש NVR עם לפחות ${tier} ערוצים עבור ${cams} מצלמות + ${Math.round(headroom * 100)}% מרווח הרחבה.`;
       }
       if (cams != null && tier != null) {
-        return `${cams} מצלמות → NVR ${tier} ערוצים`;
+        return `נדרש NVR עם לפחות ${tier} ערוצים עבור ${cams} מצלמות.`;
       }
       if (tier != null) return `נדרש מקליט של לפחות ${tier} ערוצים`;
       break;
     }
     case "ROLE_CAMERA_FROM_COUNT":
-      return `כמות מצלמות לפי הדרישות: ${num(p, "qty") ?? "—"}`;
+    case "ROLE_CAMERA_IP_FROM_COUNT":
+      return `כמות מצלמות IP לפי הדרישות: ${num(p, "qty") ?? "—"}`;
+    case "ROLE_CAMERA_ANALOG_FROM_COUNT":
+      return `כמות מצלמות אנלוגיות לפי הדרישות: ${num(p, "qty") ?? "—"}`;
     case "ROLE_STORAGE_FROM_RETENTION": {
       const tb = num(p, "requiredTb");
-      return tb != null ? `אחסון נדרש לפי ימי הקלטה: כ־${tb.toFixed(1)}TB` : "אחסון לפי ימי הקלטה";
+      return tb != null
+        ? `נפח האחסון נגזר מימי השמירה והגדרות ההקלטה שנבחרו (≈${tb.toFixed(1)}TB מהשרת).`
+        : "נפח האחסון נגזר מימי שמירה והגדרות הקלטה (שרת).";
     }
     case "STORAGE_BITRATE_DEFAULTED":
-      return "קצב נתונים משוער לפי ברירת מחדל הנדסית";
-    case "EXTERNAL_SWITCH_REQUIRED":
-      return "יציאות/תקציב ה־PoE של ה־NVR אינם מספיקים, לכן נוסף מתג PoE חיצוני";
+      return "קצב נתונים משוער לפי ברירת מחדל הנדסית (H.265/הנדסה בשרת)";
+    case "EXTERNAL_SWITCH_REQUIRED": {
+      const ipCams = num(p, "ipCameraCount");
+      if (String(p.technology ?? "") === "hybrid" && ipCams != null) {
+        return `נדרש מתג PoE חיצוני עבור ${ipCams} מצלמות IP במערך Hybrid.`;
+      }
+      return "נדרש מתג PoE חיצוני כי יציאות/תקציב ההספק של המקליט אינם מספיקים.";
+    }
     case "EXTERNAL_SWITCH_NOT_REQUIRED":
       return "ה־NVR מספק PoE מספיק — ללא מתג חיצוני";
+    case "POE_NOT_APPLICABLE_ANALOG":
+      return "מערך אנלוגי — PoE אינו רלוונטי";
+    case "RECORDER_TECHNOLOGY_PATH": {
+      const tech = String(p.technology ?? "");
+      const tier = num(p, "minChannels");
+      const ip = num(p, "ipCameraCount");
+      const an = num(p, "analogCameraCount");
+      if (tech === "analog_hd") {
+        return tier != null
+          ? `נבחר מסלול Analog HD → DVR/XVR עם לפחות ${tier} ערוצים.`
+          : "נבחר מסלול Analog HD → DVR/XVR.";
+      }
+      if (tech === "hybrid") {
+        if (ip != null && an != null) {
+          return `נבחר מסלול Hybrid בגלל שילוב של ${ip} IP + ${an} Analog${
+            tier != null ? ` → מקליט ≥${tier} ערוצים` : ""
+          }.`;
+        }
+        return "נבחר מסלול Hybrid → XVR / Hybrid recorder.";
+      }
+      return tier != null
+        ? `נבחר מסלול IP → NVR עם לפחות ${tier} ערוצים.`
+        : "נבחר מסלול IP → NVR.";
+    }
+    case "CABLE_IP_PATH":
+      return `כבל רשת (CAT) לפי מרחק: ${num(p, "meters") ?? "—"} מ׳`;
+    case "CABLE_ANALOG_PATH":
+      return `כבל קואקס/RG59 לפי מרחק: ${num(p, "meters") ?? "—"} מ׳`;
+    case "POWER_SUPPLY_FOR_ANALOG":
+      return `ספק כוח ל-${num(p, "analogCameraCount") ?? "—"} מצלמות אנלוגיות`;
+    case "HYBRID_CAMERA_SPLIT_UNRESOLVED":
+      return "פיצול מצלמות IP/אנלוגי בהיברידי לא הושלם";
+    case "HYBRID_CAMERA_SPLIT_MISMATCH":
+      return "סכום מצלמות IP + אנלוגי אינו תואם לסך המצלמות";
     case "CABLE_DISTANCE_UNRESOLVED":
       return "מרחק כבל לא הוזן — תשתית דורשת השלמה ידנית";
     case "PREFERRED_MANUFACTURER_UNAVAILABLE":
@@ -257,7 +307,7 @@ export function groupComponents(
   const order: ReviewGroupId[] = ["cameras", "recording", "network", "infrastructure", "services"];
   const buckets = new Map<ReviewGroupId, CctvRecommendationComponent[]>();
   for (const c of components) {
-    const id = groupIdForRole(c.role);
+    const id = groupIdForRole(componentKeyOf(c));
     const list = buckets.get(id) ?? [];
     list.push(c);
     buckets.set(id, list);

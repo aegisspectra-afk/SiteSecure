@@ -5,11 +5,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   CustomerCreateForm,
-  CustomerDirectoryFilters,
   CustomerDirectoryHeader,
   CustomerDirectoryList,
   CustomerDirectoryMetrics,
-  CustomerDirectorySearch,
+  CustomerDirectoryToolbar,
   useCustomerDirectorySearch,
   useCustomerDirectoryView,
 } from "../../../components/customers/CustomerDirectory";
@@ -169,8 +168,20 @@ function CustomersBody() {
   }
 
   return (
-    <div className="customer-dir space-y-5">
-      <CustomerDirectoryHeader
+    <div className="customer-dir space-y-4">
+      <CustomerDirectoryHeader summary={listQuery.isLoading ? null : summary} />
+
+      {!listQuery.isLoading ? <CustomerDirectoryMetrics summary={summary} /> : null}
+
+      <CustomerDirectoryToolbar
+        query={query}
+        onQueryChange={setQuery}
+        onClearSearch={() => {
+          setQuery("");
+          setFilter({});
+        }}
+        filter={filter}
+        onFilterChange={setFilter}
         canCreate={canCreate}
         creating={creating}
         onToggleCreate={() => {
@@ -178,20 +189,6 @@ function CustomersBody() {
           setFormError(null);
         }}
       />
-
-      {!listQuery.isLoading ? <CustomerDirectoryMetrics summary={summary} /> : null}
-
-      <div className="customer-dir-toolbar">
-        <CustomerDirectorySearch
-          value={query}
-          onChange={setQuery}
-          onClear={() => {
-            setQuery("");
-            setFilter({});
-          }}
-        />
-        <CustomerDirectoryFilters filter={filter} onChange={setFilter} />
-      </div>
 
       <CustomerCreateForm
         open={creating}

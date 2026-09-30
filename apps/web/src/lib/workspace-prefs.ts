@@ -29,13 +29,14 @@ export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
   showVatOnQuotes: true,
   paymentTerms: "שוטף + 30",
   pdfNotes: "",
-  siteRequireAddress: true,
-  siteRequireContact: true,
+  // Explicit True only — matches server enforcement (missing = not required).
+  siteRequireAddress: false,
+  siteRequireContact: false,
   siteRequireAccessNotes: false,
-  notifyQuoteViewed: true,
-  notifyQuoteApproved: true,
-  notifyJobOverdue: true,
-  notifyTeamInvite: true,
+  notifyQuoteViewed: false,
+  notifyQuoteApproved: false,
+  notifyJobOverdue: false,
+  notifyTeamInvite: false,
 };
 
 export function prefsFromSettings(settings: WorkspaceSettingsOut): WorkspacePrefs {
@@ -52,13 +53,13 @@ export function prefsFromSettings(settings: WorkspaceSettingsOut): WorkspacePref
     showVatOnQuotes: quotes.show_vat !== false,
     paymentTerms: String(quotes.payment_terms ?? DEFAULT_WORKSPACE_PREFS.paymentTerms),
     pdfNotes: String(quotes.pdf_notes ?? ""),
-    siteRequireAddress: sites.require_address !== false,
-    siteRequireContact: sites.require_contact !== false,
-    siteRequireAccessNotes: Boolean(sites.require_access_notes),
-    notifyQuoteViewed: notify.quote_viewed !== false,
-    notifyQuoteApproved: notify.quote_approved !== false,
-    notifyJobOverdue: notify.job_overdue !== false,
-    notifyTeamInvite: notify.team_invite !== false,
+    siteRequireAddress: sites.require_address === true,
+    siteRequireContact: sites.require_contact === true,
+    siteRequireAccessNotes: sites.require_access_notes === true,
+    notifyQuoteViewed: notify.quote_viewed === true,
+    notifyQuoteApproved: notify.quote_approved === true,
+    notifyJobOverdue: notify.job_overdue === true,
+    notifyTeamInvite: notify.team_invite === true,
   };
 }
 
@@ -80,18 +81,11 @@ export function prefsToSettingsPatch(prefs: WorkspacePrefs): Partial<WorkspaceSe
     scheduling: {
       sites: {
         require_address: prefs.siteRequireAddress,
-        require_contact: prefs.siteRequireContact,
+        // require_contact is not enforced — site model has no contact field; omit active claim.
         require_access_notes: prefs.siteRequireAccessNotes,
       },
     },
-    notifications: {
-      events: {
-        quote_viewed: prefs.notifyQuoteViewed,
-        quote_approved: prefs.notifyQuoteApproved,
-        job_overdue: prefs.notifyJobOverdue,
-        team_invite: prefs.notifyTeamInvite,
-      },
-    },
+    // Notification event toggles are not consumed by a dispatcher — do not patch as active prefs.
   };
 }
 

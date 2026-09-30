@@ -168,6 +168,7 @@ export function SidebarAccount({
   onSignOut,
   onAdmin,
   isBeta = false,
+  recognitionBadges = [],
   isPlatformAdmin = false,
   collapsed = false,
 }: {
@@ -184,6 +185,7 @@ export function SidebarAccount({
   onSignOut: () => void;
   onAdmin?: () => void;
   isBeta?: boolean;
+  recognitionBadges?: string[];
   isPlatformAdmin?: boolean;
   collapsed?: boolean;
 }) {
@@ -204,6 +206,7 @@ export function SidebarAccount({
         onSignOut={onSignOut}
         onAdmin={onAdmin}
         isBeta={isBeta}
+        recognitionBadges={recognitionBadges}
         isPlatformAdmin={isPlatformAdmin}
         compact={collapsed}
         showAegisLink

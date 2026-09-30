@@ -85,10 +85,25 @@ export function headerHealth(checks: SystemCheck[]): HeaderHealth {
   return "ready";
 }
 
+/** Failures first so the popover surfaces problems before healthy rows. */
+export function sortSystemChecks(checks: SystemCheck[]): SystemCheck[] {
+  return [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
+}
+
 export function headerHealthLabel(health: HeaderHealth): string {
   if (health === "offline") return he.systemStatusOffline;
   if (health === "degraded") return he.systemStatusDegraded;
   return he.systemStatusReady;
+}
+
+export function headerHealthAriaLabel(health: HeaderHealth): string {
+  return `${he.systemStatusTitle}: ${headerHealthLabel(health)}`;
+}
+
+export function headerHealthSummary(health: HeaderHealth): string {
+  if (health === "offline") return he.systemStatusSummaryOffline;
+  if (health === "degraded") return he.systemStatusSummaryDegraded;
+  return he.systemStatusSummaryReady;
 }
 
 export const ACCOUNT_POPOVER_MIN_WIDTH = 280;

@@ -7,7 +7,6 @@ import { he } from "../../../i18n/he";
 import {
   DEFAULT_WORKSPACE_PREFS,
   prefsFromSettings,
-  prefsToSettingsPatch,
   type WorkspacePrefs,
 } from "../../../lib/workspace-prefs";
 import { useSession } from "../../../lib/session";
@@ -49,11 +48,18 @@ function SitesSettingsBody() {
   const dirty =
     baseline != null &&
     (prefs.siteRequireAddress !== baseline.siteRequireAddress ||
-      prefs.siteRequireContact !== baseline.siteRequireContact ||
       prefs.siteRequireAccessNotes !== baseline.siteRequireAccessNotes);
 
   const save = useMutation({
-    mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
+    mutationFn: () =>
+      api.patchWorkspaceSettings(workspaceId!, {
+        scheduling: {
+          sites: {
+            require_address: prefs.siteRequireAddress,
+            require_access_notes: prefs.siteRequireAccessNotes,
+          },
+        },
+      }),
     onSuccess: async () => {
       setSaveError(null);
       setSaved(true);
@@ -80,6 +86,7 @@ function SitesSettingsBody() {
         }}
       >
         <p className="settings-section-title">{he.settingsSiteRequiredFields}</p>
+        <p className="settings-section-lead">{he.settingsSitesEnforceHint}</p>
         <label className="settings-toggle">
           <input
             type="checkbox"
@@ -91,19 +98,14 @@ function SitesSettingsBody() {
         <label className="settings-toggle">
           <input
             type="checkbox"
-            checked={prefs.siteRequireContact}
-            onChange={(ev) => setPrefs({ ...prefs, siteRequireContact: ev.target.checked })}
-          />
-          <span>{he.settingsSiteRequireContact}</span>
-        </label>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
             checked={prefs.siteRequireAccessNotes}
             onChange={(ev) => setPrefs({ ...prefs, siteRequireAccessNotes: ev.target.checked })}
           />
           <span>{he.settingsSiteRequireAccess}</span>
         </label>
+        <div className="settings-unavailable" role="note" data-testid="settings-site-contact-unavailable">
+          <p className="settings-section-lead">{he.settingsSiteContactUnavailable}</p>
+        </div>
         {saveError ? (
           <p className="text-sm text-danger" role="alert">
             {saveError}

@@ -145,6 +145,8 @@ describe("customer directory helpers", () => {
       leadsNeedingAttention: 1,
     });
     expect(formatCustomerMeta(rows[0].counts)).toContain("אתר");
+    expect(formatCustomerMeta(rows[0].counts)).toContain("הצעות");
+    expect(formatCustomerMeta({ sites: 0, quotes: 0, projects: 0, service: 0, leads: 0, leadsNeedingAttention: 0 })).toBe("");
     expect(summarizeDirectory(rows).leadsNeedingAttention).toBe(1);
   });
 

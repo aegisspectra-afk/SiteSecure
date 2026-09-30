@@ -15,6 +15,7 @@ from ..errors import ApiError
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..site_requirements import enforce_site_requirements, load_site_requirement_flags
 from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["sites"])
@@ -136,6 +137,12 @@ def create_site(
             params={"id": f"eq.{body.customer_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
         )
     )
+    flags = load_site_requirement_flags(client, workspace_id)
+    enforce_site_requirements(
+        flags=flags,
+        address=body.address,
+        access_notes=body.access_notes,
+    )
     payload = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),
@@ -188,6 +195,21 @@ def patch_site(
     patch = body.model_dump(exclude_none=True)
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    flags = load_site_requirement_flags(client, workspace_id)
+    if flags.get("require_address") or flags.get("require_access_notes"):
+        current = one_or_404(
+            client.get(
+                "sites",
+                params={
+                    "id": f"eq.{site_id}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": "address,access_notes",
+                },
+            )
+        )
+        final_address = patch["address"] if "address" in patch else current.get("address")
+        final_notes = patch["access_notes"] if "access_notes" in patch else current.get("access_notes")
+        enforce_site_requirements(flags=flags, address=final_address, access_notes=final_notes)
     row = patched_or_403(
         client.patch("sites", patch, params={"id": f"eq.{site_id}", "workspace_id": f"eq.{workspace_id}"})
     )

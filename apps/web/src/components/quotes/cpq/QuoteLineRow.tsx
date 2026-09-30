@@ -214,7 +214,15 @@ export const QuoteLineRow = memo(function QuoteLineRow({
               >
                 <ArrowDown className="size-4" />
               </Button>
-              <Button type="button" variant="ghost" onClick={() => onDelete(item.id)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onPointerDown={(ev) => {
+                  if (ev.button !== 0) return;
+                  ev.preventDefault();
+                  onDelete(item.id);
+                }}
+              >
                 {he.quoteDeleteItem}
               </Button>
             </>
@@ -334,7 +342,15 @@ export const QuoteLineRow = memo(function QuoteLineRow({
             >
               <ArrowDown className="size-4" />
             </Button>
-            <Button type="button" variant="ghost" onClick={() => onDelete(item.id)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onPointerDown={(ev) => {
+                if (ev.button !== 0) return;
+                ev.preventDefault();
+                onDelete(item.id);
+              }}
+            >
               {he.quoteDeleteItem}
             </Button>
           </div>

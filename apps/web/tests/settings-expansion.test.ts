@@ -40,12 +40,15 @@ describe("settings production nav", () => {
 
   it("covers required Hebrew settings sections and groups", () => {
     expect(he.settingsTitle).toBe("הגדרות");
-    expect(he.settingsLead).toContain("סביבת העבודה");
-    expect(he.settingsNavGroupWorkspace).toBe("חשבון וסביבה");
+    expect(he.settingsLead).toContain("סביבת עבודה");
+    expect(he.settingsNavGroupProfile).toBe("פרופיל וחשבון");
+    expect(he.settingsNavGroupWorkspace).toBe("סביבת עבודה");
     expect(he.settingsNavGroupCommercial).toBe("מסחרי");
     expect(he.settingsNavGroupOperations).toBe("תפעול");
     expect(he.settingsNavGroupTeam).toBe("צוות וגישה");
     expect(he.settingsNavGroupAdvanced).toBe("מתקדם");
+    expect(he.settingsNavProfile).toBe("פרופיל אישי");
+    expect(he.settingsEditProfile).toBe("עריכת פרופיל");
     expect(he.settingsNavGeneral).toBeTruthy();
     expect(he.settingsNavCompany).toBe("פרטי חברה ומיתוג");
     expect(he.settingsNavSystem).toBe("הגדרות מערכת");
@@ -56,8 +59,8 @@ describe("settings production nav", () => {
     expect(he.navUsers).toBe("צוות");
     expect(he.navSecurity).toBe("אבטחה");
     expect(he.securityTitle).toBe("אבטחה");
-    expect(he.accountAvatarMan).toBe("איור 1");
-    expect(he.accountAvatarWoman).toBe("איור 2");
+    expect(he.accountAvatarStyleA).toBeTruthy();
+    expect(he.accountAvatarStyleB).toBeTruthy();
     expect(he.settingsQuotesApplyHint).toBeTruthy();
     expect(he.settingsNumberingExampleHint).toBeTruthy();
   });
@@ -88,6 +91,17 @@ describe("settings role-aware access", () => {
       expect(can(role, "audit.view", FULL_FEATURES)).toBe(false);
     }
   });
+
+  it("sales/technician/viewer get personal Appearance via settings.view", () => {
+    for (const role of ["sales", "technician", "viewer"] as const) {
+      expect(can(role, "settings.view", FULL_FEATURES)).toBe(true);
+    }
+  });
+
+  it("security remains settings.general / workspace.edit — not broadened to sales", () => {
+    expect(can("sales", "settings.general", FULL_FEATURES)).toBe(false);
+    expect(canAny("manager", ["settings.general", "workspace.edit"], FULL_FEATURES)).toBe(true);
+  });
 });
 
 describe("RBAC plan gating", () => {
@@ -111,21 +125,62 @@ describe("workspace prefs ↔ settings JSON", () => {
       quotePrefix: "QT-",
       quoteValidityDays: 21,
       paymentTerms: "מקדמה 50%",
+      siteRequireAddress: true,
     };
     const patch = prefsToSettingsPatch(prefs);
+    expect(patch.notifications).toBeUndefined();
     const restored = prefsFromSettings({
       workspace_id: "w1",
       branding: {},
       taxes: {},
       quotes: patch.quotes!,
       localization: patch.localization!,
-      notifications: patch.notifications!,
+      notifications: {},
       scheduling: patch.scheduling!,
     });
     expect(restored.quotePrefix).toBe("QT-");
     expect(restored.quoteValidityDays).toBe(21);
     expect(restored.paymentTerms).toBe("מקדמה 50%");
+    expect(restored.siteRequireAddress).toBe(true);
     expect(restored.currency).toBe("ILS");
+  });
+
+  it("site requirements use explicit-true semantics", () => {
+    const restored = prefsFromSettings({
+      workspace_id: "w1",
+      branding: {},
+      taxes: {},
+      quotes: {},
+      localization: {},
+      notifications: {},
+      scheduling: { sites: {} },
+    });
+    expect(restored.siteRequireAddress).toBe(false);
+    expect(restored.siteRequireAccessNotes).toBe(false);
+  });
+});
+
+describe("SETTINGS-3B integrity honesty copy", () => {
+  it("marks notifications as future / unavailable", () => {
+    expect(he.settingsNotificationsFutureTitle).toContain("עתידיות");
+    expect(he.settingsNotificationsFutureBody).toContain("אין כרגע");
+  });
+
+  it("does not present unused numbering prefixes as active", () => {
+    expect(he.settingsNumberingUnusedTitle).toBeTruthy();
+    expect(he.settingsNumberingLead).not.toContain("פרויקטים");
+  });
+
+  it("security copy does not claim MFA/session management as active", () => {
+    expect(he.securityStatusMfaBody).toContain("אינו זמין");
+    expect(he.securityStatusSessionsBody).toContain("אינו זמין");
+    expect(he.securityPasswordResetCta).toBeTruthy();
+  });
+
+  it("appearance is described as personal device preference", () => {
+    expect(he.settingsAppearancePersonalHint).toContain("במכשיר זה");
+    expect(he.settingsProfileThemeDeviceHint).toContain("במכשיר זה");
+    expect(he.settingsProfilePrefsHeading).toBe("העדפות אישיות");
   });
 });
 

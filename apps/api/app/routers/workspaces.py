@@ -247,6 +247,7 @@ def create_invitation(
     body: InviteCreate,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
 ) -> InviteOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     role_key = (body.role_key or "technician").strip() or "technician"
@@ -273,6 +274,9 @@ def create_invitation(
         _raise_decision(decision)
     occupancy = fetch_occupancy(client, str(workspace_id))
     email = str(body.email).strip().lower()
+    from ..user_archive import raise_if_email_archived
+
+    raise_if_email_archived(service, email)
     existing = occupant_for_email(occupancy, email)
     if existing is not None:
         code = "INVITE_USER_EXISTS" if existing.kind == "member" else "INVITE_ALREADY_PENDING"

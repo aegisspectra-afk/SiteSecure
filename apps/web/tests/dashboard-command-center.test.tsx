@@ -67,7 +67,9 @@ describe("dashboard premium command center", () => {
       />,
     );
     expect(screen.queryByText("מוכן לפעולה")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: he.systemStatusTitle }));
+    fireEvent.click(
+      screen.getByRole("button", { name: `${he.systemStatusTitle}: ${he.systemStatusReady}` }),
+    );
     expect(within(screen.getByRole("dialog")).queryByText("מוכן לפעולה")).not.toBeInTheDocument();
   });
 

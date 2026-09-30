@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { isHostedBrowser, isSpaApiUrl, requireProductionApiUrl } from "./public-api-url";
+import { syncAccountAvatarWithUser } from "./account-avatar";
 import { supabase } from "./supabase";
 
 function apiClientConfig(): { baseUrl: string; sameOriginProxy: boolean } {
@@ -76,6 +77,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return null;
       }
+      syncAccountAvatarWithUser(
+        (nextUser.user_metadata ?? null) as Record<string, unknown> | null,
+      );
       try {
         const hydrated = await api.getSession();
         if (gen !== hydrateGen.current) return null;
@@ -85,7 +89,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         if (gen !== hydrateGen.current) return null;
         setSession(null);
-        setError(err instanceof Error ? err.message : "שגיאה");
+        const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
+        const message = err instanceof Error ? err.message : "שגיאה";
+        if (code === "ACCOUNT_INACTIVE") {
+          setError(message);
+          signingOut.current = true;
+          hydrateGen.current += 1;
+          tokenRef.current = null;
+          setUser(null);
+          try {
+            await supabase.auth.signOut({ scope: "local" });
+          } finally {
+            signingOut.current = false;
+          }
+          return null;
+        }
+        setError(message);
         return null;
       } finally {
         if (gen === hydrateGen.current) setLoading(false);
@@ -105,6 +124,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, authSession) => {
       if (signingOut.current && event !== "SIGNED_OUT") return;
       tokenRef.current = authSession?.access_token ?? null;
+      if (event === "USER_UPDATED" && authSession?.user) {
+        setUser(authSession.user);
+        syncAccountAvatarWithUser(
+          (authSession.user.user_metadata ?? null) as Record<string, unknown> | null,
+        );
+        return;
+      }
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "SIGNED_OUT") {
         void hydrate(authSession?.user ?? null);
       }

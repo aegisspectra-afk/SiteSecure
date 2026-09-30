@@ -373,39 +373,49 @@ def security_center(
     signals = [
         SecuritySignalOut(
             key="authentication",
-            label_he="Authentication",
+            label_he="אימות כניסה",
             status="healthy",
-            detail_he="Supabase Auth עם JWT על הבקשה הנוכחית",
+            detail_he="הכניסה לחשבון מנוהלת באמצעות ספק האימות המאובטח של SITE SECURE.",
         ),
         SecuritySignalOut(
             key="rbac",
-            label_he="RBAC",
+            label_he="הרשאות וגישה",
             status="healthy",
-            detail_he=f"תפקיד פעיל: {ctx.role_key}",
+            detail_he=f"הגישה נקבעת לפי התפקיד שלך בסביבת העבודה ({ctx.role_key}).",
         ),
         SecuritySignalOut(
             key="tenant_isolation",
-            label_he="Tenant Isolation",
+            label_he="בידוד סביבת עבודה",
             status="healthy",
-            detail_he="הבקשה מוגבלת ל־workspace של החברות",
+            detail_he="המידע שלך מופרד מסביבות עבודה אחרות.",
         ),
         SecuritySignalOut(
             key="audit_logging",
-            label_he="Audit Logging",
+            label_he="יומן ביקורת",
             status="healthy" if audit_in_plan else "not_in_plan",
-            detail_he="צפייה ביומן כלולה בתוכנית" if audit_in_plan else "צפייה ביומן כלולה בתוכנית Pro",
+            detail_he=(
+                "ניתן לצפות בפעולות מערכת ואירועי גישה רלוונטיים."
+                if audit_in_plan
+                else "צפייה ביומן אינה כלולה בתוכנית הנוכחית."
+            ),
         ),
         SecuritySignalOut(
             key="api_security",
-            label_he="API Security",
+            label_he="הגנת API",
             status="healthy",
-            detail_he="authorize() ואז RLS. הסתרת כפתור אינה אבטחה",
+            detail_he="גישה ל־API מוגנת בשרת לפי הרשאות ובידוד סביבה.",
         ),
         SecuritySignalOut(
             key="sessions",
-            label_he="Sessions",
+            label_he="סשנים ומכשירים",
             status="not_built",
-            detail_he="ניהול סשנים מפורט עדיין לא נבנה",
+            detail_he="ניהול סשנים ומכשירים אינו זמין כרגע בתוך האפליקציה.",
+        ),
+        SecuritySignalOut(
+            key="mfa",
+            label_he="אימות דו-שלבי",
+            status="not_built",
+            detail_he="אימות דו-שלבי אינו זמין כרגע בתוך SITE SECURE.",
         ),
     ]
     return SecurityCenterOut(

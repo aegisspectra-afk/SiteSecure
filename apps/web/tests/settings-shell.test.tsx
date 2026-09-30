@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { he } from "../src/i18n/he";
-import { isSettingsNavActive } from "../src/components/settings/SettingsShell";
+import { isSettingsHubPath, isSettingsNavActive } from "../src/components/settings/SettingsShell";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children, className, ...rest }: { to: string; children: ReactNode; className?: string }) => (
@@ -12,15 +12,18 @@ vi.mock("@tanstack/react-router", () => ({
   ),
   useNavigate: () => vi.fn(),
   useRouterState: ({ select }: { select: (s: { location: { pathname: string } }) => string }) =>
-    select({ location: { pathname: "/app/settings" } }),
+    select({ location: { pathname: "/app/settings/general" } }),
 }));
 
 vi.mock("../src/lib/session", () => ({
   useSession: () => ({
     session: {
+      email: "owner@example.com",
+      profile: { full_name: "בעלים בדיקה", phone: null },
       memberships: [
         {
           workspace_id: "ws1",
+          workspace_name: "סביבת בדיקה",
           role_key: "owner",
           features: ["core", "settings", "team", "audit"],
         },
@@ -29,17 +32,28 @@ vi.mock("../src/lib/session", () => ({
   }),
 }));
 
+vi.mock("../src/lib/use-account-avatar", () => ({
+  useAccountAvatar: () => "man",
+}));
+
+vi.mock("../src/lib/account-avatar", () => ({
+  accountAvatarUrl: () => "/avatar.png",
+}));
+
 import { SettingsShell } from "../src/components/settings/SettingsShell";
 
 describe("settings responsive shell", () => {
-  it("marks settings index active correctly", () => {
+  it("marks settings hub and section paths correctly", () => {
+    expect(isSettingsHubPath("/app/settings")).toBe(true);
+    expect(isSettingsHubPath("/app/settings/")).toBe(true);
+    expect(isSettingsHubPath("/app/settings/general")).toBe(false);
     expect(isSettingsNavActive("/app/settings", "/app/settings")).toBe(true);
-    expect(isSettingsNavActive("/app/settings/", "/app/settings")).toBe(true);
     expect(isSettingsNavActive("/app/settings/company", "/app/settings")).toBe(false);
     expect(isSettingsNavActive("/app/settings/company", "/app/settings/company")).toBe(true);
+    expect(isSettingsNavActive("/app/settings/general", "/app/settings/general")).toBe(true);
   });
 
-  it("renders mobile select and grouped desktop nav", () => {
+  it("renders desktop rail profile and grouped nav", () => {
     render(
       <SettingsShell>
         <div>תוכן</div>
@@ -47,16 +61,17 @@ describe("settings responsive shell", () => {
     );
     expect(screen.getByTestId("settings-shell")).toBeTruthy();
     expect(screen.getByTestId("settings-nav-select")).toBeTruthy();
-    expect(screen.getByLabelText(he.settingsNavMobileLabel)).toBeTruthy();
     expect(screen.getByTestId("settings-nav-desktop")).toBeTruthy();
-    expect(screen.getByText(he.settingsTitle)).toBeTruthy();
-    expect(screen.getByText(he.settingsLead)).toBeTruthy();
+    expect(screen.getByTestId("settings-rail-profile")).toBeTruthy();
+    expect(screen.getAllByText(he.settingsTitle).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(he.settingsNavGroupProfile)).toBeTruthy();
     expect(screen.getByText(he.settingsNavGroupWorkspace)).toBeTruthy();
     expect(screen.getByText(he.settingsNavGroupCommercial)).toBeTruthy();
     expect(screen.getByText(he.settingsNavGroupOperations)).toBeTruthy();
     expect(screen.getByText(he.settingsNavGroupTeam)).toBeTruthy();
     expect(screen.getByText(he.settingsNavGroupAdvanced)).toBeTruthy();
     expect(screen.getAllByText(he.settingsNavSystem).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(he.settingsNavProfile).length).toBeGreaterThanOrEqual(1);
     const select = screen.getByTestId("settings-nav-select") as HTMLSelectElement;
     expect(select.querySelectorAll("optgroup").length).toBeGreaterThanOrEqual(4);
   });

@@ -153,6 +153,15 @@ export function patchFieldsFromPatch(patch: QuoteLinePatch): QuoteLineField[] {
   return fields;
 }
 
+/** True when a numeric field draft is mid-edit (empty / trailing separator) and must not flush yet. */
+export function isIncompleteNumericDraft(field: QuoteLineField, raw: string): boolean {
+  if (field !== "qty" && field !== "unit_price" && field !== "discount") return false;
+  const t = raw.trim();
+  if (!t) return true;
+  if (/[.,]$/.test(t)) return true;
+  return Number.isNaN(Number(t.replace(",", ".")));
+}
+
 /**
  * Merge server item into local draft while preserving fields the user is editing
  * (focused and/or dirty with unsaved local changes).

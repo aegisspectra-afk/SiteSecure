@@ -7,7 +7,6 @@ import { he } from "../../../i18n/he";
 import {
   DEFAULT_WORKSPACE_PREFS,
   prefsFromSettings,
-  prefsToSettingsPatch,
   type WorkspacePrefs,
 } from "../../../lib/workspace-prefs";
 import { useSession } from "../../../lib/session";
@@ -54,7 +53,15 @@ function QuotesSettingsBody() {
       prefs.pdfNotes !== baseline.pdfNotes);
 
   const save = useMutation({
-    mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
+    mutationFn: () =>
+      api.patchWorkspaceSettings(workspaceId!, {
+        quotes: {
+          validity_days: prefs.quoteValidityDays,
+          show_vat: prefs.showVatOnQuotes,
+          payment_terms: prefs.paymentTerms,
+          pdf_notes: prefs.pdfNotes,
+        },
+      }),
     onSuccess: async () => {
       setSaveError(null);
       setSaved(true);
@@ -107,6 +114,7 @@ function QuotesSettingsBody() {
           />
           <span>{he.settingsShowVat}</span>
         </label>
+        <p className="settings-field-hint">{he.settingsShowVatHint}</p>
         <label className="settings-field-block">
           <span className="settings-field-label">{he.settingsPdfNotes}</span>
           <textarea

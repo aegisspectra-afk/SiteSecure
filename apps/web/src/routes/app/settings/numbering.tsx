@@ -7,7 +7,6 @@ import { he } from "../../../i18n/he";
 import {
   DEFAULT_WORKSPACE_PREFS,
   prefsFromSettings,
-  prefsToSettingsPatch,
   type WorkspacePrefs,
 } from "../../../lib/workspace-prefs";
 import { useSession } from "../../../lib/session";
@@ -53,21 +52,27 @@ function NumberingBody() {
 
   const dirty = useMemo(() => {
     if (!baseline) return false;
-    return (
-      prefs.quotePrefix !== baseline.quotePrefix ||
-      prefs.projectPrefix !== baseline.projectPrefix ||
-      prefs.siteFilePrefix !== baseline.siteFilePrefix
-    );
-  }, [baseline, prefs]);
+    return prefs.quotePrefix !== baseline.quotePrefix;
+  }, [baseline, prefs.quotePrefix]);
 
   const save = useMutation({
-    mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
+    mutationFn: () =>
+      api.patchWorkspaceSettings(workspaceId!, {
+        localization: {
+          locale: "he",
+          currency: "ILS",
+          quote_prefix: prefs.quotePrefix || "Q-",
+          // Preserve stored unused prefixes without exposing them as active settings.
+          project_prefix: baseline?.projectPrefix || prefs.projectPrefix || "P-",
+          site_file_prefix: baseline?.siteFilePrefix || prefs.siteFilePrefix || "SF-",
+        },
+      }),
     onSuccess: async () => {
       setSaveError(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
-      setBaseline(prefs);
+      setBaseline({ ...prefs });
     },
     onError: () => {
       setSaveError(he.settingsError);
@@ -102,30 +107,10 @@ function NumberingBody() {
               {he.settingsNumberingExample}: {exampleNumber(prefs.quotePrefix)}
             </p>
           </div>
-          <div className="settings-field-block">
-            <Input
-              id="prefix-project"
-              label={he.settingsPrefixProjects}
-              value={prefs.projectPrefix}
-              onChange={(ev) => setPrefs({ ...prefs, projectPrefix: ev.target.value })}
-              className="ltr-meta"
-            />
-            <p className="settings-field-hint ltr-meta">
-              {he.settingsNumberingExample}: {exampleNumber(prefs.projectPrefix)}
-            </p>
-          </div>
-          <div className="settings-field-block">
-            <Input
-              id="prefix-site"
-              label={he.settingsPrefixSiteFiles}
-              value={prefs.siteFilePrefix}
-              onChange={(ev) => setPrefs({ ...prefs, siteFilePrefix: ev.target.value })}
-              className="ltr-meta"
-            />
-            <p className="settings-field-hint ltr-meta">
-              {he.settingsNumberingExample}: {exampleNumber(prefs.siteFilePrefix)}
-            </p>
-          </div>
+        </div>
+        <div className="settings-unavailable" role="note" data-testid="settings-numbering-unused">
+          <p className="settings-section-title">{he.settingsNumberingUnusedTitle}</p>
+          <p className="settings-section-lead">{he.settingsNumberingUnusedBody}</p>
         </div>
         {saveError ? (
           <p className="text-sm text-danger" role="alert">

@@ -156,12 +156,11 @@ export function activeFilterCount(filter: CustomerDirectoryFilter): number {
 }
 
 export function formatCustomerMeta(counts: CustomerDirectoryCounts): string {
-  const parts = [
-    he.customerDirectorySites(counts.sites),
-    he.customerDirectoryQuotes(counts.quotes),
-    he.customerDirectoryProjects(counts.projects),
-    he.customerDirectoryService(counts.service),
-  ];
+  const parts: string[] = [];
+  if (counts.sites > 0) parts.push(he.customerDirectorySites(counts.sites));
+  if (counts.quotes > 0) parts.push(he.customerDirectoryQuotes(counts.quotes));
+  if (counts.projects > 0) parts.push(he.customerDirectoryProjects(counts.projects));
+  if (counts.service > 0) parts.push(he.customerDirectoryService(counts.service));
   if (counts.leads > 0) parts.push(he.customerDirectoryLeads(counts.leads));
   return parts.join(" · ");
 }

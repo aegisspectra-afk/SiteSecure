@@ -101,6 +101,8 @@ export function QuoteDocument({
   const issued = formatDay(quote.issued_at || quote.sent_at);
   const until = formatDay(quote.valid_until);
   const discountLabel = headerDiscountLabel(quote);
+  const tpl = quote.pdf_template && typeof quote.pdf_template === "object" ? quote.pdf_template : null;
+  const showVat = tpl == null || tpl.showVat !== false;
   const vatLabel =
     quote.vat_percent != null ? `${he.quoteTax} ${quote.vat_percent}%` : he.quoteTax;
   const siteName =
@@ -243,10 +245,12 @@ export function QuoteDocument({
               <dd>{discountLabel}</dd>
             </div>
           ) : null}
-          <div>
-            <dt>{vatLabel}</dt>
-            <dd>{formatMoney(quote.vat_amount, currency)}</dd>
-          </div>
+          {showVat ? (
+            <div>
+              <dt>{vatLabel}</dt>
+              <dd>{formatMoney(quote.vat_amount, currency)}</dd>
+            </div>
+          ) : null}
           <div className="quote-doc-totals-grand">
             <dt>{he.quoteTotalDue}</dt>
             <dd>{formatMoney(quote.total_gross, currency)}</dd>

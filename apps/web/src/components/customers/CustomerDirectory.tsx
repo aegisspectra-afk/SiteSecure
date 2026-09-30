@@ -1,5 +1,5 @@
 import type { CustomerOut, SiteOut } from "@site-secure/api-client";
-import { ActivityRow, Button, Input, Status, Table, TBody, TD, TH, THead, TR } from "@site-secure/ui";
+import { Button, Input, Status, Table, TBody, TD, TH, THead, TR } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -29,35 +29,17 @@ function useDebounced<T>(value: T, delay = 280): T {
 }
 
 export function CustomerDirectoryHeader({
-  canCreate,
-  creating,
-  onToggleCreate,
-  action,
+  summary,
 }: {
-  canCreate: boolean;
-  creating: boolean;
-  onToggleCreate: () => void;
-  action?: ReactNode;
+  summary?: CustomerDirectorySummary | null;
 }) {
   return (
     <header className="customer-dir-header">
       <div className="min-w-0">
         <h1 className="customer-dir-title">{he.customersTitle}</h1>
         <p className="customer-dir-lead">{he.customersLead}</p>
-      </div>
-      <div className="customer-dir-header-actions">
-        {action}
-        {canCreate ? (
-          <Button type="button" variant={creating ? "secondary" : "primary"} onClick={onToggleCreate}>
-            {creating ? (
-              he.cancel
-            ) : (
-              <>
-                <Plus aria-hidden />
-                {he.customersCreate}
-              </>
-            )}
-          </Button>
+        {summary ? (
+          <p className="customer-dir-count">{he.customerDirectoryCount(summary.total)}</p>
         ) : null}
       </div>
     </header>
@@ -66,19 +48,56 @@ export function CustomerDirectoryHeader({
 
 export function CustomerDirectoryMetrics({ summary }: { summary: CustomerDirectorySummary }) {
   const cards = [
-    { id: "total", label: he.customersTitle, value: summary.total },
     { id: "active", label: he.customerDirectoryActive, value: summary.active },
-    { id: "sites", label: he.navSiteFiles, value: summary.sites },
     { id: "leads", label: he.customerDirectoryLeadAttention, value: summary.leadsNeedingAttention },
   ];
   return (
     <div className="customer-dir-metrics" role="group" aria-label={he.customerDirectoryMetrics}>
       {cards.map((card) => (
         <div key={card.id} className="customer-dir-metric">
-          <p className="customer-dir-metric-label">{card.label}</p>
           <p className="customer-dir-metric-value tabular-nums">{card.value}</p>
+          <p className="customer-dir-metric-label">{card.label}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+export function CustomerDirectoryToolbar({
+  query,
+  onQueryChange,
+  onClearSearch,
+  filter,
+  onFilterChange,
+  canCreate,
+  creating,
+  onToggleCreate,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  onClearSearch: () => void;
+  filter: CustomerDirectoryFilter;
+  onFilterChange: (next: CustomerDirectoryFilter) => void;
+  canCreate: boolean;
+  creating: boolean;
+  onToggleCreate: () => void;
+}) {
+  return (
+    <div className="customer-dir-toolbar">
+      <CustomerDirectorySearch value={query} onChange={onQueryChange} onClear={onClearSearch} />
+      <CustomerDirectoryFilters filter={filter} onChange={onFilterChange} />
+      {canCreate ? (
+        <Button type="button" variant={creating ? "secondary" : "primary"} onClick={onToggleCreate}>
+          {creating ? (
+            he.cancel
+          ) : (
+            <>
+              <Plus aria-hidden />
+              {he.customersCreate}
+            </>
+          )}
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -204,7 +223,7 @@ export function CustomerDirectoryFilters({
 
 export function CustomerAvatar({ name }: { name: string }) {
   return (
-    <span className="customer-dir-avatar" aria-hidden>
+    <span className="customer-dir-avatar is-sm" aria-hidden>
       {customerInitials(name)}
     </span>
   );
@@ -240,29 +259,31 @@ function customerContactLine(customer: CustomerDirectoryRow): ReactNode {
 }
 
 export function CustomerRow({ customer }: { customer: CustomerDirectoryRow }) {
+  const meta = formatCustomerMeta(customer.counts);
   return (
     <Link to="/app/customers/$customerId" params={{ customerId: customer.id }} className="customer-dir-row">
-      <ActivityRow
-        leading={<span aria-hidden>{customerInitials(customer.display_name)}</span>}
-        title={customer.display_name}
-        subtitle={customerContactLine(customer)}
-        meta={
-          <>
-            <span>{formatCustomerMeta(customer.counts)}</span>
-            {customer.counts.leadsNeedingAttention > 0 ? (
-              <span className="customer-dir-row-lead">
-                {he.customerDirectoryLeadNeedsAttention(customer.counts.leadsNeedingAttention)}
-              </span>
-            ) : null}
-          </>
-        }
-        trailing={
-          <>
-            <Status label={customerStatusLabel(customer.status)} tone={customerStatusTone(customer.status)} />
-            <ChevronLeft className="customer-dir-row-chevron" aria-hidden />
-          </>
-        }
-      />
+      <CustomerAvatar name={customer.display_name} />
+      <div className="customer-dir-row-main">
+        <div className="customer-dir-row-top">
+          <span className="customer-dir-row-name">{customer.display_name}</span>
+          <Status label={customerStatusLabel(customer.status)} tone={customerStatusTone(customer.status)} />
+        </div>
+        <p className="customer-dir-row-sub">
+          {customerContactLine(customer)}
+          {meta ? (
+            <>
+              <span aria-hidden> · </span>
+              <span>{meta}</span>
+            </>
+          ) : null}
+        </p>
+        {customer.counts.leadsNeedingAttention > 0 ? (
+          <p className="customer-dir-row-lead">
+            {he.customerDirectoryLeadNeedsAttention(customer.counts.leadsNeedingAttention)}
+          </p>
+        ) : null}
+      </div>
+      <ChevronLeft className="customer-dir-row-chevron" aria-hidden />
     </Link>
   );
 }

@@ -26,6 +26,7 @@ import {
   quoteScopeBreakdown,
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
+import { recalculateQuotePricing } from "../../lib/quote-pricing";
 import { resolveSystemSectionName } from "../../lib/system-section";
 import {
   linesFingerprint,
@@ -267,7 +268,16 @@ export function QuoteBuilder({
     void queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
   }
 
-  function applyRow(row: QuoteOut) {
+  const touchQuoteListTimer = useRef<number | null>(null);
+  function scheduleTouchQuoteList() {
+    if (touchQuoteListTimer.current != null) window.clearTimeout(touchQuoteListTimer.current);
+    touchQuoteListTimer.current = window.setTimeout(() => {
+      touchQuoteListTimer.current = null;
+      touchQuoteList();
+    }, 1200);
+  }
+
+  function applyRow(row: QuoteOut, opts?: { syncList?: boolean }) {
     const customerChanged = row.customer_id !== liveRef.current.customer_id;
     const siteChanged = row.site_id !== liveRef.current.site_id;
     const merged: QuoteOut = {
@@ -287,7 +297,8 @@ export function QuoteBuilder({
       setCustomerLabel(merged.customer_name);
     }
     queryClient.setQueryData(["quote", workspaceId, merged.id], merged);
-    touchQuoteList();
+    if (opts?.syncList) touchQuoteList();
+    else scheduleTouchQuoteList();
   }
 
   async function createOnce(): Promise<QuoteOut> {
@@ -485,7 +496,43 @@ export function QuoteBuilder({
       commitRoute(row.id);
       return row;
     },
-    onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
+    onMutate: (body) => {
+      const prev = liveRef.current;
+      // Skip optimistic rows until the quote exists — createOnce replace would wipe them.
+      if (!prev.id) return { snapshot: prev };
+      const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const qty = Number(body.qty ?? 1) || 1;
+      const unitPrice = Number(body.unit_price ?? 0) || 0;
+      const optimistic = {
+        id: tempId,
+        quote_id: prev.id,
+        product_id: body.product_id ?? null,
+        description: body.description ?? "",
+        sku: body.sku ?? "",
+        qty,
+        unit_price: unitPrice,
+        discount: Number(body.discount ?? 0) || 0,
+        discount_type: body.discount_type ?? "amount",
+        line_net: qty * unitPrice,
+        item_type: body.item_type ?? (body.product_id ? "catalog" : "free"),
+        section_id: body.section_id ?? null,
+        sort_order: ((prev.items?.length ?? 0) + 1) * 10,
+      };
+      const next = {
+        ...prev,
+        items: [...(prev.items ?? []), optimistic],
+      };
+      liveRef.current = next;
+      setLive(next);
+      return { tempId, snapshot: prev };
+    },
+    onError: (err, _body, ctx) => {
+      if (ctx?.snapshot) {
+        liveRef.current = ctx.snapshot;
+        setLive(ctx.snapshot);
+      }
+      setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
+    },
   });
   const patchItem = useMutation({
     mutationFn: async ({
@@ -532,10 +579,30 @@ export function QuoteBuilder({
   );
   const deleteItem = useMutation({
     mutationFn: async (itemId: string) => {
+      if (String(itemId).startsWith("optimistic-")) {
+        return liveRef.current;
+      }
       const current = await createOnce();
       const row = await api.deleteQuoteItem(workspaceId, current.id, itemId);
       applyRow(row);
       return row;
+    },
+    onMutate: (itemId) => {
+      const prev = liveRef.current;
+      const next = {
+        ...prev,
+        items: (prev.items ?? []).filter((item) => item.id !== itemId),
+      };
+      liveRef.current = next;
+      setLive(next);
+      return { snapshot: prev };
+    },
+    onError: (err, _itemId, ctx) => {
+      if (ctx?.snapshot) {
+        liveRef.current = ctx.snapshot;
+        setLive(ctx.snapshot);
+      }
+      setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
     },
   });
   const applyTemplate = useMutation({
@@ -759,6 +826,17 @@ export function QuoteBuilder({
 
   const handleDeleteItem = useCallback(
     (itemId: string) => {
+      if (String(itemId).startsWith("optimistic-")) {
+        // Never hit the API for a row that only exists locally.
+        const prev = liveRef.current;
+        const next = {
+          ...prev,
+          items: (prev.items ?? []).filter((item) => item.id !== itemId),
+        };
+        liveRef.current = next;
+        setLive(next);
+        return;
+      }
       deleteItem.mutate(itemId);
     },
     [deleteItem.mutate],
@@ -813,6 +891,43 @@ export function QuoteBuilder({
     items.filter((item) => item.item_type !== "note").length,
   );
   const pricedCount = items.filter((item) => item.item_type !== "note" && Number(item.unit_price) > 0).length;
+  /**
+   * Always derive display money from the current lines so Planning ↔ Pricing stay in sync
+   * during optimistic add/delete (server totals lag until applyRow).
+   * Server remains canonical after persist; applyRow replaces both items and totals together.
+   */
+  const displayTotals = useMemo(() => {
+    const local = recalculateQuotePricing(items, {
+      vat_percent: live.vat_percent,
+      discount_type: live.discount_type,
+      discount_value: live.discount_value,
+      sections: live.sections,
+    });
+    const hasOptimistic = items.some((item) => String(item.id).startsWith("optimistic-"));
+    const serverGross = Number(live.total_gross ?? 0);
+    const revenueSynced = !hasOptimistic && Math.abs(serverGross - local.total_gross) < 0.02;
+    return {
+      subtotal_net: local.subtotal_net,
+      vat_amount: local.vat_amount,
+      total_gross: local.total_gross,
+      quote_discount_amount: local.quote_discount_amount,
+      section_discount_amount: local.section_discount_amount,
+      // Prefer server cost/margin only when revenue already matches (authorized cost fields).
+      cost_total: revenueSynced ? live.cost_total : local.cost_total,
+      margin_amount: revenueSynced ? live.margin_amount : local.margin_amount,
+      margin_percent: revenueSynced ? live.margin_percent : local.margin_percent,
+    };
+  }, [
+    items,
+    live.total_gross,
+    live.cost_total,
+    live.margin_amount,
+    live.margin_percent,
+    live.vat_percent,
+    live.discount_type,
+    live.discount_value,
+    live.sections,
+  ]);
   const scopeBreakdown = useMemo(() => quoteScopeBreakdown(items), [items]);
   const canSendNow = Boolean(live.id) && canSend && live.status === "draft" && canSendWithGaps(liveGaps);
   const completeness = completenessScore(liveGaps);
@@ -1234,11 +1349,15 @@ export function QuoteBuilder({
   function handleQuickAddAction(id: QuickAddActionId) {
     if (id === "free") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
+      goToStep("items");
       addItem.mutate({ item_type: "free", description: "", qty: 1, unit_price: 0 });
       return;
     }
     if (id === "note") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
+      goToStep("items");
       addItem.mutate({ item_type: "note", description: "", qty: 1, unit_price: 0 });
       return;
     }
@@ -1250,29 +1369,39 @@ export function QuoteBuilder({
     }
     if (id === "section") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
+      goToStep("items");
       addSection.mutate();
       return;
     }
     if (id === "system") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
       setSystemBuilderOpen(true);
       return;
     }
     if (id === "catalog") {
       setQuickCatalogKind(null);
-      window.setTimeout(() => document.getElementById("catalog-search")?.focus(), 40);
+      // Keep dialog open in catalog-search mode (parent leaves quick-add open).
+      window.setTimeout(() => inputFocusCatalogSearch(), 40);
       return;
     }
     if (id === "template") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
       setTemplatesReady(true);
       setTemplateApplyOpen(true);
       return;
     }
     if (id === "addSystem") {
       setQuickCatalogKind(null);
+      setQuickAddOpen(false);
       setSystemPickerOpen(true);
     }
+  }
+
+  function inputFocusCatalogSearch() {
+    document.getElementById("catalog-search")?.focus();
   }
 
   function handleMobileAddPick(action: QuoteMobileAddAction) {
@@ -1283,6 +1412,7 @@ export function QuoteBuilder({
       return;
     }
     if (action === "free") {
+      goToStep("items");
       addItem.mutate({ item_type: "free", description: "", qty: 1, unit_price: 0 });
       return;
     }
@@ -1293,10 +1423,12 @@ export function QuoteBuilder({
       return;
     }
     if (action === "note") {
+      goToStep("items");
       addItem.mutate({ item_type: "note", description: "", qty: 1, unit_price: 0 });
       return;
     }
     if (action === "section") {
+      goToStep("items");
       addSection.mutate();
       return;
     }
@@ -1473,6 +1605,15 @@ export function QuoteBuilder({
       general_terms: draft.general_terms || live.general_terms,
       customer_notes: draft.customer_notes || live.customer_notes,
       valid_until: draft.valid_until || live.valid_until,
+      // Keep live preview money aligned with Planning/Pricing during optimistic line edits.
+      subtotal_net: displayTotals.subtotal_net,
+      vat_amount: displayTotals.vat_amount,
+      total_gross: displayTotals.total_gross,
+      quote_discount_amount: displayTotals.quote_discount_amount,
+      section_discount_amount: displayTotals.section_discount_amount,
+      cost_total: displayTotals.cost_total,
+      margin_amount: displayTotals.margin_amount,
+      margin_percent: displayTotals.margin_percent,
     },
     {
       companyName,
@@ -1735,15 +1876,15 @@ export function QuoteBuilder({
             <QuoteSummaryAside
               currency={currency}
               vatPercent={vatPercent}
-              subtotalNet={live.subtotal_net}
-              vatAmount={live.vat_amount}
-              totalGross={live.total_gross}
-              discountAmount={live.quote_discount_amount}
-              sectionDiscountAmount={live.section_discount_amount}
+              subtotalNet={displayTotals.subtotal_net}
+              vatAmount={displayTotals.vat_amount}
+              totalGross={displayTotals.total_gross}
+              discountAmount={displayTotals.quote_discount_amount}
+              sectionDiscountAmount={displayTotals.section_discount_amount}
               canViewCost={canViewCost}
-              costTotal={live.cost_total}
-              marginAmount={live.margin_amount}
-              marginPercent={live.margin_percent}
+              costTotal={displayTotals.cost_total}
+              marginAmount={displayTotals.margin_amount}
+              marginPercent={displayTotals.margin_percent}
               marginStatus={live.margin_status}
               marginTarget={live.margin_target}
               marginMinimum={live.margin_minimum}
@@ -1761,7 +1902,7 @@ export function QuoteBuilder({
             <section className="cpq-summary-compact" aria-label={he.cpqStageCompactTotal}>
               <span className="cpq-summary-compact-label">{he.cpqStageCompactTotal}</span>
               <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
-                {formatMoney(live.total_gross, currency)}
+                {formatMoney(displayTotals.total_gross, currency)}
               </span>
             </section>
           )}
@@ -1778,7 +1919,13 @@ export function QuoteBuilder({
         disabled={!adjacentQuoteWorkspaceStep(activeStep, -1)}
         onClick={() => goAdjacentStage(-1)}
       >
-        {he.cpqStageBack}
+        {activeStep === "pricing"
+          ? he.cpqStageBackToPlanning
+          : activeStep === "review"
+            ? he.cpqStageBackToPricing
+            : activeStep === "items"
+              ? he.cpqStageBackToDetails
+              : he.cpqStageBack}
       </Button>
       <Button
         type="button"
@@ -1786,7 +1933,13 @@ export function QuoteBuilder({
         disabled={!adjacentQuoteWorkspaceStep(activeStep, 1)}
         onClick={() => goAdjacentStage(1)}
       >
-        {he.cpqStageNext}
+        {activeStep === "details"
+          ? he.cpqStageNextToPlanning
+          : activeStep === "items"
+            ? he.cpqStageNextToPricing
+            : activeStep === "pricing"
+              ? he.cpqStageNextToReview
+              : he.cpqStageNext}
       </Button>
     </div>
   );
@@ -1873,7 +2026,7 @@ export function QuoteBuilder({
         pending={send.isPending}
         customer={selectedName}
         number={live.number}
-        amount={live.total_gross}
+        amount={displayTotals.total_gross}
         currency={currency}
         gaps={liveGaps}
         canSend={canSendNow}
@@ -2385,10 +2538,20 @@ export function QuoteBuilder({
           catalogLoading={catalogQuery.isFetching}
           debouncedCatalogQ={debouncedCatalogQ}
           addPending={addItem.isPending}
-          onOpenSystemBuilder={canEdit && canCatalog ? () => setSystemBuilderOpen(true) : undefined}
-          onOpenAddSystem={canEdit ? () => setSystemPickerOpen(true) : undefined}
-          onOpenQuickAdd={canEdit ? () => setQuickAddOpen(true) : undefined}
-          onAddSection={canEdit ? () => addSection.mutate() : undefined}
+          workspaceMode={activeStep === "pricing" ? "pricing" : "planning"}
+          onGoToPlanning={() => goToStep("items")}
+          quoteDiscountAmount={draft.discount_amount}
+          quoteDiscountPercent={draft.discount_percent}
+          onQuoteDiscountAmount={(value) => updateDraft({ discount_amount: value, discount_percent: "" })}
+          onQuoteDiscountPercent={(value) => updateDraft({ discount_percent: value, discount_amount: "" })}
+          validUntil={draft.valid_until}
+          onValidUntil={(value) => updateDraft({ valid_until: value })}
+          onOpenSystemBuilder={
+            canEdit && canCatalog && activeStep === "items" ? () => setSystemBuilderOpen(true) : undefined
+          }
+          onOpenAddSystem={canEdit && activeStep === "items" ? () => setSystemPickerOpen(true) : undefined}
+          onOpenQuickAdd={canEdit && activeStep === "items" ? () => setQuickAddOpen(true) : undefined}
+          onAddSection={canEdit && activeStep === "items" ? () => addSection.mutate() : undefined}
           onRenameSection={persistSectionName}
           onPatchSectionDiscount={
             canEdit
@@ -2396,8 +2559,12 @@ export function QuoteBuilder({
               : undefined
           }
           onToggleSection={(sectionId, collapsed) => patchSection.mutate({ sectionId, body: { collapsed } })}
-          onDuplicateSection={(sectionId) => duplicateSection.mutate(sectionId)}
-          onDeleteSection={(sectionId) => deleteSection.mutate(sectionId)}
+          onDuplicateSection={
+            activeStep === "items" ? (sectionId) => duplicateSection.mutate(sectionId) : undefined
+          }
+          onDeleteSection={
+            activeStep === "items" ? (sectionId) => deleteSection.mutate(sectionId) : undefined
+          }
           onAdd={(body) => addItem.mutate(body)}
           onPersistLine={persistQuoteLine}
           onDelete={handleDeleteItem}
@@ -2429,31 +2596,18 @@ export function QuoteBuilder({
                 onSelectItem={(item) => focusReadinessField(item.field)}
               />
               {!isDesktopLayout ? (
-                <>
-                  <section className="cpq-summary-compact" aria-label={he.cpqStageCompactTotal}>
-                    <span className="cpq-summary-compact-label">{he.cpqStageCompactTotal}</span>
-                    <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
-                      {formatMoney(live.total_gross, currency)}
-                    </span>
-                  </section>
-                  {sidebarSubmitFooter}
-                </>
+                <section className="cpq-summary-compact" aria-label={he.cpqStageCompactTotal}>
+                  <span className="cpq-summary-compact-label">{he.cpqStageCompactTotal}</span>
+                  <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
+                    {formatMoney(displayTotals.total_gross, currency)}
+                  </span>
+                </section>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" disabled={!live.id && !draftHasContent(draft)} onClick={() => void goCustomerView()}>
                 {he.cpqCustomerView}
               </Button>
-              {live.status === "draft" && canSend ? (
-                <Button
-                  type="button"
-                  disabled={!canSendNow}
-                  title={!canSendNow ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1)) : undefined}
-                  onClick={() => void startSendFlow()}
-                >
-                  {he.cpqSendForApproval}
-                </Button>
-              ) : null}
             </div>
           </section>
           {stageNavFooter}
@@ -2469,7 +2623,7 @@ export function QuoteBuilder({
         <QuoteMobileSheet
           open={mobileSheetOpen}
           onOpenChange={setMobileSheetOpen}
-          totalLabel={formatMoney(live.total_gross, currency)}
+          totalLabel={formatMoney(displayTotals.total_gross, currency)}
           compactHandle
         >
           {sidebarPanel}
@@ -2479,7 +2633,7 @@ export function QuoteBuilder({
       {!isDesktopLayout ? (
         <>
           <QuoteMobileActionsBar
-            totalLabel={formatMoney(live.total_gross, currency)}
+            totalLabel={formatMoney(displayTotals.total_gross, currency)}
             readinessPercent={readiness.percent}
             canSendNow={canSendNow}
             statusLabel={statusDisplayLabel}
@@ -2487,30 +2641,56 @@ export function QuoteBuilder({
             previewDisabled={!live.id && !draftHasContent(draft)}
             onPreview={() => void goCustomerView()}
             onAdd={() => {
+              if (activeStep === "pricing" || activeStep === "review") {
+                goToStep("items");
+                return;
+              }
               setMobileMenuOpen(false);
               setMobileAddOpen(true);
             }}
             primaryCtaLabel={
-              lifecyclePrimary.kind === "send" && primaryCtaLabel
-                ? he.cpqSendForApprovalShort
-                : primaryCtaLabel
+              activeStep === "items"
+                ? he.cpqStageNextToPricingShort
+                : activeStep === "pricing"
+                  ? he.cpqStageNextToReviewShort
+                  : lifecyclePrimary.kind === "send" && primaryCtaLabel
+                    ? he.cpqSendForApprovalShort
+                    : primaryCtaLabel
             }
-            primaryCtaDisabled={primaryCtaDisabled}
+            primaryCtaDisabled={
+              activeStep === "items" || activeStep === "pricing"
+                ? !adjacentQuoteWorkspaceStep(activeStep, 1)
+                : primaryCtaDisabled
+            }
             primaryCtaLoading={
-              lifecyclePrimary.kind === "revise"
-                ? revise.isPending
-                : lifecyclePrimaryIsProjectAction
-                  ? createProject.isPending
-                  : false
+              activeStep === "items" || activeStep === "pricing"
+                ? false
+                : lifecyclePrimary.kind === "revise"
+                  ? revise.isPending
+                  : lifecyclePrimaryIsProjectAction
+                    ? createProject.isPending
+                    : false
             }
             primaryCtaTitle={
-              lifecyclePrimary.title ??
-              (lifecyclePrimary.kind === "send" && !canSendNow
-                ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
-                : undefined)
+              activeStep === "items" || activeStep === "pricing"
+                ? undefined
+                : (lifecyclePrimary.title ??
+                  (lifecyclePrimary.kind === "send" && !canSendNow
+                    ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                    : undefined))
             }
-            onPrimaryCta={() => runPrimaryCta()}
-            showPrimaryCta={Boolean(primaryCtaLabel && (lifecyclePrimary.kind !== "send" || canSend))}
+            onPrimaryCta={() => {
+              if (activeStep === "items" || activeStep === "pricing") {
+                goAdjacentStage(1);
+                return;
+              }
+              runPrimaryCta();
+            }}
+            showPrimaryCta={
+              activeStep === "items" || activeStep === "pricing"
+                ? true
+                : Boolean(primaryCtaLabel && (lifecyclePrimary.kind !== "send" || canSend))
+            }
             overflowOpen={mobileMenuOpen}
             onOverflowToggle={() => {
               setMobileAddOpen(false);
@@ -2568,6 +2748,7 @@ export function QuoteBuilder({
         onPickCatalog={(productId) => {
           const product = quickCatalogQuery.data?.items.find((p) => p.id === productId);
           const isService = product?.kind === "service" || quickCatalogKind === "service";
+          goToStep("items");
           addItem.mutate({
             product_id: productId,
             item_type: isService ? "labor" : product?.item_type || "catalog",

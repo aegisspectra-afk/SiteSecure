@@ -3,14 +3,19 @@ import { createPortal } from "react-dom";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 import { placeAccountPopover } from "../lib/workspace-header";
 
+type TriggerContent = ReactNode | ((open: boolean) => ReactNode);
+
 export function HeaderPopover({
   menuLabel,
+  triggerAriaLabel,
   trigger,
   children,
   placement = "below",
 }: {
   menuLabel: string;
-  trigger: ReactNode;
+  /** Accessible name for the trigger; defaults to `menuLabel`. */
+  triggerAriaLabel?: string;
+  trigger: TriggerContent;
   children: ReactNode;
   placement?: "cover" | "below";
 }) {
@@ -95,10 +100,10 @@ export function HeaderPopover({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-controls={open ? menuId : undefined}
-        aria-label={menuLabel}
+        aria-label={triggerAriaLabel ?? menuLabel}
         onClick={() => setOpen((value) => !value)}
       >
-        {trigger}
+        {typeof trigger === "function" ? trigger(open) : trigger}
       </button>
       {open && coords && typeof document !== "undefined"
         ? createPortal(

@@ -13,12 +13,16 @@ const KNOWN: Record<string, string> = {
   "Auth session missing!": he.resetInvalid,
   "Email rate limit exceeded": he.emailRateLimited,
   "For security purposes, you can only request this once every 60 seconds": he.emailRateLimited,
+  "User is banned": he.accountInactive,
+  "user_banned": he.accountInactive,
 };
 
 export function authErrorMessage(raw: string | undefined | null): string {
   if (!raw) return he.authGenericError;
   const mapped = KNOWN[raw];
   if (mapped) return mapped;
+  const lower = raw.toLowerCase();
+  if (lower.includes("banned") || lower.includes("user is banned")) return he.accountInactive;
   if (/[\u0590-\u05FF]/.test(raw)) return raw;
   return he.authGenericError;
 }

@@ -9,8 +9,8 @@ import {
 import { useAccountAvatar } from "../lib/use-account-avatar";
 
 const LABELS: Record<AccountAvatarId, string> = {
-  man: he.accountAvatarMan,
-  woman: he.accountAvatarWoman,
+  man: he.accountAvatarStyleA,
+  woman: he.accountAvatarStyleB,
 };
 
 export function AccountAvatarPicker({

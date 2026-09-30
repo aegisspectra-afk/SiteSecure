@@ -36,6 +36,11 @@ def error_response(request: Request, exc: ApiError) -> JSONResponse:
 
 MESSAGES = {
     "UNAUTHENTICATED": "נדרשת התחברות",
+    "ACCOUNT_INACTIVE": "החשבון אינו פעיל כרגע. פנו למנהל המערכת לקבלת גישה מחדש.",
+    "USER_ARCHIVED": "המשתמש בארכיון. יש להחזיר אותו לפעילות בממשק Admin לפני הזמנה.",
+    "ARCHIVE_SELF": "לא ניתן להעביר לארכיון את החשבון שלכם",
+    "ARCHIVE_LAST_ADMIN": "לא ניתן להעביר לארכיון את מנהל הפלטפורמה האחרון",
+    "ARCHIVE_OWNER_ORPHAN": "לא ניתן להעביר לארכיון — סביבה פעילה תישאר ללא Owner",
     "TENANT_INACTIVE": "הסביבה אינה פעילה",
     "SUBSCRIPTION_INVALID": "המנוי אינו תקין",
     "FEATURE_NOT_INCLUDED": "היכולת אינה כלולה בתוכנית",

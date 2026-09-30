@@ -159,7 +159,7 @@ def admin_summary(
     profiles = as_list(
         service.get(
             "profiles",
-            params={"select": "id,recognition_badges,created_at", "limit": "1000"},
+            params={"select": "id,recognition_badges,created_at,archived_at", "limit": "1000"},
         )
     )
     reports = as_list(
@@ -217,9 +217,11 @@ def admin_summary(
 
     beta_orgs = [row for row in orgs if row.get("is_beta")]
     beta_active = [row for row in beta_orgs if str(row.get("status") or "") == "active"]
+    active_profiles = [row for row in profiles if not row.get("archived_at")]
+    archived_profiles = [row for row in profiles if row.get("archived_at")]
     founding = [
         row
-        for row in profiles
+        for row in active_profiles
         if "founding_technician" in (row.get("recognition_badges") or [])
     ]
 
@@ -382,7 +384,8 @@ def admin_summary(
         # legacy keys (compat)
         "organizations": len(orgs),
         "beta_organizations": len(beta_orgs),
-        "users": len(profiles),
+        "users": len(active_profiles),
+        "users_archived": len(archived_profiles),
         "feedback_open": len(open_feedback),
         "feedback_total": len(reports),
         "beta_participants_active": sum(1 for row in participants if row.get("status") in active_beta),
@@ -517,31 +520,36 @@ def list_users(
     service: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
     q: str | None = Query(default=None, max_length=120),
+    status: Literal["all", "active", "archived"] = Query(default="all"),
 ):
     require_platform_admin(service, user["id"])
-    profiles = as_list(
-        service.get(
-            "profiles",
-            params={
-                "select": "id,email,full_name,is_platform_admin,recognition_badges,created_at",
-                "order": "created_at.desc",
-                "limit": "200",
-            },
-        )
-    )
+    from ..user_archive import PROFILE_ARCHIVE_SELECT, profile_lifecycle_status
+
+    params: dict[str, str] = {
+        "select": PROFILE_ARCHIVE_SELECT,
+        "order": "created_at.desc",
+        "limit": "500",
+    }
+    if status == "active":
+        params["archived_at"] = "is.null"
+    elif status == "archived":
+        params["archived_at"] = "not.is.null"
+        params["order"] = "archived_at.desc"
+    profiles = as_list(service.get("profiles", params=params))
     if q:
         needle = q.strip().lower()
         profiles = [
             p
             for p in profiles
-            if needle in str(p.get("email") or "").lower() or needle in str(p.get("full_name") or "").lower()
+            if needle in str(p.get("email") or "").lower()
+            or needle in str(p.get("full_name") or "").lower()
+            or needle in str(p.get("id") or "").lower()
         ]
     members = as_list(
         service.get(
             "workspace_memberships",
             params={
                 "select": "user_id,workspace_id,role_key,status,workspaces(name,is_beta)",
-                "status": "eq.active",
             },
         )
     )
@@ -562,23 +570,79 @@ def list_users(
                 "workspace_id": row["workspace_id"],
                 "workspace_name": ws.get("name"),
                 "role_key": row["role_key"],
+                "status": row.get("status"),
                 "is_beta": bool(ws.get("is_beta")),
             }
         )
     beta_by_user: dict[str, list] = {}
     for row in beta_rows:
         beta_by_user.setdefault(row["user_id"], []).append(_serialize_beta_row(row))
+    archiver_ids = {
+        str(p["archived_by"]) for p in profiles if p.get("archived_by")
+    }
+    archiver_names: dict[str, str] = {}
+    if archiver_ids:
+        for aid in list(archiver_ids)[:100]:
+            rows = as_list(
+                service.get(
+                    "profiles",
+                    params={"id": f"eq.{aid}", "select": "id,full_name,email", "limit": "1"},
+                )
+            )
+            if rows:
+                archiver_names[aid] = str(rows[0].get("full_name") or rows[0].get("email") or aid)
     return [
         {
             **row,
             "is_platform_admin": bool(row.get("is_platform_admin")),
             "platform_role": "platform_super_admin" if row.get("is_platform_admin") else None,
             "recognition_badges": list(row.get("recognition_badges") or []),
+            "lifecycle_status": profile_lifecycle_status(row),
+            "archived_by_name": archiver_names.get(str(row["archived_by"])) if row.get("archived_by") else None,
             "memberships": by_user.get(row["id"], []),
             "beta_participations": beta_by_user.get(row["id"], []),
         }
         for row in profiles
     ]
+
+
+class UserArchiveBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.post("/users/{user_id}/archive")
+def archive_user(
+    user_id: UUID,
+    body: UserArchiveBody,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    from ..user_archive import archive_platform_user
+
+    return archive_platform_user(
+        service,
+        actor_user_id=user["id"],
+        target_id=str(user_id),
+        reason=body.reason,
+    )
+
+
+@router.post("/users/{user_id}/restore")
+def restore_user(
+    user_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    from ..user_archive import restore_platform_user
+
+    return restore_platform_user(
+        service,
+        actor_user_id=user["id"],
+        target_id=str(user_id),
+    )
 
 
 @router.patch("/users/{user_id}/badges")
@@ -1166,6 +1230,10 @@ def create_admin_invitation(
     role_key = body.role_key
     workspace_id = str(body.workspace_id)
 
+    from ..user_archive import raise_if_email_archived
+
+    raise_if_email_archived(service, email)
+
     ws = one_or_404(
         service.get(
             "workspaces",
@@ -1337,3 +1405,314 @@ def reissue_admin_invitation(
         service,
         user,
     )
+
+
+@router.get("/archive")
+def list_archive(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    kind: Literal["workspaces", "profiles", "soft_users", "all"] = Query(default="all"),
+    q: str | None = Query(default=None, max_length=120),
+    batch: str | None = Query(default=None, max_length=120),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    """Archive browser: cold workspace/profile snapshots + reversible soft-archived users."""
+    require_platform_admin(service, user["id"])
+    from ..user_archive import PROFILE_ARCHIVE_SELECT, list_memberships_for_user
+
+    needle = (q or "").strip().lower()
+    batch_filter = (batch or "").strip() or None
+
+    workspaces: list[dict[str, Any]] = []
+    profiles: list[dict[str, Any]] = []
+    soft_users: list[dict[str, Any]] = []
+
+    if kind in {"workspaces", "all"}:
+        params: dict[str, str] = {
+            "select": "id,name,archived_at,archive_batch,note",
+            "order": "archived_at.desc",
+            "limit": str(limit),
+        }
+        if batch_filter:
+            params["archive_batch"] = f"eq.{batch_filter}"
+        workspaces = as_list(service.get("archive_workspaces", params=params))
+        if needle:
+            workspaces = [
+                row
+                for row in workspaces
+                if needle in str(row.get("name") or "").lower()
+                or needle in str(row.get("id") or "").lower()
+                or needle in str(row.get("archive_batch") or "").lower()
+            ]
+
+    if kind in {"profiles", "all"}:
+        params = {
+            "select": "id,email,full_name,recognition_badges,is_platform_admin,created_at,archived_at,archive_batch",
+            "order": "archived_at.desc",
+            "limit": str(limit),
+        }
+        if batch_filter:
+            params["archive_batch"] = f"eq.{batch_filter}"
+        profiles = as_list(service.get("archive_profiles", params=params))
+        if needle:
+            profiles = [
+                row
+                for row in profiles
+                if needle in str(row.get("email") or "").lower()
+                or needle in str(row.get("full_name") or "").lower()
+                or needle in str(row.get("id") or "").lower()
+            ]
+
+    if kind in {"soft_users", "all"}:
+        soft = as_list(
+            service.get(
+                "profiles",
+                params={
+                    "select": PROFILE_ARCHIVE_SELECT,
+                    "archived_at": "not.is.null",
+                    "order": "archived_at.desc",
+                    "limit": str(limit),
+                },
+            )
+        )
+        if needle:
+            soft = [
+                row
+                for row in soft
+                if needle in str(row.get("email") or "").lower()
+                or needle in str(row.get("full_name") or "").lower()
+                or needle in str(row.get("id") or "").lower()
+            ]
+        archiver_ids = {str(r["archived_by"]) for r in soft if r.get("archived_by")}
+        archiver_names: dict[str, str] = {}
+        for aid in list(archiver_ids)[:100]:
+            rows = as_list(
+                service.get(
+                    "profiles",
+                    params={"id": f"eq.{aid}", "select": "id,full_name,email", "limit": "1"},
+                )
+            )
+            if rows:
+                archiver_names[aid] = str(rows[0].get("full_name") or rows[0].get("email") or aid)
+        for row in soft:
+            memberships = list_memberships_for_user(service, str(row["id"]))
+            roles = sorted({str(m.get("role_key")) for m in memberships if m.get("role_key")})
+            soft_users.append(
+                {
+                    **row,
+                    "lifecycle_status": "archived",
+                    "archived_by_name": archiver_names.get(str(row["archived_by"]))
+                    if row.get("archived_by")
+                    else None,
+                    "workspace_count": len(memberships),
+                    "important_roles": roles,
+                    "memberships": memberships,
+                }
+            )
+
+    return {
+        "workspaces": workspaces,
+        "profiles": profiles,
+        "soft_users": soft_users,
+        "counts": {
+            "workspaces": len(workspaces),
+            "profiles": len(profiles),
+            "soft_users": len(soft_users),
+        },
+    }
+
+
+@router.get("/archive/profiles/{profile_id}")
+def get_archive_profile(
+    profile_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Full archived profile snapshot (includes JSON payload)."""
+    require_platform_admin(service, user["id"])
+    row = one_or_404(
+        service.get(
+            "archive_profiles",
+            params={
+                "id": f"eq.{profile_id}",
+                "select": "id,email,full_name,recognition_badges,is_platform_admin,created_at,snapshot,archived_at,archive_batch",
+                "limit": "1",
+            },
+        )
+    )
+    return row
+
+
+class ArchiveRestoreBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspace_id: UUID
+    role_key: AdminInviteRole = "technician"
+
+
+def _badges_from_snapshot(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        values = raw
+    elif isinstance(raw, str):
+        values = [raw]
+    else:
+        values = []
+    out: list[str] = []
+    for item in values:
+        key = str(item or "").strip().lower()
+        if key in ALLOWED_RECOGNITION_BADGES and key not in out:
+            out.append(key)
+    return out
+
+
+@router.post("/archive/profiles/{profile_id}/restore")
+def restore_archive_profile(
+    profile_id: UUID,
+    body: ArchiveRestoreBody,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Restore an archived profile into hot auth + attach to a live workspace."""
+    import secrets
+
+    require_platform_admin(service, user["id"])
+    archived = one_or_404(
+        service.get(
+            "archive_profiles",
+            params={
+                "id": f"eq.{profile_id}",
+                "select": "id,email,full_name,recognition_badges,created_at,snapshot,archive_batch",
+                "limit": "1",
+            },
+        )
+    )
+    email = str(archived.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        raise ApiError(400, "VALIDATION_ERROR", "לרשומה בארכיון אין אימייל תקין לשחזור")
+
+    workspace_id = str(body.workspace_id)
+    role_key = body.role_key
+    ws = one_or_404(
+        service.get(
+            "workspaces",
+            params={"id": f"eq.{workspace_id}", "select": "id,name,status"},
+        )
+    )
+    if ws.get("status") != "active":
+        raise ApiError(403, "TENANT_INACTIVE", MESSAGES["TENANT_INACTIVE"])
+
+    if role_key == "owner":
+        owners = as_list(
+            service.get(
+                "workspace_memberships",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "role_key": "eq.owner",
+                    "status": "eq.active",
+                    "select": "id",
+                    "limit": "1",
+                },
+            )
+        )
+        if owners:
+            raise ApiError(403, "BUSINESS_RULE", "לסביבה כבר יש בעלים פעיל — בחרו תפקיד אחר")
+
+    existing_profile = as_list(
+        service.get(
+            "profiles",
+            params={"email": f"eq.{email}", "select": "id,email", "limit": "1"},
+        )
+    )
+    if existing_profile:
+        raise ApiError(409, "CONFLICT", "משתמש עם האימייל הזה כבר קיים במערכת החיה")
+
+    snap = archived.get("snapshot") if isinstance(archived.get("snapshot"), dict) else {}
+    full_name = str(archived.get("full_name") or snap.get("full_name") or "").strip()
+    phone = snap.get("phone")
+    locale = str(snap.get("locale") or "he").strip() or "he"
+    badges = _badges_from_snapshot(archived.get("recognition_badges") or snap.get("recognition_badges"))
+    uid = str(archived["id"])
+    temp_password = secrets.token_urlsafe(24)
+
+    created = service.auth_admin_create_user(
+        {
+            "id": uid,
+            "email": email,
+            "password": temp_password,
+            "email_confirm": True,
+            "user_metadata": {"full_name": full_name},
+        }
+    )
+    if created.status_code not in {200, 201}:
+        text = created.text or ""
+        if "already been registered" in text.lower() or "duplicate" in text.lower():
+            raise ApiError(409, "CONFLICT", "המשתמש כבר קיים ב־Auth")
+        raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשחזר את המשתמש ל־Auth")
+
+    created_id = str((created.json() or {}).get("id") or uid)
+
+    profile_patch: dict[str, Any] = {
+        "full_name": full_name,
+        "email": email,
+        "locale": locale,
+        "last_workspace_id": workspace_id,
+        "is_platform_admin": False,
+        "recognition_badges": badges,
+    }
+    if phone is not None:
+        profile_patch["phone"] = phone
+    patched = service.patch("profiles", profile_patch, params={"id": f"eq.{created_id}"})
+    if patched.status_code not in {200, 204}:
+        raise ApiError(503, "API_UNAVAILABLE", "המשתמש נוצר ב־Auth אך עדכון הפרופיל נכשל")
+
+    membership = service.post(
+        "workspace_memberships",
+        {
+            "workspace_id": workspace_id,
+            "user_id": created_id,
+            "role_key": role_key,
+            "status": "active",
+        },
+    )
+    if membership.status_code not in {200, 201}:
+        raise ApiError(503, "API_UNAVAILABLE", "המשתמש שוחזר אך צירוף לסביבה נכשל")
+
+    recovery_link: str | None = None
+    link_res = service.auth_admin_generate_link({"type": "recovery", "email": email})
+    if link_res.status_code == 200:
+        link_body = link_res.json() or {}
+        recovery_link = (
+            link_body.get("action_link")
+            or (link_body.get("properties") or {}).get("action_link")
+            or None
+        )
+
+    consume = service.rpc("archive_consume_profile", {"p_id": str(profile_id)})
+    if consume.status_code != 200:
+        # Hot restore succeeded; archive cleanup failure is non-fatal but reported.
+        pass
+
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="archive_profile_restored",
+        target_user_id=created_id,
+        target_workspace_id=workspace_id,
+        metadata={
+            "email": email,
+            "role_key": role_key,
+            "archive_batch": archived.get("archive_batch"),
+            "archive_consumed": consume.status_code == 200 and bool(consume.json()),
+        },
+    )
+
+    return {
+        "id": created_id,
+        "email": email,
+        "full_name": full_name,
+        "workspace_id": workspace_id,
+        "workspace_name": ws.get("name"),
+        "role_key": role_key,
+        "recognition_badges": badges,
+        "recovery_link": recovery_link,
+        "message": "המשתמש שוחזר וצורף לסביבה. שלחו לו קישור איפוס סיסמה כדי שיוכל להתחבר.",
+    }

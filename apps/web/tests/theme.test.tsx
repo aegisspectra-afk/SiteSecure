@@ -213,9 +213,17 @@ describe("theme picker", () => {
     expect(within(group).getByRole("radio", { name: he.themeLight })).toHaveAttribute("aria-checked", "false");
     expect(within(group).getByRole("radio", { name: he.themeDark })).toHaveAttribute("aria-checked", "false");
     expect(within(group).getByRole("radio", { name: he.themeSystem })).toHaveAttribute("aria-checked", "true");
+    const system = within(group).getByRole("radio", { name: he.themeSystem });
+    const thumb = group.querySelector("[data-theme-thumb]") as HTMLElement;
+    expect(thumb).toBeTruthy();
+    expect(thumb.style.width).toBe(`${system.offsetWidth}px`);
+    expect(thumb.style.transform).toBe(`translate3d(${system.offsetLeft}px, 0, 0)`);
     fireEvent.click(within(group).getByRole("radio", { name: he.themeDark }));
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+    const dark = within(group).getByRole("radio", { name: he.themeDark });
+    expect(thumb.style.width).toBe(`${dark.offsetWidth}px`);
+    expect(thumb.style.transform).toBe(`translate3d(${dark.offsetLeft}px, 0, 0)`);
   });
 
   it("is available in the account menu for every signed-in role", () => {
@@ -235,10 +243,13 @@ describe("theme picker", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: he.userMenu }));
     const panel = screen.getByRole("dialog", { name: he.userMenu });
-    expect(within(panel).getByRole("radiogroup", { name: he.themeLabel })).toBeInTheDocument();
-    expect(within(panel).getByRole("radio", { name: he.themeLight })).toBeInTheDocument();
-    expect(within(panel).getByRole("radio", { name: he.themeDark })).toBeInTheDocument();
-    expect(within(panel).getByRole("radio", { name: he.themeSystem })).toBeInTheDocument();
+    const group = within(panel).getByRole("radiogroup", { name: he.themeLabel });
+    expect(group).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: he.themeLight })).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: he.themeDark })).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: he.themeSystem })).toBeInTheDocument();
+    expect(within(group).queryByText(he.themeLight)).not.toBeInTheDocument();
+    expect(within(panel).queryByText(he.themeSystemHint)).not.toBeInTheDocument();
   });
 });
 

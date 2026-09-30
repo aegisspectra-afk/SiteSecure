@@ -1,15 +1,7 @@
-import { Button, ErrorState, PageHeader } from "@site-secure/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ErrorState, PageHeader } from "@site-secure/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
-import {
-  DEFAULT_WORKSPACE_PREFS,
-  prefsFromSettings,
-  prefsToSettingsPatch,
-  type WorkspacePrefs,
-} from "../../../lib/workspace-prefs";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/settings/notifications")({
@@ -25,114 +17,17 @@ function NotificationsPage() {
 }
 
 function NotificationsBody() {
-  const { session, api } = useSession();
+  const { session } = useSession();
   const workspaceId = session?.memberships[0]?.workspace_id;
-  const queryClient = useQueryClient();
-  const [prefs, setPrefs] = useState<WorkspacePrefs>(DEFAULT_WORKSPACE_PREFS);
-  const [baseline, setBaseline] = useState<WorkspacePrefs | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const query = useQuery({
-    queryKey: ["workspace-settings", workspaceId],
-    enabled: Boolean(workspaceId),
-    queryFn: () => api.getWorkspaceSettings(workspaceId!),
-  });
-
-  useEffect(() => {
-    if (!query.data) return;
-    const next = prefsFromSettings(query.data);
-    setPrefs(next);
-    setBaseline(next);
-  }, [query.data]);
-
-  const dirty =
-    baseline != null &&
-    (prefs.notifyQuoteViewed !== baseline.notifyQuoteViewed ||
-      prefs.notifyQuoteApproved !== baseline.notifyQuoteApproved ||
-      prefs.notifyJobOverdue !== baseline.notifyJobOverdue ||
-      prefs.notifyTeamInvite !== baseline.notifyTeamInvite);
-
-  const save = useMutation({
-    mutationFn: () => api.patchWorkspaceSettings(workspaceId!, prefsToSettingsPatch(prefs)),
-    onSuccess: async () => {
-      setSaveError(null);
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1600);
-      await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
-      setBaseline(prefs);
-    },
-    onError: () => setSaveError(he.settingsError),
-  });
-
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
-  if (query.isLoading) return <p className="text-sm text-fg-muted">{he.loading}</p>;
-  if (query.isError) return <ErrorState title={he.settingsError} />;
 
   return (
     <div className="settings-panel flex flex-col gap-6">
       <PageHeader title={he.settingsNavNotifications} description={he.settingsNotificationsLead} />
-      <form
-        className="settings-form"
-        onSubmit={(e: FormEvent) => {
-          e.preventDefault();
-          if (!dirty) return;
-          save.mutate();
-        }}
-      >
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            checked={prefs.notifyQuoteViewed}
-            onChange={(ev) => setPrefs({ ...prefs, notifyQuoteViewed: ev.target.checked })}
-          />
-          <span>{he.settingsNotifyQuoteViewed}</span>
-        </label>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            checked={prefs.notifyQuoteApproved}
-            onChange={(ev) => setPrefs({ ...prefs, notifyQuoteApproved: ev.target.checked })}
-          />
-          <span>{he.settingsNotifyQuoteApproved}</span>
-        </label>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            checked={prefs.notifyJobOverdue}
-            onChange={(ev) => setPrefs({ ...prefs, notifyJobOverdue: ev.target.checked })}
-          />
-          <span>{he.settingsNotifyJobOverdue}</span>
-        </label>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            checked={prefs.notifyTeamInvite}
-            onChange={(ev) => setPrefs({ ...prefs, notifyTeamInvite: ev.target.checked })}
-          />
-          <span>{he.settingsNotifyTeamInvite}</span>
-        </label>
-        {saveError ? (
-          <p className="text-sm text-danger" role="alert">
-            {saveError}
-          </p>
-        ) : null}
-        {saved ? (
-          <p className="text-sm text-success" role="status">
-            {he.settingsSaved}
-          </p>
-        ) : null}
-        <Button
-          type="submit"
-          variant="primary"
-          className="self-start"
-          loading={save.isPending}
-          disabled={!dirty}
-          title={!dirty ? he.settingsSaveDisabled : undefined}
-        >
-          {he.saveSettings}
-        </Button>
-      </form>
+      <div className="settings-unavailable" role="status" data-testid="settings-notifications-unavailable">
+        <p className="settings-section-title">{he.settingsNotificationsFutureTitle}</p>
+        <p className="settings-section-lead">{he.settingsNotificationsFutureBody}</p>
+      </div>
     </div>
   );
 }

@@ -13,21 +13,12 @@ export const Route = createFileRoute("/admin")({
 
 type NavItem = {
   to: string;
-  labelKey:
-    | "adminTitle"
-    | "adminOrgs"
-    | "adminInvitations"
-    | "adminUsers"
-    | "adminFeedback"
-    | "adminAudit"
-    | "adminBeta"
-    | "adminBadges"
-    | "adminFlags";
+  labelKey: "adminTitle" | "adminOrgs" | "adminUsers" | "adminFeedback" | "adminAudit" | "adminBeta";
   exact?: boolean;
 };
 
 const NAV_GROUPS: Array<{
-  labelKey: "adminNavGroupOps" | "adminNavGroupAdvanced";
+  labelKey: "adminNavGroupOps" | "adminNavGroupPlatform";
   items: NavItem[];
 }> = [
   {
@@ -35,19 +26,14 @@ const NAV_GROUPS: Array<{
     items: [
       { to: "/admin", labelKey: "adminTitle", exact: true },
       { to: "/admin/organizations", labelKey: "adminOrgs" },
-      { to: "/admin/invitations", labelKey: "adminInvitations" },
       { to: "/admin/users", labelKey: "adminUsers" },
       { to: "/admin/feedback", labelKey: "adminFeedback" },
       { to: "/admin/audit", labelKey: "adminAudit" },
     ],
   },
   {
-    labelKey: "adminNavGroupAdvanced",
-    items: [
-      { to: "/admin/beta", labelKey: "adminBeta" },
-      { to: "/admin/badges", labelKey: "adminBadges" },
-      { to: "/admin/flags", labelKey: "adminFlags" },
-    ],
+    labelKey: "adminNavGroupPlatform",
+    items: [{ to: "/admin/beta", labelKey: "adminBeta" }],
   },
 ];
 

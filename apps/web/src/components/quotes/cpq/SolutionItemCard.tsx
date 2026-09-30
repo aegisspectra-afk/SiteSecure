@@ -311,6 +311,7 @@ function ReorderDelete({
   onReorder: (itemId: string, direction: "up" | "down") => void;
   onDelete: (itemId: string) => void;
 }) {
+  const deleteLock = useRef(false);
   return (
     <>
       <Button
@@ -331,7 +332,20 @@ function ReorderDelete({
       >
         <ArrowDown className="size-4" />
       </Button>
-      <Button type="button" variant="ghost" onClick={() => onDelete(itemId)}>
+      <Button
+        type="button"
+        variant="ghost"
+        onPointerDown={(ev) => {
+          if (ev.button !== 0) return;
+          ev.preventDefault();
+          if (deleteLock.current) return;
+          deleteLock.current = true;
+          onDelete(itemId);
+          window.setTimeout(() => {
+            deleteLock.current = false;
+          }, 400);
+        }}
+      >
         {he.quoteDeleteItem}
       </Button>
     </>

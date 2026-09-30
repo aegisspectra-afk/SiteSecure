@@ -60,6 +60,60 @@ class ServiceClient:
             json=json,
         )
 
+    def delete(self, path: str, params: dict | None = None):
+        return supabase_request(
+            "DELETE",
+            f"{self.rest}/{path.lstrip('/')}",
+            headers=self._headers,
+            params=params,
+        )
+
+    def rpc(self, name: str, payload: dict | None = None):
+        return supabase_request(
+            "POST",
+            f"{self.rest}/rpc/{name}",
+            headers=self._headers,
+            json=payload or {},
+        )
+
+    @property
+    def auth(self) -> str:
+        return f"{self._settings.supabase_url}/auth/v1"
+
+    def auth_admin_create_user(self, body: dict) -> httpx.Response:
+        return supabase_request(
+            "POST",
+            f"{self.auth}/admin/users",
+            headers=self._headers,
+            json=body,
+        )
+
+    def auth_admin_generate_link(self, body: dict) -> httpx.Response:
+        return supabase_request(
+            "POST",
+            f"{self.auth}/admin/generate_link",
+            headers=self._headers,
+            json=body,
+        )
+
+    def auth_admin_update_user(self, user_id: str, body: dict) -> httpx.Response:
+        """GoTrue Admin update (e.g. ban_duration). Never deletes the auth user."""
+        return supabase_request(
+            "PUT",
+            f"{self.auth}/admin/users/{user_id}",
+            headers=self._headers,
+            json=body,
+        )
+
+    def auth_admin_logout_user(self, user_id: str) -> httpx.Response:
+        """Invalidate refresh tokens for the user (global logout)."""
+        return supabase_request(
+            "POST",
+            f"{self.auth}/admin/users/{user_id}/logout",
+            headers=self._headers,
+            json={},
+        )
+
     def storage_upload_bytes(self, bucket: str, path: str, data: bytes, content_type: str) -> None:
         """Upload a private object with the service role (bypasses Storage RLS)."""
         headers = {

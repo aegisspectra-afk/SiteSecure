@@ -80,7 +80,7 @@ export function liveAdminActions(
   if (can(roleKey, "users.invite", features)) {
     out.push({ permission: "users.invite", label: he.inviteUser, href: "/app/settings/users" });
   }
-  if (can(roleKey, "workspace.edit", features)) {
+  if (can(roleKey, "workspace.edit", features) || can(roleKey, "settings.view", features)) {
     out.push({ permission: "workspace.edit", label: he.navSettings, href: "/app/settings" });
   }
   if (can(roleKey, "users.view", features) || can(roleKey, "roles.manage", features)) {

@@ -511,6 +511,7 @@ function CompanyBrandingBody() {
           <Button
             type="submit"
             variant="primary"
+            className="settings-save-cta"
             loading={save.isPending}
             disabled={!dirty || !form.displayName.trim()}
             title={!dirty ? he.settingsSaveDisabled : undefined}

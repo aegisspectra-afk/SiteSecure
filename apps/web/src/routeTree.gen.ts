@@ -20,6 +20,7 @@ import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as VerifyEmailRouteImport } from "./routes/verify-email"
 import { Route as AdminIndexRouteImport } from "./routes/admin/index"
+import { Route as AdminArchiveRouteImport } from "./routes/admin/archive"
 import { Route as AdminAuditRouteImport } from "./routes/admin/audit"
 import { Route as AdminBadgesRouteImport } from "./routes/admin/badges"
 import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
@@ -58,9 +59,11 @@ import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/inde
 import { Route as AppSettingsAppearanceRouteImport } from "./routes/app/settings/appearance"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
 import { Route as AppSettingsCompanyRouteImport } from "./routes/app/settings/company"
+import { Route as AppSettingsGeneralRouteImport } from "./routes/app/settings/general"
 import { Route as AppSettingsNotificationsRouteImport } from "./routes/app/settings/notifications"
 import { Route as AppSettingsNumberingRouteImport } from "./routes/app/settings/numbering"
 import { Route as AppSettingsPdfTemplatesRouteImport } from "./routes/app/settings/pdf-templates"
+import { Route as AppSettingsProfileRouteImport } from "./routes/app/settings/profile"
 import { Route as AppSettingsQuotesRouteImport } from "./routes/app/settings/quotes"
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
 import { Route as AppSettingsSecurityRouteImport } from "./routes/app/settings/security"
@@ -130,6 +133,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminArchiveRoute = AdminArchiveRouteImport.update({
+  id: "/archive",
+  path: "/archive",
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
@@ -322,6 +330,11 @@ const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   path: "/company",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsGeneralRoute = AppSettingsGeneralRouteImport.update({
+  id: "/general",
+  path: "/general",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: "/notifications",
@@ -336,6 +349,11 @@ const AppSettingsNumberingRoute = AppSettingsNumberingRouteImport.update({
 const AppSettingsPdfTemplatesRoute = AppSettingsPdfTemplatesRouteImport.update({
   id: "/pdf-templates",
   path: "/pdf-templates",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
+  id: "/profile",
+  path: "/profile",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsQuotesRoute = AppSettingsQuotesRouteImport.update({
@@ -427,6 +445,7 @@ export interface FileRoutesByFullPath {
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
+  "/admin/archive": typeof AdminArchiveRoute
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
@@ -457,9 +476,11 @@ export interface FileRoutesByFullPath {
   "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
@@ -492,6 +513,7 @@ export interface FileRoutesByTo {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/admin/archive": typeof AdminArchiveRoute
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
@@ -522,9 +544,11 @@ export interface FileRoutesByTo {
   "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
@@ -562,6 +586,7 @@ export interface FileRoutesById {
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
+  "/admin/archive": typeof AdminArchiveRoute
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
@@ -592,9 +617,11 @@ export interface FileRoutesById {
   "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
+  "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
   "/app/settings/security": typeof AppSettingsSecurityRoute
@@ -633,6 +660,7 @@ export interface FileRouteTypes {
     | "/reset-password"
     | "/verify-email"
     | "/app/settings"
+    | "/admin/archive"
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
@@ -663,9 +691,11 @@ export interface FileRouteTypes {
     | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
+    | "/app/settings/general"
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
@@ -698,6 +728,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/admin/archive"
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
@@ -728,9 +759,11 @@ export interface FileRouteTypes {
     | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
+    | "/app/settings/general"
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
@@ -767,6 +800,7 @@ export interface FileRouteTypes {
     | "/reset-password"
     | "/verify-email"
     | "/app/settings"
+    | "/admin/archive"
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
@@ -797,9 +831,11 @@ export interface FileRouteTypes {
     | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
+    | "/app/settings/general"
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
     | "/app/settings/security"
@@ -921,6 +957,13 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/admin/"
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/archive": {
+      id: "/admin/archive"
+      path: "/archive"
+      fullPath: "/admin/archive"
+      preLoaderRoute: typeof AdminArchiveRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     "/admin/audit": {
@@ -1189,6 +1232,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsCompanyRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    "/app/settings/general": {
+      id: "/app/settings/general"
+      path: "/general"
+      fullPath: "/app/settings/general"
+      preLoaderRoute: typeof AppSettingsGeneralRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     "/app/settings/notifications": {
       id: "/app/settings/notifications"
       path: "/notifications"
@@ -1208,6 +1258,13 @@ declare module "@tanstack/react-router" {
       path: "/pdf-templates"
       fullPath: "/app/settings/pdf-templates"
       preLoaderRoute: typeof AppSettingsPdfTemplatesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    "/app/settings/profile": {
+      id: "/app/settings/profile"
+      path: "/profile"
+      fullPath: "/app/settings/profile"
+      preLoaderRoute: typeof AppSettingsProfileRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/quotes": {
@@ -1319,6 +1376,7 @@ declare module "@tanstack/react-router" {
 }
 
 interface AdminRouteRouteChildren {
+  AdminArchiveRoute: typeof AdminArchiveRoute
   AdminAuditRoute: typeof AdminAuditRoute
   AdminBadgesRoute: typeof AdminBadgesRoute
   AdminBetaRoute: typeof AdminBetaRoute
@@ -1331,6 +1389,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminArchiveRoute: AdminArchiveRoute,
   AdminAuditRoute: AdminAuditRoute,
   AdminBadgesRoute: AdminBadgesRoute,
   AdminBetaRoute: AdminBetaRoute,
@@ -1350,9 +1409,11 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsGeneralRoute: typeof AppSettingsGeneralRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsNumberingRoute: typeof AppSettingsNumberingRoute
   AppSettingsPdfTemplatesRoute: typeof AppSettingsPdfTemplatesRoute
+  AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsQuotesRoute: typeof AppSettingsQuotesRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
@@ -1366,9 +1427,11 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsGeneralRoute: AppSettingsGeneralRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsNumberingRoute: AppSettingsNumberingRoute,
   AppSettingsPdfTemplatesRoute: AppSettingsPdfTemplatesRoute,
+  AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsQuotesRoute: AppSettingsQuotesRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,

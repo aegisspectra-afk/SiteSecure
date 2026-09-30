@@ -14,7 +14,7 @@ import { cn } from "@site-secure/ui";
 import { ThemePicker } from "./ThemePicker";
 import { he } from "../i18n/he";
 import { accountAvatarUrl } from "../lib/account-avatar";
-import { planLabel, roleLabelEn } from "../lib/app-nav";
+import { planLabel, roleLabel } from "../lib/app-nav";
 import { useAccountAvatar } from "../lib/use-account-avatar";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 import { initialsFromName, placeAccountPopover } from "../lib/workspace-header";
@@ -45,20 +45,32 @@ function AccountAction({
   icon,
   children,
   onClick,
+  tone = "default",
 }: {
   icon: ReactNode;
   children: ReactNode;
   onClick: () => void;
+  tone?: "default" | "danger";
 }) {
+  const danger = tone === "danger";
   return (
     <button
       type="button"
       role="menuitem"
       data-account-item
-      className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-control)] px-3 text-start text-sm text-fg hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className={cn(
+        "flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-control)] px-3 text-start text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        danger ? "text-danger hover:bg-bg-subtle" : "text-fg hover:bg-bg-subtle",
+      )}
       onClick={onClick}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center text-fg-muted" aria-hidden>
+      <span
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center",
+          danger ? "text-danger" : "text-fg-muted",
+        )}
+        aria-hidden
+      >
         {icon}
       </span>
       {children}
@@ -119,11 +131,12 @@ export function UserAccountMenu({
     maxHeight: number;
   } | null>(null);
   const initials = initialsFromName(displayName, email);
-  const roleEn = roleLabelEn(roleKey);
+  const roleHe = roleLabel(roleKey);
   const plan = planLabel(planKey);
-  const tenure = [roleEn, plan].filter(Boolean).join(" · ");
+  const tenure = [roleHe, plan].filter(Boolean).join(" · ");
   const showTeam = Boolean(canUsers && onUsers);
-  const showManage = canSettings || canSecurity || showTeam || Boolean(isPlatformAdmin && onAdmin);
+  const showWorkspaceManage = canSettings || canSecurity || showTeam;
+  const showAdmin = Boolean(isPlatformAdmin && onAdmin);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -288,27 +301,27 @@ export function UserAccountMenu({
               onKeyDown={onPanelKeyDown}
             >
               <div className="px-3 pb-3 pt-3">
-                <p className="public-mono text-[10px] tracking-[0.16em] text-fg-muted">{he.accountMenuKicker}</p>
-                <div className="mt-3 flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <AvatarMark initials={initials} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg">
-                      {displayName}
-                      {isBeta ? <BetaBadge className="ms-2 align-middle" /> : null}
-                    </p>
+                    <p className="truncate text-sm font-medium text-fg">{displayName}</p>
                     {email ? <p className="ltr-meta truncate text-xs text-fg-muted">{email}</p> : null}
+                    {recognitionBadges.includes("founding_technician") || isBeta ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {recognitionBadges.includes("founding_technician") ? (
+                          <FoundingTechnicianBadge />
+                        ) : null}
+                        {isBeta ? <BetaBadge /> : null}
+                      </div>
+                    ) : null}
+                    {tenure ? <p className="mt-1 truncate text-xs text-fg-muted">{tenure}</p> : null}
                   </div>
                 </div>
-                {tenure ? (
-                  <p className="public-mono mt-3 text-[10px] tracking-[0.16em] text-fg-muted uppercase">
-                    {tenure}
-                  </p>
-                ) : null}
               </div>
-              <div className="border-t border-border px-3 py-3">
-                <ThemePicker id={`${menuId}-theme`} />
+              <div className="border-t border-border px-3 py-2.5">
+                <ThemePicker id={`${menuId}-theme`} compact />
               </div>
-              {showManage ? (
+              {showWorkspaceManage ? (
                 <div className="border-t border-border px-1 py-1">
                   <p className="px-3 pb-1 pt-2 text-xs text-fg-muted">{he.accountManage}</p>
                   {canSettings ? (
@@ -326,11 +339,13 @@ export function UserAccountMenu({
                       {he.navUsers}
                     </AccountAction>
                   ) : null}
-                  {isPlatformAdmin && onAdmin ? (
-                    <AccountAction icon={<LayoutDashboard className="size-4" />} onClick={() => closeThen(onAdmin)}>
-                      {he.adminNav}
-                    </AccountAction>
-                  ) : null}
+                </div>
+              ) : null}
+              {showAdmin ? (
+                <div className="border-t border-border px-1 py-1">
+                  <AccountAction icon={<LayoutDashboard className="size-4" />} onClick={() => closeThen(onAdmin!)}>
+                    {he.adminNav}
+                  </AccountAction>
                 </div>
               ) : null}
               {showAegisLink ? (
@@ -350,7 +365,11 @@ export function UserAccountMenu({
                 </div>
               ) : null}
               <div className="border-t border-border px-1 py-1">
-                <AccountAction icon={<LogOut className="size-4" />} onClick={() => closeThen(onSignOut)}>
+                <AccountAction
+                  tone="danger"
+                  icon={<LogOut className="size-4" />}
+                  onClick={() => closeThen(onSignOut)}
+                >
                   {he.signOut}
                 </AccountAction>
               </div>

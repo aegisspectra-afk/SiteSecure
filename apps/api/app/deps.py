@@ -42,7 +42,27 @@ def service_client(settings: Annotated[Settings, Depends(get_settings)]) -> Serv
 
 
 def current_user(client: Annotated[UserClient, Depends(user_client)]) -> dict:
-    return client.get_user()
+    """Resolve the authenticated Auth user and reject platform soft-archived accounts.
+
+    Soft-archive is authoritative in ``profiles.archived_at`` (app-level).
+    GoTrue ban is an additional gate; this check rejects existing JWTs immediately.
+    """
+    user = client.get_user()
+    user_id = user.get("id")
+    if not user_id:
+        raise ApiError(401, "UNAUTHENTICATED", "נדרשת התחברות")
+    try:
+        res = client.get(
+            "profiles",
+            params={"id": f"eq.{user_id}", "select": "archived_at", "limit": "1"},
+        )
+    except Exception:
+        res = None
+    if res is not None and getattr(res, "status_code", None) == 200:
+        rows = res.json() or []
+        if rows and rows[0].get("archived_at"):
+            raise ApiError(403, "ACCOUNT_INACTIVE", MESSAGES["ACCOUNT_INACTIVE"])
+    return user
 
 
 def parse_entitlements_rpc(response: Any, *, workspace_id: str) -> tuple[str, str, frozenset[str]]:

@@ -232,6 +232,7 @@ export function appNav(
           icon: "settings",
           visible:
             allow("workspace.edit") ||
+            allow("settings.view") ||
             allow("users.view") ||
             allow("roles.manage") ||
             allow("settings.general") ||
@@ -357,7 +358,7 @@ export function mobileCommandSections(
   ];
 
   const manageItems: AppNavItem[] = [
-    { to: "/app/settings", label: he.navSettings, icon: "settings", visible: allow("workspace.edit") || allow("users.view") || allow("roles.manage") || allow("settings.general") || allow("audit.view") },
+    { to: "/app/settings", label: he.navSettings, icon: "settings", visible: allow("workspace.edit") || allow("settings.view") || allow("users.view") || allow("roles.manage") || allow("settings.general") || allow("audit.view") },
   ];
 
   const opsExtra: AppNavItem[] = [

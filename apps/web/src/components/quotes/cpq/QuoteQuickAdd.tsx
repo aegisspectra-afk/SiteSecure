@@ -32,6 +32,22 @@ type Action = {
   keywords: string;
 };
 
+type Row =
+  | {
+      kind: "product";
+      id: string;
+      label: string;
+      hint: string;
+      icon: LucideIcon;
+    }
+  | {
+      kind: "action";
+      id: QuickAddActionId;
+      label: string;
+      hint: string;
+      icon: LucideIcon;
+    };
+
 export function QuoteQuickAdd({
   open,
   onClose,
@@ -66,6 +82,7 @@ export function QuoteQuickAdd({
 }) {
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectLock = useRef(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
 
@@ -144,7 +161,7 @@ export function QuoteQuickAdd({
   }, [actions, query]);
 
   const showCatalogHits = Boolean(canCatalog && (query.trim().length >= 1 || catalogKind === "service"));
-  const rows = showCatalogHits
+  const rows: Row[] = showCatalogHits
     ? [
         ...catalogResults.map((p) => {
           const skuPart = (p.sku || "").trim();
@@ -184,11 +201,32 @@ export function QuoteQuickAdd({
     if (!open) {
       setQuery("");
       setActive(0);
+      selectLock.current = false;
       onCatalogQuery("");
       return;
     }
+    selectLock.current = false;
     window.setTimeout(() => inputRef.current?.focus(), 20);
   }, [open, onCatalogQuery]);
+
+  function selectRow(row: Row) {
+    if (selectLock.current) return;
+    selectLock.current = true;
+    // Release quickly so multi-add catalog picks still work while dialog stays open.
+    window.setTimeout(() => {
+      selectLock.current = false;
+    }, 250);
+
+    if (row.kind === "product") {
+      onClose();
+      onPickCatalog(row.id);
+      return;
+    }
+    const actionId = row.id;
+    // Close first for instant feedback (catalog/service keep browse mode open).
+    if (actionId !== "catalog" && actionId !== "service") onClose();
+    onAction(actionId);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -210,15 +248,7 @@ export function QuoteQuickAdd({
         event.preventDefault();
         const row = rows[active];
         if (!row) return;
-        if (row.kind === "product") {
-          onPickCatalog(row.id);
-          onClose();
-          return;
-        }
-        const actionId = row.id as QuickAddActionId;
-        onAction(actionId);
-        // Stay open for catalog/service browse modes — parent may keep dialog open.
-        if (actionId !== "catalog" && actionId !== "service") onClose();
+        selectRow(row);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -271,15 +301,12 @@ export function QuoteQuickAdd({
                   aria-selected={index === active}
                   className={`cpq-quick-add-row${index === active ? " is-active" : ""}`}
                   onMouseEnter={() => setActive(index)}
-                  onClick={() => {
-                    if (row.kind === "product") {
-                      onPickCatalog(row.id);
-                      onClose();
-                      return;
-                    }
-                    const actionId = row.id as QuickAddActionId;
-                    onAction(actionId);
-                    if (actionId !== "catalog" && actionId !== "service") onClose();
+                  onPointerDown={(ev) => {
+                    if (ev.button !== 0) return;
+                    // Fire on pointerdown so the choice registers before overlay teardown.
+                    ev.preventDefault();
+                    setActive(index);
+                    selectRow(row);
                   }}
                 >
                   <span className="cpq-quick-add-icon" aria-hidden>

@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     email: session?.email,
     roleKey,
     planKey: membership?.plan_key,
-    canSettings: can(roleKey, "workspace.edit", features, permissions),
+    canSettings: canAny(roleKey, ["workspace.edit", "settings.view"], features, permissions),
     canSecurity: canAny(roleKey, ["settings.general", "workspace.edit"], features, permissions),
     canUsers: can(roleKey, "users.view", features, permissions),
     onSettings: () => void navigate({ to: "/app/settings" }),

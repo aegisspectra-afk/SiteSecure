@@ -199,19 +199,79 @@ export type AdminUser = {
   platform_role?: string | null;
   recognition_badges?: string[];
   created_at: string;
+  lifecycle_status?: "active" | "archived";
+  archived_at?: string | null;
+  archived_by?: string | null;
+  archived_by_name?: string | null;
+  archive_reason?: string | null;
   memberships: {
     workspace_id: string;
     workspace_name?: string | null;
     role_key: string;
+    status?: string | null;
     is_beta?: boolean;
   }[];
   beta_participations?: BetaParticipant[];
+};
+
+export type AdminArchiveWorkspace = {
+  id: string;
+  name: string;
+  archived_at: string;
+  archive_batch: string;
+  note?: string | null;
+};
+
+export type AdminArchiveProfile = {
+  id: string;
+  email?: string | null;
+  full_name?: string | null;
+  recognition_badges?: unknown;
+  is_platform_admin?: boolean | null;
+  created_at?: string | null;
+  archived_at: string;
+  archive_batch: string;
+  snapshot?: Record<string, unknown> | null;
+};
+
+export type AdminArchiveSoftUser = {
+  id: string;
+  email?: string | null;
+  full_name?: string | null;
+  archived_at: string;
+  archived_by?: string | null;
+  archived_by_name?: string | null;
+  archive_reason?: string | null;
+  workspace_count?: number;
+  important_roles?: string[];
+  memberships?: AdminUser["memberships"];
+  lifecycle_status?: "archived";
+};
+
+export type AdminArchiveResponse = {
+  workspaces: AdminArchiveWorkspace[];
+  profiles: AdminArchiveProfile[];
+  soft_users?: AdminArchiveSoftUser[];
+  counts: { workspaces: number; profiles: number; soft_users?: number };
+};
+
+export type AdminArchiveRestoreResult = {
+  id: string;
+  email: string;
+  full_name: string;
+  workspace_id: string;
+  workspace_name?: string | null;
+  role_key: string;
+  recognition_badges?: string[];
+  recovery_link?: string | null;
+  message?: string;
 };
 
 export type AdminSummary = {
   organizations: number;
   beta_organizations: number;
   users: number;
+  users_archived?: number;
   feedback_open: number;
   feedback_total: number;
   beta_participants_active?: number;
@@ -1280,6 +1340,8 @@ export type PublicQuote = {
   approved_name?: string | null;
   rejected_at?: string | null;
   signature_captured?: boolean;
+  /** Presentation hints from PDF template / workspace defaults (e.g. showVat). */
+  pdf_template?: Record<string, unknown> | null;
 };
 
 export type QuoteListCounts = {
@@ -3156,6 +3218,25 @@ export function createApiClient(opts: {
       return request<FeatureFlag[]>(`/api/v1/feature-flags${q ? `?${q}` : ""}`);
     },
     adminSummary: () => request<AdminSummary>("/api/v1/admin/summary"),
+    adminArchive: (opts: { kind?: "workspaces" | "profiles" | "soft_users" | "all"; q?: string; batch?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.kind) params.set("kind", opts.kind);
+      if (opts.q) params.set("q", opts.q);
+      if (opts.batch) params.set("batch", opts.batch);
+      if (opts.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<AdminArchiveResponse>(`/api/v1/admin/archive${q ? `?${q}` : ""}`);
+    },
+    adminArchiveProfile: (profileId: string) =>
+      request<AdminArchiveProfile>(`/api/v1/admin/archive/profiles/${profileId}`),
+    adminRestoreArchiveProfile: (
+      profileId: string,
+      body: { workspace_id: string; role_key: "owner" | "manager" | "sales" | "technician" | "viewer" | "administrator" },
+    ) =>
+      request<AdminArchiveRestoreResult>(`/api/v1/admin/archive/profiles/${profileId}/restore`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     adminOrganizations: () => request<AdminOrganization[]>("/api/v1/admin/organizations"),
     adminCreateOrganization: (body: {
       name: string;
@@ -3197,12 +3278,22 @@ export function createApiClient(opts: {
       request<AdminInvitation>(`/api/v1/admin/invitations/${invitationId}/revoke`, { method: "POST" }),
     adminReissueInvitation: (invitationId: string) =>
       request<AdminInvitation>(`/api/v1/admin/invitations/${invitationId}/reissue`, { method: "POST" }),
-    adminUsers: (opts: { q?: string } = {}) => {
+    adminUsers: (opts: { q?: string; status?: "all" | "active" | "archived" } = {}) => {
       const params = new URLSearchParams();
       if (opts.q) params.set("q", opts.q);
+      if (opts.status) params.set("status", opts.status);
       const q = params.toString();
       return request<AdminUser[]>(`/api/v1/admin/users${q ? `?${q}` : ""}`);
     },
+    adminArchiveUser: (userId: string, body: { reason?: string | null } = {}) =>
+      request<AdminUser>(`/api/v1/admin/users/${userId}/archive`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    adminRestoreUser: (userId: string) =>
+      request<AdminUser>(`/api/v1/admin/users/${userId}/restore`, {
+        method: "POST",
+      }),
     adminPatchUserBadges: (
       userId: string,
       body: { recognition_badges: string[]; reason?: string | null },

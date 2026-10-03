@@ -119,14 +119,35 @@ export function compatibilityLabelHe(state: CompatUi): string {
   }
 }
 
+/**
+ * True when the user explicitly chose this product (picker), not merely engine auto-fill.
+ * Browse/search picks live in candidateOverrides; swapping away from engine preferred also counts.
+ */
+export function isUserConfirmedSelection(
+  component: CctvRecommendationComponent,
+  selection: ReviewSelectionState,
+  picked: CctvRecommendationCandidate | null,
+): boolean {
+  if (!picked?.product.id) return false;
+  const key = componentKeyOf(component);
+  const selectedId = selection.selectedByComponentId[key];
+  if (!selectedId || selectedId !== picked.product.id) return false;
+  if (selection.candidateOverrides?.[key]?.product.id === selectedId) return true;
+  const engineId = component.selected_product?.id;
+  return Boolean(engineId && selectedId !== engineId);
+}
+
 export function deriveReviewCardStatus(
   component: CctvRecommendationComponent,
   picked: CctvRecommendationCandidate | null,
   needsReview: boolean,
+  opts?: { userConfirmed?: boolean },
 ): ReviewCardStatus {
   if (picked) {
     const compat = overallCompatibility(picked.compatibility);
     if (compat === "FAIL") return "incompatible";
+    // User picked in the catalog picker — treat as accepted for quoting (chip: נבחר).
+    if (opts?.userConfirmed) return "selected";
     if (
       needsReview ||
       picked.confidence === "TEXT_ASSISTED" ||

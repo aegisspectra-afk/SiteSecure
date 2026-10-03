@@ -21,6 +21,11 @@ export type PublicMessages = {
   languageLabel: string;
   languageHe: string;
   languageEn: string;
+  themeLabel: string;
+  themeLight: string;
+  themeDark: string;
+  themeSystem: string;
+  themeSystemHint: string;
   navPlatform: string;
   navQuotes: string;
   navSiteFile: string;

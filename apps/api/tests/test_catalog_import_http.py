@@ -90,7 +90,7 @@ def _csv_bytes(sku: str) -> bytes:
 
 
 def _csv_dup_sku_bytes(sku: str) -> bytes:
-    """Two product rows with the same SKU — triggers UNIQUE mid-batch RPC failure."""
+    """Two product rows with the same SKU — second row is blocked before commit."""
     return (
         "sku,name,cost,resolution_mp,form_factor\n"
         f"{sku},CSV Cam A,150,4,bullet\n"
@@ -307,11 +307,7 @@ def test_tenant_isolation_session_and_commit(api, tenants):
 
 
 def test_atomic_rollback_on_unique_sku_conflict(api, tenants):
-    """Mid-batch UNIQUE(workspace_id, sku) failure rolls back all intended creates.
-
-    No production test hook: duplicate SKUs in one import plan hit the DB constraint
-    after the first insert, aborting the SECURITY DEFINER transaction.
-    """
+    """In-file duplicate SKUs are blocked in preview; commit writes only the first row."""
     ws = tenants["ws_a"]
     a = _auth(tenants["token_a"])
     sku = f"ROLL-{uuid.uuid4().hex[:8]}"
@@ -327,8 +323,16 @@ def test_atomic_rollback_on_unique_sku_conflict(api, tenants):
         "sheets": [_sheet_cfg(sheet, cam_id)],
         "confirm": True,
     }
-    fail = api.post(f"/api/v1/workspaces/{ws}/catalog/import/commit", headers=a, json=body)
-    assert fail.status_code == 409, fail.text
+
+    prev = api.post(
+        f"/api/v1/workspaces/{ws}/catalog/import/preview",
+        headers=a,
+        json={"session_id": sid, "duplicate_policy": "skip", "sheets": [_sheet_cfg(sheet, cam_id)]},
+    )
+    assert prev.status_code == 200, prev.text
+    summary = prev.json()["summary"]
+    assert summary["will_create"] == 1
+    assert summary["blocked"] >= 1
 
     # Removed production hook must be rejected by schema (extra=forbid), not acted on
     hook = api.post(
@@ -339,23 +343,22 @@ def test_atomic_rollback_on_unique_sku_conflict(api, tenants):
     assert hook.status_code in {400, 422}, hook.text
     assert "test_force_fail" in hook.text or "extra_forbidden" in hook.text or "Extra inputs" in hook.text
 
+    ok = api.post(f"/api/v1/workspaces/{ws}/catalog/import/commit", headers=a, json=body)
+    assert ok.status_code == 200, ok.text
+    result = ok.json()
+    assert result["imported"] == 1
+    assert result["failed_count"] >= 1
+
     products = api.get(
         f"/api/v1/workspaces/{ws}/catalog/products",
         headers=a,
         params={"q": sku, "limit": 10, "include_inactive": "true"},
     )
     assert products.status_code == 200
-    assert not any(p.get("sku") == sku for p in products.json().get("items", []))
+    hits = [p for p in products.json().get("items", []) if p.get("sku") == sku]
+    assert len(hits) == 1
 
-    # Session retained after failure — preview still works
-    prev = api.post(
-        f"/api/v1/workspaces/{ws}/catalog/import/preview",
-        headers=a,
-        json={"session_id": sid, "duplicate_policy": "skip", "sheets": [_sheet_cfg(sheet, cam_id)]},
-    )
-    assert prev.status_code == 200
-
-    # Safe retry: new clean upload (corrected workbook) commits successfully
+    # Re-import same SKU with skip — commits cleanly without creating a second row
     clean = {"file": ("roll_ok.csv", _csv_bytes(sku), "text/csv")}
     parsed2 = api.post(f"/api/v1/workspaces/{ws}/catalog/import/parse", headers=a, files=clean)
     assert parsed2.status_code == 200
@@ -371,7 +374,8 @@ def test_atomic_rollback_on_unique_sku_conflict(api, tenants):
         },
     )
     assert ok.status_code == 200, ok.text
-    assert ok.json()["imported"] == 1
+    assert ok.json()["imported"] == 0
+    assert ok.json()["skipped"] >= 1
 
 
 def test_rpc_rejects_cross_workspace_update_and_category(settings, tenants):

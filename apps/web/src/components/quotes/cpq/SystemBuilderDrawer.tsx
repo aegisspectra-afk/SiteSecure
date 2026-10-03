@@ -30,7 +30,10 @@ import {
   deriveDesignerReadiness,
   type PersistTrustState,
 } from "../../../lib/cctv-designer-summary";
-import { CctvRequirementsWorkspace } from "./CctvRequirementsWorkspace";
+import {
+  CctvRequirementsHeader,
+  CctvRequirementsWorkspace,
+} from "./CctvRequirementsWorkspace";
 import { CctvEngineeringSummaryPanel } from "./CctvEngineeringSummaryPanel";
 import { CctvReviewPanel } from "./CctvReviewPanel";
 import {
@@ -693,6 +696,7 @@ export function SystemBuilderDrawer({
       title={he.cpqBuildSystem}
       subtitle={he.cpqBuildSystemLead}
       variant="sheet"
+      size="lg"
       footer={footer}
     >
       <div className="grid gap-4">
@@ -739,28 +743,37 @@ export function SystemBuilderDrawer({
               <CctvBuildProgress label={hydrating ? he.cpqCctvDesignHydrating : undefined} />
             ) : (
               <div className="cpq-cctv-designer-shell" data-testid="cctv-designer-requirements-shell">
-                <CctvEngineeringSummaryPanel
-                  req={req}
-                  recommendation={recommendation}
-                  calcState={calcState}
-                  readiness={designerReadiness}
-                  persistState={persistState}
-                  stale={requirementsStale}
-                />
-                <CctvRequirementsWorkspace
+                <CctvRequirementsHeader
                   req={req}
                   setReq={updateRequirements}
-                  inputError={inputError}
-                  stale={requirementsStale}
                   calcState={calcState}
                   disabled={conflict}
-                  siteContext={{
-                    customerName,
-                    siteName,
-                    leadLocation: lead?.requirements?.location,
-                    leadInfra: lead?.requirements?.infrastructure,
-                  }}
                 />
+                <div className="cpq-cctv-designer-shell-body">
+                  <CctvEngineeringSummaryPanel
+                    req={req}
+                    recommendation={recommendation}
+                    calcState={calcState}
+                    readiness={designerReadiness}
+                    persistState={persistState}
+                    stale={requirementsStale}
+                  />
+                  <CctvRequirementsWorkspace
+                    req={req}
+                    setReq={updateRequirements}
+                    inputError={inputError}
+                    stale={requirementsStale}
+                    calcState={calcState}
+                    disabled={conflict}
+                    hideHeader
+                    siteContext={{
+                      customerName,
+                      siteName,
+                      leadLocation: lead?.requirements?.location,
+                      leadInfra: lead?.requirements?.infrastructure,
+                    }}
+                  />
+                </div>
               </div>
             )}
             {serverError ? (
@@ -777,6 +790,10 @@ export function SystemBuilderDrawer({
             selection={selection}
             setSelection={updateSelection}
             needsReviewKeys={needsReviewKeys}
+            onNeedsReviewKeysChange={(next) => {
+              setNeedsReviewKeys(next);
+              setNeedsReviewHint(next.size > 0);
+            }}
             applyError={shownApplyError}
             focusComponentKey={focusComponentKey}
             workspaceId={workspaceId}

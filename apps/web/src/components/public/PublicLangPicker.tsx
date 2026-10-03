@@ -20,6 +20,7 @@ function readSelectedThumb(track: HTMLElement): ThumbBox | null {
 
 /**
  * Segmented HE / EN control with sliding thumb — same interaction grammar as ThemePicker.
+ * Track is always LTR so option order and thumb do not jump when page locale flips.
  */
 export function PublicLangPicker({
   id = "public-lang",
@@ -31,13 +32,12 @@ export function PublicLangPicker({
   /** Icon-density: shorter min height for tight header chrome. */
   compact?: boolean;
 }) {
-  const { locale, setLocale, t, dir } = usePublicLocale();
+  const { locale, setLocale, t } = usePublicLocale();
   const reducedMotion = useReducedMotion();
   const trackRef = useRef<HTMLDivElement>(null);
   const placedRef = useRef(false);
   const [thumb, setThumb] = useState<ThumbBox | null>(null);
   const [canSlide, setCanSlide] = useState(false);
-  const rtl = dir === "rtl";
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -62,14 +62,14 @@ export function PublicLangPicker({
       ro?.disconnect();
       window.removeEventListener("resize", sync);
     };
-  }, [locale, compact, rtl]);
+  }, [locale, compact]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const index = PUBLIC_LOCALES.indexOf(locale);
     const forward = event.key === "ArrowRight";
-    const delta = rtl ? (forward ? -1 : 1) : forward ? 1 : -1;
+    const delta = forward ? 1 : -1;
     const next = PUBLIC_LOCALES[(index + delta + PUBLIC_LOCALES.length) % PUBLIC_LOCALES.length];
     setLocale(next);
   };
@@ -95,9 +95,10 @@ export function PublicLangPicker({
         ref={trackRef}
         role="radiogroup"
         aria-labelledby={`${id}-label`}
+        dir="ltr"
         className={cn(
-          "theme-picker-track public-lang-track relative grid grid-cols-2 gap-1 rounded-[var(--radius-control)] border border-border bg-bg-subtle p-1",
-          compact ? "min-w-[7.5rem]" : "min-w-[8.5rem]",
+          "theme-picker-track public-lang-track relative grid grid-cols-2 rounded-[var(--radius-control)] border border-border bg-bg-subtle",
+          compact ? "min-w-[7.25rem] gap-0.5 p-0.5" : "min-w-[8.5rem] gap-1 p-1",
         )}
         onKeyDown={onKeyDown}
       >
@@ -105,7 +106,8 @@ export function PublicLangPicker({
           aria-hidden
           data-theme-thumb
           className={cn(
-            "theme-picker-thumb pointer-events-none absolute top-1 left-0 z-0 h-[calc(100%-0.5rem)] rounded-[var(--radius-control)]",
+            "theme-picker-thumb pointer-events-none absolute left-0 z-0 rounded-[calc(var(--radius-control)-1px)]",
+            compact ? "top-0.5 h-[calc(100%-0.25rem)]" : "top-1 h-[calc(100%-0.5rem)]",
             canSlide && !reducedMotion && "is-animated",
             !thumb && "opacity-0",
           )}
@@ -128,8 +130,8 @@ export function PublicLangPicker({
               aria-checked={selected}
               aria-label={`${t.languageLabel}: ${labels[value]}`}
               className={cn(
-                "relative z-10 rounded-[var(--radius-control)] px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-                compact ? "flex min-h-9 items-center justify-center" : "flex min-h-11 items-center justify-center",
+                "relative z-10 rounded-[calc(var(--radius-control)-1px)] px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                compact ? "flex h-8 items-center justify-center" : "flex min-h-11 items-center justify-center",
                 selected ? "font-medium text-fg" : "text-fg-muted hover:text-fg",
                 !reducedMotion && "transition-colors duration-150",
               )}

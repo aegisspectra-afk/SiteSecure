@@ -25,7 +25,7 @@ type Props = {
   component: CctvRecommendationComponent;
   technology: "ip" | "analog_hd" | "hybrid";
   selectedProductId?: string | null;
-  onSelect: (productId: string) => void;
+  onSelect: (candidate: CctvRecommendationCandidate) => void;
   workspaceId: string;
   api: ApiClient;
 };
@@ -47,6 +47,37 @@ function CompatBadge({ state }: { state: CompatUi }) {
   );
 }
 
+function mapBrowseCandidate(
+  p: {
+    id: string;
+    sku?: string | null;
+    name: string;
+    manufacturer?: string | null;
+    model?: string | null;
+    category_key?: string | null;
+    unit?: string | null;
+    list_price?: number | null;
+    attributes?: Record<string, unknown> | null;
+  },
+): CctvRecommendationCandidate {
+  return {
+    product: {
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      manufacturer: p.manufacturer,
+      model: p.model,
+      category_key: p.category_key,
+      unit: p.unit,
+      list_price: p.list_price,
+      attributes: p.attributes ?? {},
+    },
+    confidence: "PARTIAL",
+    compatibility: {},
+    reason_codes: [{ code: "CATALOG_BROWSE_UNVERIFIED", params: {} }],
+  };
+}
+
 export function CctvComponentPicker({
   open,
   onClose,
@@ -61,15 +92,21 @@ export function CctvComponentPicker({
   const searchId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [query, setQuery] = useState("");
-  const [extra, setExtra] = useState<CctvRecommendationCandidate[]>([]);
+  const [browseExtra, setBrowseExtra] = useState<CctvRecommendationCandidate[]>([]);
+  const [searchExtra, setSearchExtra] = useState<CctvRecommendationCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const cacheKeyRef = useRef<string>("");
+  const browseCacheKeyRef = useRef<string>("");
   const componentKey = componentKeyOf(component);
+  const allowedKeys = useMemo(
+    () => categoryKeysForComponent(componentKey, technology),
+    [componentKey, technology],
+  );
 
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    setSearchExtra([]);
     setLoadError(null);
     const t = window.setTimeout(() => closeRef.current?.focus(), 0);
     const onKey = (ev: KeyboardEvent) => {
@@ -82,40 +119,26 @@ export function CctvComponentPicker({
     };
   }, [open, onClose]);
 
+  // Initial browse page (category-filtered). Large catalogs need server search below.
   useEffect(() => {
     if (!open) return;
     const cacheKey = `${componentKey}:${technology}`;
-    if (cacheKeyRef.current === cacheKey && extra.length) return;
-    const allowed = new Set(categoryKeysForComponent(componentKey, technology));
+    if (browseCacheKeyRef.current === cacheKey && browseExtra.length) return;
+    const allowed = new Set(allowedKeys);
     if (!allowed.size) return;
     let cancelled = false;
     setLoading(true);
     void (async () => {
       try {
         // listCatalogProducts uses server PRODUCT_SELECT — no products.cost (Q4-S).
-        const res = await api.listCatalogProducts(workspaceId, { q: "", limit: 80 });
+        const res = await api.listCatalogProducts(workspaceId, { q: "", limit: 200 });
         if (cancelled) return;
         const existingIds = new Set(component.candidates.map((c) => c.product.id));
-        const mapped: CctvRecommendationCandidate[] = (res.items ?? [])
+        const mapped = (res.items ?? [])
           .filter((p) => p.category_key && allowed.has(p.category_key) && !existingIds.has(p.id))
-          .map((p) => ({
-            product: {
-              id: p.id,
-              sku: p.sku,
-              name: p.name,
-              manufacturer: p.manufacturer,
-              model: p.model,
-              category_key: p.category_key,
-              unit: p.unit,
-              list_price: p.list_price,
-              attributes: p.attributes ?? {},
-            },
-            confidence: "PARTIAL" as const,
-            compatibility: {},
-            reason_codes: [{ code: "CATALOG_BROWSE_UNVERIFIED", params: {} }],
-          }));
-        setExtra(mapped);
-        cacheKeyRef.current = cacheKey;
+          .map(mapBrowseCandidate);
+        setBrowseExtra(mapped);
+        browseCacheKeyRef.current = cacheKey;
       } catch (err) {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : he.quotesError);
       } finally {
@@ -125,18 +148,56 @@ export function CctvComponentPicker({
     return () => {
       cancelled = true;
     };
-    // Intentionally omit extra.length — cacheKeyRef gates refetch for same component.
+    // Intentionally omit browseExtra.length — browseCacheKeyRef gates refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, componentKey, technology, workspaceId, api, component.candidates]);
+  }, [open, componentKey, technology, workspaceId, api, component.candidates, allowedKeys]);
+
+  // Server-side search so SKUs outside the first browse page still appear.
+  useEffect(() => {
+    if (!open) return;
+    const needle = query.trim();
+    if (!needle) {
+      setSearchExtra([]);
+      return;
+    }
+    const allowed = new Set(allowedKeys);
+    if (!allowed.size) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      setLoading(true);
+      void (async () => {
+        try {
+          const res = await api.listCatalogProducts(workspaceId, { q: needle, limit: 100 });
+          if (cancelled) return;
+          const mapped = (res.items ?? [])
+            .filter((p) => p.category_key && allowed.has(p.category_key))
+            .map(mapBrowseCandidate);
+          setSearchExtra(mapped);
+          setLoadError(null);
+        } catch (err) {
+          if (!cancelled) setLoadError(err instanceof Error ? err.message : he.quotesError);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query, workspaceId, api, allowedKeys]);
 
   const merged = useMemo(() => {
     const byId = new Map<string, CctvRecommendationCandidate>();
     for (const c of component.candidates) byId.set(c.product.id, c);
-    for (const c of extra) {
+    for (const c of browseExtra) {
+      if (!byId.has(c.product.id)) byId.set(c.product.id, c);
+    }
+    for (const c of searchExtra) {
       if (!byId.has(c.product.id)) byId.set(c.product.id, c);
     }
     return [...byId.values()];
-  }, [component.candidates, extra]);
+  }, [component.candidates, browseExtra, searchExtra]);
 
   const visible = useMemo(
     () => filterPickerCandidates(merged, { query, includeFail: true }),
@@ -223,7 +284,7 @@ export function CctvComponentPicker({
                     }
                     aria-pressed={selected}
                     onClick={() => {
-                      onSelect(cand.product.id);
+                      onSelect(cand);
                       onClose();
                     }}
                   >

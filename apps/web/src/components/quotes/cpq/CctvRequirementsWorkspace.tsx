@@ -18,13 +18,17 @@ import {
   type SiteContextChip,
 } from "../../../lib/cctv-designer-workspace";
 
+type CalcState = "draft" | "fresh" | "stale";
+
 type Props = {
   req: CctvBuildRequirements;
   setReq: (next: CctvBuildRequirements) => void;
   inputError: string | null;
   stale: boolean;
-  calcState: "draft" | "fresh" | "stale";
+  calcState: CalcState;
   disabled?: boolean;
+  /** When true, tech/mode chrome is rendered by the parent above the summary. */
+  hideHeader?: boolean;
   siteContext?: {
     customerName?: string | null;
     siteName?: string | null;
@@ -265,6 +269,76 @@ function Section({
   );
 }
 
+/** Tech / mode chrome — rendered above the engineering summary in the designer shell. */
+export function CctvRequirementsHeader({
+  req,
+  setReq,
+  calcState,
+  disabled = false,
+}: {
+  req: CctvBuildRequirements;
+  setReq: (next: CctvBuildRequirements) => void;
+  calcState: CalcState;
+  disabled?: boolean;
+}) {
+  const pro = isProfessionalMode(req);
+  const tech = req.cctvTechnology;
+  const calcLabel =
+    calcState === "stale"
+      ? he.cpqCctvCalcStale
+      : calcState === "fresh"
+        ? he.cpqCctvCalcFresh
+        : he.cpqCctvCalcReady;
+
+  return (
+    <header className="cpq-cctv-ws-header" data-testid="cctv-requirements-header">
+      <div className="cpq-cctv-ws-header-top">
+        <p className="cpq-cctv-ws-kicker">
+          <Ltr>CCTV</Ltr>
+        </p>
+        <p
+          className={
+            calcState === "stale"
+              ? "cpq-cctv-ws-calc-state is-stale"
+              : calcState === "fresh"
+                ? "cpq-cctv-ws-calc-state is-fresh"
+                : "cpq-cctv-ws-calc-state"
+          }
+          role="status"
+          data-testid="cctv-calc-state"
+        >
+          {calcLabel}
+        </p>
+      </div>
+      <div className="cpq-cctv-ws-header-row">
+        <Segmented
+          name="cctv-tech"
+          label={he.cpqCctvTechLabel}
+          value={tech}
+          disabled={disabled}
+          onChange={(v) => setReq(applyTechnology(req, v))}
+          options={[
+            { value: "ip", label: <Ltr>{he.cpqCctvTechIp}</Ltr> },
+            { value: "analog_hd", label: <Ltr>{he.cpqCctvTechAnalog}</Ltr> },
+            { value: "hybrid", label: <Ltr>{he.cpqCctvTechHybrid}</Ltr> },
+          ]}
+        />
+        <Segmented
+          name="cctv-mode"
+          label={he.cpqCctvModeLabel}
+          value={pro ? "professional" : "quick"}
+          disabled={disabled}
+          onChange={(v) => setReq(withDesignerMode(req, v))}
+          options={[
+            { value: "quick", label: he.cpqCctvModeQuick },
+            { value: "professional", label: he.cpqCctvModePro },
+          ]}
+        />
+      </div>
+    </header>
+  );
+}
+
 export function CctvRequirementsWorkspace({
   req,
   setReq,
@@ -272,6 +346,7 @@ export function CctvRequirementsWorkspace({
   stale,
   calcState,
   disabled = false,
+  hideHeader = false,
   siteContext,
 }: Props) {
   const pro = isProfessionalMode(req);
@@ -297,13 +372,6 @@ export function CctvRequirementsWorkspace({
     setReq({ ...req, ...partial });
   }
 
-  const calcLabel =
-    calcState === "stale"
-      ? he.cpqCctvCalcStale
-      : calcState === "fresh"
-        ? he.cpqCctvCalcFresh
-        : he.cpqCctvCalcReady;
-
   return (
     <div
       className="cpq-cctv-ws"
@@ -312,51 +380,9 @@ export function CctvRequirementsWorkspace({
       data-mode={pro ? "professional" : "quick"}
       data-stale={stale ? "true" : "false"}
     >
-      <header className="cpq-cctv-ws-header">
-        <div className="cpq-cctv-ws-header-main">
-          <p className="cpq-cctv-ws-kicker">
-            <Ltr>CCTV</Ltr>
-          </p>
-          <div className="cpq-cctv-ws-header-row">
-            <Segmented
-              name="cctv-tech"
-              label={he.cpqCctvTechLabel}
-              value={tech}
-              disabled={disabled}
-              onChange={(v) => setReq(applyTechnology(req, v))}
-              options={[
-                { value: "ip", label: <Ltr>{he.cpqCctvTechIp}</Ltr> },
-                { value: "analog_hd", label: <Ltr>{he.cpqCctvTechAnalog}</Ltr> },
-                { value: "hybrid", label: <Ltr>{he.cpqCctvTechHybrid}</Ltr> },
-              ]}
-            />
-            <Segmented
-              name="cctv-mode"
-              label={he.cpqCctvModeLabel}
-              value={pro ? "professional" : "quick"}
-              disabled={disabled}
-              onChange={(v) => setReq(withDesignerMode(req, v))}
-              options={[
-                { value: "quick", label: he.cpqCctvModeQuick },
-                { value: "professional", label: he.cpqCctvModePro },
-              ]}
-            />
-          </div>
-        </div>
-        <p
-          className={
-            calcState === "stale"
-              ? "cpq-cctv-ws-calc-state is-stale"
-              : calcState === "fresh"
-                ? "cpq-cctv-ws-calc-state is-fresh"
-                : "cpq-cctv-ws-calc-state"
-          }
-          role="status"
-          data-testid="cctv-calc-state"
-        >
-          {calcLabel}
-        </p>
-      </header>
+      {hideHeader ? null : (
+        <CctvRequirementsHeader req={req} setReq={setReq} calcState={calcState} disabled={disabled} />
+      )}
 
       {chips.length > 0 ? (
         <div className="cpq-cctv-ws-context" aria-label={he.cpqCctvSiteContext}>

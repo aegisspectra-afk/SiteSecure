@@ -1,16 +1,32 @@
 import { Button, Drawer, cn } from "@site-secure/ui";
 import { Menu } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { afterAuthPath } from "../../lib/auth-routes";
 import { useSession } from "../../lib/session";
+import { ThemePicker, type ThemePickerLabels } from "../ThemePicker";
 import { LegalNav } from "./LegalNav";
 import { PublicLangPicker } from "./PublicLangPicker";
 import { usePublicLocale } from "./PublicLocaleProvider";
 
+function usePublicThemeLabels(): ThemePickerLabels {
+  const { t } = usePublicLocale();
+  return useMemo(
+    () => ({
+      group: t.themeLabel,
+      light: t.themeLight,
+      dark: t.themeDark,
+      system: t.themeSystem,
+      systemHint: t.themeSystemHint,
+    }),
+    [t.themeDark, t.themeLabel, t.themeLight, t.themeSystem, t.themeSystemHint],
+  );
+}
+
 export function PublicHeader() {
   const { user, session, error, signOut } = useSession();
   const { t, dir } = usePublicLocale();
+  const themeLabels = usePublicThemeLabels();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -38,12 +54,12 @@ export function PublicHeader() {
     : null;
 
   const links = (
-    <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-7">
+    <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-5" dir={dir}>
       {nav.map((item) => (
         <a
           key={item.href}
           href={`/${item.href}`}
-          className="rounded-[var(--radius-control)] px-1.5 py-2 text-[13px] tracking-[0.06em] text-fg-muted transition-colors duration-200 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="rounded-[var(--radius-control)] px-1 py-2 text-[13px] tracking-[0.04em] text-fg-muted transition-colors duration-200 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={() => setOpen(false)}
         >
           {item.label}
@@ -52,21 +68,34 @@ export function PublicHeader() {
     </div>
   );
 
+  /* Desktop chrome: language + theme stay LTR so they never flip with locale. */
+  const chromeControls = (
+    <div className="flex shrink-0 items-center gap-2" dir="ltr">
+      <PublicLangPicker id="public-lang-header" compact />
+      <ThemePicker
+        id="public-theme-header"
+        compact
+        hideLabel
+        labels={themeLabels}
+        lockDir="ltr"
+      />
+    </div>
+  );
+
   const actions = (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
-      <PublicLangPicker id="public-lang-header" compact className="hidden lg:block" />
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
       {workspaceCta ? (
         <>
           <Link
             to={workspaceCta.to}
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] bg-action px-3.5 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
             onClick={() => setOpen(false)}
           >
             {workspaceCta.label}
           </Link>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] px-2.5 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
             onClick={() => {
               setOpen(false);
               void signOut();
@@ -79,14 +108,14 @@ export function PublicHeader() {
         <>
           <Link
             to="/login"
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] px-2.5 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
             onClick={() => setOpen(false)}
           >
             {t.login}
           </Link>
           <Link
             to="/register"
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] bg-action px-3.5 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
             onClick={() => setOpen(false)}
           >
             {t.joinPilot}
@@ -102,23 +131,29 @@ export function PublicHeader() {
         "public-nav sticky top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
         scrolled ? "public-nav-scrolled" : "public-nav-top",
       )}
-      dir={dir}
+      /* Chrome layout stays RTL so brand + controls do not jump when locale flips. */
+      dir="rtl"
     >
-      <div className="public-nav-inner relative mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <div className="public-nav-inner mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 lg:gap-4">
         <Link
           to="/"
-          className="relative z-10 text-sm font-semibold tracking-[0.22em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="shrink-0 text-sm font-semibold tracking-[0.22em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           {t.brand}
         </Link>
-        <nav className="pointer-events-none absolute inset-x-0 hidden justify-center lg:flex" aria-label={t.navAria}>
-          <div className="pointer-events-auto" dir={dir}>
-            {links}
-          </div>
+
+        <nav className="hidden min-w-0 flex-1 items-center lg:flex" aria-label={t.navAria}>
+          {links}
         </nav>
-        <div className="relative z-10 hidden lg:flex">{actions}</div>
-        <div className="relative z-10 flex items-center gap-2 lg:hidden">
-          <PublicLangPicker id="public-lang-mobile" compact />
+
+        {/* Desktop: utilities then CTAs on the trailing edge — no absolute overlap. */}
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
+          {chromeControls}
+          {actions}
+        </div>
+
+        {/* Below lg: only the menu trigger — theme + language live in the drawer. */}
+        <div className="ms-auto lg:hidden">
           <Button variant="ghost" className="min-w-11" aria-label={t.menu} onClick={() => setOpen(true)}>
             <Menu className="size-5" aria-hidden />
           </Button>
@@ -126,6 +161,10 @@ export function PublicHeader() {
       </div>
       <Drawer open={open} onClose={() => setOpen(false)} title={t.brand}>
         <div className="flex flex-col gap-6 p-4" dir={dir}>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-fg-muted">{t.themeLabel}</p>
+            <ThemePicker id="public-theme-drawer" labels={themeLabels} lockDir="ltr" />
+          </div>
           <div className="flex flex-col gap-2">
             <p className="text-xs text-fg-muted">{t.languageLabel}</p>
             <PublicLangPicker id="public-lang-drawer" />

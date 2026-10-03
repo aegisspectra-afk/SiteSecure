@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -94,12 +94,25 @@ describe("public website", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubHe.heroLine1);
 
     const english = screen.getAllByRole("radio", { name: /EN/i })[0];
+    const header = document.querySelector("header.public-nav");
+    expect(header).toHaveAttribute("dir", "rtl");
     await user.click(english);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubEn.heroLine1);
     expect(screen.getAllByRole("link", { name: pubEn.joinPilot }).length).toBeGreaterThan(0);
     expect(document.querySelector(".public-root")).toHaveAttribute("dir", "ltr");
+    expect(header).toHaveAttribute("dir", "rtl");
     expect(window.localStorage.getItem(PUBLIC_LOCALE_STORAGE_KEY)).toBe("en");
+  });
+
+  it("exposes theme controls on the homepage that follow system preference", () => {
+    render(<PublicHome />);
+    const groups = screen.getAllByRole("radiogroup", { name: pubHe.themeLabel });
+    expect(groups.length).toBeGreaterThan(0);
+    const group = groups[0];
+    expect(within(group).getByRole("radio", { name: pubHe.themeLight })).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: pubHe.themeDark })).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: pubHe.themeSystem })).toBeInTheDocument();
   });
 
   it("keeps product entry at login when the app is unauthenticated", () => {

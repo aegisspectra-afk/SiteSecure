@@ -2,34 +2,78 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..catalog_attrs import normalize_unit, validate_product_attributes, AttributeValidationError
 from .normalize import normalize_mapped_value
 
 DuplicatePolicy = str  # skip | update | new_only
+InFileDuplicateMode = str  # block | suffix
+
+# Model/SKU-like tokens (e.g. IPC642E-X22I-IN, NVR301-08E-IQ, PWR-DC12-350A-IN).
+_SKU_LIKE = re.compile(
+    r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9][A-Za-z0-9._/\-]{2,62}[A-Za-z0-9]$"
+)
+_SKU_PREFIX = re.compile(r"^(IPC|NVR|DVR|XVR|PWR|DS-|DH-|UNV)", re.I)
 
 
-def _is_product_row(row: list[Any], sku_idx: int | None) -> bool:
-    if not row or not any(v is not None and str(v).strip() != "" for v in row):
+def looks_like_sku(value: str | None) -> bool:
+    s = (value or "").strip()
+    if len(s) < 4 or len(s) > 64:
         return False
-    if sku_idx is not None:
-        if sku_idx >= len(row) or row[sku_idx] is None or str(row[sku_idx]).strip() == "":
-            return False
+    # Hebrew prose is never a SKU; mixed HE+code still rejected here.
+    if re.search(r"[\u0590-\u05FF]", s):
+        return False
+    if " " in s:
+        return False
+    if _SKU_LIKE.fullmatch(s):
         return True
-    # Without SKU map: require at least 2 non-empty cells and a string-ish first populated cell
-    nonempty = [v for v in row if v is not None and str(v).strip() != ""]
-    return len(nonempty) >= 2
+    return bool(_SKU_PREFIX.match(s)) and any(ch.isdigit() for ch in s)
 
 
-def _sku_col(column_map: dict[str, str]) -> int | None:
+def _field_col(column_map: dict[str, str], field: str) -> int | None:
     for k, v in column_map.items():
-        if v == "sku":
+        if v == field:
             try:
                 return int(k)
             except ValueError:
                 return None
     return None
+
+
+def _cell(row: list[Any], idx: int | None) -> str:
+    if idx is None or idx < 0 or idx >= len(row):
+        return ""
+    raw = row[idx]
+    if raw is None:
+        return ""
+    return str(raw).strip()
+
+
+def _is_product_row(
+    row: list[Any],
+    sku_idx: int | None,
+    *,
+    name_idx: int | None = None,
+    model_idx: int | None = None,
+) -> bool:
+    if not row or not any(v is not None and str(v).strip() != "" for v in row):
+        return False
+    sku_val = _cell(row, sku_idx)
+    if sku_val:
+        return True
+    # Empty / unmapped SKU: still accept when name/model looks like a product code (PTZ sheets).
+    if looks_like_sku(_cell(row, model_idx)) or looks_like_sku(_cell(row, name_idx)):
+        return True
+    if sku_idx is not None:
+        return False
+    nonempty = [v for v in row if v is not None and str(v).strip() != ""]
+    return len(nonempty) >= 2
+
+
+def _sku_col(column_map: dict[str, str]) -> int | None:
+    return _field_col(column_map, "sku")
 
 
 def build_row_product(
@@ -91,6 +135,16 @@ def build_row_product(
             commercial["name"] = str(commercial["model"])
         elif commercial.get("sku"):
             commercial["name"] = str(commercial["sku"])
+
+    # PTZ / accessory sheets often put the model code in the name column with no SKU.
+    if not commercial.get("sku"):
+        for candidate in (commercial.get("model"), commercial.get("name")):
+            if candidate is not None and looks_like_sku(str(candidate)):
+                commercial["sku"] = str(candidate).strip()
+                warnings.append("sku_from_name")
+                if not commercial.get("model"):
+                    commercial["model"] = commercial["sku"]
+                break
 
     if commercial.get("unit"):
         commercial["unit"] = normalize_unit(str(commercial["unit"]))
@@ -189,11 +243,13 @@ def collect_candidates(
         category_key = cat.get("key") if cat else None
         parent_key = parent.get("key") if parent else None
         sku_idx = _sku_col(column_map)
+        name_idx = _field_col(column_map, "name")
+        model_idx = _field_col(column_map, "model")
         rows: list[list[Any]] = src.get("rows") or []
         for ri, row in enumerate(rows, start=1):
             if ri <= header_row:
                 continue
-            if not _is_product_row(row, sku_idx):
+            if not _is_product_row(row, sku_idx, name_idx=name_idx, model_idx=model_idx):
                 continue
             built = build_row_product(
                 row,
@@ -216,30 +272,118 @@ def classify_duplicates(
     candidates: list[dict[str, Any]],
     existing_skus: dict[str, str],
     policy: DuplicatePolicy,
+    *,
+    in_file_mode: InFileDuplicateMode = "block",
 ) -> None:
-    """Mutate candidates with duplicate_action: create|update|skip|blocked_dup."""
+    """Mutate candidates with duplicate_action: create|update|skip|none.
+
+    Repeated SKUs in the same file:
+    - block (default): later rows blocked as duplicate_sku_in_file
+    - suffix: later rows get SKU-2 / SKU-3… and import as create (user-approved)
+    """
+    seen_in_file: set[str] = set()
+    in_file_counts: dict[str, int] = {}
+    mode = in_file_mode if in_file_mode in {"block", "suffix"} else "block"
+
     for c in candidates:
         if c["status"] == "blocked":
             c["duplicate_action"] = "none"
             continue
-        sku = (c.get("product") or {}).get("sku")
+        product = c.get("product")
+        if not isinstance(product, dict):
+            c["duplicate_action"] = "none"
+            continue
+        sku = product.get("sku")
         if not sku:
             c["duplicate_action"] = "none"
             continue
-        if sku in existing_skus:
-            c["existing_id"] = existing_skus[sku]
+        sku_key = str(sku).strip()
+        if not sku_key:
+            c["duplicate_action"] = "none"
+            continue
+
+        if sku_key in seen_in_file:
             c["is_duplicate"] = True
-            if policy == "skip":
-                c["duplicate_action"] = "skip"
-            elif policy == "update":
+            if mode == "suffix":
+                n = in_file_counts.get(sku_key, 1) + 1
+                in_file_counts[sku_key] = n
+                new_sku = f"{sku_key}-{n}"
+                while new_sku in seen_in_file or new_sku in existing_skus:
+                    n += 1
+                    in_file_counts[sku_key] = n
+                    new_sku = f"{sku_key}-{n}"
+                product["sku"] = new_sku
+                seen_in_file.add(new_sku)
+                warnings = list(c.get("warnings") or [])
+                if "sku_suffix_for_duplicate" not in warnings:
+                    warnings.append("sku_suffix_for_duplicate")
+                c["warnings"] = warnings
+                reasons = [r for r in (c.get("block_reasons") or []) if r != "duplicate_sku_in_file"]
+                c["block_reasons"] = reasons
+                if c["status"] == "blocked" and not reasons:
+                    c["status"] = "warning"
+                elif c["status"] == "ready":
+                    c["status"] = "warning"
+                c["duplicate_action"] = "create"
+                continue
+
+            c["status"] = "blocked"
+            reasons = list(c.get("block_reasons") or [])
+            if "duplicate_sku_in_file" not in reasons:
+                reasons.append("duplicate_sku_in_file")
+            c["block_reasons"] = reasons
+            c["duplicate_action"] = "none"
+            continue
+
+        seen_in_file.add(sku_key)
+        in_file_counts[sku_key] = 1
+        if sku_key in existing_skus:
+            c["existing_id"] = existing_skus[sku_key]
+            c["is_duplicate"] = True
+            if policy == "update":
                 c["duplicate_action"] = "update"
-            elif policy == "new_only":
-                c["duplicate_action"] = "skip"
             else:
+                # skip + new_only (and unknown): do not create a second row
                 c["duplicate_action"] = "skip"
         else:
             c["is_duplicate"] = False
             c["duplicate_action"] = "create"
+
+
+def apply_import_pricing(
+    candidates: list[dict[str, Any]],
+    *,
+    mode: str,
+    value: float | None,
+    only_missing: bool = True,
+) -> None:
+    """Derive list_price from cost for import candidates (mutates in place)."""
+    if mode in {"", "leave", "none", "manual"}:
+        return
+    if value is None or value <= 0:
+        return
+    for c in candidates:
+        if c.get("status") == "blocked":
+            continue
+        product = c.get("product")
+        if not isinstance(product, dict):
+            continue
+        cost = float(product.get("cost") or 0)
+        if cost <= 0:
+            continue
+        current = float(product.get("list_price") or 0)
+        if only_missing and current > 0:
+            continue
+        if mode == "markup_percent":
+            product["list_price"] = round(cost * (1.0 + float(value) / 100.0), 2)
+        elif mode == "multiplier":
+            product["list_price"] = round(cost * float(value), 2)
+        else:
+            continue
+        warnings = list(c.get("warnings") or [])
+        if "list_price_from_cost" not in warnings:
+            warnings.append("list_price_from_cost")
+        c["warnings"] = warnings
 
 
 def summarize_candidates(candidates: list[dict[str, Any]]) -> dict[str, Any]:

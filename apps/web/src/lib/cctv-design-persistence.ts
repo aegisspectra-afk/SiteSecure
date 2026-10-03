@@ -101,6 +101,14 @@ export function componentsFromRecommendation(
       component_key: componentKey,
       semantic_role: semanticRole,
     };
+    const override = selection.candidateOverrides?.[componentKey];
+    const candidates = [...(c.candidates ?? [])];
+    if (
+      override?.product?.id &&
+      !candidates.some((row) => row.product?.id === override.product.id)
+    ) {
+      candidates.push(override);
+    }
     return {
       role_key: componentKey,
       label: commercialLabelHe(componentKey) || c.label || componentKey,
@@ -110,7 +118,7 @@ export function componentsFromRecommendation(
       removed,
       resolution_status: c.resolution_status,
       technical_requirements: tech,
-      candidates: c.candidates ?? [],
+      candidates,
       engine_preferred_product_id: enginePreferred,
       user_selected_product_id: userSelected,
       selection_origin: selectionOriginForComponent(componentKey, selection, enginePreferred),
@@ -198,6 +206,7 @@ function componentRowToRec(row: SystemDesignComponent): CctvRecommendationCompon
 export function selectionFromDesign(design: SystemDesign): ReviewSelectionState {
   const selectedByComponentId: Record<string, string> = {};
   const removedComponentIds = new Set<string>();
+  const candidateOverrides: ReviewSelectionState["candidateOverrides"] = {};
   for (const row of design.components ?? []) {
     const key = componentKeyOf({
       role: row.role_key,
@@ -208,9 +217,14 @@ export function selectionFromDesign(design: SystemDesign): ReviewSelectionState 
       continue;
     }
     const id = row.user_selected_product_id || null;
-    if (id) selectedByComponentId[key] = id;
+    if (id) {
+      selectedByComponentId[key] = id;
+      const candidates = (row.candidates as CctvRecommendationCandidate[]) || [];
+      const hit = candidates.find((c) => c.product?.id === id);
+      if (hit) candidateOverrides[key] = hit;
+    }
   }
-  return { selectedByComponentId, removedComponentIds };
+  return { selectedByComponentId, removedComponentIds, candidateOverrides };
 }
 
 /**
@@ -225,6 +239,7 @@ export function mergeSelectionAfterRecalculate(
   const needsReviewRoles = new Set<string>();
   const selectedByComponentId = { ...base.selectedByComponentId };
   const removedComponentIds = new Set<string>();
+  const candidateOverrides: ReviewSelectionState["candidateOverrides"] = {};
 
   for (const key of prior.removedComponentIds) {
     const comp = rec.components.find((c) => componentKeyOf(c) === key);
@@ -238,10 +253,15 @@ export function mergeSelectionAfterRecalculate(
       needsReviewRoles.add(key);
       continue;
     }
-    const cand = comp.candidates.find((c) => c.product.id === productId);
+    const override =
+      prior.candidateOverrides?.[key]?.product.id === productId
+        ? prior.candidateOverrides[key]
+        : undefined;
+    const cand = comp.candidates.find((c) => c.product.id === productId) ?? override;
     const verdict = classifyPriorSelection(cand);
     if (verdict === "keep" || verdict === "keep_verify") {
       selectedByComponentId[key] = productId;
+      if (override) candidateOverrides[key] = override;
       if (verdict === "keep_verify") needsReviewRoles.add(key);
     } else {
       needsReviewRoles.add(key);
@@ -250,9 +270,13 @@ export function mergeSelectionAfterRecalculate(
 
   for (const key of removedComponentIds) {
     delete selectedByComponentId[key];
+    delete candidateOverrides[key];
   }
 
-  return { selection: { selectedByComponentId, removedComponentIds }, needsReviewRoles };
+  return {
+    selection: { selectedByComponentId, removedComponentIds, candidateOverrides },
+    needsReviewRoles,
+  };
 }
 
 export function designHasRecommendation(design: SystemDesign): boolean {

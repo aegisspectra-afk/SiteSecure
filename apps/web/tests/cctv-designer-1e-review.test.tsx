@@ -2,7 +2,7 @@
  * SYSTEM-DESIGNER-1 Slice E — review / picker / selection tests A–Q.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import type {
@@ -27,10 +27,11 @@ import {
   deriveReviewCardStatus,
   filterPickerCandidates,
   groupComponentsForReview,
+  isUserConfirmedSelection,
   overallCompatibility,
 } from "../src/lib/cctv-designer-review";
 import { mergeSelectionAfterRecalculate } from "../src/lib/cctv-design-persistence";
-import { emptyReviewSelection } from "../src/lib/cctv-recommend-projection";
+import { emptyReviewSelection, resolveComponentProduct } from "../src/lib/cctv-recommend-projection";
 import { CctvReviewPanel } from "../src/components/quotes/cpq/CctvReviewPanel";
 import { CctvComponentPicker } from "../src/components/quotes/cpq/CctvComponentPicker";
 
@@ -278,6 +279,87 @@ describe("SYSTEM-DESIGNER-1 Slice E review", () => {
     expect(spy).toHaveBeenCalled();
     const item = await spy.mock.results[0]!.value;
     expect(item.items[0]).not.toHaveProperty("cost");
+  });
+
+  it("P3. selecting a browse/search camera updates the review card (not stuck on engine pick)", () => {
+    const engine = cand("engine-cam", { name: "Engine Cam", sku: "OLD" });
+    const browsed = cand("sku-hit", {
+      name: "IP Cam Target",
+      sku: "32323212431",
+      confidence: "PARTIAL",
+      compat: {},
+    });
+    const component = comp("camera_ip_main", "camera", {
+      candidates: [engine],
+      selected_product: engine.product,
+      selected_confidence: "PARTIAL",
+    });
+    const selection = {
+      selectedByComponentId: { camera_ip_main: "sku-hit" },
+      removedComponentIds: new Set<string>(),
+      candidateOverrides: { camera_ip_main: browsed },
+    };
+    const picked = resolveComponentProduct(component, selection);
+    expect(picked?.product.id).toBe("sku-hit");
+    expect(picked?.product.sku).toBe("32323212431");
+    expect(
+      deriveReviewCardStatus(component, picked, true, {
+        userConfirmed: isUserConfirmedSelection(component, selection, picked),
+      }),
+    ).toBe("selected");
+  });
+
+  it("P2. picker searches catalog by SKU on the server (not only first browse page)", async () => {
+    const spy = vi.fn(async (_ws: string, opts: { q?: string; limit?: number } = {}) => {
+      if (opts.q === "32323212431") {
+        return {
+          items: [
+            {
+              id: "sku-hit",
+              name: "IP Cam Target",
+              sku: "32323212431",
+              category_key: "cameras_ip",
+              list_price: 99,
+              unit: "unit",
+            },
+          ],
+        };
+      }
+      return {
+        items: [
+          {
+            id: "other",
+            name: "AAA Other Cam",
+            sku: "000",
+            category_key: "cameras_ip",
+            list_price: 1,
+            unit: "unit",
+          },
+        ],
+      };
+    });
+    render(
+      <CctvComponentPicker
+        open
+        onClose={() => undefined}
+        component={comp("camera_ip_main", "camera", { candidates: [] })}
+        technology="ip"
+        workspaceId="ws"
+        api={{ listCatalogProducts: spy } as never}
+        onSelect={() => undefined}
+      />,
+    );
+    await screen.findByTestId("cctv-component-picker");
+    fireEvent.change(screen.getByLabelText("חיפוש שם / מק״ט / יצרן"), {
+      target: { value: "32323212431" },
+    });
+    expect(await screen.findByText("IP Cam Target")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        "ws",
+        expect.objectContaining({ q: "32323212431" }),
+      ),
+    );
   });
 
   it("Q. mobile review cards + picker open", async () => {

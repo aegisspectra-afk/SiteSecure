@@ -72,10 +72,15 @@ export type ReviewSelectionState = {
   selectedByComponentId: Record<string, string>;
   /** optional component_keys the user removed */
   removedComponentIds: Set<string>;
+  /**
+   * Full candidates chosen via catalog browse/search that are not in engine `candidates`.
+   * Required so resolve/apply/UI can show the product the user actually picked.
+   */
+  candidateOverrides?: Record<string, CctvRecommendationCandidate>;
 };
 
 export function emptyReviewSelection(): ReviewSelectionState {
-  return { selectedByComponentId: {}, removedComponentIds: new Set() };
+  return { selectedByComponentId: {}, removedComponentIds: new Set(), candidateOverrides: {} };
 }
 
 export function initialReviewSelection(rec: SystemRecommendation): ReviewSelectionState {
@@ -89,13 +94,26 @@ export function initialReviewSelection(rec: SystemRecommendation): ReviewSelecti
       selectedByComponentId[key] = id;
     }
   }
-  return { selectedByComponentId, removedComponentIds: new Set() };
+  return { selectedByComponentId, removedComponentIds: new Set(), candidateOverrides: {} };
 }
 
 export function isCandidateSelectable(candidate: CctvRecommendationCandidate): boolean {
   const compat = candidate.compatibility ?? {};
   if (Object.values(compat).includes("FAIL")) return false;
   return true;
+}
+
+function candidateForProductId(
+  component: CctvRecommendationComponent,
+  selection: ReviewSelectionState,
+  productId: string,
+): CctvRecommendationCandidate | null {
+  const key = componentKeyOf(component);
+  const override = selection.candidateOverrides?.[key];
+  if (override?.product.id === productId && isCandidateSelectable(override)) return override;
+  const fromCandidates = component.candidates.find((c) => c.product.id === productId);
+  if (fromCandidates && isCandidateSelectable(fromCandidates)) return fromCandidates;
+  return null;
 }
 
 export function resolveComponentProduct(
@@ -105,13 +123,26 @@ export function resolveComponentProduct(
   const key = componentKeyOf(component);
   if (selection.removedComponentIds.has(key)) return null;
   const preferredId = selection.selectedByComponentId[key];
-  const fromCandidates = component.candidates.find((c) => c.product.id === preferredId);
-  if (fromCandidates && isCandidateSelectable(fromCandidates)) return fromCandidates;
-  if (component.selected_product?.id) {
-    const sel = component.candidates.find((c) => c.product.id === component.selected_product!.id);
-    if (sel && isCandidateSelectable(sel) && component.selected_confidence !== "TEXT_ASSISTED") {
-      return sel;
+  if (preferredId) {
+    const preferred = candidateForProductId(component, selection, preferredId);
+    if (preferred) return preferred;
+    // Explicit user id that we can only reconstruct from engine selected_product.
+    if (component.selected_product?.id === preferredId) {
+      if (component.selected_confidence === "STRUCTURED" || component.selected_confidence === "PARTIAL") {
+        return {
+          product: component.selected_product,
+          confidence: component.selected_confidence,
+          compatibility: component.selected_compatibility ?? undefined,
+          reason_codes: component.reason_codes,
+        };
+      }
     }
+    // Do not fall back to a different engine product when the user chose another id.
+    return null;
+  }
+  if (component.selected_product?.id) {
+    const sel = candidateForProductId(component, selection, component.selected_product.id);
+    if (sel && component.selected_confidence !== "TEXT_ASSISTED") return sel;
     if (component.selected_confidence === "STRUCTURED" || component.selected_confidence === "PARTIAL") {
       return {
         product: component.selected_product,

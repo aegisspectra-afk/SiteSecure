@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.guard import require
 from ..catalog_import.engine import (
+    apply_import_pricing,
     classify_duplicates,
     collect_candidates,
     readiness_from_products,
@@ -33,6 +35,61 @@ def _ctx(client: UserClient, user: dict, workspace_id: UUID):
     return load_authz_context(client, actor_id(user), str(workspace_id))
 
 
+def _commit_rpc_error(res: Any) -> ApiError:
+    """Map PostgREST / Postgres failures from catalog_import_commit to a clear ApiError."""
+    raw = (getattr(res, "text", None) or "")[:800]
+    payload: dict[str, Any] = {}
+    try:
+        parsed = json.loads(raw) if raw else {}
+        if isinstance(parsed, dict):
+            payload = parsed
+    except Exception:
+        payload = {}
+
+    pg_code = str(payload.get("code") or "")
+    pg_msg = str(payload.get("message") or "")
+    details = {
+        "status": getattr(res, "status_code", None),
+        "pg_code": pg_code or None,
+        "detail": raw[:400],
+    }
+
+    if pg_code == "23505" or "unique" in pg_msg.lower() or "duplicate key" in pg_msg.lower():
+        return ApiError(
+            409,
+            "IMPORT_DUPLICATE_SKU",
+            "בקובץ או בקטלוג יש מק״ט כפול — תקנו את הכפילויות ונסו שוב.",
+            details=details,
+        )
+    if "PERMISSION_DENIED" in pg_msg:
+        return ApiError(
+            403,
+            "PERMISSION_DENIED",
+            "אין הרשאה לייבוא קטלוג בסביבה זו.",
+            details=details,
+        )
+    if "INVALID_CATEGORY" in pg_msg:
+        return ApiError(
+            400,
+            "VALIDATION_ERROR",
+            "קטגוריית יעד לא תקינה — בחרו קטגוריה מחדש.",
+            details=details,
+        )
+    if "MISSING_REQUIRED_FIELDS" in pg_msg:
+        return ApiError(
+            400,
+            "VALIDATION_ERROR",
+            "חסרים מק״ט או שם באחת השורות לייבוא.",
+            details=details,
+        )
+    return ApiError(
+        409,
+        "IMPORT_COMMIT_FAILED",
+        "הייבוא נכשל ולא נשמרו שינויים. ניתן לנסות שוב.",
+        details=details,
+    )
+
+
 class SheetConfigIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     sheet_index: int
@@ -48,7 +105,13 @@ class ImportPreviewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: str
     duplicate_policy: Literal["skip", "update", "new_only"] = "skip"
+    # block = reject in-file SKU repeats; suffix = import them as SKU-2 / SKU-3…
+    in_file_duplicate_mode: Literal["block", "suffix"] = "block"
     sheets: list[SheetConfigIn]
+    # leave = keep mapped/zero list_price; markup_percent / multiplier derive from cost
+    pricing_mode: Literal["leave", "markup_percent", "multiplier"] = "leave"
+    pricing_value: float | None = Field(default=None, gt=0, le=1000)
+    pricing_only_missing: bool = True
 
 
 class ImportCommitIn(ImportPreviewIn):
@@ -111,7 +174,21 @@ def _run_preview(
         can_set_cost=can_set_cost,
     )
     existing = _existing_sku_map(client, workspace_id)
-    classify_duplicates(candidates, existing, body.duplicate_policy)
+    classify_duplicates(
+        candidates,
+        existing,
+        body.duplicate_policy,
+        in_file_mode=body.in_file_duplicate_mode,
+    )
+    if body.pricing_mode != "leave":
+        if body.pricing_value is None:
+            raise ApiError(400, "VALIDATION_ERROR", "יש להזין ערך לתמחור מעלות")
+        apply_import_pricing(
+            candidates,
+            mode=body.pricing_mode,
+            value=body.pricing_value,
+            only_missing=body.pricing_only_missing,
+        )
     summary = summarize_candidates(candidates)
     return candidates, summary, cat_index
 
@@ -127,9 +204,11 @@ def _candidate_rpc_rows(
     for c in candidates:
         action = c.get("duplicate_action")
         if c["status"] == "blocked":
+            product = c.get("product") or {}
             failed.append(
                 {
-                    "sku": (c.get("product") or {}).get("sku"),
+                    "sku": product.get("sku"),
+                    "name": product.get("name"),
                     "source_row": c.get("source_row"),
                     "sheet_name": c.get("sheet_name"),
                     "reasons": c.get("block_reasons") or [],
@@ -256,34 +335,36 @@ def preview_import(
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "catalog.edit")
     can_cost = _can_view_cost(ctx)
-    candidates, summary, _cat_index = _run_preview(
+    candidates, summary, cat_index = _run_preview(
         client=client, workspace_id=workspace_id, body=body, can_set_cost=can_cost
     )
-    sample = []
-    for c in candidates[:40]:
-        sample.append(
-            {
-                "sheet_name": c.get("sheet_name"),
-                "source_row": c.get("source_row"),
-                "status": c["status"],
-                "warnings": c.get("warnings") or [],
-                "block_reasons": c.get("block_reasons") or [],
-                "is_duplicate": bool(c.get("is_duplicate")),
-                "duplicate_action": c.get("duplicate_action"),
-                "original": c.get("original") or {},
-                "product": c.get("product"),
-                "provenance": c.get("provenance") or {},
-            }
-        )
+
+    def _row_public(c: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "sheet_name": c.get("sheet_name"),
+            "source_row": c.get("source_row"),
+            "status": c["status"],
+            "warnings": c.get("warnings") or [],
+            "block_reasons": c.get("block_reasons") or [],
+            "is_duplicate": bool(c.get("is_duplicate")),
+            "duplicate_action": c.get("duplicate_action"),
+            "original": c.get("original") or {},
+            "product": c.get("product"),
+            "provenance": c.get("provenance") or {},
+        }
+
+    sample = [_row_public(c) for c in candidates[:40]]
+    blocked_rows = [_row_public(c) for c in candidates if c.get("status") == "blocked"][:200]
     est_products = [
         c["product"]
         for c in candidates
         if c["status"] != "blocked" and c.get("duplicate_action") in {"create", "update"}
     ]
-    readiness = readiness_from_products(est_products, _cat_index)
+    readiness = readiness_from_products(est_products, cat_index)
     return {
         "summary": summary,
         "sample_rows": sample,
+        "blocked_rows": blocked_rows,
         "readiness_estimate": readiness,
         "can_view_cost": can_cost,
     }
@@ -327,13 +408,7 @@ def commit_import(
     )
     if res.status_code not in {200, 201}:
         # Keep session for retry — no partial writes from the RPC.
-        detail = (res.text or "")[:400]
-        raise ApiError(
-            409,
-            "IMPORT_COMMIT_FAILED",
-            "הייבוא נכשל ולא נשמרו שינויים. ניתן לנסות שוב.",
-            details={"status": res.status_code, "detail": detail},
-        )
+        raise _commit_rpc_error(res)
 
     result = res.json()
     if not isinstance(result, dict):

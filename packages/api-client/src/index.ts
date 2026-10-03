@@ -673,13 +673,35 @@ export type CatalogImportSheetConfig = {
   column_map: Record<string, string>;
 };
 
+export type CatalogImportPricingMode = "leave" | "markup_percent" | "multiplier";
+
+export type CatalogImportInFileDuplicateMode = "block" | "suffix";
+
 export type CatalogImportPreviewIn = {
   session_id: string;
   duplicate_policy: "skip" | "update" | "new_only";
+  /** block = reject repeats in file; suffix = import as SKU-2 / SKU-3… */
+  in_file_duplicate_mode?: CatalogImportInFileDuplicateMode;
   sheets: CatalogImportSheetConfig[];
+  pricing_mode?: CatalogImportPricingMode;
+  pricing_value?: number | null;
+  pricing_only_missing?: boolean;
 };
 
 export type CatalogImportCommitIn = CatalogImportPreviewIn & { confirm: boolean };
+
+export type CatalogImportPreviewRow = {
+  sheet_name?: string;
+  source_row?: number;
+  status: string;
+  warnings: string[];
+  block_reasons: string[];
+  is_duplicate?: boolean;
+  duplicate_action?: string;
+  original?: Record<string, unknown>;
+  product?: CatalogProduct & { attributes?: Record<string, unknown> };
+  provenance?: Record<string, string>;
+};
 
 export type CatalogImportPreviewResult = {
   summary: {
@@ -692,18 +714,9 @@ export type CatalogImportPreviewResult = {
     will_update: number;
     will_skip: number;
   };
-  sample_rows: Array<{
-    sheet_name?: string;
-    source_row?: number;
-    status: string;
-    warnings: string[];
-    block_reasons: string[];
-    is_duplicate?: boolean;
-    duplicate_action?: string;
-    original?: Record<string, unknown>;
-    product?: CatalogProduct & { attributes?: Record<string, unknown> };
-    provenance?: Record<string, string>;
-  }>;
+  sample_rows: CatalogImportPreviewRow[];
+  /** All blocked rows (capped server-side) with reasons. */
+  blocked_rows?: CatalogImportPreviewRow[];
   readiness_estimate: CatalogImportReadiness;
   can_view_cost: boolean;
 };
@@ -722,7 +735,13 @@ export type CatalogImportCommitResult = {
   imported: number;
   updated: number;
   skipped: number;
-  failed: Array<{ sku?: string; source_row?: number; sheet_name?: string; reasons: string[] }>;
+  failed: Array<{
+    sku?: string;
+    name?: string;
+    source_row?: number;
+    sheet_name?: string;
+    reasons: string[];
+  }>;
   failed_count: number;
   summary: CatalogImportPreviewResult["summary"];
   readiness: CatalogImportReadiness;
@@ -2853,15 +2872,24 @@ export function createApiClient(opts: {
       ),
     listCatalogProducts: (
       workspaceId: string,
-      opts: { q?: string; kind?: string; category_id?: string; limit?: number; include_inactive?: boolean; active?: boolean } = {},
+      opts: {
+        q?: string;
+        kind?: string;
+        category_id?: string;
+        limit?: number;
+        cursor?: string | null;
+        include_inactive?: boolean;
+        active?: boolean;
+      } = {},
     ) => {
-      const params = new URLSearchParams({ limit: String(opts.limit ?? 30) });
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 100) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.kind) params.set("kind", opts.kind);
       if (opts.category_id) params.set("category_id", opts.category_id);
+      if (opts.cursor) params.set("cursor", opts.cursor);
       if (opts.include_inactive) params.set("include_inactive", "true");
       if (opts.active === false) params.set("active", "false");
-      return request<{ items: CatalogProduct[] }>(
+      return request<{ items: CatalogProduct[]; next_cursor?: string | null }>(
         `/api/v1/workspaces/${workspaceId}/catalog/products?${params}`,
       );
     },
@@ -2908,6 +2936,18 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    deleteCatalogProduct: (workspaceId: string, productId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/catalog/products/${productId}`, {
+        method: "DELETE",
+      }),
+    bulkDeleteCatalogProducts: (workspaceId: string, ids: string[]) =>
+      request<{ ok: true; deleted: number; requested: number }>(
+        `/api/v1/workspaces/${workspaceId}/catalog/products/bulk-delete`,
+        {
+          method: "POST",
+          body: JSON.stringify({ ids }),
+        },
+      ),
     getCatalogProduct: (workspaceId: string, productId: string) =>
       request<CatalogProduct>(`/api/v1/workspaces/${workspaceId}/catalog/products/${productId}`),
     listCatalogCategories: (workspaceId: string) =>

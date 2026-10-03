@@ -193,9 +193,45 @@ html.ss-brand-dark body {
   --shadow-popover: 0 12px 40px rgb(0 0 0 / 35%);
 }
 
-/* Public marketing origin. Layered dark surfaces — premium, calm, technical. */
+/* Public marketing origin — light by default; dark follows html.dark (homepage theme). */
 .public-root {
+  color-scheme: light;
+  --color-public-bg: #f1f5f9;
+  --color-public-surface: #ffffff;
+  --color-public-elevated: #f8fafc;
+  --color-public-card: #ffffff;
+  --color-public-border: #d8dee8;
+  --public-scene-mid: #e8eef5;
+  --public-scene-deep: #dde5ef;
+  --color-action: #0b6bcb;
+  --color-action-hover: #095aa9;
+  --color-action-active: #084f93;
+  --color-action-fg: #ffffff;
+  --color-fg: #0f172a;
+  --color-fg-muted: #475569;
+  --color-border: var(--color-public-border);
+  --color-bg: var(--color-public-surface);
+  --color-bg-subtle: var(--color-public-elevated);
+  --color-bg-0: var(--color-public-bg);
+  --color-bg-1: var(--color-public-surface);
+  --color-bg-2: var(--color-public-elevated);
+  --color-focus: #0b6bcb;
+  --color-danger: #b42318;
+  --color-success: #067647;
+  --color-warning: #b54708;
+  --shadow-card: 0 1px 0 rgb(15 23 42 / 4%);
+  --shadow-popover: 0 12px 40px rgb(15 23 42 / 10%);
+}
+
+html.dark .public-root {
   color-scheme: dark;
+  --color-public-bg: #0b0d10;
+  --color-public-surface: #11151a;
+  --color-public-elevated: #171c22;
+  --color-public-card: #1c2229;
+  --color-public-border: #29313a;
+  --public-scene-mid: #0e1115;
+  --public-scene-deep: #090b0e;
   --color-action: #0b6bcb;
   --color-action-hover: #1c7dd9;
   --color-action-active: #095aa9;

@@ -8,6 +8,7 @@ import pytest
 from openpyxl import Workbook
 
 from app.catalog_import.engine import (
+    apply_import_pricing,
     build_row_product,
     classify_duplicates,
     collect_candidates,
@@ -59,6 +60,9 @@ def test_hebrew_header_auto_map():
     assert suggest_field_for_header('מק"ט') == "sku"
     assert suggest_field_for_header("דגם") == "model"
     assert suggest_field_for_header("מחיר מתקין") == "cost"
+    assert suggest_field_for_header("מחיר") == "cost"
+    assert suggest_field_for_header("Price") == "cost"
+    assert suggest_field_for_header("מחיר למתקין") == "cost"
     assert suggest_field_for_header("רזולוציה") == "attributes.resolution_mp"
     assert suggest_field_for_header("ערוצים") == "attributes.channels"
     assert suggest_field_for_header("resolution_mp") == "attributes.resolution_mp"
@@ -144,6 +148,70 @@ def test_blocked_without_category_and_duplicate_policies():
     assert cands[1]["duplicate_action"] == "create"
     classify_duplicates(cands, {"A": "id-a"}, "update")
     assert cands[0]["duplicate_action"] == "update"
+
+
+def test_classify_duplicates_blocks_in_file_sku_repeats():
+    cands = [
+        {"status": "ready", "product": {"sku": "CAM-1"}, "block_reasons": []},
+        {"status": "ready", "product": {"sku": "CAM-1"}, "block_reasons": []},
+        {"status": "ready", "product": {"sku": "CAM-2"}, "block_reasons": []},
+    ]
+    classify_duplicates(cands, {}, "skip")
+    assert cands[0]["duplicate_action"] == "create"
+    assert cands[1]["status"] == "blocked"
+    assert cands[1]["duplicate_action"] == "none"
+    assert "duplicate_sku_in_file" in cands[1]["block_reasons"]
+    assert cands[2]["duplicate_action"] == "create"
+
+
+def test_classify_duplicates_suffix_mode_imports_in_file_repeats():
+    cands = [
+        {"status": "ready", "product": {"sku": "CAM-1"}, "block_reasons": [], "warnings": []},
+        {"status": "ready", "product": {"sku": "CAM-1"}, "block_reasons": [], "warnings": []},
+        {"status": "ready", "product": {"sku": "CAM-1"}, "block_reasons": [], "warnings": []},
+    ]
+    classify_duplicates(cands, {}, "skip", in_file_mode="suffix")
+    assert cands[0]["product"]["sku"] == "CAM-1"
+    assert cands[0]["duplicate_action"] == "create"
+    assert cands[1]["product"]["sku"] == "CAM-1-2"
+    assert cands[1]["duplicate_action"] == "create"
+    assert cands[1]["status"] == "warning"
+    assert "sku_suffix_for_duplicate" in cands[1]["warnings"]
+    assert cands[2]["product"]["sku"] == "CAM-1-3"
+    assert cands[2]["duplicate_action"] == "create"
+
+
+def test_build_row_fills_sku_from_model_code_in_name():
+    row = build_row_product(
+        ["IPC642E-X22I-IN", ""],
+        column_map={"0": "name", "1": "cost"},
+        manufacturer_default="UNIVIEW",
+        unit_default="unit",
+        category_id="cat-ptz",
+        category_key="cameras_ptz",
+        parent_key="video",
+        can_set_cost=True,
+    )
+    assert row["status"] in {"ready", "warning"}
+    assert row["product"]["sku"] == "IPC642E-X22I-IN"
+    assert "sku_from_name" in row["warnings"]
+    assert "missing_sku" not in row["block_reasons"]
+
+
+def test_apply_import_pricing_markup_and_multiplier():
+    cands = [
+        {"status": "ready", "product": {"sku": "A", "cost": 100, "list_price": 0}, "warnings": []},
+        {"status": "ready", "product": {"sku": "B", "cost": 100, "list_price": 180}, "warnings": []},
+        {"status": "blocked", "product": {"sku": "C", "cost": 50, "list_price": 0}, "warnings": []},
+    ]
+    apply_import_pricing(cands, mode="markup_percent", value=30, only_missing=True)
+    assert cands[0]["product"]["list_price"] == 130.0
+    assert cands[1]["product"]["list_price"] == 180.0  # kept — already set
+    assert cands[2]["product"]["list_price"] == 0  # blocked ignored
+
+    apply_import_pricing(cands, mode="multiplier", value=1.5, only_missing=False)
+    assert cands[0]["product"]["list_price"] == 150.0
+    assert cands[1]["product"]["list_price"] == 150.0
 
 
 def test_session_tenant_isolation():

@@ -18,6 +18,7 @@ export function QuoteFlowSheet({
   children,
   footer,
   variant = "center",
+  size = "md",
   returnFocusRef,
 }: {
   open: boolean;
@@ -27,6 +28,8 @@ export function QuoteFlowSheet({
   children: ReactNode;
   footer?: ReactNode;
   variant?: "center" | "sheet";
+  /** Wide panel for dense builders (CCTV designer). */
+  size?: "md" | "lg";
   /** Optional trigger to restore focus when the sheet closes. */
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
@@ -124,7 +127,7 @@ export function QuoteFlowSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`quote-flow-sheet quote-flow-sheet--${variant}${visible ? " is-open" : ""}`}
+        className={`quote-flow-sheet quote-flow-sheet--${variant} quote-flow-sheet--${size}${visible ? " is-open" : ""}`}
       >
         <header className="quote-flow-header">
           <div className="min-w-0">

@@ -1,20 +1,40 @@
-import { Button, ErrorState, Input, PageHeader, Select, Status, Table, TBody, TD, TH, THead, TR } from "@site-secure/ui";
+import {
+  Button,
+  Checkbox,
+  ErrorState,
+  Input,
+  PageHeader,
+  Select,
+  Status,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from "@site-secure/ui";
 import {
   ApiClientError,
   type CatalogAttributeField,
   type CatalogCategory,
   type CatalogProduct,
 } from "@site-secure/api-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { RequirePermission } from "../../components/settings/RequirePermission";
+import {
+  CatalogBulkDeleteDialog,
+  type BulkDeletePhase,
+} from "../../components/catalog/CatalogBulkDeleteDialog";
 import { CatalogImportWizard } from "../../components/catalog/CatalogImportWizard";
 import { CatalogBulkPricing } from "../../components/catalog/CatalogBulkPricing";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
 import { formatMoney } from "../../lib/quotes";
 import { useSession } from "../../lib/session";
+
+const BULK_DELETE_CHUNK = 25;
 
 export const Route = createFileRoute("/app/catalog")({
   component: CatalogPage,
@@ -87,6 +107,15 @@ function CatalogBody() {
   const [formError, setFormError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePhase, setDeletePhase] = useState<BulkDeletePhase>("confirm");
+  const [deleteProgress, setDeleteProgress] = useState({ done: 0, total: 0 });
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<{
+    ok: number;
+    fail: Array<{ id: string; label: string; error: string }>;
+  } | null>(null);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog-categories", workspaceId],
@@ -118,27 +147,162 @@ function CatalogBody() {
   const selectedLeaf = categories.find((c) => c.id === draft.category_id);
   const attrSchema: CatalogAttributeField[] = selectedLeaf?.attribute_schema ?? [];
 
-  const productsQuery = useQuery({
+  const productsQuery = useInfiniteQuery({
     queryKey: ["catalog-products", workspaceId, q, filterCategoryId],
     enabled: Boolean(workspaceId),
-    queryFn: () =>
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
       api.listCatalogProducts(workspaceId!, {
         q,
         category_id: filterCategoryId || undefined,
         include_inactive: true,
-        limit: 100,
+        limit: 200,
+        cursor: pageParam,
       }),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 
+  // Auto-load additional pages so search (e.g. Uniview × 300) is not capped at one page.
+  const pageCount = productsQuery.data?.pages.length ?? 0;
+  useEffect(() => {
+    if (pageCount >= 25) return;
+    if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage) {
+      void productsQuery.fetchNextPage();
+    }
+  }, [pageCount, productsQuery.hasNextPage, productsQuery.isFetchingNextPage, productsQuery.fetchNextPage]);
+
+  const allProducts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: CatalogProduct[] = [];
+    for (const page of productsQuery.data?.pages ?? []) {
+      for (const row of page.items) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        out.push(row);
+      }
+    }
+    return out;
+  }, [productsQuery.data]);
+
   const visible = useMemo(() => {
-    const rows = productsQuery.data?.items ?? [];
-    return rows.filter((row) => {
+    return allProducts.filter((row) => {
       const active = row.active ?? row.is_active ?? true;
       if (status === "active") return active;
       if (status === "inactive") return !active;
       return true;
     });
-  }, [productsQuery.data, status]);
+  }, [allProducts, status]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+    setBulkResult(null);
+  }, [q, filterCategoryId, status]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedCount = visible.filter((row) => selectedSet.has(row.id)).length;
+  const allVisibleSelected = visible.length > 0 && selectedCount === visible.length;
+  const someVisibleSelected = selectedCount > 0 && !allVisibleSelected;
+
+  function toggleOne(id: string, on: boolean) {
+    setSelectedIds((prev) => {
+      if (on) return prev.includes(id) ? prev : [...prev, id];
+      return prev.filter((x) => x !== id);
+    });
+  }
+
+  function toggleAllVisible(on: boolean) {
+    if (!on) {
+      const visibleIds = new Set(visible.map((r) => r.id));
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.has(id)));
+      return;
+    }
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const row of visible) next.add(row.id);
+      return [...next];
+    });
+  }
+
+  const bulkDelete = useMutation({
+    mutationFn: async (ids: string[]) => {
+      setDeletePhase("running");
+      setDeleteProgress({ done: 0, total: ids.length });
+      setDeleteError(null);
+      const fail: Array<{ id: string; label: string; error: string }> = [];
+      let ok = 0;
+      const deletedIds: string[] = [];
+      for (let i = 0; i < ids.length; i += BULK_DELETE_CHUNK) {
+        const chunk = ids.slice(i, i + BULK_DELETE_CHUNK);
+        try {
+          const res = await api.bulkDeleteCatalogProducts(workspaceId!, chunk);
+          ok += res.deleted;
+          deletedIds.push(...chunk);
+        } catch (err) {
+          // Fall back per-id so progress keeps moving if a chunk fails.
+          for (const id of chunk) {
+            try {
+              await api.deleteCatalogProduct(workspaceId!, id);
+              ok += 1;
+              deletedIds.push(id);
+            } catch (inner) {
+              const row = visible.find((r) => r.id === id);
+              fail.push({
+                id,
+                label: row?.name || row?.sku || id.slice(0, 8),
+                error: inner instanceof ApiClientError ? inner.message : he.catalogError,
+              });
+            }
+            setDeleteProgress({ done: ok + fail.length, total: ids.length });
+          }
+          if (!(err instanceof ApiClientError) && fail.length === 0) {
+            setDeleteError(he.catalogError);
+          }
+          continue;
+        }
+        setDeleteProgress({ done: Math.min(ok + fail.length, ids.length), total: ids.length });
+      }
+      return { ok, fail, deletedIds };
+    },
+    onSuccess: (result) => {
+      setDeletePhase("done");
+      setDeleteProgress({ done: result.ok + result.fail.length, total: result.ok + result.fail.length });
+      setBulkResult(result);
+      setSelectedIds((ids) => ids.filter((id) => result.fail.some((f) => f.id === id)));
+      if (editingId && result.deletedIds.includes(editingId)) {
+        setEditingId(null);
+        setDraft(emptyDraft);
+        setFormError(null);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["catalog-products", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["cpq-catalog", workspaceId] });
+      if (result.fail.length === 0) {
+        window.setTimeout(() => {
+          setDeleteOpen(false);
+          setDeletePhase("confirm");
+          setDeleteError(null);
+        }, 900);
+      }
+    },
+    onError: (err) => {
+      setDeletePhase("confirm");
+      setDeleteError(err instanceof ApiClientError ? err.message : he.catalogError);
+    },
+  });
+
+  function openBulkDelete() {
+    setBulkResult(null);
+    setDeleteError(null);
+    setDeletePhase("confirm");
+    setDeleteProgress({ done: 0, total: selectedCount });
+    setDeleteOpen(true);
+  }
+
+  function closeBulkDelete() {
+    if (bulkDelete.isPending) return;
+    setDeleteOpen(false);
+    setDeletePhase("confirm");
+    setDeleteError(null);
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -284,7 +448,7 @@ function CatalogBody() {
   const isTrulyEmpty =
     !productsQuery.isLoading &&
     !productsQuery.isFetching &&
-    (productsQuery.data?.items?.length ?? 0) === 0 &&
+    allProducts.length === 0 &&
     !q &&
     !filterCategoryId;
 
@@ -535,14 +699,81 @@ function CatalogBody() {
           </form>
         ) : null}
 
+        {canEdit && selectedCount > 0 ? (
+          <div className="admin-bulk-bar" role="region" aria-label={he.catalogBulkSelected.replace("{count}", String(selectedCount))}>
+            <p className="text-sm text-fg">
+              {he.catalogBulkSelected.replace("{count}", String(selectedCount))}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" onClick={() => setSelectedIds([])} disabled={bulkDelete.isPending}>
+                {he.catalogBulkClear}
+              </Button>
+              <Button variant="danger" disabled={bulkDelete.isPending} onClick={openBulkDelete}>
+                {he.catalogBulkDelete}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <CatalogBulkDeleteDialog
+          open={deleteOpen}
+          phase={deletePhase}
+          count={selectedCount || deleteProgress.total}
+          done={deleteProgress.done}
+          total={deleteProgress.total || selectedCount}
+          error={deleteError}
+          onClose={closeBulkDelete}
+          onConfirm={() => {
+            const ids = visible.filter((row) => selectedSet.has(row.id)).map((row) => row.id);
+            if (!ids.length) {
+              closeBulkDelete();
+              return;
+            }
+            bulkDelete.mutate(ids);
+          }}
+        />
+
+        {bulkResult && bulkResult.fail.length ? (
+          <div className="rounded-[var(--radius-panel)] border border-border px-3 py-2 text-sm" role="status">
+            <p className="text-fg">
+              {he.catalogBulkResultOk.replace("{count}", String(bulkResult.ok))}
+            </p>
+            <div className="mt-2 text-fg-muted">
+              <p>{he.catalogBulkResultFail.replace("{count}", String(bulkResult.fail.length))}</p>
+              <ul className="mt-1 list-inside list-disc">
+                {bulkResult.fail.slice(0, 8).map((f) => (
+                  <li key={f.id}>
+                    {f.label}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
+
         {productsQuery.isLoading ? <p className="text-sm text-fg-muted">{he.loading}</p> : null}
         {!productsQuery.isLoading && visible.length === 0 ? (
           <p className="text-sm text-fg-muted">{editingId ? he.catalogEmpty : `${he.catalogEmpty}. ${he.catalogEmptyBody}`}</p>
         ) : null}
         {visible.length > 0 ? (
+          <p className="text-xs text-fg-muted">
+            {he.catalogShowingCount.replace("{count}", String(visible.length))}
+            {productsQuery.isFetchingNextPage ? ` · ${he.catalogLoadingMore}` : null}
+          </p>
+        ) : null}
+        {visible.length > 0 ? (
           <Table>
             <THead>
               <TR>
+                {canEdit ? (
+                  <TH className="w-10">
+                    <SelectAllCheckbox
+                      checked={allVisibleSelected}
+                      indeterminate={someVisibleSelected}
+                      onChange={toggleAllVisible}
+                    />
+                  </TH>
+                ) : null}
                 <TH>{he.catalogSku}</TH>
                 <TH>{he.catalogName}</TH>
                 <TH>{he.catalogManufacturer}</TH>
@@ -556,8 +787,20 @@ function CatalogBody() {
             <TBody>
               {visible.map((row) => {
                 const active = row.active ?? row.is_active ?? true;
+                const selected = selectedSet.has(row.id);
                 return (
-                  <TR key={row.id}>
+                  <TR key={row.id} className={selected ? "is-selected" : undefined}>
+                    {canEdit ? (
+                      <TD>
+                        <Checkbox
+                          hideLabel
+                          label={he.catalogSelectRow.replace("{name}", row.name)}
+                          checked={selected}
+                          disabled={bulkDelete.isPending}
+                          onChange={(event) => toggleOne(row.id, event.target.checked)}
+                        />
+                      </TD>
+                    ) : null}
                     <TD className="public-mono text-xs">{row.sku || "—"}</TD>
                     <TD className="font-medium">{row.name}</TD>
                     <TD>{row.manufacturer || "—"}</TD>
@@ -572,7 +815,7 @@ function CatalogBody() {
                     </TD>
                     {canEdit ? (
                       <TD>
-                        <Button variant="ghost" onClick={() => startEdit(row)}>
+                        <Button variant="ghost" onClick={() => startEdit(row)} disabled={bulkDelete.isPending}>
                           {he.catalogEdit}
                         </Button>
                       </TD>
@@ -583,7 +826,45 @@ function CatalogBody() {
             </TBody>
           </Table>
         ) : null}
+        {productsQuery.hasNextPage ? (
+          <div className="flex justify-center">
+            <Button
+              variant="ghost"
+              loading={productsQuery.isFetchingNextPage}
+              onClick={() => void productsQuery.fetchNextPage()}
+            >
+              {he.catalogLoadMore}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function SelectAllCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <label className="inline-flex min-h-11 cursor-pointer items-center">
+      <input
+        ref={ref}
+        type="checkbox"
+        className="size-4 rounded-[3px] border-border text-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        checked={checked}
+        aria-label={he.catalogSelectAll}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
   );
 }

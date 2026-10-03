@@ -14,6 +14,7 @@ import {
   compatibilityLabelHe,
   deriveReviewCardStatus,
   groupComponentsForReview,
+  isUserConfirmedSelection,
   overallCompatibility,
   requirementTextForCard,
   reviewStatusLabelHe,
@@ -32,6 +33,7 @@ type Props = {
   selection: ReviewSelectionState;
   setSelection: (next: ReviewSelectionState) => void;
   needsReviewKeys?: Set<string>;
+  onNeedsReviewKeysChange?: (next: Set<string>) => void;
   applyError?: string | null;
   /** Open picker for this component_key once (Step 2 resolve / reopen). */
   focusComponentKey?: string | null;
@@ -52,6 +54,7 @@ export function CctvReviewPanel({
   selection,
   setSelection,
   needsReviewKeys = new Set(),
+  onNeedsReviewKeysChange,
   applyError = null,
   focusComponentKey = null,
   workspaceId,
@@ -165,7 +168,10 @@ export function CctvReviewPanel({
             {section.components.map((component) => {
               const key = componentKeyOf(component);
               const picked = resolveComponentProduct(component, selection);
-              const status = deriveReviewCardStatus(component, picked, needsReviewKeys.has(key));
+              const userConfirmed = isUserConfirmedSelection(component, selection, picked);
+              const status = deriveReviewCardStatus(component, picked, needsReviewKeys.has(key), {
+                userConfirmed,
+              });
               const reqText = requirementTextForCard(component, summary.channelTier);
               const whyText = whyTextForCard(component);
               const compat = overallCompatibility(
@@ -277,15 +283,26 @@ export function CctvReviewPanel({
           selectedProductId={selection.selectedByComponentId[componentKeyOf(pickerComponent)] ?? null}
           workspaceId={workspaceId}
           api={api}
-          onSelect={(productId) => {
+          onSelect={(candidate) => {
             const key = componentKeyOf(pickerComponent);
+            const productId = candidate.product.id;
+            if (!productId) return;
             setSelection({
               ...selection,
               selectedByComponentId: {
                 ...selection.selectedByComponentId,
                 [key]: productId,
               },
+              candidateOverrides: {
+                ...(selection.candidateOverrides ?? {}),
+                [key]: candidate,
+              },
             });
+            if (onNeedsReviewKeysChange && needsReviewKeys.has(key)) {
+              const next = new Set(needsReviewKeys);
+              next.delete(key);
+              onNeedsReviewKeysChange(next);
+            }
           }}
         />
       ) : null}

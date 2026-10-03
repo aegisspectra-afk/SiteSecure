@@ -18,9 +18,14 @@ function normalizePathname(pathname: string): string {
   return path;
 }
 
-/** Public + auth family: fixed SITE SECURE dark. /app, /admin, /dev keep user theme. */
+/**
+ * Auth/marketing canvas that stays brand-dark regardless of theme picker.
+ * Homepage `/` follows light / dark / system like `/app`.
+ * `/app`, `/admin`, `/dev` keep user theme.
+ */
 export function isBrandDarkPath(pathname: string | null | undefined): boolean {
   const path = normalizePathname(pathname ?? "/");
+  if (path === "/") return false;
   if (path === "/app" || path.startsWith("/app/")) return false;
   if (path === "/admin" || path.startsWith("/admin/")) return false;
   if (path === "/dev" || path.startsWith("/dev/")) return false;

@@ -36,6 +36,7 @@
           var path = String(pathname || "/").split("?")[0].split("#")[0];
           if (!path) path = "/";
           if (path.length > 1 && path.charAt(path.length - 1) === "/") path = path.slice(0, -1);
+          if (path === "/") return false;
           if (path === "/app" || path.indexOf("/app/") === 0) return false;
           if (path === "/admin" || path.indexOf("/admin/") === 0) return false;
           if (path === "/dev" || path.indexOf("/dev/") === 0) return false;

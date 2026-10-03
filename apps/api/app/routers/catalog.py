@@ -18,10 +18,37 @@ from ..catalog_attrs import (
 from ..deps import ServiceClient, UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
-from ..pagination import decode_cursor, page_from_rows, parse_limit
-from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..pagination import decode_cursor, encode_cursor
+from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["catalog"])
+
+_CURSOR_SEP = "\x1f"
+
+
+def _pg_str(value: str) -> str:
+    """Quote a PostgREST filter value so commas/parens in names stay safe."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _decode_product_cursor(cursor: str | None) -> tuple[str, str] | None:
+    raw = decode_cursor(cursor)
+    if not raw:
+        return None
+    if _CURSOR_SEP in raw:
+        name, product_id = raw.split(_CURSOR_SEP, 1)
+        return name, product_id
+    # Legacy name-only cursors from before keyset (name, id).
+    return raw, ""
+
+
+def _encode_product_cursor(row: dict) -> str | None:
+    name = row.get("name")
+    product_id = row.get("id")
+    if name is None or not product_id:
+        return None
+    return encode_cursor(f"{name}{_CURSOR_SEP}{product_id}")
+
 
 # Q4-S: authenticated cannot SELECT products.cost — never request it via UserClient JWT.
 PRODUCT_SELECT = (
@@ -268,11 +295,16 @@ def list_products(
     require(ctx, "catalog.view")
     categories = _load_categories(client, workspace_id, include_archived=True)
     cat_index = _category_index(categories)
-    page_size = parse_limit(limit)
+    # Catalog may be large (imports); allow up to 500 per page + cursor for the rest.
+    raw_limit = 50 if limit is None else int(limit)
+    if raw_limit < 1 or raw_limit > 500:
+        raise ApiError(400, "VALIDATION_ERROR", "מגבלת עמוד לא תקינה")
+    page_size = raw_limit
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
         "select": PRODUCT_SELECT,
-        "order": "name.asc",
+        # Ascending keyset: next page is name/id *greater than* the cursor (not lt).
+        "order": "name.asc,id.asc",
         "limit": str(page_size + 1),
     }
     if not include_inactive:
@@ -288,25 +320,42 @@ def list_products(
             params["category_id"] = f"eq.{category_id}"
         else:
             params["category_id"] = f"in.({','.join(sorted(subtree))})"
+    search_inner: str | None = None
     if q:
         safe = q.replace(",", " ").replace("*", " ").replace("(", " ").replace(")", " ").strip()
         if safe:
-            params["or"] = (
-                f"(name.ilike.*{safe}*,sku.ilike.*{safe}*,"
-                f"manufacturer.ilike.*{safe}*,model.ilike.*{safe}*)"
+            search_inner = (
+                f"name.ilike.*{safe}*,sku.ilike.*{safe}*,"
+                f"manufacturer.ilike.*{safe}*,model.ilike.*{safe}*"
             )
-    before = decode_cursor(cursor)
-    if before:
-        params["name"] = f"lt.{before}"
+    marker = _decode_product_cursor(cursor)
+    cursor_inner: str | None = None
+    if marker:
+        before_name, before_id = marker
+        nq = _pg_str(before_name)
+        if before_id:
+            cursor_inner = f"name.gt.{nq},and(name.eq.{nq},id.gt.{before_id})"
+        else:
+            # Legacy name-only cursor.
+            params["name"] = f"gt.{nq}"
+    if search_inner and cursor_inner:
+        params["and"] = f"(or({search_inner}),or({cursor_inner}))"
+    elif search_inner:
+        params["or"] = f"({search_inner})"
+    elif cursor_inner:
+        params["or"] = f"({cursor_inner})"
     rows = as_list(client.get("products", params=params))
-    page = page_from_rows(rows, page_size, cursor_field="name")
+    next_cursor = None
+    items = rows
+    if len(rows) > page_size:
+        items = rows[:page_size]
+        next_cursor = _encode_product_cursor(items[-1])
     show_cost = _can_view_cost(ctx)
-    items = page.items
     if show_cost:
         items = _merge_product_costs(service, workspace_id, items)
     return {
         "items": [_strip_cost(row, show_cost=show_cost, categories_by_id=cat_index) for row in items],
-        "next_cursor": page.next_cursor,
+        "next_cursor": next_cursor,
     }
 
 
@@ -375,7 +424,8 @@ def create_product(
     }
     if body.category_id:
         payload["category_id"] = body.category_id
-    row = created_or_403(client.post("products", payload))
+    # Prefer return=representation must select only columns authenticated can SELECT (no cost).
+    row = created_or_403(client.post("products", payload, params={"select": PRODUCT_SELECT}))
     if isinstance(row, list):
         row = row[0] if row else {}
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
@@ -439,10 +489,90 @@ def patch_product(
         client.patch(
             "products",
             patch,
-            params={"id": f"eq.{product_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{product_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": PRODUCT_SELECT,
+            },
         )
     )
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
+
+
+@router.delete("/catalog/products/{product_id}")
+def delete_product(
+    workspace_id: UUID,
+    product_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """Hard-delete a catalog product. Quote lines keep denormalized snapshot (FK SET NULL)."""
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "catalog.edit")
+    one_or_404(
+        client.get(
+            "products",
+            params={
+                "id": f"eq.{product_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id",
+            },
+        )
+    )
+    # Prefer minimal: authenticated cannot SELECT products.cost (Q4-S lockdown).
+    acked_or_403(
+        client.delete(
+            "products",
+            params={"id": f"eq.{product_id}", "workspace_id": f"eq.{workspace_id}"},
+            prefer="return=minimal",
+        )
+    )
+    return {"ok": True}
+
+
+class BulkDeleteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ids: list[UUID] = Field(min_length=1, max_length=200)
+
+
+@router.post("/catalog/products/bulk-delete")
+def bulk_delete_products(
+    workspace_id: UUID,
+    body: BulkDeleteIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """Mass hard-delete. Quote lines keep snapshots (product_id SET NULL)."""
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "catalog.edit")
+    # Preserve order, drop dupes.
+    seen: set[str] = set()
+    ids: list[str] = []
+    for raw in body.ids:
+        sid = str(raw)
+        if sid in seen:
+            continue
+        seen.add(sid)
+        ids.append(sid)
+    if not ids:
+        raise ApiError(400, "VALIDATION_ERROR", "לא נבחרו פריטים")
+    # Chunk to keep PostgREST URL filters bounded.
+    deleted = 0
+    chunk_size = 50
+    for i in range(0, len(ids), chunk_size):
+        chunk = ids[i : i + chunk_size]
+        acked_or_403(
+            client.delete(
+                "products",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "id": f"in.({','.join(chunk)})",
+                },
+                prefer="return=minimal",
+            )
+        )
+        deleted += len(chunk)
+    return {"ok": True, "deleted": deleted, "requested": len(ids)}
 
 
 class BulkPricingIn(BaseModel):
@@ -537,11 +667,16 @@ def bulk_pricing(
         preview.append(entry)
         if body.dry_run:
             continue
+        # User JWT cannot SELECT products.cost — PATCH return=* would 403 under Q4-S lockdown.
         patched_or_403(
             client.patch(
                 "products",
                 {"list_price": next_price},
-                params={"id": f"eq.{row['id']}", "workspace_id": f"eq.{workspace_id}"},
+                params={
+                    "id": f"eq.{row['id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": PRODUCT_SELECT,
+                },
             )
         )
         updated += 1

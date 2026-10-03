@@ -18,10 +18,17 @@ const ICONS = {
   system: Monitor,
 } as const;
 
-const LABELS: Record<ThemeMode, string> = {
+export type ThemePickerLabels = Record<ThemeMode, string> & {
+  group: string;
+  systemHint: string;
+};
+
+const DEFAULT_LABELS: ThemePickerLabels = {
+  group: he.themeLabel,
   light: he.themeLight,
   dark: he.themeDark,
   system: he.themeSystem,
+  systemHint: he.themeSystemHint,
 };
 
 type ThumbBox = { x: number; width: number };
@@ -35,10 +42,18 @@ function readSelectedThumb(track: HTMLElement): ThumbBox | null {
 export function ThemePicker({
   id,
   compact = false,
+  hideLabel = false,
+  labels = DEFAULT_LABELS,
+  /** Keep segment order stable even when the page is RTL. */
+  lockDir = "ltr",
 }: {
   id?: string;
   /** Icon-only segmented control for tight surfaces (account menu). */
   compact?: boolean;
+  /** Hide the visible group label (still exposed to assistive tech). */
+  hideLabel?: boolean;
+  labels?: ThemePickerLabels;
+  lockDir?: "ltr" | "rtl" | "inherit";
 }) {
   const { mode } = useTheme();
   const groupId = id ?? "theme-mode";
@@ -47,18 +62,20 @@ export function ThemePicker({
   const placedRef = useRef(false);
   const [thumb, setThumb] = useState<ThumbBox | null>(null);
   const [canSlide, setCanSlide] = useState(false);
-  const [rtl, setRtl] = useState(() =>
+  const [pageRtl, setPageRtl] = useState(() =>
     typeof document !== "undefined" ? document.documentElement.dir !== "ltr" : true,
   );
+  const trackRtl = lockDir === "inherit" ? pageRtl : lockDir === "rtl";
 
   useLayoutEffect(() => {
+    if (lockDir !== "inherit") return;
     const root = document.documentElement;
-    const syncDir = () => setRtl(root.dir !== "ltr");
+    const syncDir = () => setPageRtl(root.dir !== "ltr");
     syncDir();
     const dirObserver = new MutationObserver(syncDir);
     dirObserver.observe(root, { attributes: true, attributeFilter: ["dir"] });
     return () => dirObserver.disconnect();
-  }, []);
+  }, [lockDir]);
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -83,14 +100,14 @@ export function ThemePicker({
       ro?.disconnect();
       window.removeEventListener("resize", sync);
     };
-  }, [mode, compact, rtl]);
+  }, [mode, compact, trackRtl]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const index = THEME_MODES.indexOf(mode);
     const forward = event.key === "ArrowRight";
-    const delta = rtl ? (forward ? -1 : 1) : forward ? 1 : -1;
+    const delta = trackRtl ? (forward ? -1 : 1) : forward ? 1 : -1;
     const next = THEME_MODES[(index + delta + THEME_MODES.length) % THEME_MODES.length];
     setThemeMode(next);
   };
@@ -104,22 +121,27 @@ export function ThemePicker({
   };
 
   return (
-    <div className={compact ? "flex flex-col gap-1.5" : "flex flex-col gap-2"}>
-      <p id={`${groupId}-label`} className="text-xs text-fg-muted">
-        {he.themeLabel}
+    <div className={cn(hideLabel ? "inline-flex" : "flex flex-col gap-2")}>
+      <p id={`${groupId}-label`} className={hideLabel ? "sr-only" : "text-xs text-fg-muted"}>
+        {labels.group}
       </p>
       <div
         ref={trackRef}
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
-        className="theme-picker-track relative grid grid-cols-3 gap-1 rounded-[var(--radius-control)] border border-border bg-bg-subtle p-1"
+        dir={lockDir === "inherit" ? undefined : lockDir}
+        className={cn(
+          "theme-picker-track relative grid grid-cols-3 rounded-[var(--radius-control)] border border-border bg-bg-subtle",
+          compact ? "theme-picker-track--compact gap-0.5 p-0.5" : "gap-1 p-1",
+        )}
         onKeyDown={onKeyDown}
       >
         <span
           aria-hidden
           data-theme-thumb
           className={cn(
-            "theme-picker-thumb pointer-events-none absolute top-1 left-0 z-0 h-[calc(100%-0.5rem)] rounded-[var(--radius-control)]",
+            "theme-picker-thumb pointer-events-none absolute left-0 z-0 rounded-[calc(var(--radius-control)-1px)]",
+            compact ? "top-0.5 h-[calc(100%-0.25rem)]" : "top-1 h-[calc(100%-0.5rem)]",
             canSlide && !reducedMotion && "is-animated",
             !thumb && "opacity-0",
           )}
@@ -135,19 +157,19 @@ export function ThemePicker({
         {THEME_MODES.map((value) => {
           const Icon = ICONS[value];
           const selected = mode === value;
-          const label = LABELS[value];
+          const label = labels[value];
           return (
             <button
               key={value}
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={compact ? label : undefined}
+              aria-label={compact || hideLabel ? label : undefined}
               title={compact ? label : undefined}
               className={cn(
-                "relative z-10 rounded-[var(--radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                "relative z-10 rounded-[calc(var(--radius-control)-1px)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 compact
-                  ? "flex min-h-11 items-center justify-center"
+                  ? "flex h-8 w-8 items-center justify-center"
                   : "flex min-h-11 flex-col items-center justify-center gap-0.5 px-1 text-[11px]",
                 selected
                   ? compact
@@ -158,13 +180,19 @@ export function ThemePicker({
               )}
               onClick={(event) => onSelect(value, event)}
             >
-              <Icon className="size-4" strokeWidth={selected ? 2.25 : 1.75} aria-hidden />
+              <Icon
+                className={compact ? "size-3.5" : "size-4"}
+                strokeWidth={selected ? 2.25 : 1.75}
+                aria-hidden
+              />
               {compact ? null : label}
             </button>
           );
         })}
       </div>
-      {!compact && mode === "system" ? <p className="text-[11px] text-fg-muted">{he.themeSystemHint}</p> : null}
+      {!compact && !hideLabel && mode === "system" ? (
+        <p className="text-[11px] text-fg-muted">{labels.systemHint}</p>
+      ) : null}
     </div>
   );
 }

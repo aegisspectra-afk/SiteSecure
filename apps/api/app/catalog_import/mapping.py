@@ -12,8 +12,10 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"יצרן|manufacturer|מותג|brand", re.I), "manufacturer"),
     (re.compile(r"תאור\s*מקוצר|שם|name|product\s*name|תאור מוצר", re.I), "name"),
     (re.compile(r"תאור\s*מורחב|description|תיאור", re.I), "description"),
-    (re.compile(r"מחיר\s*מתקין|עלות|cost|purchase|dealer|מחירון\s*מתקין", re.I), "cost"),
-    (re.compile(r"מחיר\s*מכירה|list\s*price|sale|מחירון\s*לקוח|selling", re.I), "list_price"),
+    (re.compile(r"מחיר\s*ל?מתקין|עלות|cost|purchase|dealer|מחירון\s*ל?מתקין|dealer\s*price", re.I), "cost"),
+    (re.compile(r"מחיר\s*מכירה|list\s*price|sale|מחירון\s*לקוח|selling|msrp|rrp|מומלץ", re.I), "list_price"),
+    # Bare "מחיר" / "Price" on supplier sheets is almost always installer/dealer cost.
+    (re.compile(r"^מחיר$|^price$|unit\s*price|מחיר\s*יח|price\s*\(|₪|nis", re.I), "cost"),
     (re.compile(r"יחידה|unit", re.I), "unit"),
     (re.compile(r"קטגור|category", re.I), "category"),
     (re.compile(r"רזולוצ|resolution", re.I), "attributes.resolution_mp"),
@@ -133,6 +135,9 @@ def suggest_field_for_header(header: str | None) -> str | None:
     return None
 
 
+_PRICE_FALLBACK = re.compile(r"מחיר|price|₪|nis|usd|\$", re.I)
+
+
 def suggest_column_map(headers: list[Any]) -> dict[str, str]:
     """Map column index (str) → target field. Unique targets preferred."""
     used: set[str] = set()
@@ -143,6 +148,18 @@ def suggest_column_map(headers: list[Any]) -> dict[str, str]:
             continue
         used.add(field)
         out[str(i)] = field
+    # Second pass: if no cost mapped, pick the first price-like header still free.
+    if "cost" not in used:
+        for i, h in enumerate(headers):
+            if str(i) in out:
+                continue
+            label = h if isinstance(h, str) else (str(h) if h is not None else "")
+            if not label or _SKIP_HEADERS.search(label):
+                continue
+            if _PRICE_FALLBACK.search(label):
+                out[str(i)] = "cost"
+                used.add("cost")
+                break
     return out
 
 
@@ -184,6 +201,14 @@ def suggest_category_key(sheet_name: str) -> str | None:
         return "hdd_recorders"
     if "switch" in n or "מתג" in n:
         return "switch"
-    if "אביז" in n or "access" in n or "כללי" in n or "הוראות" in n:
+    if (
+        "נלוו" in n
+        or "אביזרים נלוו" in n
+        or "אביז" in n
+        or "accessories" in n
+        or "accessory" in n
+    ):
+        return "general_accessories"
+    if "כללי" in n or "הוראות" in n:
         return None
     return None

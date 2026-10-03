@@ -52,8 +52,8 @@ beforeEach(() => {
 });
 
 describe("theme helpers", () => {
-  it("scopes fixed brand-dark to public and auth paths only", () => {
-    expect(isBrandDarkPath("/")).toBe(true);
+  it("scopes fixed brand-dark to auth/marketing paths, not homepage or app shells", () => {
+    expect(isBrandDarkPath("/")).toBe(false);
     expect(isBrandDarkPath("/login")).toBe(true);
     expect(isBrandDarkPath("/register")).toBe(true);
     expect(isBrandDarkPath("/forgot-password")).toBe(true);
@@ -66,6 +66,21 @@ describe("theme helpers", () => {
     expect(isBrandDarkPath("/app/dashboard")).toBe(false);
     expect(isBrandDarkPath("/admin")).toBe(false);
     expect(isBrandDarkPath("/dev/ui")).toBe(false);
+  });
+
+  it("lets the homepage follow theme mode without ss-brand-dark", () => {
+    mockScheme(false);
+    window.history.replaceState({}, "", "/");
+    applyDocumentTheme("light");
+    expect(document.documentElement.classList.contains("ss-brand-dark")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.documentElement.style.colorScheme).toBe("light");
+
+    applyDocumentTheme("dark");
+    expect(document.documentElement.classList.contains("ss-brand-dark")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe("dark");
   });
 
   it("paints a dark html canvas on auth routes without forcing html.dark", () => {

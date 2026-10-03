@@ -1,10 +1,12 @@
-import { Button, Input, Select, Status } from "@site-secure/ui";
+import { Button, Checkbox, Input, Select, Status } from "@site-secure/ui";
 import {
   ApiClientError,
   type CatalogCategory,
   type CatalogImportCommitResult,
+  type CatalogImportInFileDuplicateMode,
   type CatalogImportParseResult,
   type CatalogImportPreviewResult,
+  type CatalogImportPricingMode,
   type CatalogImportSheetConfig,
 } from "@site-secure/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,6 +86,42 @@ function stepIndex(step: Step): number {
   return STEPS.findIndex((s) => s.id === step);
 }
 
+function blockReasonLabel(code: string): string {
+  switch (code) {
+    case "missing_sku":
+      return he.catalogImportReasonMissingSku;
+    case "missing_name":
+      return he.catalogImportReasonMissingName;
+    case "missing_category":
+      return he.catalogImportReasonMissingCategory;
+    case "duplicate_sku_in_file":
+      return he.catalogImportReasonDupInFile;
+    default:
+      return code || he.catalogImportReasonUnknown;
+  }
+}
+
+function warningLabel(code: string): string {
+  switch (code) {
+    case "sku_from_name":
+      return he.catalogImportWarnSkuFromName;
+    case "sku_suffix_for_duplicate":
+      return he.catalogImportWarnSkuSuffix;
+    default:
+      return code;
+  }
+}
+
+function formatReasons(reasons: string[] | undefined): string {
+  if (!reasons?.length) return he.catalogImportReasonUnknown;
+  return reasons.map(blockReasonLabel).join(" · ");
+}
+
+function formatWarnings(warnings: string[] | undefined): string {
+  if (!warnings?.length) return "";
+  return warnings.map(warningLabel).join(" · ");
+}
+
 export function CatalogImportWizard({
   open,
   onClose,
@@ -109,12 +147,26 @@ export function CatalogImportWizard({
   const [sheets, setSheets] = useState<SheetState[]>([]);
   const [activeSheet, setActiveSheet] = useState(0);
   const [duplicatePolicy, setDuplicatePolicy] = useState<"skip" | "update" | "new_only">("skip");
+  const [inFileDupMode, setInFileDupMode] = useState<CatalogImportInFileDuplicateMode>("block");
+  const [pricingMode, setPricingMode] = useState<CatalogImportPricingMode>("markup_percent");
+  const [pricingValue, setPricingValue] = useState("30");
+  const [pricingOnlyMissing, setPricingOnlyMissing] = useState(true);
+  const [globalManufacturer, setGlobalManufacturer] = useState("");
   const [preview, setPreview] = useState<CatalogImportPreviewResult | null>(null);
   const [result, setResult] = useState<CatalogImportCommitResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+
+  const pricingPayload = useMemo(() => {
+    const value = Number(pricingValue);
+    return {
+      pricing_mode: pricingMode,
+      pricing_value: pricingMode === "leave" ? null : Number.isFinite(value) && value > 0 ? value : null,
+      pricing_only_missing: pricingOnlyMissing,
+    };
+  }, [pricingMode, pricingOnlyMissing, pricingValue]);
 
   onCloseRef.current = onClose;
 
@@ -244,19 +296,25 @@ export function CatalogImportWizard({
   });
 
   const previewMut = useMutation({
-    mutationFn: () =>
-      api.catalogImportPreview(workspaceId!, {
+    mutationFn: () => {
+      if (pricingMode !== "leave" && !(Number(pricingValue) > 0)) {
+        throw new Error(he.catalogImportPricingValueRequired);
+      }
+      return api.catalogImportPreview(workspaceId!, {
         session_id: parsed!.session_id,
         duplicate_policy: duplicatePolicy,
+        in_file_duplicate_mode: inFileDupMode,
         sheets: sheets.map(toConfig),
-      }),
+        ...pricingPayload,
+      });
+    },
     onSuccess: (data) => {
       setPreview(data);
       setStep("preview");
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof ApiClientError ? err.message : he.catalogImportError);
+      setError(err instanceof ApiClientError || err instanceof Error ? err.message : he.catalogImportError);
     },
   });
 
@@ -265,8 +323,10 @@ export function CatalogImportWizard({
       api.catalogImportCommit(workspaceId!, {
         session_id: parsed!.session_id,
         duplicate_policy: duplicatePolicy,
+        in_file_duplicate_mode: inFileDupMode,
         sheets: sheets.map(toConfig),
         confirm: true,
+        ...pricingPayload,
       }),
     onSuccess: (data) => {
       setResult(data);
@@ -301,7 +361,18 @@ export function CatalogImportWizard({
     setError(null);
     setSelectedName(null);
     setDragOver(false);
+    setPricingMode("markup_percent");
+    setPricingValue("30");
+    setPricingOnlyMissing(true);
+    setGlobalManufacturer("");
+    setInFileDupMode("block");
     onCloseRef.current();
+  }
+
+  function applyManufacturerToAll(value: string) {
+    const next = value.trim();
+    setGlobalManufacturer(next);
+    setSheets((prev) => prev.map((s) => ({ ...s, manufacturer_default: next })));
   }
 
   function acceptFile(file: File | undefined | null) {
@@ -520,6 +591,19 @@ export function CatalogImportWizard({
               <p className="text-sm text-fg">
                 {he.catalogImportSheetsFound.replace("{n}", String(parsed.sheet_count))} · {parsed.filename}
               </p>
+              <div className="grid gap-2 rounded-[var(--radius-control)] border border-border bg-bg-1 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <Input
+                  id="imp-mfr-global"
+                  label={he.catalogImportManufacturerGlobal}
+                  value={globalManufacturer}
+                  onChange={(ev) => setGlobalManufacturer(ev.target.value)}
+                  placeholder="UNIVIEW / Hikvision / …"
+                  list="catalog-import-mfr-suggestions"
+                />
+                <Button type="button" variant="secondary" onClick={() => applyManufacturerToAll(globalManufacturer)}>
+                  {he.catalogImportManufacturerApplyAll}
+                </Button>
+              </div>
               <ul className="flex flex-col gap-2">
                 {sheets.map((s, i) => {
                   const meta = parsed.sheets.find((x) => x.index === s.sheet_index)!;
@@ -626,13 +710,25 @@ export function CatalogImportWizard({
                     </option>
                   ))}
                 </Select>
-                <Input
-                  id="imp-mfr"
-                  label={he.catalogImportManufacturerDefault}
-                  value={mappingSheet.manufacturer_default}
-                  onChange={(ev) => updateActive({ manufacturer_default: ev.target.value })}
-                  placeholder="UNIVIEW"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <Input
+                    id="imp-mfr"
+                    label={he.catalogImportManufacturerDefault}
+                    value={mappingSheet.manufacturer_default}
+                    onChange={(ev) => updateActive({ manufacturer_default: ev.target.value })}
+                    placeholder="UNIVIEW / Hikvision / …"
+                    list="catalog-import-mfr-suggestions"
+                  />
+                  <p className="text-xs text-fg-muted">{he.catalogImportManufacturerHint}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="self-start"
+                    onClick={() => applyManufacturerToAll(mappingSheet.manufacturer_default)}
+                  >
+                    {he.catalogImportManufacturerApplyAll}
+                  </Button>
+                </div>
                 <Select
                   id="imp-unit"
                   label={he.catalogUnit}
@@ -645,6 +741,38 @@ export function CatalogImportWizard({
                   <option value="job">{he.catalogUnitJob}</option>
                   <option value="pack">{he.catalogUnitPack}</option>
                 </Select>
+              </div>
+
+              <div className="grid gap-3 rounded-[var(--radius-control)] border border-border bg-bg-1 p-3 md:grid-cols-2">
+                <Select
+                  id="imp-pricing-mode"
+                  label={he.catalogImportPricingFromCost}
+                  value={pricingMode}
+                  onChange={(ev) => setPricingMode(ev.target.value as CatalogImportPricingMode)}
+                >
+                  <option value="leave">{he.catalogImportPricingLeave}</option>
+                  <option value="markup_percent">{he.catalogImportPricingMarkup}</option>
+                  <option value="multiplier">{he.catalogImportPricingMultiplier}</option>
+                </Select>
+                <Input
+                  id="imp-pricing-value"
+                  label={he.catalogImportPricingValue}
+                  type="number"
+                  value={pricingValue}
+                  disabled={pricingMode === "leave"}
+                  onChange={(ev) => setPricingValue(ev.target.value)}
+                  placeholder={pricingMode === "multiplier" ? "1.3" : "30"}
+                />
+                <label className="flex items-center gap-2 text-sm text-fg md:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={pricingOnlyMissing}
+                    disabled={pricingMode === "leave"}
+                    onChange={(ev) => setPricingOnlyMissing(ev.target.checked)}
+                  />
+                  {he.catalogImportPricingOnlyMissing}
+                </label>
+                <p className="text-xs text-fg-muted md:col-span-2">{he.catalogImportPricingHint}</p>
               </div>
 
               <p className="text-xs text-fg-muted">
@@ -705,6 +833,74 @@ export function CatalogImportWizard({
                 {preview.summary.will_update} · {he.catalogImportWillSkip}: {preview.summary.will_skip} ·{" "}
                 {he.catalogImportDuplicates}: {preview.summary.duplicates}
               </p>
+              {(preview.blocked_rows?.length ?? 0) > 0 ? (
+                <div className="overflow-x-auto rounded-[var(--radius-control)] border border-danger/30">
+                  <p className="bg-danger/5 px-3 py-2 text-sm font-semibold text-danger">
+                    {he.catalogImportBlockedTitle} ({preview.blocked_rows!.length})
+                  </p>
+                  {preview.blocked_rows!.some((r) => r.block_reasons?.includes("duplicate_sku_in_file")) ? (
+                    <div className="flex flex-col gap-2 border-b border-danger/20 px-3 py-3">
+                      <Checkbox
+                        id="approve-in-file-dups"
+                        label={he.catalogImportApproveInFileDups}
+                        checked={inFileDupMode === "suffix"}
+                        onChange={(ev) => {
+                          const next: CatalogImportInFileDuplicateMode = ev.target.checked ? "suffix" : "block";
+                          setInFileDupMode(next);
+                          // Re-preview immediately so counts / blocked list update.
+                          void api
+                            .catalogImportPreview(workspaceId!, {
+                              session_id: parsed!.session_id,
+                              duplicate_policy: duplicatePolicy,
+                              in_file_duplicate_mode: next,
+                              sheets: sheets.map(toConfig),
+                              ...pricingPayload,
+                            })
+                            .then((data) => {
+                              setPreview(data);
+                              setError(null);
+                            })
+                            .catch((err) => {
+                              setError(
+                                err instanceof ApiClientError || err instanceof Error
+                                  ? err.message
+                                  : he.catalogImportError,
+                              );
+                            });
+                        }}
+                      />
+                      <p className="text-xs text-fg-muted">{he.catalogImportApproveInFileDupsHint}</p>
+                    </div>
+                  ) : null}
+                  <table className="min-w-full text-start text-xs">
+                    <thead className="bg-bg-subtle">
+                      <tr>
+                        <th className="p-2">{he.catalogImportSheet}</th>
+                        <th className="p-2">{he.catalogImportRow}</th>
+                        <th className="p-2">{he.catalogSku}</th>
+                        <th className="p-2">{he.catalogName}</th>
+                        <th className="p-2">{he.catalogImportBlockedWhy}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.blocked_rows!.map((row, i) => (
+                        <tr key={`b-${i}`} className="border-t border-border bg-bg-1">
+                          <td className="p-2">{row.sheet_name ?? "—"}</td>
+                          <td className="p-2 public-mono">{row.source_row ?? "—"}</td>
+                          <td className="p-2 public-mono">{row.product?.sku ?? "—"}</td>
+                          <td className="p-2">{row.product?.name ?? "—"}</td>
+                          <td className="p-2 text-danger">{formatReasons(row.block_reasons)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+              {inFileDupMode === "suffix" && (preview.summary.blocked ?? 0) === 0 ? (
+                <p className="rounded-[var(--radius-control)] border border-border bg-bg-subtle px-3 py-2 text-xs text-fg-muted">
+                  {he.catalogImportApproveInFileDupsHint}
+                </p>
+              ) : null}
               <div className="overflow-x-auto rounded-[var(--radius-control)] border border-border">
                 <table className="min-w-full text-start text-xs">
                   <thead className="bg-bg-subtle">
@@ -712,6 +908,7 @@ export function CatalogImportWizard({
                       <th className="p-2">{he.catalogSku}</th>
                       <th className="p-2">{he.catalogName}</th>
                       <th className="p-2">{he.catalogStatus}</th>
+                      <th className="p-2">{he.catalogPrice}</th>
                       <th className="p-2">{he.catalogImportNormalized}</th>
                     </tr>
                   </thead>
@@ -732,12 +929,18 @@ export function CatalogImportWizard({
                             tone={row.status === "ready" ? "success" : row.status === "warning" ? "warning" : "danger"}
                           />
                         </td>
+                        <td className="p-2 public-mono">
+                          {typeof row.product?.list_price === "number" ? `₪${row.product.list_price}` : "—"}
+                        </td>
                         <td className="p-2 text-fg-muted">
-                          {row.product?.attributes
-                            ? Object.entries(row.product.attributes)
-                                .map(([k, v]) => `${k}=${String(v)}`)
-                                .join(", ") || "—"
-                            : "—"}
+                          {row.status === "blocked"
+                            ? formatReasons(row.block_reasons)
+                            : formatWarnings(row.warnings) ||
+                              (row.product?.attributes
+                                ? Object.entries(row.product.attributes)
+                                    .map(([k, v]) => `${k}=${String(v)}`)
+                                    .join(", ") || "—"
+                                : "—")}
                         </td>
                       </tr>
                     ))}
@@ -770,13 +973,46 @@ export function CatalogImportWizard({
                 ) : null}
               </ul>
               {result.failed_count ? (
-                <p className="text-sm text-danger">
-                  {he.catalogImportFailed}: {result.failed_count}
-                </p>
+                <div className="overflow-x-auto rounded-[var(--radius-control)] border border-danger/30">
+                  <p className="bg-danger/5 px-3 py-2 text-sm font-semibold text-danger">
+                    {he.catalogImportFailedTitle} ({result.failed_count})
+                  </p>
+                  <table className="min-w-full text-start text-xs">
+                    <thead className="bg-bg-subtle">
+                      <tr>
+                        <th className="p-2">{he.catalogImportSheet}</th>
+                        <th className="p-2">{he.catalogImportRow}</th>
+                        <th className="p-2">{he.catalogSku}</th>
+                        <th className="p-2">{he.catalogName}</th>
+                        <th className="p-2">{he.catalogImportBlockedWhy}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.failed.map((row, i) => (
+                        <tr key={`f-${i}`} className="border-t border-border bg-bg-1">
+                          <td className="p-2">{row.sheet_name ?? "—"}</td>
+                          <td className="p-2 public-mono">{row.source_row ?? "—"}</td>
+                          <td className="p-2 public-mono">{row.sku ?? "—"}</td>
+                          <td className="p-2">{row.name ?? "—"}</td>
+                          <td className="p-2 text-danger">{formatReasons(row.reasons)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : null}
             </div>
           ) : null}
         </div>
+
+        <datalist id="catalog-import-mfr-suggestions">
+          <option value="UNIVIEW" />
+          <option value="Hikvision" />
+          <option value="Dahua" />
+          <option value="Hanwha" />
+          <option value="Axis" />
+          <option value="Tiandy" />
+        </datalist>
 
         <footer className="catalog-import-footer">{footer}</footer>
       </div>

@@ -69,11 +69,11 @@ class UserClient:
             json=json,
         )
 
-    def delete(self, path: str, params: dict | None = None):
+    def delete(self, path: str, params: dict | None = None, *, prefer: str | None = None):
         return supabase_request(
             "DELETE",
             f"{self.rest}/{path.lstrip('/')}",
-            headers=self._rest_headers(),
+            headers=self._rest_headers(prefer),
             params=params,
         )
 

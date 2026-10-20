@@ -1,6 +1,6 @@
 import { can } from "./can";
 
-export type HomeVariant = "ops" | "sales" | "today" | "observe";
+export type HomeVariant = "ops" | "sales" | "today" | "observe" | "workforce";
 
 export function homeVariant(roleKey: string | undefined): HomeVariant {
   switch (roleKey) {
@@ -10,6 +10,8 @@ export function homeVariant(roleKey: string | undefined): HomeVariant {
       return "today";
     case "viewer":
       return "observe";
+    case "workforce_member":
+      return "workforce";
     default:
       return "ops";
   }

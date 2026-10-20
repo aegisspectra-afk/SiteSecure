@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "apps/web",
+    "apps/ssp",
     "packages/*"
   ],
   "scripts": {
@@ -10,7 +11,11 @@
     "web:build": "npm run build -w @site-secure/web",
     "web:test": "npm run test -w @site-secure/ui && npm run test -w @site-secure/web",
     "web:lint": "npm run lint -w @site-secure/ui && npm run lint -w @site-secure/web",
-    "web:typecheck": "npm run typecheck -w @site-secure/ui && npm run typecheck -w @site-secure/web"
+    "web:typecheck": "npm run typecheck -w @site-secure/ui && npm run typecheck -w @site-secure/web",
+    "ssp:dev": "npm run dev -w @aegis/ssp",
+    "ssp:build": "npm run build -w @aegis/ssp",
+    "ssp:typecheck": "npm run typecheck -w @aegis/ssp",
+    "ssp:smoke": "npm run smoke -w @aegis/ssp"
   },
   "engines": {
     "node": ">=20"

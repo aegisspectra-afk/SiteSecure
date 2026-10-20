@@ -1,3 +1,4 @@
+import { ApiClientError } from "@site-secure/api-client";
 import { Button, ErrorState } from "@site-secure/ui";
 import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -21,6 +22,7 @@ function OnboardingPage() {
   const [created, setCreated] = useState(false);
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [createdIsBeta, setCreatedIsBeta] = useState(false);
+  const [ownerConfirmed, setOwnerConfirmed] = useState(false);
   const [entering, setEntering] = useState(false);
   const [launchReady, setLaunchReady] = useState(false);
   const email = user?.email ?? session?.email ?? null;
@@ -72,7 +74,11 @@ function OnboardingPage() {
       </AuthLayout>
     );
   }
-  if (session?.has_workspace && !created && !entering) return <Navigate to={afterAuthPath(true)} />;
+
+  // Existing workspace: Site Secure home — never public product/plan path.
+  if (session?.has_workspace && !created && !entering) {
+    return <Navigate to={afterAuthPath(true)} />;
+  }
 
   if (entering) {
     return (
@@ -92,6 +98,16 @@ function OnboardingPage() {
       ? he.onboardingWorkspaceHeading
       : he.onboardingProfileHeading;
 
+  async function enterSiteSecure() {
+    setEntering(true);
+    setLaunchReady(false);
+    await authLaunchSequence({
+      onWorkspace: () => setLaunchReady(false),
+      onReady: () => setLaunchReady(true),
+    });
+    await navigate({ to: "/platform" });
+  }
+
   return (
     <AuthLayout
       title={he.onboardingTitle}
@@ -110,6 +126,7 @@ function OnboardingPage() {
         created={created}
         workspaceName={createdName}
         isBeta={createdIsBeta || Boolean(session?.memberships[0]?.is_beta)}
+        ownerConfirmed={ownerConfirmed}
         loading={submitting}
         error={error}
         onSaveProfile={async (fullName) => {
@@ -131,7 +148,6 @@ function OnboardingPage() {
             const ws = await api.createWorkspace({ name, business_type: businessType });
             setCreatedName(ws.name ?? name);
             setCreatedIsBeta(Boolean(ws.is_beta));
-            setCreated(true);
             try {
               await api.patchWorkspace(ws.id, {
                 timezone: "Asia/Jerusalem",
@@ -141,23 +157,46 @@ function OnboardingPage() {
             } catch {
               // Workspace exists; timezone/VAT defaults still apply.
             }
-            await refresh();
+            const hydrated = await refresh();
+            const role = hydrated?.memberships[0]?.role_key;
+            if (role !== "owner") {
+              setOwnerConfirmed(false);
+              setCreated(true);
+              setError(he.onboardingOwnerRoleMissing);
+              return;
+            }
+            setOwnerConfirmed(true);
+            setCreated(true);
+            setSubmitting(false);
+            await enterSiteSecure();
+            return;
           } catch (err) {
+            // Workspace may already exist if defaults seed failed after RPC commit.
+            const hydrated = await refresh();
+            const m = hydrated?.memberships[0];
+            if (hydrated?.has_workspace && m?.role_key === "owner") {
+              setCreatedName(m.workspace_name || name);
+              setCreatedIsBeta(Boolean(m.is_beta));
+              setOwnerConfirmed(true);
+              setCreated(true);
+              const code = err instanceof ApiClientError ? err.code : "";
+              setError(
+                code === "WORKSPACE_PRODUCT_DEFAULTS_FAILED" || code === "PRODUCT_DEFAULTS_UNAVAILABLE"
+                  ? he.onboardingWorkspaceCreatedDefaultsFailed
+                  : he.onboardingWorkspaceCreatedPartial,
+              );
+              return;
+            }
+            // Total failure: stay on create form (do not show ready/success).
+            setCreated(false);
+            setOwnerConfirmed(false);
             setError(err instanceof Error ? err.message : he.sessionError);
           } finally {
             setSubmitting(false);
           }
         }}
         onEnter={() => {
-          setEntering(true);
-          setLaunchReady(false);
-          void (async () => {
-            await authLaunchSequence({
-              onWorkspace: () => setLaunchReady(false),
-              onReady: () => setLaunchReady(true),
-            });
-            await navigate({ to: afterAuthPath(true) });
-          })();
+          void enterSiteSecure();
         }}
       />
     </AuthLayout>

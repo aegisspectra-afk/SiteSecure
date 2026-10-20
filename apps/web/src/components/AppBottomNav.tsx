@@ -156,6 +156,7 @@ export function AppBottomNav({
           <NavSlot key={item.to} index={index} itemRefs={itemRefs}>
             <Link
               to={item.to}
+              activeOptions={item.to === "/app/ssp" ? { exact: true } : undefined}
               className={cn("ops-bottom-nav-item", selected && "is-active")}
               aria-current={selected ? "page" : undefined}
             >

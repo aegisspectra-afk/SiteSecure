@@ -88,6 +88,7 @@ function AppLayout() {
     );
   }
   if (!session?.has_workspace) return <Navigate to={afterAuthPath(false)} />;
+
   return (
     <div className="auth-app-enter">
       <AppShell>

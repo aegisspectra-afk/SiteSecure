@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   Shield,
+  Truck,
   UserPlus,
   Wrench,
   X,
@@ -19,6 +20,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { he } from "../i18n/he";
 import { can } from "../lib/can";
+import { hasFeature } from "../lib/home";
 import { useSession } from "../lib/session";
 
 type CommandAction = {
@@ -126,6 +128,15 @@ export function CommandPalette({
         hint: he.navServiceShort,
         icon: Plus,
         run: () => void navigate({ to: "/app/service" }),
+      });
+    }
+    if (can(roleKey, "fleet.view", features) && hasFeature(features, "fleet")) {
+      list.push({
+        id: "go-fleet",
+        label: he.navFleetMaster,
+        hint: he.fleetTitle,
+        icon: Truck,
+        run: () => void navigate({ to: "/app/fleet" }),
       });
     }
     list.push({

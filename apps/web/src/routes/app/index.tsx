@@ -10,5 +10,6 @@ function AppHome() {
   const { session } = useSession();
   const variant = homeVariant(session?.memberships[0]?.role_key);
   if (variant === "today") return <Navigate to="/app/today" />;
+  if (variant === "workforce") return <Navigate to="/app/workforce" />;
   return <Navigate to="/app/dashboard" />;
 }

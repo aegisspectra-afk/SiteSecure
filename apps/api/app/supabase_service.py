@@ -88,6 +88,30 @@ class ServiceClient:
             json=body,
         )
 
+    def auth_admin_delete_user(self, user_id: str) -> httpx.Response:
+        """GoTrue Admin delete. Call only for users created in the current request with no other memberships."""
+        return supabase_request(
+            "DELETE",
+            f"{self.auth}/admin/users/{user_id}",
+            headers=self._headers,
+        )
+
+    def auth_admin_get_user(self, user_id: str) -> httpx.Response:
+        return supabase_request(
+            "GET",
+            f"{self.auth}/admin/users/{user_id}",
+            headers=self._headers,
+        )
+
+    def auth_admin_get_user_by_email(self, email: str) -> httpx.Response:
+        """GoTrue Admin list filtered by email. Used only to resume workforce orphans."""
+        return supabase_request(
+            "GET",
+            f"{self.auth}/admin/users",
+            headers=self._headers,
+            params={"page": "1", "per_page": "5", "email": email.strip().lower()},
+        )
+
     def auth_admin_generate_link(self, body: dict) -> httpx.Response:
         return supabase_request(
             "POST",

@@ -1,5 +1,9 @@
 -- Auth contract P1: technician field scope, founding_technician never an RBAC role, customer visibility.
 
+-- Fresh local apply runs this file before 20260908200000_profiles_recognition_badges.sql.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS recognition_badges text[] NOT NULL DEFAULT '{}'::text[];
+
 -- 1) Customer visibility follows full site visibility (job/project/service assignment paths).
 CREATE OR REPLACE FUNCTION public.auth_customer_visible(p_workspace_id uuid, p_customer_id uuid)
 RETURNS boolean

@@ -68,5 +68,24 @@ MESSAGES = {
     "QUOTE_INCOMPLETE": "לא ניתן לשלוח את ההצעה",
     "TEMPLATE_EMPTY": "לתבנית אין שורות להחלה",
     "API_UNAVAILABLE": "השירות אינו זמין",
+    "SSP_SCHEMA_UNAVAILABLE": (
+        "טבלת האתרים אינה קיימת במסד שאליו מחובר ה־API. "
+        "יצירה דורשת Local Supabase ב־127.0.0.1:54321 עם המיגרציות המקומיות. "
+        "לא הוחלה סכמה לענן, ואין זו שגיאת הרשאה."
+    ),
+    "WORKFORCE_SCHEMA_UNAVAILABLE": (
+        "טבלאות Workforce Intelligence אינן קיימות במסד שאליו מחובר ה־API. "
+        "יש להחיל את המיגרציה המקומית. אין זו שגיאת הרשאה."
+    ),
+    "WORKFORCE_USERNAME_TAKEN": "שם המשתמש התפעולי כבר בשימוש בסביבה זו",
+    "WORKFORCE_ACCOUNT_CONFLICT": "לא ניתן ליצור חשבון עם פרטי ההתחברות האלה",
+    "WORKFORCE_USER_CANNOT_CREATE_WORKSPACE": "חשבון עובד אינו יכול לפתוח סביבת עבודה חדשה",
+    "WORKFORCE_PARTIAL_RECOVERY": "היצירה נכשלה. נסו שוב עם אותם פרטים לאחר בדיקת הסביבה",
+    "WORKFORCE_SELF_DISABLE": "לא ניתן להשבית את החשבון שלכם",
+    "WORKFORCE_CROSS_TENANT": "לא ניתן לשייך חשבון שכבר משויך לסביבה אחרת",
+    "WORKFORCE_IN_USE": "לא ניתן למחוק — קיימים נתונים תפעוליים מקושרים",
+
     "ENTITLEMENTS_UNAVAILABLE": "לא ניתן לאמת את הרשאות התוכנית כרגע",
+    "PRODUCT_DEFAULTS_UNAVAILABLE": "לא ניתן להגדיר את מוצרי ברירת המחדל לסביבה. נסו שוב או פנו לתמיכה.",
+    "WORKSPACE_PRODUCT_DEFAULTS_FAILED": "הסביבה נוצרה אך הגדרת מוצרי ברירת המחדל נכשלה. פנו לתמיכה לפני שימוש.",
 }

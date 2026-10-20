@@ -137,6 +137,7 @@ export function SidebarNav({
                   to={item.to}
                   data-sidebar-item
                   title={item.label}
+                  activeOptions={item.to === "/app/ssp" ? { exact: true } : undefined}
                   className={cn("ops-sidebar-link", selected && "is-active", collapsed && "is-collapsed")}
                   aria-current={selected ? "page" : undefined}
                   aria-label={item.label}

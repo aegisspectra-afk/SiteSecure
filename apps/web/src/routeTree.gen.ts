@@ -15,6 +15,7 @@ import { Route as AppRouteRouteImport } from "./routes/app/route"
 import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password"
 import { Route as LoginRouteImport } from "./routes/login"
 import { Route as OnboardingRouteImport } from "./routes/onboarding"
+import { Route as PlatformRouteRouteImport } from "./routes/platform/route"
 import { Route as PortalRouteRouteImport } from "./routes/portal/route"
 import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
@@ -33,22 +34,46 @@ import { Route as AppIndexRouteImport } from "./routes/app/index"
 import { Route as AppAnalyticsRouteImport } from "./routes/app/analytics"
 import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
+import { Route as AppFleetRouteRouteImport } from "./routes/app/fleet/route"
+import { Route as AppPlatformPathRouteRouteImport } from "./routes/app/platform-path/route"
 import { Route as AppSettingsRouteRouteImport } from "./routes/app/settings/route"
+import { Route as AppSspRouteRouteImport } from "./routes/app/ssp/route"
 import { Route as AppTodayRouteImport } from "./routes/app/today"
+import { Route as AppWorkforceRouteRouteImport } from "./routes/app/workforce/route"
+import { Route as DemoSspRouteImport } from "./routes/demo/ssp"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
+import { Route as PlatformIndexRouteImport } from "./routes/platform/index"
 import { Route as PortalIndexRouteImport } from "./routes/portal/index"
 import { Route as PortalChooseRouteImport } from "./routes/portal/choose"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
+import { Route as SspTokenRouteImport } from "./routes/ssp/$token"
 import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
 import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
+import { Route as AppFleetIndexRouteImport } from "./routes/app/fleet/index"
+import { Route as AppFleetAccessRouteImport } from "./routes/app/fleet/access"
+import { Route as AppFleetAssignmentsRouteImport } from "./routes/app/fleet/assignments"
+import { Route as AppFleetDocumentsRouteImport } from "./routes/app/fleet/documents"
+import { Route as AppFleetEquipmentRouteImport } from "./routes/app/fleet/equipment"
+import { Route as AppFleetImportRouteImport } from "./routes/app/fleet/import"
+import { Route as AppFleetMaintenanceRouteImport } from "./routes/app/fleet/maintenance"
+import { Route as AppFleetMileageRouteImport } from "./routes/app/fleet/mileage"
+import { Route as AppFleetMyVehicleRouteImport } from "./routes/app/fleet/my-vehicle"
+import { Route as AppFleetReportsRouteImport } from "./routes/app/fleet/reports"
+import { Route as AppFleetSchedulesRouteImport } from "./routes/app/fleet/schedules"
+import { Route as AppFleetVehiclesRouteImport } from "./routes/app/fleet/vehicles"
 import { Route as AppJobsIndexRouteImport } from "./routes/app/jobs/index"
 import { Route as AppJobsJobIdRouteImport } from "./routes/app/jobs/$jobId"
 import { Route as AppKnowledgeIndexRouteImport } from "./routes/app/knowledge/index"
 import { Route as AppLeadsIndexRouteImport } from "./routes/app/leads/index"
 import { Route as AppLeadsLeadIdRouteImport } from "./routes/app/leads/$leadId"
+import { Route as AppPlatformPathIndexRouteImport } from "./routes/app/platform-path/index"
+import { Route as AppPlatformPathDoneRouteImport } from "./routes/app/platform-path/done"
+import { Route as AppPlatformPathPlansRouteImport } from "./routes/app/platform-path/plans"
+import { Route as AppPlatformPathProductsRouteImport } from "./routes/app/platform-path/products"
+import { Route as AppPlatformPathReviewRouteImport } from "./routes/app/platform-path/review"
 import { Route as AppProjectsIndexRouteImport } from "./routes/app/projects/index"
 import { Route as AppProjectsProjectIdRouteImport } from "./routes/app/projects/$projectId"
 import { Route as AppQuotesIndexRouteImport } from "./routes/app/quotes/index"
@@ -63,6 +88,7 @@ import { Route as AppSettingsGeneralRouteImport } from "./routes/app/settings/ge
 import { Route as AppSettingsNotificationsRouteImport } from "./routes/app/settings/notifications"
 import { Route as AppSettingsNumberingRouteImport } from "./routes/app/settings/numbering"
 import { Route as AppSettingsPdfTemplatesRouteImport } from "./routes/app/settings/pdf-templates"
+import { Route as AppSettingsProductsRouteImport } from "./routes/app/settings/products"
 import { Route as AppSettingsProfileRouteImport } from "./routes/app/settings/profile"
 import { Route as AppSettingsQuotesRouteImport } from "./routes/app/settings/quotes"
 import { Route as AppSettingsRolesRouteImport } from "./routes/app/settings/roles"
@@ -72,12 +98,41 @@ import { Route as AppSettingsSystemRouteImport } from "./routes/app/settings/sys
 import { Route as AppSettingsUsersRouteImport } from "./routes/app/settings/users"
 import { Route as AppSitesIndexRouteImport } from "./routes/app/sites/index"
 import { Route as AppSitesSiteIdRouteImport } from "./routes/app/sites/$siteId"
+import { Route as AppSspIndexRouteImport } from "./routes/app/ssp/index"
+import { Route as AppSspActivityRouteImport } from "./routes/app/ssp/activity"
+import { Route as AppSspAlertsRouteImport } from "./routes/app/ssp/alerts"
+import { Route as AppSspCheckpointsRouteImport } from "./routes/app/ssp/checkpoints"
+import { Route as AppSspDevicesRouteImport } from "./routes/app/ssp/devices"
+import { Route as AppSspEnrollmentsRouteImport } from "./routes/app/ssp/enrollments"
+import { Route as AppSspJoinRouteImport } from "./routes/app/ssp/join"
+import { Route as AppSspMessagesRouteImport } from "./routes/app/ssp/messages"
+import { Route as AppSspMobilityRouteImport } from "./routes/app/ssp/mobility"
+import { Route as AppSspOfficersRouteImport } from "./routes/app/ssp/officers"
+import { Route as AppSspOrganizationRouteImport } from "./routes/app/ssp/organization"
+import { Route as AppSspPatrolsRouteImport } from "./routes/app/ssp/patrols"
+import { Route as AppSspTaskTemplatesRouteImport } from "./routes/app/ssp/task-templates"
+import { Route as AppSspTemplatesRouteImport } from "./routes/app/ssp/templates"
+import { Route as AppSspUsersRouteImport } from "./routes/app/ssp/users"
 import { Route as AppTasksIndexRouteImport } from "./routes/app/tasks/index"
 import { Route as AppWarrantiesIndexRouteImport } from "./routes/app/warranties/index"
 import { Route as AppWarrantiesWarrantyIdRouteImport } from "./routes/app/warranties/$warrantyId"
+import { Route as AppWorkforceIndexRouteImport } from "./routes/app/workforce/index"
+import { Route as AppWorkforceEmployeesRouteImport } from "./routes/app/workforce/employees"
+import { Route as AppWorkforcePositionsRouteImport } from "./routes/app/workforce/positions"
+import { Route as AppWorkforceSchedulesRouteImport } from "./routes/app/workforce/schedules"
+import { Route as AppWorkforceSitesRouteImport } from "./routes/app/workforce/sites"
 import { Route as PortalInviteTokenRouteImport } from "./routes/portal/invite/$token"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
+import { Route as AppFleetVehiclesVehicleIdRouteImport } from "./routes/app/fleet/vehicles.$vehicleId"
 import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId.preview"
+import { Route as AppSspEventsIndexRouteImport } from "./routes/app/ssp/events.index"
+import { Route as AppSspEventsEventIdRouteImport } from "./routes/app/ssp/events.$eventId"
+import { Route as AppSspFormsIndexRouteImport } from "./routes/app/ssp/forms.index"
+import { Route as AppSspFormsFormIdRouteImport } from "./routes/app/ssp/forms.$formId"
+import { Route as AppSspSitesIndexRouteImport } from "./routes/app/ssp/sites.index"
+import { Route as AppSspSitesSiteIdRouteImport } from "./routes/app/ssp/sites.$siteId"
+import { Route as AppSspSubmissionsIndexRouteImport } from "./routes/app/ssp/submissions.index"
+import { Route as AppSspSubmissionsSubmissionIdRouteImport } from "./routes/app/ssp/submissions.$submissionId"
 import { Route as AppSitesSiteIdAssetsAssetIdRouteImport } from "./routes/app/sites/$siteId_.assets.$assetId"
 
 const IndexRoute = IndexRouteImport.update({
@@ -108,6 +163,11 @@ const LoginRoute = LoginRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: "/onboarding",
   path: "/onboarding",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformRouteRoute = PlatformRouteRouteImport.update({
+  id: "/platform",
+  path: "/platform",
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
@@ -200,15 +260,40 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: "/dashboard",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppFleetRouteRoute = AppFleetRouteRouteImport.update({
+  id: "/fleet",
+  path: "/fleet",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPlatformPathRouteRoute = AppPlatformPathRouteRouteImport.update({
+  id: "/platform-path",
+  path: "/platform-path",
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
   id: "/settings",
   path: "/settings",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSspRouteRoute = AppSspRouteRouteImport.update({
+  id: "/ssp",
+  path: "/ssp",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppTodayRoute = AppTodayRouteImport.update({
   id: "/today",
   path: "/today",
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AppWorkforceRouteRoute = AppWorkforceRouteRouteImport.update({
+  id: "/workforce",
+  path: "/workforce",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const DemoSspRoute = DemoSspRouteImport.update({
+  id: "/demo/ssp",
+  path: "/demo/ssp",
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevUiRoute = DevUiRouteImport.update({
   id: "/dev/ui",
@@ -230,6 +315,11 @@ const LegalSlugRoute = LegalSlugRouteImport.update({
   path: "/legal/$slug",
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlatformIndexRoute = PlatformIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => PlatformRouteRoute,
+} as any)
 const PortalIndexRoute = PortalIndexRouteImport.update({
   id: "/",
   path: "/",
@@ -245,6 +335,11 @@ const QTokenRoute = QTokenRouteImport.update({
   path: "/q/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
+const SspTokenRoute = SspTokenRouteImport.update({
+  id: "/ssp/$token",
+  path: "/ssp/$token",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
   id: "/customers/",
   path: "/customers/",
@@ -254,6 +349,66 @@ const AppCustomersCustomerIdRoute = AppCustomersCustomerIdRouteImport.update({
   id: "/customers/$customerId",
   path: "/customers/$customerId",
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AppFleetIndexRoute = AppFleetIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetAccessRoute = AppFleetAccessRouteImport.update({
+  id: "/access",
+  path: "/access",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetAssignmentsRoute = AppFleetAssignmentsRouteImport.update({
+  id: "/assignments",
+  path: "/assignments",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetDocumentsRoute = AppFleetDocumentsRouteImport.update({
+  id: "/documents",
+  path: "/documents",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetEquipmentRoute = AppFleetEquipmentRouteImport.update({
+  id: "/equipment",
+  path: "/equipment",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetImportRoute = AppFleetImportRouteImport.update({
+  id: "/import",
+  path: "/import",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetMaintenanceRoute = AppFleetMaintenanceRouteImport.update({
+  id: "/maintenance",
+  path: "/maintenance",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetMileageRoute = AppFleetMileageRouteImport.update({
+  id: "/mileage",
+  path: "/mileage",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetMyVehicleRoute = AppFleetMyVehicleRouteImport.update({
+  id: "/my-vehicle",
+  path: "/my-vehicle",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetReportsRoute = AppFleetReportsRouteImport.update({
+  id: "/reports",
+  path: "/reports",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetSchedulesRoute = AppFleetSchedulesRouteImport.update({
+  id: "/schedules",
+  path: "/schedules",
+  getParentRoute: () => AppFleetRouteRoute,
+} as any)
+const AppFleetVehiclesRoute = AppFleetVehiclesRouteImport.update({
+  id: "/vehicles",
+  path: "/vehicles",
+  getParentRoute: () => AppFleetRouteRoute,
 } as any)
 const AppJobsIndexRoute = AppJobsIndexRouteImport.update({
   id: "/jobs/",
@@ -279,6 +434,31 @@ const AppLeadsLeadIdRoute = AppLeadsLeadIdRouteImport.update({
   id: "/leads/$leadId",
   path: "/leads/$leadId",
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPlatformPathIndexRoute = AppPlatformPathIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppPlatformPathRouteRoute,
+} as any)
+const AppPlatformPathDoneRoute = AppPlatformPathDoneRouteImport.update({
+  id: "/done",
+  path: "/done",
+  getParentRoute: () => AppPlatformPathRouteRoute,
+} as any)
+const AppPlatformPathPlansRoute = AppPlatformPathPlansRouteImport.update({
+  id: "/plans",
+  path: "/plans",
+  getParentRoute: () => AppPlatformPathRouteRoute,
+} as any)
+const AppPlatformPathProductsRoute = AppPlatformPathProductsRouteImport.update({
+  id: "/products",
+  path: "/products",
+  getParentRoute: () => AppPlatformPathRouteRoute,
+} as any)
+const AppPlatformPathReviewRoute = AppPlatformPathReviewRouteImport.update({
+  id: "/review",
+  path: "/review",
+  getParentRoute: () => AppPlatformPathRouteRoute,
 } as any)
 const AppProjectsIndexRoute = AppProjectsIndexRouteImport.update({
   id: "/projects/",
@@ -351,6 +531,11 @@ const AppSettingsPdfTemplatesRoute = AppSettingsPdfTemplatesRouteImport.update({
   path: "/pdf-templates",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsProductsRoute = AppSettingsProductsRouteImport.update({
+  id: "/products",
+  path: "/products",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
   id: "/profile",
   path: "/profile",
@@ -396,6 +581,81 @@ const AppSitesSiteIdRoute = AppSitesSiteIdRouteImport.update({
   path: "/sites/$siteId",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppSspIndexRoute = AppSspIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspActivityRoute = AppSspActivityRouteImport.update({
+  id: "/activity",
+  path: "/activity",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspAlertsRoute = AppSspAlertsRouteImport.update({
+  id: "/alerts",
+  path: "/alerts",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspCheckpointsRoute = AppSspCheckpointsRouteImport.update({
+  id: "/checkpoints",
+  path: "/checkpoints",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspDevicesRoute = AppSspDevicesRouteImport.update({
+  id: "/devices",
+  path: "/devices",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspEnrollmentsRoute = AppSspEnrollmentsRouteImport.update({
+  id: "/enrollments",
+  path: "/enrollments",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspJoinRoute = AppSspJoinRouteImport.update({
+  id: "/join",
+  path: "/join",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspMessagesRoute = AppSspMessagesRouteImport.update({
+  id: "/messages",
+  path: "/messages",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspMobilityRoute = AppSspMobilityRouteImport.update({
+  id: "/mobility",
+  path: "/mobility",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspOfficersRoute = AppSspOfficersRouteImport.update({
+  id: "/officers",
+  path: "/officers",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspOrganizationRoute = AppSspOrganizationRouteImport.update({
+  id: "/organization",
+  path: "/organization",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspPatrolsRoute = AppSspPatrolsRouteImport.update({
+  id: "/patrols",
+  path: "/patrols",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspTaskTemplatesRoute = AppSspTaskTemplatesRouteImport.update({
+  id: "/task-templates",
+  path: "/task-templates",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspTemplatesRoute = AppSspTemplatesRouteImport.update({
+  id: "/templates",
+  path: "/templates",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspUsersRoute = AppSspUsersRouteImport.update({
+  id: "/users",
+  path: "/users",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
 const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
   id: "/tasks/",
   path: "/tasks/",
@@ -411,6 +671,31 @@ const AppWarrantiesWarrantyIdRoute = AppWarrantiesWarrantyIdRouteImport.update({
   path: "/warranties/$warrantyId",
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppWorkforceIndexRoute = AppWorkforceIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppWorkforceRouteRoute,
+} as any)
+const AppWorkforceEmployeesRoute = AppWorkforceEmployeesRouteImport.update({
+  id: "/employees",
+  path: "/employees",
+  getParentRoute: () => AppWorkforceRouteRoute,
+} as any)
+const AppWorkforcePositionsRoute = AppWorkforcePositionsRouteImport.update({
+  id: "/positions",
+  path: "/positions",
+  getParentRoute: () => AppWorkforceRouteRoute,
+} as any)
+const AppWorkforceSchedulesRoute = AppWorkforceSchedulesRouteImport.update({
+  id: "/schedules",
+  path: "/schedules",
+  getParentRoute: () => AppWorkforceRouteRoute,
+} as any)
+const AppWorkforceSitesRoute = AppWorkforceSitesRouteImport.update({
+  id: "/sites",
+  path: "/sites",
+  getParentRoute: () => AppWorkforceRouteRoute,
+} as any)
 const PortalInviteTokenRoute = PortalInviteTokenRouteImport.update({
   id: "/invite/$token",
   path: "/invite/$token",
@@ -421,11 +706,58 @@ const PublicQuotesTokenRoute = PublicQuotesTokenRouteImport.update({
   path: "/public/quotes/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppFleetVehiclesVehicleIdRoute =
+  AppFleetVehiclesVehicleIdRouteImport.update({
+    id: "/$vehicleId",
+    path: "/$vehicleId",
+    getParentRoute: () => AppFleetVehiclesRoute,
+  } as any)
 const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
   id: "/preview",
   path: "/preview",
   getParentRoute: () => AppQuotesQuoteIdRoute,
 } as any)
+const AppSspEventsIndexRoute = AppSspEventsIndexRouteImport.update({
+  id: "/events/",
+  path: "/events/",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspEventsEventIdRoute = AppSspEventsEventIdRouteImport.update({
+  id: "/events/$eventId",
+  path: "/events/$eventId",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspFormsIndexRoute = AppSspFormsIndexRouteImport.update({
+  id: "/forms/",
+  path: "/forms/",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspFormsFormIdRoute = AppSspFormsFormIdRouteImport.update({
+  id: "/forms/$formId",
+  path: "/forms/$formId",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspSitesIndexRoute = AppSspSitesIndexRouteImport.update({
+  id: "/sites/",
+  path: "/sites/",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspSitesSiteIdRoute = AppSspSitesSiteIdRouteImport.update({
+  id: "/sites/$siteId",
+  path: "/sites/$siteId",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspSubmissionsIndexRoute = AppSspSubmissionsIndexRouteImport.update({
+  id: "/submissions/",
+  path: "/submissions/",
+  getParentRoute: () => AppSspRouteRoute,
+} as any)
+const AppSspSubmissionsSubmissionIdRoute =
+  AppSspSubmissionsSubmissionIdRouteImport.update({
+    id: "/submissions/$submissionId",
+    path: "/submissions/$submissionId",
+    getParentRoute: () => AppSspRouteRoute,
+  } as any)
 const AppSitesSiteIdAssetsAssetIdRoute =
   AppSitesSiteIdAssetsAssetIdRouteImport.update({
     id: "/sites/$siteId_/assets/$assetId",
@@ -437,6 +769,7 @@ export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
+  "/platform": typeof PlatformRouteRouteWithChildren
   "/portal": typeof PortalRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
@@ -444,7 +777,11 @@ export interface FileRoutesByFullPath {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/fleet": typeof AppFleetRouteRouteWithChildren
+  "/app/platform-path": typeof AppPlatformPathRouteRouteWithChildren
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
+  "/app/ssp": typeof AppSspRouteRouteWithChildren
+  "/app/workforce": typeof AppWorkforceRouteRouteWithChildren
   "/admin/archive": typeof AdminArchiveRoute
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
@@ -458,18 +795,36 @@ export interface FileRoutesByFullPath {
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
+  "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
+  "/ssp/$token": typeof SspTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/fleet/access": typeof AppFleetAccessRoute
+  "/app/fleet/assignments": typeof AppFleetAssignmentsRoute
+  "/app/fleet/documents": typeof AppFleetDocumentsRoute
+  "/app/fleet/equipment": typeof AppFleetEquipmentRoute
+  "/app/fleet/import": typeof AppFleetImportRoute
+  "/app/fleet/maintenance": typeof AppFleetMaintenanceRoute
+  "/app/fleet/mileage": typeof AppFleetMileageRoute
+  "/app/fleet/my-vehicle": typeof AppFleetMyVehicleRoute
+  "/app/fleet/reports": typeof AppFleetReportsRoute
+  "/app/fleet/schedules": typeof AppFleetSchedulesRoute
+  "/app/fleet/vehicles": typeof AppFleetVehiclesRouteWithChildren
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/platform-path/done": typeof AppPlatformPathDoneRoute
+  "/app/platform-path/plans": typeof AppPlatformPathPlansRoute
+  "/app/platform-path/products": typeof AppPlatformPathProductsRoute
+  "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
@@ -480,6 +835,7 @@ export interface FileRoutesByFullPath {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
@@ -488,21 +844,52 @@ export interface FileRoutesByFullPath {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/ssp/activity": typeof AppSspActivityRoute
+  "/app/ssp/alerts": typeof AppSspAlertsRoute
+  "/app/ssp/checkpoints": typeof AppSspCheckpointsRoute
+  "/app/ssp/devices": typeof AppSspDevicesRoute
+  "/app/ssp/enrollments": typeof AppSspEnrollmentsRoute
+  "/app/ssp/join": typeof AppSspJoinRoute
+  "/app/ssp/messages": typeof AppSspMessagesRoute
+  "/app/ssp/mobility": typeof AppSspMobilityRoute
+  "/app/ssp/officers": typeof AppSspOfficersRoute
+  "/app/ssp/organization": typeof AppSspOrganizationRoute
+  "/app/ssp/patrols": typeof AppSspPatrolsRoute
+  "/app/ssp/task-templates": typeof AppSspTaskTemplatesRoute
+  "/app/ssp/templates": typeof AppSspTemplatesRoute
+  "/app/ssp/users": typeof AppSspUsersRoute
   "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/app/workforce/employees": typeof AppWorkforceEmployeesRoute
+  "/app/workforce/positions": typeof AppWorkforcePositionsRoute
+  "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
+  "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/fleet/": typeof AppFleetIndexRoute
   "/app/jobs/": typeof AppJobsIndexRoute
   "/app/knowledge/": typeof AppKnowledgeIndexRoute
   "/app/leads/": typeof AppLeadsIndexRoute
+  "/app/platform-path/": typeof AppPlatformPathIndexRoute
   "/app/projects/": typeof AppProjectsIndexRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/service/": typeof AppServiceIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
   "/app/sites/": typeof AppSitesIndexRoute
+  "/app/ssp/": typeof AppSspIndexRoute
   "/app/tasks/": typeof AppTasksIndexRoute
   "/app/warranties/": typeof AppWarrantiesIndexRoute
+  "/app/workforce/": typeof AppWorkforceIndexRoute
+  "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
+  "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
+  "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
+  "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
+  "/app/ssp/events/": typeof AppSspEventsIndexRoute
+  "/app/ssp/forms/": typeof AppSspFormsIndexRoute
+  "/app/ssp/sites/": typeof AppSspSitesIndexRoute
+  "/app/ssp/submissions/": typeof AppSspSubmissionsIndexRoute
   "/app/sites/$siteId/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRoutesByTo {
@@ -526,18 +913,36 @@ export interface FileRoutesByTo {
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
+  "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
+  "/ssp/$token": typeof SspTokenRoute
   "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
+  "/platform": typeof PlatformIndexRoute
   "/portal": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/fleet/access": typeof AppFleetAccessRoute
+  "/app/fleet/assignments": typeof AppFleetAssignmentsRoute
+  "/app/fleet/documents": typeof AppFleetDocumentsRoute
+  "/app/fleet/equipment": typeof AppFleetEquipmentRoute
+  "/app/fleet/import": typeof AppFleetImportRoute
+  "/app/fleet/maintenance": typeof AppFleetMaintenanceRoute
+  "/app/fleet/mileage": typeof AppFleetMileageRoute
+  "/app/fleet/my-vehicle": typeof AppFleetMyVehicleRoute
+  "/app/fleet/reports": typeof AppFleetReportsRoute
+  "/app/fleet/schedules": typeof AppFleetSchedulesRoute
+  "/app/fleet/vehicles": typeof AppFleetVehiclesRouteWithChildren
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/platform-path/done": typeof AppPlatformPathDoneRoute
+  "/app/platform-path/plans": typeof AppPlatformPathPlansRoute
+  "/app/platform-path/products": typeof AppPlatformPathProductsRoute
+  "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
@@ -548,6 +953,7 @@ export interface FileRoutesByTo {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
@@ -556,21 +962,52 @@ export interface FileRoutesByTo {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/ssp/activity": typeof AppSspActivityRoute
+  "/app/ssp/alerts": typeof AppSspAlertsRoute
+  "/app/ssp/checkpoints": typeof AppSspCheckpointsRoute
+  "/app/ssp/devices": typeof AppSspDevicesRoute
+  "/app/ssp/enrollments": typeof AppSspEnrollmentsRoute
+  "/app/ssp/join": typeof AppSspJoinRoute
+  "/app/ssp/messages": typeof AppSspMessagesRoute
+  "/app/ssp/mobility": typeof AppSspMobilityRoute
+  "/app/ssp/officers": typeof AppSspOfficersRoute
+  "/app/ssp/organization": typeof AppSspOrganizationRoute
+  "/app/ssp/patrols": typeof AppSspPatrolsRoute
+  "/app/ssp/task-templates": typeof AppSspTaskTemplatesRoute
+  "/app/ssp/templates": typeof AppSspTemplatesRoute
+  "/app/ssp/users": typeof AppSspUsersRoute
   "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/app/workforce/employees": typeof AppWorkforceEmployeesRoute
+  "/app/workforce/positions": typeof AppWorkforcePositionsRoute
+  "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
+  "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers": typeof AppCustomersIndexRoute
+  "/app/fleet": typeof AppFleetIndexRoute
   "/app/jobs": typeof AppJobsIndexRoute
   "/app/knowledge": typeof AppKnowledgeIndexRoute
   "/app/leads": typeof AppLeadsIndexRoute
+  "/app/platform-path": typeof AppPlatformPathIndexRoute
   "/app/projects": typeof AppProjectsIndexRoute
   "/app/quotes": typeof AppQuotesIndexRoute
   "/app/service": typeof AppServiceIndexRoute
   "/app/settings": typeof AppSettingsIndexRoute
   "/app/sites": typeof AppSitesIndexRoute
+  "/app/ssp": typeof AppSspIndexRoute
   "/app/tasks": typeof AppTasksIndexRoute
   "/app/warranties": typeof AppWarrantiesIndexRoute
+  "/app/workforce": typeof AppWorkforceIndexRoute
+  "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
+  "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
+  "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
+  "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
+  "/app/ssp/events": typeof AppSspEventsIndexRoute
+  "/app/ssp/forms": typeof AppSspFormsIndexRoute
+  "/app/ssp/sites": typeof AppSspSitesIndexRoute
+  "/app/ssp/submissions": typeof AppSspSubmissionsIndexRoute
   "/app/sites/$siteId/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRoutesById {
@@ -578,6 +1015,7 @@ export interface FileRoutesById {
   "/": typeof IndexRoute
   "/admin": typeof AdminRouteRouteWithChildren
   "/app": typeof AppRouteRouteWithChildren
+  "/platform": typeof PlatformRouteRouteWithChildren
   "/portal": typeof PortalRouteRouteWithChildren
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
@@ -585,7 +1023,11 @@ export interface FileRoutesById {
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
+  "/app/fleet": typeof AppFleetRouteRouteWithChildren
+  "/app/platform-path": typeof AppPlatformPathRouteRouteWithChildren
   "/app/settings": typeof AppSettingsRouteRouteWithChildren
+  "/app/ssp": typeof AppSspRouteRouteWithChildren
+  "/app/workforce": typeof AppWorkforceRouteRouteWithChildren
   "/admin/archive": typeof AdminArchiveRoute
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
@@ -599,18 +1041,36 @@ export interface FileRoutesById {
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
+  "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
+  "/ssp/$token": typeof SspTokenRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
+  "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
+  "/app/fleet/access": typeof AppFleetAccessRoute
+  "/app/fleet/assignments": typeof AppFleetAssignmentsRoute
+  "/app/fleet/documents": typeof AppFleetDocumentsRoute
+  "/app/fleet/equipment": typeof AppFleetEquipmentRoute
+  "/app/fleet/import": typeof AppFleetImportRoute
+  "/app/fleet/maintenance": typeof AppFleetMaintenanceRoute
+  "/app/fleet/mileage": typeof AppFleetMileageRoute
+  "/app/fleet/my-vehicle": typeof AppFleetMyVehicleRoute
+  "/app/fleet/reports": typeof AppFleetReportsRoute
+  "/app/fleet/schedules": typeof AppFleetSchedulesRoute
+  "/app/fleet/vehicles": typeof AppFleetVehiclesRouteWithChildren
   "/app/jobs/$jobId": typeof AppJobsJobIdRoute
   "/app/leads/$leadId": typeof AppLeadsLeadIdRoute
+  "/app/platform-path/done": typeof AppPlatformPathDoneRoute
+  "/app/platform-path/plans": typeof AppPlatformPathPlansRoute
+  "/app/platform-path/products": typeof AppPlatformPathProductsRoute
+  "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
@@ -621,6 +1081,7 @@ export interface FileRoutesById {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
   "/app/settings/roles": typeof AppSettingsRolesRoute
@@ -629,21 +1090,52 @@ export interface FileRoutesById {
   "/app/settings/system": typeof AppSettingsSystemRoute
   "/app/settings/users": typeof AppSettingsUsersRoute
   "/app/sites/$siteId": typeof AppSitesSiteIdRoute
+  "/app/ssp/activity": typeof AppSspActivityRoute
+  "/app/ssp/alerts": typeof AppSspAlertsRoute
+  "/app/ssp/checkpoints": typeof AppSspCheckpointsRoute
+  "/app/ssp/devices": typeof AppSspDevicesRoute
+  "/app/ssp/enrollments": typeof AppSspEnrollmentsRoute
+  "/app/ssp/join": typeof AppSspJoinRoute
+  "/app/ssp/messages": typeof AppSspMessagesRoute
+  "/app/ssp/mobility": typeof AppSspMobilityRoute
+  "/app/ssp/officers": typeof AppSspOfficersRoute
+  "/app/ssp/organization": typeof AppSspOrganizationRoute
+  "/app/ssp/patrols": typeof AppSspPatrolsRoute
+  "/app/ssp/task-templates": typeof AppSspTaskTemplatesRoute
+  "/app/ssp/templates": typeof AppSspTemplatesRoute
+  "/app/ssp/users": typeof AppSspUsersRoute
   "/app/warranties/$warrantyId": typeof AppWarrantiesWarrantyIdRoute
+  "/app/workforce/employees": typeof AppWorkforceEmployeesRoute
+  "/app/workforce/positions": typeof AppWorkforcePositionsRoute
+  "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
+  "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
+  "/app/fleet/": typeof AppFleetIndexRoute
   "/app/jobs/": typeof AppJobsIndexRoute
   "/app/knowledge/": typeof AppKnowledgeIndexRoute
   "/app/leads/": typeof AppLeadsIndexRoute
+  "/app/platform-path/": typeof AppPlatformPathIndexRoute
   "/app/projects/": typeof AppProjectsIndexRoute
   "/app/quotes/": typeof AppQuotesIndexRoute
   "/app/service/": typeof AppServiceIndexRoute
   "/app/settings/": typeof AppSettingsIndexRoute
   "/app/sites/": typeof AppSitesIndexRoute
+  "/app/ssp/": typeof AppSspIndexRoute
   "/app/tasks/": typeof AppTasksIndexRoute
   "/app/warranties/": typeof AppWarrantiesIndexRoute
+  "/app/workforce/": typeof AppWorkforceIndexRoute
+  "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
+  "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
+  "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
+  "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
+  "/app/ssp/events/": typeof AppSspEventsIndexRoute
+  "/app/ssp/forms/": typeof AppSspFormsIndexRoute
+  "/app/ssp/sites/": typeof AppSspSitesIndexRoute
+  "/app/ssp/submissions/": typeof AppSspSubmissionsIndexRoute
   "/app/sites/$siteId_/assets/$assetId": typeof AppSitesSiteIdAssetsAssetIdRoute
 }
 export interface FileRouteTypes {
@@ -652,6 +1144,7 @@ export interface FileRouteTypes {
     | "/"
     | "/admin"
     | "/app"
+    | "/platform"
     | "/portal"
     | "/forgot-password"
     | "/login"
@@ -659,7 +1152,11 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/fleet"
+    | "/app/platform-path"
     | "/app/settings"
+    | "/app/ssp"
+    | "/app/workforce"
     | "/admin/archive"
     | "/admin/audit"
     | "/admin/badges"
@@ -673,18 +1170,36 @@ export interface FileRouteTypes {
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
+    | "/demo/ssp"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
     | "/q/$token"
+    | "/ssp/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
+    | "/platform/"
     | "/portal/"
     | "/app/customers/$customerId"
+    | "/app/fleet/access"
+    | "/app/fleet/assignments"
+    | "/app/fleet/documents"
+    | "/app/fleet/equipment"
+    | "/app/fleet/import"
+    | "/app/fleet/maintenance"
+    | "/app/fleet/mileage"
+    | "/app/fleet/my-vehicle"
+    | "/app/fleet/reports"
+    | "/app/fleet/schedules"
+    | "/app/fleet/vehicles"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
+    | "/app/platform-path/done"
+    | "/app/platform-path/plans"
+    | "/app/platform-path/products"
+    | "/app/platform-path/review"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
@@ -695,6 +1210,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
@@ -703,21 +1219,52 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/ssp/activity"
+    | "/app/ssp/alerts"
+    | "/app/ssp/checkpoints"
+    | "/app/ssp/devices"
+    | "/app/ssp/enrollments"
+    | "/app/ssp/join"
+    | "/app/ssp/messages"
+    | "/app/ssp/mobility"
+    | "/app/ssp/officers"
+    | "/app/ssp/organization"
+    | "/app/ssp/patrols"
+    | "/app/ssp/task-templates"
+    | "/app/ssp/templates"
+    | "/app/ssp/users"
     | "/app/warranties/$warrantyId"
+    | "/app/workforce/employees"
+    | "/app/workforce/positions"
+    | "/app/workforce/schedules"
+    | "/app/workforce/sites"
     | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
+    | "/app/fleet/"
     | "/app/jobs/"
     | "/app/knowledge/"
     | "/app/leads/"
+    | "/app/platform-path/"
     | "/app/projects/"
     | "/app/quotes/"
     | "/app/service/"
     | "/app/settings/"
     | "/app/sites/"
+    | "/app/ssp/"
     | "/app/tasks/"
     | "/app/warranties/"
+    | "/app/workforce/"
+    | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/ssp/events/$eventId"
+    | "/app/ssp/forms/$formId"
+    | "/app/ssp/sites/$siteId"
+    | "/app/ssp/submissions/$submissionId"
+    | "/app/ssp/events/"
+    | "/app/ssp/forms/"
+    | "/app/ssp/sites/"
+    | "/app/ssp/submissions/"
     | "/app/sites/$siteId/assets/$assetId"
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -741,18 +1288,36 @@ export interface FileRouteTypes {
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
+    | "/demo/ssp"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
     | "/q/$token"
+    | "/ssp/$token"
     | "/admin"
     | "/app"
     | "/legal"
+    | "/platform"
     | "/portal"
     | "/app/customers/$customerId"
+    | "/app/fleet/access"
+    | "/app/fleet/assignments"
+    | "/app/fleet/documents"
+    | "/app/fleet/equipment"
+    | "/app/fleet/import"
+    | "/app/fleet/maintenance"
+    | "/app/fleet/mileage"
+    | "/app/fleet/my-vehicle"
+    | "/app/fleet/reports"
+    | "/app/fleet/schedules"
+    | "/app/fleet/vehicles"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
+    | "/app/platform-path/done"
+    | "/app/platform-path/plans"
+    | "/app/platform-path/products"
+    | "/app/platform-path/review"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
@@ -763,6 +1328,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
@@ -771,27 +1337,59 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/ssp/activity"
+    | "/app/ssp/alerts"
+    | "/app/ssp/checkpoints"
+    | "/app/ssp/devices"
+    | "/app/ssp/enrollments"
+    | "/app/ssp/join"
+    | "/app/ssp/messages"
+    | "/app/ssp/mobility"
+    | "/app/ssp/officers"
+    | "/app/ssp/organization"
+    | "/app/ssp/patrols"
+    | "/app/ssp/task-templates"
+    | "/app/ssp/templates"
+    | "/app/ssp/users"
     | "/app/warranties/$warrantyId"
+    | "/app/workforce/employees"
+    | "/app/workforce/positions"
+    | "/app/workforce/schedules"
+    | "/app/workforce/sites"
     | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers"
+    | "/app/fleet"
     | "/app/jobs"
     | "/app/knowledge"
     | "/app/leads"
+    | "/app/platform-path"
     | "/app/projects"
     | "/app/quotes"
     | "/app/service"
     | "/app/settings"
     | "/app/sites"
+    | "/app/ssp"
     | "/app/tasks"
     | "/app/warranties"
+    | "/app/workforce"
+    | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/ssp/events/$eventId"
+    | "/app/ssp/forms/$formId"
+    | "/app/ssp/sites/$siteId"
+    | "/app/ssp/submissions/$submissionId"
+    | "/app/ssp/events"
+    | "/app/ssp/forms"
+    | "/app/ssp/sites"
+    | "/app/ssp/submissions"
     | "/app/sites/$siteId/assets/$assetId"
   id:
     | "__root__"
     | "/"
     | "/admin"
     | "/app"
+    | "/platform"
     | "/portal"
     | "/forgot-password"
     | "/login"
@@ -799,7 +1397,11 @@ export interface FileRouteTypes {
     | "/register"
     | "/reset-password"
     | "/verify-email"
+    | "/app/fleet"
+    | "/app/platform-path"
     | "/app/settings"
+    | "/app/ssp"
+    | "/app/workforce"
     | "/admin/archive"
     | "/admin/audit"
     | "/admin/badges"
@@ -813,18 +1415,36 @@ export interface FileRouteTypes {
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
+    | "/demo/ssp"
     | "/dev/ui"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
     | "/q/$token"
+    | "/ssp/$token"
     | "/admin/"
     | "/app/"
     | "/legal/"
+    | "/platform/"
     | "/portal/"
     | "/app/customers/$customerId"
+    | "/app/fleet/access"
+    | "/app/fleet/assignments"
+    | "/app/fleet/documents"
+    | "/app/fleet/equipment"
+    | "/app/fleet/import"
+    | "/app/fleet/maintenance"
+    | "/app/fleet/mileage"
+    | "/app/fleet/my-vehicle"
+    | "/app/fleet/reports"
+    | "/app/fleet/schedules"
+    | "/app/fleet/vehicles"
     | "/app/jobs/$jobId"
     | "/app/leads/$leadId"
+    | "/app/platform-path/done"
+    | "/app/platform-path/plans"
+    | "/app/platform-path/products"
+    | "/app/platform-path/review"
     | "/app/projects/$projectId"
     | "/app/quotes/$quoteId"
     | "/app/quotes/new"
@@ -835,6 +1455,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
     | "/app/settings/roles"
@@ -843,21 +1464,52 @@ export interface FileRouteTypes {
     | "/app/settings/system"
     | "/app/settings/users"
     | "/app/sites/$siteId"
+    | "/app/ssp/activity"
+    | "/app/ssp/alerts"
+    | "/app/ssp/checkpoints"
+    | "/app/ssp/devices"
+    | "/app/ssp/enrollments"
+    | "/app/ssp/join"
+    | "/app/ssp/messages"
+    | "/app/ssp/mobility"
+    | "/app/ssp/officers"
+    | "/app/ssp/organization"
+    | "/app/ssp/patrols"
+    | "/app/ssp/task-templates"
+    | "/app/ssp/templates"
+    | "/app/ssp/users"
     | "/app/warranties/$warrantyId"
+    | "/app/workforce/employees"
+    | "/app/workforce/positions"
+    | "/app/workforce/schedules"
+    | "/app/workforce/sites"
     | "/portal/invite/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
+    | "/app/fleet/"
     | "/app/jobs/"
     | "/app/knowledge/"
     | "/app/leads/"
+    | "/app/platform-path/"
     | "/app/projects/"
     | "/app/quotes/"
     | "/app/service/"
     | "/app/settings/"
     | "/app/sites/"
+    | "/app/ssp/"
     | "/app/tasks/"
     | "/app/warranties/"
+    | "/app/workforce/"
+    | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/ssp/events/$eventId"
+    | "/app/ssp/forms/$formId"
+    | "/app/ssp/sites/$siteId"
+    | "/app/ssp/submissions/$submissionId"
+    | "/app/ssp/events/"
+    | "/app/ssp/forms/"
+    | "/app/ssp/sites/"
+    | "/app/ssp/submissions/"
     | "/app/sites/$siteId_/assets/$assetId"
   fileRoutesById: FileRoutesById
 }
@@ -865,6 +1517,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  PlatformRouteRoute: typeof PlatformRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
@@ -872,10 +1525,12 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  DemoSspRoute: typeof DemoSspRoute
   DevUiRoute: typeof DevUiRoute
   InviteTokenRoute: typeof InviteTokenRoute
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
+  SspTokenRoute: typeof SspTokenRoute
   LegalIndexRoute: typeof LegalIndexRoute
   PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
 }
@@ -922,6 +1577,13 @@ declare module "@tanstack/react-router" {
       path: "/onboarding"
       fullPath: "/onboarding"
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/platform": {
+      id: "/platform"
+      path: "/platform"
+      fullPath: "/platform"
+      preLoaderRoute: typeof PlatformRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/portal": {
@@ -1050,11 +1712,32 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/fleet": {
+      id: "/app/fleet"
+      path: "/fleet"
+      fullPath: "/app/fleet"
+      preLoaderRoute: typeof AppFleetRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/platform-path": {
+      id: "/app/platform-path"
+      path: "/platform-path"
+      fullPath: "/app/platform-path"
+      preLoaderRoute: typeof AppPlatformPathRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     "/app/settings": {
       id: "/app/settings"
       path: "/settings"
       fullPath: "/app/settings"
       preLoaderRoute: typeof AppSettingsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/ssp": {
+      id: "/app/ssp"
+      path: "/ssp"
+      fullPath: "/app/ssp"
+      preLoaderRoute: typeof AppSspRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/today": {
@@ -1063,6 +1746,20 @@ declare module "@tanstack/react-router" {
       fullPath: "/app/today"
       preLoaderRoute: typeof AppTodayRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    "/app/workforce": {
+      id: "/app/workforce"
+      path: "/workforce"
+      fullPath: "/app/workforce"
+      preLoaderRoute: typeof AppWorkforceRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/demo/ssp": {
+      id: "/demo/ssp"
+      path: "/demo/ssp"
+      fullPath: "/demo/ssp"
+      preLoaderRoute: typeof DemoSspRouteImport
+      parentRoute: typeof rootRouteImport
     }
     "/dev/ui": {
       id: "/dev/ui"
@@ -1092,6 +1789,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LegalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/platform/": {
+      id: "/platform/"
+      path: "/"
+      fullPath: "/platform/"
+      preLoaderRoute: typeof PlatformIndexRouteImport
+      parentRoute: typeof PlatformRouteRoute
+    }
     "/portal/": {
       id: "/portal/"
       path: "/"
@@ -1113,6 +1817,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof QTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/ssp/$token": {
+      id: "/ssp/$token"
+      path: "/ssp/$token"
+      fullPath: "/ssp/$token"
+      preLoaderRoute: typeof SspTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/app/customers/": {
       id: "/app/customers/"
       path: "/customers"
@@ -1126,6 +1837,90 @@ declare module "@tanstack/react-router" {
       fullPath: "/app/customers/$customerId"
       preLoaderRoute: typeof AppCustomersCustomerIdRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    "/app/fleet/": {
+      id: "/app/fleet/"
+      path: "/"
+      fullPath: "/app/fleet/"
+      preLoaderRoute: typeof AppFleetIndexRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/access": {
+      id: "/app/fleet/access"
+      path: "/access"
+      fullPath: "/app/fleet/access"
+      preLoaderRoute: typeof AppFleetAccessRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/assignments": {
+      id: "/app/fleet/assignments"
+      path: "/assignments"
+      fullPath: "/app/fleet/assignments"
+      preLoaderRoute: typeof AppFleetAssignmentsRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/documents": {
+      id: "/app/fleet/documents"
+      path: "/documents"
+      fullPath: "/app/fleet/documents"
+      preLoaderRoute: typeof AppFleetDocumentsRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/equipment": {
+      id: "/app/fleet/equipment"
+      path: "/equipment"
+      fullPath: "/app/fleet/equipment"
+      preLoaderRoute: typeof AppFleetEquipmentRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/import": {
+      id: "/app/fleet/import"
+      path: "/import"
+      fullPath: "/app/fleet/import"
+      preLoaderRoute: typeof AppFleetImportRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/maintenance": {
+      id: "/app/fleet/maintenance"
+      path: "/maintenance"
+      fullPath: "/app/fleet/maintenance"
+      preLoaderRoute: typeof AppFleetMaintenanceRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/mileage": {
+      id: "/app/fleet/mileage"
+      path: "/mileage"
+      fullPath: "/app/fleet/mileage"
+      preLoaderRoute: typeof AppFleetMileageRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/my-vehicle": {
+      id: "/app/fleet/my-vehicle"
+      path: "/my-vehicle"
+      fullPath: "/app/fleet/my-vehicle"
+      preLoaderRoute: typeof AppFleetMyVehicleRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/reports": {
+      id: "/app/fleet/reports"
+      path: "/reports"
+      fullPath: "/app/fleet/reports"
+      preLoaderRoute: typeof AppFleetReportsRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/schedules": {
+      id: "/app/fleet/schedules"
+      path: "/schedules"
+      fullPath: "/app/fleet/schedules"
+      preLoaderRoute: typeof AppFleetSchedulesRouteImport
+      parentRoute: typeof AppFleetRouteRoute
+    }
+    "/app/fleet/vehicles": {
+      id: "/app/fleet/vehicles"
+      path: "/vehicles"
+      fullPath: "/app/fleet/vehicles"
+      preLoaderRoute: typeof AppFleetVehiclesRouteImport
+      parentRoute: typeof AppFleetRouteRoute
     }
     "/app/jobs/": {
       id: "/app/jobs/"
@@ -1161,6 +1956,41 @@ declare module "@tanstack/react-router" {
       fullPath: "/app/leads/$leadId"
       preLoaderRoute: typeof AppLeadsLeadIdRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    "/app/platform-path/": {
+      id: "/app/platform-path/"
+      path: "/"
+      fullPath: "/app/platform-path/"
+      preLoaderRoute: typeof AppPlatformPathIndexRouteImport
+      parentRoute: typeof AppPlatformPathRouteRoute
+    }
+    "/app/platform-path/done": {
+      id: "/app/platform-path/done"
+      path: "/done"
+      fullPath: "/app/platform-path/done"
+      preLoaderRoute: typeof AppPlatformPathDoneRouteImport
+      parentRoute: typeof AppPlatformPathRouteRoute
+    }
+    "/app/platform-path/plans": {
+      id: "/app/platform-path/plans"
+      path: "/plans"
+      fullPath: "/app/platform-path/plans"
+      preLoaderRoute: typeof AppPlatformPathPlansRouteImport
+      parentRoute: typeof AppPlatformPathRouteRoute
+    }
+    "/app/platform-path/products": {
+      id: "/app/platform-path/products"
+      path: "/products"
+      fullPath: "/app/platform-path/products"
+      preLoaderRoute: typeof AppPlatformPathProductsRouteImport
+      parentRoute: typeof AppPlatformPathRouteRoute
+    }
+    "/app/platform-path/review": {
+      id: "/app/platform-path/review"
+      path: "/review"
+      fullPath: "/app/platform-path/review"
+      preLoaderRoute: typeof AppPlatformPathReviewRouteImport
+      parentRoute: typeof AppPlatformPathRouteRoute
     }
     "/app/projects/": {
       id: "/app/projects/"
@@ -1260,6 +2090,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsPdfTemplatesRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    "/app/settings/products": {
+      id: "/app/settings/products"
+      path: "/products"
+      fullPath: "/app/settings/products"
+      preLoaderRoute: typeof AppSettingsProductsRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     "/app/settings/profile": {
       id: "/app/settings/profile"
       path: "/profile"
@@ -1323,6 +2160,111 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSitesSiteIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/ssp/": {
+      id: "/app/ssp/"
+      path: "/"
+      fullPath: "/app/ssp/"
+      preLoaderRoute: typeof AppSspIndexRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/activity": {
+      id: "/app/ssp/activity"
+      path: "/activity"
+      fullPath: "/app/ssp/activity"
+      preLoaderRoute: typeof AppSspActivityRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/alerts": {
+      id: "/app/ssp/alerts"
+      path: "/alerts"
+      fullPath: "/app/ssp/alerts"
+      preLoaderRoute: typeof AppSspAlertsRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/checkpoints": {
+      id: "/app/ssp/checkpoints"
+      path: "/checkpoints"
+      fullPath: "/app/ssp/checkpoints"
+      preLoaderRoute: typeof AppSspCheckpointsRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/devices": {
+      id: "/app/ssp/devices"
+      path: "/devices"
+      fullPath: "/app/ssp/devices"
+      preLoaderRoute: typeof AppSspDevicesRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/enrollments": {
+      id: "/app/ssp/enrollments"
+      path: "/enrollments"
+      fullPath: "/app/ssp/enrollments"
+      preLoaderRoute: typeof AppSspEnrollmentsRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/join": {
+      id: "/app/ssp/join"
+      path: "/join"
+      fullPath: "/app/ssp/join"
+      preLoaderRoute: typeof AppSspJoinRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/messages": {
+      id: "/app/ssp/messages"
+      path: "/messages"
+      fullPath: "/app/ssp/messages"
+      preLoaderRoute: typeof AppSspMessagesRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/mobility": {
+      id: "/app/ssp/mobility"
+      path: "/mobility"
+      fullPath: "/app/ssp/mobility"
+      preLoaderRoute: typeof AppSspMobilityRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/officers": {
+      id: "/app/ssp/officers"
+      path: "/officers"
+      fullPath: "/app/ssp/officers"
+      preLoaderRoute: typeof AppSspOfficersRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/organization": {
+      id: "/app/ssp/organization"
+      path: "/organization"
+      fullPath: "/app/ssp/organization"
+      preLoaderRoute: typeof AppSspOrganizationRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/patrols": {
+      id: "/app/ssp/patrols"
+      path: "/patrols"
+      fullPath: "/app/ssp/patrols"
+      preLoaderRoute: typeof AppSspPatrolsRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/task-templates": {
+      id: "/app/ssp/task-templates"
+      path: "/task-templates"
+      fullPath: "/app/ssp/task-templates"
+      preLoaderRoute: typeof AppSspTaskTemplatesRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/templates": {
+      id: "/app/ssp/templates"
+      path: "/templates"
+      fullPath: "/app/ssp/templates"
+      preLoaderRoute: typeof AppSspTemplatesRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/users": {
+      id: "/app/ssp/users"
+      path: "/users"
+      fullPath: "/app/ssp/users"
+      preLoaderRoute: typeof AppSspUsersRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
     "/app/tasks/": {
       id: "/app/tasks/"
       path: "/tasks"
@@ -1344,6 +2286,41 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppWarrantiesWarrantyIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    "/app/workforce/": {
+      id: "/app/workforce/"
+      path: "/"
+      fullPath: "/app/workforce/"
+      preLoaderRoute: typeof AppWorkforceIndexRouteImport
+      parentRoute: typeof AppWorkforceRouteRoute
+    }
+    "/app/workforce/employees": {
+      id: "/app/workforce/employees"
+      path: "/employees"
+      fullPath: "/app/workforce/employees"
+      preLoaderRoute: typeof AppWorkforceEmployeesRouteImport
+      parentRoute: typeof AppWorkforceRouteRoute
+    }
+    "/app/workforce/positions": {
+      id: "/app/workforce/positions"
+      path: "/positions"
+      fullPath: "/app/workforce/positions"
+      preLoaderRoute: typeof AppWorkforcePositionsRouteImport
+      parentRoute: typeof AppWorkforceRouteRoute
+    }
+    "/app/workforce/schedules": {
+      id: "/app/workforce/schedules"
+      path: "/schedules"
+      fullPath: "/app/workforce/schedules"
+      preLoaderRoute: typeof AppWorkforceSchedulesRouteImport
+      parentRoute: typeof AppWorkforceRouteRoute
+    }
+    "/app/workforce/sites": {
+      id: "/app/workforce/sites"
+      path: "/sites"
+      fullPath: "/app/workforce/sites"
+      preLoaderRoute: typeof AppWorkforceSitesRouteImport
+      parentRoute: typeof AppWorkforceRouteRoute
+    }
     "/portal/invite/$token": {
       id: "/portal/invite/$token"
       path: "/invite/$token"
@@ -1358,12 +2335,75 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof PublicQuotesTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/app/fleet/vehicles/$vehicleId": {
+      id: "/app/fleet/vehicles/$vehicleId"
+      path: "/$vehicleId"
+      fullPath: "/app/fleet/vehicles/$vehicleId"
+      preLoaderRoute: typeof AppFleetVehiclesVehicleIdRouteImport
+      parentRoute: typeof AppFleetVehiclesRoute
+    }
     "/app/quotes/$quoteId/preview": {
       id: "/app/quotes/$quoteId/preview"
       path: "/preview"
       fullPath: "/app/quotes/$quoteId/preview"
       preLoaderRoute: typeof AppQuotesQuoteIdPreviewRouteImport
       parentRoute: typeof AppQuotesQuoteIdRoute
+    }
+    "/app/ssp/events/": {
+      id: "/app/ssp/events/"
+      path: "/events"
+      fullPath: "/app/ssp/events/"
+      preLoaderRoute: typeof AppSspEventsIndexRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/events/$eventId": {
+      id: "/app/ssp/events/$eventId"
+      path: "/events/$eventId"
+      fullPath: "/app/ssp/events/$eventId"
+      preLoaderRoute: typeof AppSspEventsEventIdRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/forms/": {
+      id: "/app/ssp/forms/"
+      path: "/forms"
+      fullPath: "/app/ssp/forms/"
+      preLoaderRoute: typeof AppSspFormsIndexRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/forms/$formId": {
+      id: "/app/ssp/forms/$formId"
+      path: "/forms/$formId"
+      fullPath: "/app/ssp/forms/$formId"
+      preLoaderRoute: typeof AppSspFormsFormIdRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/sites/": {
+      id: "/app/ssp/sites/"
+      path: "/sites"
+      fullPath: "/app/ssp/sites/"
+      preLoaderRoute: typeof AppSspSitesIndexRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/sites/$siteId": {
+      id: "/app/ssp/sites/$siteId"
+      path: "/sites/$siteId"
+      fullPath: "/app/ssp/sites/$siteId"
+      preLoaderRoute: typeof AppSspSitesSiteIdRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/submissions/": {
+      id: "/app/ssp/submissions/"
+      path: "/submissions"
+      fullPath: "/app/ssp/submissions/"
+      preLoaderRoute: typeof AppSspSubmissionsIndexRouteImport
+      parentRoute: typeof AppSspRouteRoute
+    }
+    "/app/ssp/submissions/$submissionId": {
+      id: "/app/ssp/submissions/$submissionId"
+      path: "/submissions/$submissionId"
+      fullPath: "/app/ssp/submissions/$submissionId"
+      preLoaderRoute: typeof AppSspSubmissionsSubmissionIdRouteImport
+      parentRoute: typeof AppSspRouteRoute
     }
     "/app/sites/$siteId_/assets/$assetId": {
       id: "/app/sites/$siteId_/assets/$assetId"
@@ -1405,6 +2445,70 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface AppFleetVehiclesRouteChildren {
+  AppFleetVehiclesVehicleIdRoute: typeof AppFleetVehiclesVehicleIdRoute
+}
+
+const AppFleetVehiclesRouteChildren: AppFleetVehiclesRouteChildren = {
+  AppFleetVehiclesVehicleIdRoute: AppFleetVehiclesVehicleIdRoute,
+}
+
+const AppFleetVehiclesRouteWithChildren =
+  AppFleetVehiclesRoute._addFileChildren(AppFleetVehiclesRouteChildren)
+
+interface AppFleetRouteRouteChildren {
+  AppFleetAccessRoute: typeof AppFleetAccessRoute
+  AppFleetAssignmentsRoute: typeof AppFleetAssignmentsRoute
+  AppFleetDocumentsRoute: typeof AppFleetDocumentsRoute
+  AppFleetEquipmentRoute: typeof AppFleetEquipmentRoute
+  AppFleetImportRoute: typeof AppFleetImportRoute
+  AppFleetMaintenanceRoute: typeof AppFleetMaintenanceRoute
+  AppFleetMileageRoute: typeof AppFleetMileageRoute
+  AppFleetMyVehicleRoute: typeof AppFleetMyVehicleRoute
+  AppFleetReportsRoute: typeof AppFleetReportsRoute
+  AppFleetSchedulesRoute: typeof AppFleetSchedulesRoute
+  AppFleetVehiclesRoute: typeof AppFleetVehiclesRouteWithChildren
+  AppFleetIndexRoute: typeof AppFleetIndexRoute
+}
+
+const AppFleetRouteRouteChildren: AppFleetRouteRouteChildren = {
+  AppFleetAccessRoute: AppFleetAccessRoute,
+  AppFleetAssignmentsRoute: AppFleetAssignmentsRoute,
+  AppFleetDocumentsRoute: AppFleetDocumentsRoute,
+  AppFleetEquipmentRoute: AppFleetEquipmentRoute,
+  AppFleetImportRoute: AppFleetImportRoute,
+  AppFleetMaintenanceRoute: AppFleetMaintenanceRoute,
+  AppFleetMileageRoute: AppFleetMileageRoute,
+  AppFleetMyVehicleRoute: AppFleetMyVehicleRoute,
+  AppFleetReportsRoute: AppFleetReportsRoute,
+  AppFleetSchedulesRoute: AppFleetSchedulesRoute,
+  AppFleetVehiclesRoute: AppFleetVehiclesRouteWithChildren,
+  AppFleetIndexRoute: AppFleetIndexRoute,
+}
+
+const AppFleetRouteRouteWithChildren = AppFleetRouteRoute._addFileChildren(
+  AppFleetRouteRouteChildren,
+)
+
+interface AppPlatformPathRouteRouteChildren {
+  AppPlatformPathDoneRoute: typeof AppPlatformPathDoneRoute
+  AppPlatformPathPlansRoute: typeof AppPlatformPathPlansRoute
+  AppPlatformPathProductsRoute: typeof AppPlatformPathProductsRoute
+  AppPlatformPathReviewRoute: typeof AppPlatformPathReviewRoute
+  AppPlatformPathIndexRoute: typeof AppPlatformPathIndexRoute
+}
+
+const AppPlatformPathRouteRouteChildren: AppPlatformPathRouteRouteChildren = {
+  AppPlatformPathDoneRoute: AppPlatformPathDoneRoute,
+  AppPlatformPathPlansRoute: AppPlatformPathPlansRoute,
+  AppPlatformPathProductsRoute: AppPlatformPathProductsRoute,
+  AppPlatformPathReviewRoute: AppPlatformPathReviewRoute,
+  AppPlatformPathIndexRoute: AppPlatformPathIndexRoute,
+}
+
+const AppPlatformPathRouteRouteWithChildren =
+  AppPlatformPathRouteRoute._addFileChildren(AppPlatformPathRouteRouteChildren)
+
 interface AppSettingsRouteRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
@@ -1413,6 +2517,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsNumberingRoute: typeof AppSettingsNumberingRoute
   AppSettingsPdfTemplatesRoute: typeof AppSettingsPdfTemplatesRoute
+  AppSettingsProductsRoute: typeof AppSettingsProductsRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsQuotesRoute: typeof AppSettingsQuotesRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
@@ -1431,6 +2536,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsNumberingRoute: AppSettingsNumberingRoute,
   AppSettingsPdfTemplatesRoute: AppSettingsPdfTemplatesRoute,
+  AppSettingsProductsRoute: AppSettingsProductsRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsQuotesRoute: AppSettingsQuotesRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
@@ -1444,6 +2550,81 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
 const AppSettingsRouteRouteWithChildren =
   AppSettingsRouteRoute._addFileChildren(AppSettingsRouteRouteChildren)
 
+interface AppSspRouteRouteChildren {
+  AppSspActivityRoute: typeof AppSspActivityRoute
+  AppSspAlertsRoute: typeof AppSspAlertsRoute
+  AppSspCheckpointsRoute: typeof AppSspCheckpointsRoute
+  AppSspDevicesRoute: typeof AppSspDevicesRoute
+  AppSspEnrollmentsRoute: typeof AppSspEnrollmentsRoute
+  AppSspJoinRoute: typeof AppSspJoinRoute
+  AppSspMessagesRoute: typeof AppSspMessagesRoute
+  AppSspMobilityRoute: typeof AppSspMobilityRoute
+  AppSspOfficersRoute: typeof AppSspOfficersRoute
+  AppSspOrganizationRoute: typeof AppSspOrganizationRoute
+  AppSspPatrolsRoute: typeof AppSspPatrolsRoute
+  AppSspTaskTemplatesRoute: typeof AppSspTaskTemplatesRoute
+  AppSspTemplatesRoute: typeof AppSspTemplatesRoute
+  AppSspUsersRoute: typeof AppSspUsersRoute
+  AppSspIndexRoute: typeof AppSspIndexRoute
+  AppSspEventsEventIdRoute: typeof AppSspEventsEventIdRoute
+  AppSspFormsFormIdRoute: typeof AppSspFormsFormIdRoute
+  AppSspSitesSiteIdRoute: typeof AppSspSitesSiteIdRoute
+  AppSspSubmissionsSubmissionIdRoute: typeof AppSspSubmissionsSubmissionIdRoute
+  AppSspEventsIndexRoute: typeof AppSspEventsIndexRoute
+  AppSspFormsIndexRoute: typeof AppSspFormsIndexRoute
+  AppSspSitesIndexRoute: typeof AppSspSitesIndexRoute
+  AppSspSubmissionsIndexRoute: typeof AppSspSubmissionsIndexRoute
+}
+
+const AppSspRouteRouteChildren: AppSspRouteRouteChildren = {
+  AppSspActivityRoute: AppSspActivityRoute,
+  AppSspAlertsRoute: AppSspAlertsRoute,
+  AppSspCheckpointsRoute: AppSspCheckpointsRoute,
+  AppSspDevicesRoute: AppSspDevicesRoute,
+  AppSspEnrollmentsRoute: AppSspEnrollmentsRoute,
+  AppSspJoinRoute: AppSspJoinRoute,
+  AppSspMessagesRoute: AppSspMessagesRoute,
+  AppSspMobilityRoute: AppSspMobilityRoute,
+  AppSspOfficersRoute: AppSspOfficersRoute,
+  AppSspOrganizationRoute: AppSspOrganizationRoute,
+  AppSspPatrolsRoute: AppSspPatrolsRoute,
+  AppSspTaskTemplatesRoute: AppSspTaskTemplatesRoute,
+  AppSspTemplatesRoute: AppSspTemplatesRoute,
+  AppSspUsersRoute: AppSspUsersRoute,
+  AppSspIndexRoute: AppSspIndexRoute,
+  AppSspEventsEventIdRoute: AppSspEventsEventIdRoute,
+  AppSspFormsFormIdRoute: AppSspFormsFormIdRoute,
+  AppSspSitesSiteIdRoute: AppSspSitesSiteIdRoute,
+  AppSspSubmissionsSubmissionIdRoute: AppSspSubmissionsSubmissionIdRoute,
+  AppSspEventsIndexRoute: AppSspEventsIndexRoute,
+  AppSspFormsIndexRoute: AppSspFormsIndexRoute,
+  AppSspSitesIndexRoute: AppSspSitesIndexRoute,
+  AppSspSubmissionsIndexRoute: AppSspSubmissionsIndexRoute,
+}
+
+const AppSspRouteRouteWithChildren = AppSspRouteRoute._addFileChildren(
+  AppSspRouteRouteChildren,
+)
+
+interface AppWorkforceRouteRouteChildren {
+  AppWorkforceEmployeesRoute: typeof AppWorkforceEmployeesRoute
+  AppWorkforcePositionsRoute: typeof AppWorkforcePositionsRoute
+  AppWorkforceSchedulesRoute: typeof AppWorkforceSchedulesRoute
+  AppWorkforceSitesRoute: typeof AppWorkforceSitesRoute
+  AppWorkforceIndexRoute: typeof AppWorkforceIndexRoute
+}
+
+const AppWorkforceRouteRouteChildren: AppWorkforceRouteRouteChildren = {
+  AppWorkforceEmployeesRoute: AppWorkforceEmployeesRoute,
+  AppWorkforcePositionsRoute: AppWorkforcePositionsRoute,
+  AppWorkforceSchedulesRoute: AppWorkforceSchedulesRoute,
+  AppWorkforceSitesRoute: AppWorkforceSitesRoute,
+  AppWorkforceIndexRoute: AppWorkforceIndexRoute,
+}
+
+const AppWorkforceRouteRouteWithChildren =
+  AppWorkforceRouteRoute._addFileChildren(AppWorkforceRouteRouteChildren)
+
 interface AppQuotesQuoteIdRouteChildren {
   AppQuotesQuoteIdPreviewRoute: typeof AppQuotesQuoteIdPreviewRoute
 }
@@ -1456,7 +2637,11 @@ const AppQuotesQuoteIdRouteWithChildren =
   AppQuotesQuoteIdRoute._addFileChildren(AppQuotesQuoteIdRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppFleetRouteRoute: typeof AppFleetRouteRouteWithChildren
+  AppPlatformPathRouteRoute: typeof AppPlatformPathRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
+  AppSspRouteRoute: typeof AppSspRouteRouteWithChildren
+  AppWorkforceRouteRoute: typeof AppWorkforceRouteRouteWithChildren
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppCatalogRoute: typeof AppCatalogRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -1484,7 +2669,11 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppFleetRouteRoute: AppFleetRouteRouteWithChildren,
+  AppPlatformPathRouteRoute: AppPlatformPathRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
+  AppSspRouteRoute: AppSspRouteRouteWithChildren,
+  AppWorkforceRouteRoute: AppWorkforceRouteRouteWithChildren,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppCatalogRoute: AppCatalogRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -1515,6 +2704,18 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
+interface PlatformRouteRouteChildren {
+  PlatformIndexRoute: typeof PlatformIndexRoute
+}
+
+const PlatformRouteRouteChildren: PlatformRouteRouteChildren = {
+  PlatformIndexRoute: PlatformIndexRoute,
+}
+
+const PlatformRouteRouteWithChildren = PlatformRouteRoute._addFileChildren(
+  PlatformRouteRouteChildren,
+)
+
 interface PortalRouteRouteChildren {
   PortalChooseRoute: typeof PortalChooseRoute
   PortalIndexRoute: typeof PortalIndexRoute
@@ -1535,6 +2736,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
+  PlatformRouteRoute: PlatformRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
@@ -1542,10 +2744,12 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  DemoSspRoute: DemoSspRoute,
   DevUiRoute: DevUiRoute,
   InviteTokenRoute: InviteTokenRoute,
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
+  SspTokenRoute: SspTokenRoute,
   LegalIndexRoute: LegalIndexRoute,
   PublicQuotesTokenRoute: PublicQuotesTokenRoute,
 }

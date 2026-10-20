@@ -117,6 +117,57 @@ export type WorkspaceOut = {
   beta_enrolled_at?: string | null;
 };
 
+export type ProductEntitlement = {
+  feature_key: string;
+  eligible: boolean;
+  enabled: boolean;
+  override_enabled: boolean | null;
+  toggleable: boolean;
+};
+
+export type WorkspaceProductsResponse = {
+  workspace_id: string;
+  plan_key: string;
+  products: ProductEntitlement[];
+};
+
+export type PlatformHomeProduct = {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  entry_path: string;
+};
+
+export type PlatformHomeResponse = {
+  user: {
+    id: string;
+    email?: string | null;
+    full_name: string;
+    locale: string;
+    is_platform_admin: boolean;
+  };
+  active_workspace_id: string | null;
+  workspaces: Array<{
+    id: string;
+    name: string;
+    role_key: string;
+    plan_key: string;
+    can_manage_workspace: boolean;
+  }>;
+  products: PlatformHomeProduct[];
+  links: {
+    account_settings?: string | null;
+    workspace_settings?: string | null;
+    platform_admin?: string | null;
+  };
+};
+
+export type ActiveWorkspaceResponse = {
+  workspace_id: string;
+  last_workspace_id: string;
+};
+
 export type FeedbackReport = {
   id: string;
   ticket_id: string;
@@ -1285,6 +1336,222 @@ export type KnowledgeOut = {
   updated_at: string;
 };
 
+export type FleetVehicleStatus =
+  | "active"
+  | "maintenance"
+  | "temporarily_inactive"
+  | "inactive"
+  | "sold"
+  | string;
+
+export type FleetMaintenanceStatus = "normal" | "soon" | "due";
+
+export type FleetDepartmentOut = {
+  id: string;
+  workspace_id: string;
+  key: string;
+  name_he: string;
+  name_en?: string | null;
+  sort_order: number;
+  is_active: boolean;
+  modules?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  member_count?: number;
+};
+
+export type FleetDepartmentMemberOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  user_id: string;
+  created_at: string;
+  full_name?: string | null;
+  email?: string | null;
+};
+
+export type FleetVehicleOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  license_plate: string;
+  vehicle_type: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  year?: number | null;
+  current_mileage: number;
+  service_interval_km?: number | null;
+  next_service_mileage?: number | null;
+  last_service_mileage?: number | null;
+  last_service_at?: string | null;
+  status: FleetVehicleStatus;
+  assigned_user_id?: string | null;
+  notes?: string | null;
+  test_expiry_date?: string | null;
+  insurance_provider?: string | null;
+  insurance_policy_number?: string | null;
+  insurance_expiry_date?: string | null;
+  maintenance_soon_km?: number;
+  archived_at?: string | null;
+  archived_by?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  department_name?: string | null;
+  assigned_user_name?: string | null;
+  maintenance_status?: FleetMaintenanceStatus;
+};
+
+export type FleetMileageLogOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  vehicle_id: string;
+  previous_mileage: number;
+  mileage: number;
+  distance_since_previous: number;
+  recorded_by?: string | null;
+  recorded_at: string;
+  source: string;
+  notes?: string | null;
+  license_plate?: string | null;
+  recorded_by_name?: string | null;
+};
+
+export type FleetMaintenanceOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  vehicle_id: string;
+  maintenance_type: string;
+  mileage?: number | null;
+  performed_on: string;
+  next_mileage?: number | null;
+  provider?: string | null;
+  cost_cents?: number | null;
+  description?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  license_plate?: string | null;
+};
+
+export type FleetEquipmentOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  vehicle_id: string;
+  equipment_type: string;
+  name: string;
+  serial_number?: string | null;
+  status: string;
+  installation_date?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  license_plate?: string | null;
+};
+
+export type FleetAssignmentOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  vehicle_id: string;
+  user_id: string;
+  starts_at: string;
+  ends_at?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  license_plate?: string | null;
+  user_name?: string | null;
+};
+
+export type FleetScheduleOut = {
+  id: string;
+  workspace_id: string;
+  department_id: string;
+  user_id: string;
+  vehicle_id?: string | null;
+  schedule_date: string;
+  start_time: string;
+  end_time: string;
+  shift_label?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  user_name?: string | null;
+  license_plate?: string | null;
+};
+
+export type FleetMyAccessOut = {
+  workspace_id: string;
+  role_key: string;
+  managerial: boolean;
+  departments: FleetDepartmentOut[];
+  permissions: string[];
+};
+
+export type FleetDashboardOut = {
+  total_vehicles: number;
+  by_status: Record<string, number>;
+  maintenance_due: number;
+  maintenance_soon: number;
+  expiring_tests: number;
+  expiring_insurance: number;
+  total_mileage: number;
+  recent_mileage: FleetMileageLogOut[];
+  by_department?: Array<{
+    department_id: string;
+    name_he: string;
+    count: number;
+  }>;
+};
+
+export type FleetReportOut = {
+  report_key: string;
+  generated_at: string;
+  rows: Record<string, unknown>[];
+};
+
+export type FleetImportParseResult = {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  sheet_names?: string[];
+  filename?: string;
+};
+
+export type FleetImportPreviewIn = {
+  column_map: Record<string, string>;
+  rows: Record<string, unknown>[];
+  department_id?: string | null;
+  default_department_id?: string | null;
+};
+
+export type FleetImportPreviewResult = {
+  total: number;
+  valid: number;
+  invalid: number;
+  duplicate_plates?: number;
+  missing_plates?: number;
+  errors: Array<{ row: number; field?: string; message: string }>;
+  warnings?: Array<{ row: number; field?: string; message: string }>;
+  rows: Record<string, unknown>[];
+};
+
+export type FleetImportCommitIn = FleetImportPreviewIn & { confirm: boolean };
+
+export type FleetImportCommitResult = {
+  created: number;
+  skipped?: number;
+  errors?: Array<{ row?: number; message: string }>;
+};
+
 export type PublicQuote = {
   id: string;
   number: string;
@@ -1896,8 +2163,21 @@ export function createApiClient(opts: {
 
   return {
     getSession: () => request<SessionResponse>("/api/v1/auth/session"),
+    platformHome: () => request<PlatformHomeResponse>("/api/v1/platform/home"),
     patchMe: (body: { full_name?: string; phone?: string; locale?: string }) =>
       request("/api/v1/me", { method: "PATCH", body: JSON.stringify(body) }),
+    setActiveWorkspace: (workspaceId: string) =>
+      request<ActiveWorkspaceResponse>("/api/v1/me/active-workspace", {
+        method: "PUT",
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      }),
+    listWorkspaceProducts: (workspaceId: string) =>
+      request<WorkspaceProductsResponse>(`/api/v1/workspaces/${workspaceId}/products`),
+    setWorkspaceProductOverride: (workspaceId: string, body: { feature_key: string; enabled: boolean }) =>
+      request<WorkspaceProductsResponse>(`/api/v1/workspaces/${workspaceId}/products/overrides`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
     createWorkspace: (body: { name: string; plan_key?: string; business_type?: string }) =>
       request<WorkspaceOut>("/api/v1/workspaces", {
         method: "POST",
@@ -3302,6 +3582,16 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    adminWorkspaceProducts: (workspaceId: string) =>
+      request<WorkspaceProductsResponse>(`/api/v1/admin/workspaces/${workspaceId}/products`),
+    adminSetWorkspaceProductOverride: (
+      workspaceId: string,
+      body: { feature_key: string; enabled: boolean },
+    ) =>
+      request<WorkspaceProductsResponse>(`/api/v1/admin/workspaces/${workspaceId}/products/overrides`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
     adminMemberships: (opts: { workspace_id?: string; limit?: number } = {}) => {
       const params = new URLSearchParams();
       if (opts.workspace_id) params.set("workspace_id", opts.workspace_id);
@@ -3429,7 +3719,1630 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    listFleetDepartments: (workspaceId: string) =>
+      request<{ items: FleetDepartmentOut[] }>(`/api/v1/workspaces/${workspaceId}/fleet/departments`),
+    createFleetDepartment: (
+      workspaceId: string,
+      body: { key: string; name_he: string; name_en?: string | null; sort_order?: number; is_active?: boolean },
+    ) =>
+      request<FleetDepartmentOut>(`/api/v1/workspaces/${workspaceId}/fleet/departments`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchFleetDepartment: (
+      workspaceId: string,
+      departmentId: string,
+      body: Partial<{ key: string; name_he: string; name_en: string | null; sort_order: number; is_active: boolean }>,
+    ) =>
+      request<FleetDepartmentOut>(`/api/v1/workspaces/${workspaceId}/fleet/departments/${departmentId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    addFleetDepartmentMember: (workspaceId: string, departmentId: string, body: { user_id: string }) =>
+      request<FleetDepartmentMemberOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/departments/${departmentId}/members`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    removeFleetDepartmentMember: (workspaceId: string, departmentId: string, userId: string) =>
+      request<{ ok: true }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/departments/${departmentId}/members/${userId}`,
+        { method: "DELETE" },
+      ),
+    getFleetMyAccess: (workspaceId: string) =>
+      request<FleetMyAccessOut>(`/api/v1/workspaces/${workspaceId}/fleet/my-access`),
+    getFleetDashboard: (workspaceId: string, opts: { department_id?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.department_id) params.set("department_id", opts.department_id);
+      const q = params.toString();
+      return request<FleetDashboardOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/dashboard${q ? `?${q}` : ""}`,
+      );
+    },
+    listFleetVehicles: (
+      workspaceId: string,
+      opts: {
+        q?: string;
+        department_id?: string;
+        status?: string;
+        vehicle_type?: string;
+        manufacturer?: string;
+        assigned_user_id?: string;
+        include_archived?: boolean;
+        limit?: number;
+        cursor?: string;
+      } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 100) });
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.department_id) params.set("department_id", opts.department_id);
+      if (opts.status) params.set("status", opts.status);
+      if (opts.vehicle_type) params.set("vehicle_type", opts.vehicle_type);
+      if (opts.manufacturer) params.set("manufacturer", opts.manufacturer);
+      if (opts.assigned_user_id) params.set("assigned_user_id", opts.assigned_user_id);
+      if (opts.include_archived) params.set("include_archived", "true");
+      if (opts.cursor) params.set("cursor", opts.cursor);
+      return request<{ items: FleetVehicleOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles?${params}`,
+      );
+    },
+    createFleetVehicle: (
+      workspaceId: string,
+      body: {
+        department_id: string;
+        license_plate: string;
+        vehicle_type?: string;
+        manufacturer?: string | null;
+        model?: string | null;
+        year?: number | null;
+        current_mileage?: number;
+        service_interval_km?: number | null;
+        next_service_mileage?: number | null;
+        status?: string;
+        assigned_user_id?: string | null;
+        notes?: string | null;
+        test_expiry_date?: string | null;
+        insurance_provider?: string | null;
+        insurance_policy_number?: string | null;
+        insurance_expiry_date?: string | null;
+        maintenance_soon_km?: number;
+      },
+    ) =>
+      request<FleetVehicleOut>(`/api/v1/workspaces/${workspaceId}/fleet/vehicles`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getFleetVehicle: (workspaceId: string, vehicleId: string) =>
+      request<FleetVehicleOut>(`/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}`),
+    patchFleetVehicle: (
+      workspaceId: string,
+      vehicleId: string,
+      body: Partial<{
+        department_id: string;
+        license_plate: string;
+        vehicle_type: string;
+        manufacturer: string | null;
+        model: string | null;
+        year: number | null;
+        current_mileage: number;
+        service_interval_km: number | null;
+        next_service_mileage: number | null;
+        last_service_mileage: number | null;
+        last_service_at: string | null;
+        status: string;
+        assigned_user_id: string | null;
+        notes: string | null;
+        test_expiry_date: string | null;
+        insurance_provider: string | null;
+        insurance_policy_number: string | null;
+        insurance_expiry_date: string | null;
+        maintenance_soon_km: number;
+      }>,
+    ) =>
+      request<FleetVehicleOut>(`/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    archiveFleetVehicle: (workspaceId: string, vehicleId: string) =>
+      request<FleetVehicleOut>(`/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/archive`, {
+        method: "POST",
+      }),
+    getFleetMyVehicle: (workspaceId: string) =>
+      request<FleetVehicleOut | null>(`/api/v1/workspaces/${workspaceId}/fleet/my-vehicle`),
+    updateFleetMileage: (
+      workspaceId: string,
+      vehicleId: string,
+      body: { mileage: number; notes?: string; source?: string },
+    ) =>
+      request<FleetMileageLogOut>(`/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/mileage`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listFleetVehicleMileage: (
+      workspaceId: string,
+      vehicleId: string,
+      opts: { limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      return request<{ items: FleetMileageLogOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/mileage?${params}`,
+      );
+    },
+    listFleetMileage: (
+      workspaceId: string,
+      opts: { department_id?: string; vehicle_id?: string; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      if (opts.department_id) params.set("department_id", opts.department_id);
+      if (opts.vehicle_id) params.set("vehicle_id", opts.vehicle_id);
+      return request<{ items: FleetMileageLogOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/mileage?${params}`,
+      );
+    },
+    listFleetVehicleMaintenance: (
+      workspaceId: string,
+      vehicleId: string,
+      opts: { limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      return request<{ items: FleetMaintenanceOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/maintenance?${params}`,
+      );
+    },
+    createFleetMaintenance: (
+      workspaceId: string,
+      vehicleId: string,
+      body: {
+        maintenance_type?: string;
+        mileage?: number | null;
+        performed_on?: string;
+        next_mileage?: number | null;
+        provider?: string | null;
+        cost_cents?: number | null;
+        description?: string | null;
+        notes?: string | null;
+        update_vehicle?: boolean;
+      },
+    ) =>
+      request<FleetMaintenanceOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/maintenance`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    patchFleetMaintenance: (
+      workspaceId: string,
+      maintenanceId: string,
+      body: Partial<{
+        maintenance_type: string;
+        mileage: number | null;
+        performed_on: string;
+        next_mileage: number | null;
+        provider: string | null;
+        cost_cents: number | null;
+        description: string | null;
+        notes: string | null;
+      }>,
+    ) =>
+      request<FleetMaintenanceOut>(`/api/v1/workspaces/${workspaceId}/fleet/maintenance/${maintenanceId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listFleetVehicleEquipment: (
+      workspaceId: string,
+      vehicleId: string,
+      opts: { limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      return request<{ items: FleetEquipmentOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/equipment?${params}`,
+      );
+    },
+    createFleetEquipment: (
+      workspaceId: string,
+      vehicleId: string,
+      body: {
+        equipment_type: string;
+        name: string;
+        serial_number?: string | null;
+        status?: string;
+        installation_date?: string | null;
+        notes?: string | null;
+      },
+    ) =>
+      request<FleetEquipmentOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/equipment`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    patchFleetEquipment: (
+      workspaceId: string,
+      equipmentId: string,
+      body: Partial<{
+        equipment_type: string;
+        name: string;
+        serial_number: string | null;
+        status: string;
+        installation_date: string | null;
+        notes: string | null;
+      }>,
+    ) =>
+      request<FleetEquipmentOut>(`/api/v1/workspaces/${workspaceId}/fleet/equipment/${equipmentId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteFleetEquipment: (workspaceId: string, equipmentId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/fleet/equipment/${equipmentId}`, {
+        method: "DELETE",
+      }),
+    listFleetAssignments: (
+      workspaceId: string,
+      vehicleId: string,
+      opts: { limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+      return request<{ items: FleetAssignmentOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/assignments?${params}`,
+      );
+    },
+    createFleetAssignment: (
+      workspaceId: string,
+      vehicleId: string,
+      body: { user_id: string; starts_at?: string; notes?: string | null },
+    ) =>
+      request<FleetAssignmentOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/vehicles/${vehicleId}/assignments`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    endFleetAssignment: (workspaceId: string, assignmentId: string, body: { ends_at?: string } = {}) =>
+      request<FleetAssignmentOut>(`/api/v1/workspaces/${workspaceId}/fleet/assignments/${assignmentId}/end`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listFleetSchedules: (
+      workspaceId: string,
+      opts: {
+        department_id?: string;
+        from_date?: string;
+        to_date?: string;
+        user_id?: string;
+        limit?: number;
+      } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 100) });
+      if (opts.department_id) params.set("department_id", opts.department_id);
+      if (opts.from_date) params.set("from_date", opts.from_date);
+      if (opts.to_date) params.set("to_date", opts.to_date);
+      if (opts.user_id) params.set("user_id", opts.user_id);
+      return request<{ items: FleetScheduleOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/schedules?${params}`,
+      );
+    },
+    createFleetSchedule: (
+      workspaceId: string,
+      body: {
+        department_id: string;
+        user_id: string;
+        vehicle_id?: string | null;
+        schedule_date: string;
+        start_time: string;
+        end_time: string;
+        shift_label?: string | null;
+        location?: string | null;
+        notes?: string | null;
+      },
+    ) =>
+      request<FleetScheduleOut>(`/api/v1/workspaces/${workspaceId}/fleet/schedules`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchFleetSchedule: (
+      workspaceId: string,
+      scheduleId: string,
+      body: Partial<{
+        user_id: string;
+        vehicle_id: string | null;
+        schedule_date: string;
+        start_time: string;
+        end_time: string;
+        shift_label: string | null;
+        location: string | null;
+        notes: string | null;
+      }>,
+    ) =>
+      request<FleetScheduleOut>(`/api/v1/workspaces/${workspaceId}/fleet/schedules/${scheduleId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteFleetSchedule: (workspaceId: string, scheduleId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/fleet/schedules/${scheduleId}`, {
+        method: "DELETE",
+      }),
+    getFleetReport: (
+      workspaceId: string,
+      reportKey: string,
+      opts: { department_id?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.department_id) params.set("department_id", opts.department_id);
+      const q = params.toString();
+      return request<FleetReportOut>(
+        `/api/v1/workspaces/${workspaceId}/fleet/reports/${encodeURIComponent(reportKey)}${q ? `?${q}` : ""}`,
+      );
+    },
+    fleetImportParse: (workspaceId: string, file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return request<FleetImportParseResult>(`/api/v1/workspaces/${workspaceId}/fleet/import/parse`, {
+        method: "POST",
+        body: fd,
+      });
+    },
+    fleetImportPreview: (workspaceId: string, body: FleetImportPreviewIn) =>
+      request<FleetImportPreviewResult>(`/api/v1/workspaces/${workspaceId}/fleet/import/preview`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    fleetImportCommit: (workspaceId: string, body: FleetImportCommitIn) =>
+      request<FleetImportCommitResult>(`/api/v1/workspaces/${workspaceId}/fleet/import/commit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    seedFleetDemo: (workspaceId: string) =>
+      request<{ ok: boolean; created_departments?: number; created_vehicles?: number; skipped?: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/fleet/seed-demo`,
+        { method: "POST" },
+      ),
+    getWorkforceSummary: (workspaceId: string) =>
+      request<WorkforceSummaryOut>(`/api/v1/workspaces/${workspaceId}/workforce/summary`),
+    listWorkforceEmployees: (workspaceId: string, opts?: { status?: string; q?: string }) => {
+      const params = new URLSearchParams();
+      if (opts?.status) params.set("status", opts.status);
+      if (opts?.q) params.set("q", opts.q);
+      const q = params.toString() ? `?${params}` : "";
+      return request<{ items: WorkforceEmployeeOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/employees${q}`,
+      );
+    },
+    listWorkforceLookups: (workspaceId: string) =>
+      request<WorkforceLookupsOut>(`/api/v1/workspaces/${workspaceId}/workforce/lookups`),
+    createWorkforceEmployee: (workspaceId: string, body: WorkforceEmployeeCreateIn) =>
+      request<WorkforceEmployeeOut>(`/api/v1/workspaces/${workspaceId}/workforce/employees`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    disableWorkforceEmployee: (workspaceId: string, employeeId: string) =>
+      request<WorkforceEmployeeOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/employees/${employeeId}/disable`,
+        { method: "POST" },
+      ),
+    listWorkforceRegions: (workspaceId: string) =>
+      request<{ items: WorkforceRegionOut[] }>(`/api/v1/workspaces/${workspaceId}/workforce/regions`),
+    createWorkforceRegion: (workspaceId: string, body: WorkforceRegionWrite) =>
+      request<WorkforceRegionOut>(`/api/v1/workspaces/${workspaceId}/workforce/regions`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWorkforceRegion: (workspaceId: string, regionId: string, body: WorkforceRegionWrite) =>
+      request<WorkforceRegionOut>(`/api/v1/workspaces/${workspaceId}/workforce/regions/${regionId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteWorkforceRegion: (workspaceId: string, regionId: string) =>
+      request<void>(`/api/v1/workspaces/${workspaceId}/workforce/regions/${regionId}`, { method: "DELETE" }),
+    listWorkforceSites: (workspaceId: string) =>
+      request<{ items: WorkforceSiteOut[] }>(`/api/v1/workspaces/${workspaceId}/workforce/sites`),
+    createWorkforceSite: (workspaceId: string, body: WorkforceSiteWrite) =>
+      request<WorkforceSiteOut>(`/api/v1/workspaces/${workspaceId}/workforce/sites`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWorkforceSite: (workspaceId: string, siteId: string, body: WorkforceSiteWrite) =>
+      request<WorkforceSiteOut>(`/api/v1/workspaces/${workspaceId}/workforce/sites/${siteId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteWorkforceSite: (workspaceId: string, siteId: string) =>
+      request<void>(`/api/v1/workspaces/${workspaceId}/workforce/sites/${siteId}`, { method: "DELETE" }),
+    listWorkforcePositions: (workspaceId: string) =>
+      request<{ items: WorkforcePositionOut[] }>(`/api/v1/workspaces/${workspaceId}/workforce/positions`),
+    listWorkforceShifts: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<{ items: WorkforceShiftOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/shifts?${params.toString()}`,
+      );
+    },
+    createWorkforceShift: (workspaceId: string, body: WorkforceShiftWrite) =>
+      request<WorkforceShiftOut>(`/api/v1/workspaces/${workspaceId}/workforce/shifts`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWorkforceShift: (workspaceId: string, shiftId: string, body: WorkforceShiftWrite) =>
+      request<WorkforceShiftOut>(`/api/v1/workspaces/${workspaceId}/workforce/shifts/${shiftId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deleteWorkforceShift: (workspaceId: string, shiftId: string) =>
+      request<void>(`/api/v1/workspaces/${workspaceId}/workforce/shifts/${shiftId}`, { method: "DELETE" }),
+
+    // ── SSP digital forms ───────────────────────────────────────────────────
+    listSspForms: (workspaceId: string, opts?: string | { status?: string; q?: string; category?: string }) => {
+      const params = new URLSearchParams();
+      if (typeof opts === "string") {
+        if (opts) params.set("status", opts);
+      } else if (opts) {
+        if (opts.status) params.set("status", opts.status);
+        if (opts.q) params.set("q", opts.q);
+        if (opts.category) params.set("category", opts.category);
+      }
+      const q = params.toString() ? `?${params}` : "";
+      return request<{ items: SspFormOut[] }>(`/api/v1/workspaces/${workspaceId}/ssp/forms${q}`);
+    },
+    createSspForm: (workspaceId: string, body: { title: string; description?: string; category?: string }) =>
+      request<SspFormOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspForm: (workspaceId: string, formId: string) =>
+      request<SspFormDetailOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}`),
+    patchSspForm: (
+      workspaceId: string,
+      formId: string,
+      body: { title?: string; description?: string; category?: string | null },
+    ) =>
+      request<SspFormOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    putSspFormDefinition: (workspaceId: string, formId: string, definition: SspFormDefinition) =>
+      request<SspFormVersionOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/definition`, {
+        method: "PUT",
+        body: JSON.stringify({ definition }),
+      }),
+    publishSspForm: (workspaceId: string, formId: string) =>
+      request<{ form: SspFormOut; version: SspFormVersionOut }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/publish`,
+        { method: "POST" },
+      ),
+    duplicateSspForm: (workspaceId: string, formId: string) =>
+      request<SspFormOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/duplicate`, {
+        method: "POST",
+      }),
+    archiveSspForm: (workspaceId: string, formId: string) =>
+      request<SspFormOut>(`/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/archive`, {
+        method: "POST",
+      }),
+    listSspAssignments: (workspaceId: string, formId: string) =>
+      request<{ items: SspAssignmentOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/assignments`,
+      ),
+    createSspAssignment: (
+      workspaceId: string,
+      formId: string,
+      body: {
+        form_version_id?: string;
+        label?: string;
+        access_code?: string;
+        require_account?: boolean;
+        expires_at?: string;
+        max_submissions?: number;
+      },
+    ) =>
+      request<SspAssignmentCreatedOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/assignments`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    revokeSspAssignment: (workspaceId: string, assignmentId: string) =>
+      request<SspAssignmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/assignments/${assignmentId}/revoke`,
+        { method: "POST" },
+      ),
+    listSspSubmissions: (
+      workspaceId: string,
+      query: { form_id?: string; status?: string; from_date?: string; to_date?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (query.form_id) params.set("form_id", query.form_id);
+      if (query.status) params.set("status", query.status);
+      if (query.from_date) params.set("from_date", query.from_date);
+      if (query.to_date) params.set("to_date", query.to_date);
+      const q = params.toString();
+      return request<{ items: SspSubmissionSummaryOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/submissions${q ? `?${q}` : ""}`,
+      );
+    },
+    getSspSubmission: (workspaceId: string, submissionId: string) =>
+      request<SspSubmissionOut>(`/api/v1/workspaces/${workspaceId}/ssp/submissions/${submissionId}`),
+    peekSspAssignment: (token: string) =>
+      request<SspPublicPeekOut>(`/api/v1/public/ssp/assignments/${encodeURIComponent(token)}`),
+    unlockSspAssignment: (token: string, access_code: string) =>
+      request<SspPublicFormOut>(`/api/v1/public/ssp/assignments/${encodeURIComponent(token)}/unlock`, {
+        method: "POST",
+        body: JSON.stringify({ access_code }),
+      }),
+    submitSspAssignment: (
+      token: string,
+      body: { access_code?: string; answers: Record<string, unknown>; idempotency_key?: string },
+    ) =>
+      request<SspPublicSubmitOut>(`/api/v1/public/ssp/assignments/${encodeURIComponent(token)}/submit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspOrgMe: (workspaceId: string) =>
+      request<SspOrgMeOut>(`/api/v1/workspaces/${workspaceId}/ssp/org/me`),
+    bootstrapSspCompany: (
+      workspaceId: string,
+      body: { name: string; root_unit_name?: string; patrol_department_name?: string },
+    ) =>
+      request<SspOrgBootstrapOut>(`/api/v1/workspaces/${workspaceId}/ssp/org/bootstrap`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listSspOrgUnits: (workspaceId: string) =>
+      request<{ items: SspOrgUnitOut[] }>(`/api/v1/workspaces/${workspaceId}/ssp/org/units`),
+    listSspDepartments: (workspaceId: string) =>
+      request<{ items: SspDepartmentOut[] }>(`/api/v1/workspaces/${workspaceId}/ssp/org/departments`),
+    listSspOrgMembers: (workspaceId: string) =>
+      request<{ items: SspOrgMembershipOut[] }>(`/api/v1/workspaces/${workspaceId}/ssp/org/members`),
+    assignSspOrgMember: (
+      workspaceId: string,
+      body: {
+        user_id: string;
+        product_role: "org_admin" | "patrol_manager" | "patrol_officer";
+        org_unit_id?: string | null;
+        department_id?: string | null;
+        manager_user_id?: string | null;
+      },
+    ) =>
+      request<SspOrgMembershipOut>(`/api/v1/workspaces/${workspaceId}/ssp/org/members`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    officerSubmitSspForm: (
+      workspaceId: string,
+      formId: string,
+      body: { answers: Record<string, unknown>; site_assignment_id?: string },
+    ) =>
+      request<SspSubmissionOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/officer-submit`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    listSspAlerts: (workspaceId: string) =>
+      request<{
+        items: Array<{
+          id: string;
+          source: string;
+          status?: string | null;
+          at?: string | null;
+          title?: string | null;
+          href: string;
+          severity?: string | null;
+        }>;
+        data_mode: string;
+      }>(`/api/v1/workspaces/${workspaceId}/ssp/alerts`),
+    getSspDashboard: (
+      workspaceId: string,
+      opts?: {
+        status?: string;
+        department_id?: string;
+        from_date?: string;
+        to_date?: string;
+        site_id?: string;
+        org_unit_id?: string;
+        form_id?: string;
+        assignment_status?: string;
+      },
+    ) => {
+      const q = new URLSearchParams();
+      if (opts?.status) q.set("status", opts.status);
+      if (opts?.department_id) q.set("department_id", opts.department_id);
+      if (opts?.from_date) q.set("from_date", opts.from_date);
+      if (opts?.to_date) q.set("to_date", opts.to_date);
+      if (opts?.site_id) q.set("site_id", opts.site_id);
+      if (opts?.org_unit_id) q.set("org_unit_id", opts.org_unit_id);
+      if (opts?.form_id) q.set("form_id", opts.form_id);
+      if (opts?.assignment_status) q.set("assignment_status", opts.assignment_status);
+      const qs = q.toString() ? `?${q}` : "";
+      return request<SspDashboardOut>(`/api/v1/workspaces/${workspaceId}/ssp/dashboard${qs}`);
+    },
+    listSspSites: (
+      workspaceId: string,
+      opts?: {
+        q?: string;
+        is_active?: boolean;
+        org_unit_id?: string;
+        department_id?: string;
+        activation_status?: string;
+        kind?: string;
+      },
+    ) => {
+      const q = new URLSearchParams();
+      if (opts?.q) q.set("q", opts.q);
+      if (opts?.is_active != null) q.set("is_active", String(opts.is_active));
+      if (opts?.org_unit_id) q.set("org_unit_id", opts.org_unit_id);
+      if (opts?.department_id) q.set("department_id", opts.department_id);
+      if (opts?.activation_status) q.set("activation_status", opts.activation_status);
+      if (opts?.kind) q.set("kind", opts.kind);
+      const qs = q.toString() ? `?${q}` : "";
+      return request<{ items: SspSiteOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites${qs}`,
+      );
+    },
+    createSspSite: (
+      workspaceId: string,
+      body: {
+        name: string;
+        phone?: string;
+        description?: string;
+        org_unit_id?: string | null;
+        department_id?: string | null;
+        manager_user_id?: string | null;
+        is_active?: boolean;
+        admin_notes?: string | null;
+        kind?: "office" | "ops_center" | "physical_site" | "other";
+      },
+    ) =>
+      request<SspSiteOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspSite: (workspaceId: string, siteId: string) =>
+      request<SspSiteOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}`),
+    patchSspSite: (
+      workspaceId: string,
+      siteId: string,
+      body: {
+        name?: string;
+        phone?: string | null;
+        description?: string;
+        org_unit_id?: string | null;
+        department_id?: string | null;
+        manager_user_id?: string | null;
+        is_active?: boolean;
+        admin_notes?: string | null;
+        kind?: "office" | "ops_center" | "physical_site" | "other";
+      },
+    ) =>
+      request<SspSiteOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    getSspSiteOps: (workspaceId: string, siteId: string) =>
+      request<SspSiteOpsOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/ops`),
+    listSspSiteMembers: (workspaceId: string, siteId: string) =>
+      request<{ items: SspSiteMemberOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/members`,
+      ),
+    addSspSiteMember: (workspaceId: string, siteId: string, body: { user_id: string }) =>
+      request<SspSiteMemberOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/members`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    removeSspSiteMember: (workspaceId: string, siteId: string, userId: string) =>
+      request<{ ok: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/members/${userId}`,
+        { method: "DELETE" },
+      ),
+    listSspSiteAssignments: (
+      workspaceId: string,
+      opts?: { site_id?: string; form_id?: string; status?: string },
+    ) => {
+      const q = new URLSearchParams();
+      if (opts?.site_id) q.set("site_id", opts.site_id);
+      if (opts?.form_id) q.set("form_id", opts.form_id);
+      if (opts?.status) q.set("status", opts.status);
+      const qs = q.toString() ? `?${q}` : "";
+      return request<{ items: SspSiteAssignmentOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments${qs}`,
+      );
+    },
+    getSspSiteAssignment: (workspaceId: string, assignmentId: string) =>
+      request<SspSiteAssignmentOut & { definition_snapshot?: { fields: SspFormField[] } }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments/${assignmentId}`,
+      ),
+    createSspSiteAssignments: (
+      workspaceId: string,
+      body: {
+        form_id: string;
+        site_ids: string[];
+        starts_at?: string | null;
+        due_at?: string | null;
+        filler_mode?: "site" | "users" | "group";
+        user_ids?: string[];
+        department_id?: string | null;
+      },
+    ) =>
+      request<{ items: SspSiteAssignmentOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    pauseSspSiteAssignment: (workspaceId: string, assignmentId: string) =>
+      request<SspSiteAssignmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments/${assignmentId}/pause`,
+        { method: "POST" },
+      ),
+    resumeSspSiteAssignment: (workspaceId: string, assignmentId: string) =>
+      request<SspSiteAssignmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments/${assignmentId}/resume`,
+        { method: "POST" },
+      ),
+    completeSspSiteAssignment: (workspaceId: string, assignmentId: string) =>
+      request<SspSiteAssignmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments/${assignmentId}/complete`,
+        { method: "POST" },
+      ),
+    submitSspSiteAssignment: (
+      workspaceId: string,
+      assignmentId: string,
+      body: { answers: Record<string, unknown> },
+    ) =>
+      request<SspSubmissionOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/site-assignments/${assignmentId}/submit`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    issueSspActivationCode: (
+      workspaceId: string,
+      siteId: string,
+      body?: { audience?: "device" | "user"; invited_role?: "patrol_officer" | "patrol_manager" },
+    ) =>
+      request<SspActivationCodeOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/activation-codes`,
+        { method: "POST", body: body ? JSON.stringify(body) : undefined },
+      ),
+    requestSspSiteJoin: (workspaceId: string, body: { code: string }) =>
+      request<{ status: string; enrollment_id: string; site_name?: string | null; message: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/join`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    listSspActivationCodes: (workspaceId: string, siteId: string) =>
+      request<{ items: SspActivationCodeOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/activation-codes`,
+      ),
+    revokeSspActivationCode: (workspaceId: string, codeId: string) =>
+      request<SspActivationCodeOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/activation-codes/${codeId}/revoke`,
+        { method: "POST" },
+      ),
+    listSspEnrollments: (workspaceId: string, opts?: { status?: string; site_id?: string }) => {
+      const q = new URLSearchParams();
+      if (opts?.status) q.set("status", opts.status);
+      if (opts?.site_id) q.set("site_id", opts.site_id);
+      const qs = q.toString() ? `?${q}` : "";
+      return request<{ items: SspEnrollmentOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/enrollments${qs}`,
+      );
+    },
+    approveSspEnrollment: (workspaceId: string, enrollmentId: string) =>
+      request<SspEnrollmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/enrollments/${enrollmentId}/approve`,
+        { method: "POST" },
+      ),
+    denySspEnrollment: (workspaceId: string, enrollmentId: string) =>
+      request<SspEnrollmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/enrollments/${enrollmentId}/deny`,
+        { method: "POST" },
+      ),
+    cancelSspEnrollment: (workspaceId: string, enrollmentId: string) =>
+      request<SspEnrollmentOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/enrollments/${enrollmentId}/cancel`,
+        { method: "POST" },
+      ),
+    listSspSiteDevices: (workspaceId: string, siteId: string) =>
+      request<{ items: SspSiteDeviceOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}/devices`,
+      ),
+    revokeSspSiteDevice: (workspaceId: string, deviceId: string) =>
+      request<SspSiteDeviceOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/devices/${deviceId}/revoke`,
+        { method: "POST" },
+      ),
+    revokeSspSiteDeviceSession: (workspaceId: string, deviceId: string) =>
+      request<SspSiteDeviceOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/devices/${deviceId}/revoke-session`,
+        { method: "POST" },
+      ),
+    activateSspSitePublic: (body: { code: string; device_label?: string }) =>
+      request<SspPublicActivateOut>(`/api/v1/public/ssp/site-activate`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    pollSspEnrollmentPublic: (pollToken: string) =>
+      request<SspPublicEnrollmentPollOut>(
+        `/api/v1/public/ssp/site-enrollments/${encodeURIComponent(pollToken)}`,
+      ),
+    claimSspEnrollmentPublic: (pollToken: string) =>
+      request<SspPublicClaimOut>(
+        `/api/v1/public/ssp/site-enrollments/${encodeURIComponent(pollToken)}/claim`,
+        { method: "POST" },
+      ),
+    getSspSiteDeviceMe: (deviceToken: string) =>
+      request<SspDeviceMeOut>(`/api/v1/public/ssp/site-device/me`, {
+        headers: { "X-SSP-Device-Token": deviceToken },
+      }),
+    getSspSiteDeviceOps: (deviceToken: string) =>
+      request<SspSiteOpsOut>(`/api/v1/public/ssp/site-device/ops`, {
+        headers: { "X-SSP-Device-Token": deviceToken },
+      }),
+    getSspSiteDeviceAssignment: (deviceToken: string, assignmentId: string) =>
+      request<{
+        assignment: SspSiteAssignmentOut;
+        form: SspFormOut;
+        definition: SspFormDefinition;
+        site: { id: string; name: string };
+      }>(`/api/v1/public/ssp/site-device/assignments/${assignmentId}`, {
+        headers: { "X-SSP-Device-Token": deviceToken },
+      }),
+    submitSspSiteDeviceAssignment: (
+      deviceToken: string,
+      assignmentId: string,
+      body: { answers: Record<string, unknown> },
+    ) =>
+      request<SspSubmissionOut>(
+        `/api/v1/public/ssp/site-device/assignments/${assignmentId}/submit`,
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+          headers: { "X-SSP-Device-Token": deviceToken },
+        },
+      ),
+    listSspOfficers: (workspaceId: string) =>
+      request<{ items: SspOrgMembershipOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/officers`,
+      ),
+    listSspCheckpoints: (workspaceId: string) =>
+      request<{ items: SspCheckpointOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/checkpoints`,
+      ),
+    createSspCheckpoint: (
+      workspaceId: string,
+      body: { name: string; location_label?: string; code_format?: "qr" | "barcode" | "both" },
+    ) =>
+      request<SspCheckpointOut>(`/api/v1/workspaces/${workspaceId}/ssp/checkpoints`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listSspPatrols: (workspaceId: string) =>
+      request<{ items: SspPatrolOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/patrols`,
+      ),
+    createSspPatrol: (workspaceId: string, body: { name: string; description?: string }) =>
+      request<SspPatrolOut>(`/api/v1/workspaces/${workspaceId}/ssp/patrols`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspPatrol: (workspaceId: string, patrolId: string) =>
+      request<{ patrol: SspPatrolOut; stops: SspPatrolStopOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/patrols/${patrolId}`,
+      ),
+    listSspPatrolRuns: (workspaceId: string, status?: string) => {
+      const q = status ? `?status=${encodeURIComponent(status)}` : "";
+      return request<{ items: SspPatrolRunOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/patrol-runs${q}`,
+      );
+    },
+    createSspPatrolRun: (
+      workspaceId: string,
+      body: {
+        patrol_id: string;
+        planned_start_at?: string;
+        planned_end_at?: string;
+        assignee_user_ids?: string[];
+      },
+    ) =>
+      request<SspPatrolRunOut>(`/api/v1/workspaces/${workspaceId}/ssp/patrol-runs`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspPatrolRun: (workspaceId: string, runId: string) =>
+      request<SspPatrolRunDetailOut>(`/api/v1/workspaces/${workspaceId}/ssp/patrol-runs/${runId}`),
+    startSspPatrolRun: (workspaceId: string, runId: string) =>
+      request<SspPatrolRunOut>(`/api/v1/workspaces/${workspaceId}/ssp/patrol-runs/${runId}/start`, {
+        method: "POST",
+        body: "{}",
+      }),
+    completeSspPatrolRun: (workspaceId: string, runId: string) =>
+      request<SspPatrolRunOut>(`/api/v1/workspaces/${workspaceId}/ssp/patrol-runs/${runId}/complete`, {
+        method: "POST",
+        body: "{}",
+      }),
+    createSspScan: (
+      workspaceId: string,
+      body: { code: string; run_id?: string; notes?: string },
+    ) =>
+      request<SspScanResultOut>(`/api/v1/workspaces/${workspaceId}/ssp/scans`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    listSspEvents: (workspaceId: string, status?: string) => {
+      const q = status ? `?status=${encodeURIComponent(status)}` : "";
+      return request<{ items: SspEventOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/events${q}`,
+      );
+    },
+    getSspEvent: (workspaceId: string, eventId: string) =>
+      request<{ event: SspEventOut; actions: SspEventActionOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/events/${eventId}`,
+      ),
+    createSspEvent: (
+      workspaceId: string,
+      body: {
+        title: string;
+        description?: string;
+        category?: string;
+        severity?: string;
+        location_label?: string;
+        run_id?: string;
+        checkpoint_id?: string;
+      },
+    ) =>
+      request<SspEventOut>(`/api/v1/workspaces/${workspaceId}/ssp/events`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchSspEvent: (
+      workspaceId: string,
+      eventId: string,
+      body: {
+        status?: string;
+        severity?: string;
+        assignee_user_id?: string | null;
+        description?: string;
+        note?: string;
+      },
+    ) =>
+      request<SspEventOut>(`/api/v1/workspaces/${workspaceId}/ssp/events/${eventId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listSspDistributions: (workspaceId: string) =>
+      request<{ items: SspDistributionOut[]; targets?: SspDistributionTargetOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/distributions`,
+      ),
+    getSspDistribution: (workspaceId: string, distributionId: string) =>
+      request<{
+        distribution: SspDistributionOut;
+        targets: SspDistributionTargetOut[];
+        data_mode: string;
+      }>(`/api/v1/workspaces/${workspaceId}/ssp/distributions/${distributionId}`),
+    createSspDistribution: (
+      workspaceId: string,
+      body: {
+        form_id: string;
+        title?: string;
+        due_at?: string;
+        require_completion?: boolean;
+        target_user_ids?: string[];
+        department_id?: string;
+        org_unit_id?: string;
+      },
+    ) =>
+      request<SspDistributionOut>(`/api/v1/workspaces/${workspaceId}/ssp/distributions`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    startSspDistribution: (workspaceId: string, distributionId: string) =>
+      request<SspDistributionTargetOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/distributions/${distributionId}/start`,
+        { method: "POST", body: "{}" },
+      ),
+    completeSspDistribution: (workspaceId: string, distributionId: string) =>
+      request<SspDistributionTargetOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/distributions/${distributionId}/complete`,
+        { method: "POST", body: "{}" },
+      ),
   };
 }
+
+export type SspOrgCompanyOut = {
+  id: string;
+  workspace_id: string;
+  company_id: string;
+  name: string;
+  created_at?: string;
+};
+
+export type SspOrgMembershipOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  user_id: string;
+  org_unit_id?: string | null;
+  department_id?: string | null;
+  product_role: "org_admin" | "patrol_manager" | "patrol_officer";
+  manager_user_id?: string | null;
+  status: string;
+};
+
+export type SspOrgMeOut = {
+  company: SspOrgCompanyOut | null;
+  membership: SspOrgMembershipOut | null;
+  workspace_role_key: string;
+  has_ssp_entitlement: boolean;
+};
+
+export type SspOrgUnitOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  parent_id: string | null;
+  name: string;
+  unit_type: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type SspDepartmentOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  org_unit_id: string;
+  key: string;
+  name_he: string;
+  name_en?: string | null;
+  is_active: boolean;
+};
+
+export type SspOrgBootstrapOut = {
+  company: SspOrgCompanyOut;
+  root_unit: SspOrgUnitOut;
+  patrol_department: SspDepartmentOut;
+  membership: SspOrgMembershipOut;
+};
+
+export type SspDashboardOut = {
+  company: { id: string; company_id: string; name: string } | null;
+  runs: { planned: number; active: number; completed: number; late: number };
+  open_events: number;
+  checkpoints_active: number;
+  checkpoint_scans_ok?: number;
+  officers: number;
+  distributions_overdue?: number;
+  sites_active?: number;
+  forms_published?: number;
+  site_assignments_active?: number;
+  submissions_pending?: number;
+  submissions_submitted?: number;
+  submissions_overdue?: number;
+  sites_pending_activation?: number;
+  enrollments_pending?: number;
+  devices_active?: number;
+  devices_revoked?: number;
+  site_members_active?: number;
+  user_joins_pending?: number;
+  updated_at?: string;
+  filters?: Record<string, string | null | undefined>;
+  data_mode: "live" | "empty";
+};
+
+export type SspSiteOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  site_id: string;
+  name: string;
+  phone: string | null;
+  description: string;
+  org_unit_id: string | null;
+  department_id: string | null;
+  manager_user_id: string | null;
+  is_active: boolean;
+  admin_notes?: string | null;
+  kind?: "office" | "ops_center" | "physical_site" | "other";
+  created_at: string;
+  updated_at: string;
+  activation_status?: string;
+  assigned_forms_count?: number;
+  overdue_count?: number;
+  active_devices_count?: number;
+  last_device_seen_at?: string | null;
+  members_count?: number;
+  pending_join_count?: number;
+  submissions_count?: number;
+};
+
+export type SspActivationCodeOut = {
+  id: string;
+  site_pk: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+  redeemed_at: string | null;
+  revoked_at: string | null;
+  code?: string | null;
+  audience?: "device" | "user";
+  invited_role?: string | null;
+  join_path?: string | null;
+};
+
+export type SspEnrollmentOut = {
+  id: string;
+  site_pk: string;
+  status: string;
+  device_label: string | null;
+  created_at: string;
+  expires_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+  device_id: string | null;
+  site_name?: string | null;
+  site_phone?: string | null;
+  site_public_id?: string | null;
+  audience?: "device" | "user";
+  requested_user_id?: string | null;
+  invited_role?: string | null;
+  user_id?: string | null;
+};
+
+export type SspSiteDeviceOut = {
+  id: string;
+  site_pk: string;
+  status: string;
+  device_label: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  last_seen_at: string | null;
+  revoked_at: string | null;
+  session_status?: string;
+  sessions?: number;
+  created_at: string;
+};
+
+export type SspPublicActivateOut = {
+  status: string;
+  poll_token: string;
+  enrollment_id: string;
+  site: { name: string; phone: string | null };
+  message: string;
+};
+
+export type SspPublicEnrollmentPollOut = {
+  status: string;
+  enrollment_id: string;
+  message: string;
+  claimable?: boolean;
+};
+
+export type SspPublicClaimOut = {
+  status: string;
+  device_token: string;
+  expires_at: string;
+  site: { id: string; name: string; phone: string | null; site_id: string };
+  message: string;
+};
+
+export type SspDeviceMeOut = {
+  site: { id: string; name: string; phone: string | null; site_id: string; is_active: boolean };
+  device: { id: string; status: string; device_label: string | null };
+  session: { id: string; expires_at: string };
+  identity: "site_device";
+};
+
+export type SspSiteMemberOut = {
+  id: string;
+  workspace_id: string;
+  site_pk: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type SspSiteAssignmentOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  form_id: string;
+  form_version_id: string;
+  site_pk: string;
+  status: "active" | "paused" | "completed" | "cancelled";
+  cadence: "once";
+  filler_mode: "site" | "users" | "group";
+  starts_at: string | null;
+  due_at: string | null;
+  department_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  paused_at: string | null;
+  completed_at: string | null;
+  form_title?: string | null;
+  form_category?: string | null;
+  form_status?: string | null;
+  fill_status?: string;
+  submission_count?: number;
+  latest_submission_at?: string | null;
+  definition_snapshot?: { fields?: Array<{ id: string; type: string; label: string; required?: boolean }> } | null;
+};
+
+export type SspSiteOpsOut = {
+  site: SspSiteOut;
+  assignments: SspSiteAssignmentOut[];
+  buckets: Record<string, string[]>;
+  submissions: Array<{
+    id: string;
+    site_assignment_id: string | null;
+    form_id: string;
+    submitted_at: string;
+    submitted_by: string | null;
+    device_id?: string | null;
+    status: string;
+  }>;
+  members?: Array<{
+    id: string;
+    user_id: string;
+    role: string | null;
+    is_active: boolean;
+  }>;
+  data_mode: "live" | "empty";
+};
+
+export type SspCheckpointOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  code: string;
+  name: string;
+  location_label?: string | null;
+  code_format: string;
+  is_active: boolean;
+};
+
+export type SspPatrolOut = {
+  id: string;
+  workspace_id: string;
+  company_pk: string;
+  name: string;
+  description: string;
+  status: string;
+  department_id?: string | null;
+};
+
+export type SspPatrolStopOut = {
+  id: string;
+  patrol_id: string;
+  checkpoint_id: string;
+  sort_order: number;
+  is_required: boolean;
+};
+
+export type SspPatrolRunOut = {
+  id: string;
+  patrol_id: string;
+  status: string;
+  planned_start_at?: string | null;
+  planned_end_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+};
+
+export type SspCheckpointScanOut = {
+  id: string;
+  checkpoint_id: string;
+  run_id?: string | null;
+  result: string;
+  scanned_at: string;
+};
+
+export type SspScanResultOut = {
+  scan: SspCheckpointScanOut;
+  checkpoint: { id: string; name?: string; code?: string };
+  result: string;
+};
+
+export type SspPatrolRunDetailOut = {
+  run: SspPatrolRunOut;
+  assignees: string[];
+  stops: SspPatrolStopOut[];
+  scans: SspCheckpointScanOut[];
+  progress: {
+    total_stops: number;
+    required_stops: number;
+    completed_stops: number;
+    missing_checkpoint_ids: string[];
+    percent: number;
+  };
+  data_mode: string;
+};
+
+export type SspEventOut = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  severity: string;
+  status: string;
+  created_at: string;
+  assignee_user_id?: string | null;
+  run_id?: string | null;
+  checkpoint_id?: string | null;
+};
+
+export type SspEventActionOut = {
+  id: string;
+  actor_user_id: string;
+  action_type: string;
+  from_value?: string | null;
+  to_value?: string | null;
+  note?: string | null;
+  created_at: string;
+};
+
+export type SspDistributionOut = {
+  id: string;
+  form_id: string;
+  form_version_id?: string | null;
+  title: string;
+  due_at?: string | null;
+  status: string;
+  require_completion: boolean;
+};
+
+export type SspDistributionTargetOut = {
+  id?: string;
+  distribution_id?: string;
+  user_id?: string;
+  status: string;
+  effective_status?: string;
+  submitted_at?: string | null;
+  started_at?: string | null;
+  form_id?: string | null;
+  title?: string | null;
+  due_at?: string | null;
+};
+
+export type SspFieldType =
+  | "short_text"
+  | "long_text"
+  | "notes"
+  | "number"
+  | "time"
+  | "single_choice"
+  | "multi_choice"
+  | "date"
+  | "yes_no"
+  | "consent";
+
+export type SspFormField = {
+  id: string;
+  type: SspFieldType;
+  label: string;
+  help_text?: string;
+  required: boolean;
+  order?: number;
+  options?: Array<{ id: string; label: string }>;
+  consent_wording?: string;
+};
+
+export type SspFormDefinition = { fields: SspFormField[] };
+
+export type SspFormOut = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  status: "draft" | "published" | "archived";
+  latest_published_version: number | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  category?: string | null;
+};
+
+export type SspFormVersionOut = {
+  id: string;
+  workspace_id: string;
+  form_id: string;
+  version: number;
+  status: "draft" | "published";
+  definition: SspFormDefinition;
+  published_at: string | null;
+  published_by: string | null;
+  created_at: string;
+};
+
+export type SspFormDetailOut = {
+  form: SspFormOut;
+  draft_version: SspFormVersionOut | null;
+  latest_published: SspFormVersionOut | null;
+  versions: SspFormVersionOut[];
+};
+
+export type SspAssignmentOut = {
+  id: string;
+  workspace_id: string;
+  form_id: string;
+  form_version_id: string;
+  label: string;
+  require_account: boolean;
+  status: "active" | "completed" | "expired" | "revoked";
+  expires_at: string | null;
+  max_submissions: number | null;
+  submission_count: number;
+  created_by: string | null;
+  created_at: string;
+  revoked_at: string | null;
+  completed_at: string | null;
+};
+
+export type SspAssignmentCreatedOut = SspAssignmentOut & {
+  public_token: string;
+  public_path: string;
+};
+
+export type SspSubmissionSummaryOut = {
+  id: string;
+  form_id: string;
+  form_version_id: string;
+  assignment_id: string;
+  site_assignment_id?: string | null;
+  status: string;
+  submitted_at: string;
+  has_consent: boolean;
+  submitted_by?: string | null;
+};
+
+export type SspSubmissionOut = {
+  id: string;
+  workspace_id: string;
+  form_id: string;
+  form_version_id: string;
+  assignment_id: string;
+  status: string;
+  answers: Record<string, unknown>;
+  consent: Array<{ field_id: string; accepted: boolean; consent_wording: string }>;
+  definition_snapshot: SspFormDefinition;
+  submitted_at: string;
+  created_at: string;
+};
+
+export type SspPublicPeekOut = {
+  requires_access_code: boolean;
+  form_title: string;
+  form_description: string;
+  status: string;
+  version?: number;
+  definition?: SspFormDefinition;
+  require_account?: boolean;
+};
+
+export type SspPublicFormOut = {
+  form_title: string;
+  form_description: string;
+  version: number;
+  definition: SspFormDefinition;
+  require_account: boolean;
+};
+
+export type SspPublicSubmitOut = {
+  id: string;
+  status: string;
+  submitted_at: string;
+  replayed: boolean;
+};
+
+export type WorkforceEmployeeOut = {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  membership_id: string | null;
+  employee_number: string | null;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  username: string | null;
+  employment_status: string;
+  position_id: string | null;
+  region_id: string | null;
+  site_id: string | null;
+  hire_date: string | null;
+  must_change_password?: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  account_status: string;
+};
+
+export type WorkforceLookupItem = {
+  id: string;
+  name: string;
+  code?: string | null;
+  is_active: boolean;
+};
+
+export type WorkforceLookupsOut = {
+  regions: WorkforceLookupItem[];
+  sites: WorkforceLookupItem[];
+  positions: WorkforceLookupItem[];
+  product_roles: string[];
+};
+
+export type WorkforceEmployeeCreateIn = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  username: string;
+  password: string;
+  phone?: string;
+  employee_number?: string;
+  product_role?: string;
+  position_id?: string;
+  region_id?: string;
+  site_id?: string;
+  hire_date?: string;
+};
+
+export type WorkforceSummaryOut = {
+  employees_total: number;
+  employees_active: number;
+  employees_with_account: number;
+  sites_total: number;
+  sites_active: number;
+  data_mode: "empty" | "live";
+};
+
+export type WorkforceRegionOut = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  code: string | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type WorkforceRegionWrite = {
+  name?: string;
+  code?: string | null;
+  is_active?: boolean;
+  workspace_id?: string;
+};
+
+export type WorkforceSiteOut = WorkforceRegionOut & {
+  region_id: string | null;
+  kind: string;
+  address: Record<string, unknown>;
+  notes: string | null;
+  created_by: string | null;
+};
+
+export type WorkforceSiteWrite = {
+  name?: string;
+  code?: string | null;
+  kind?: string;
+  region_id?: string | null;
+  address?: Record<string, unknown>;
+  is_active?: boolean;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforcePositionOut = WorkforceRegionOut;
+
+export type WorkforceShiftOut = {
+  id: string;
+  workspace_id: string;
+  employee_id: string | null;
+  site_id: string | null;
+  region_id: string | null;
+  position_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  employee_name: string | null;
+  site_name: string | null;
+  region_name: string | null;
+  position_name: string | null;
+};
+
+export type WorkforceShiftWrite = {
+  employee_id?: string;
+  site_id?: string;
+  region_id?: string | null;
+  position_id?: string | null;
+  starts_at?: string;
+  ends_at?: string;
+  notes?: string | null;
+  workspace_id?: string;
+};
 
 export type ApiClient = ReturnType<typeof createApiClient>;

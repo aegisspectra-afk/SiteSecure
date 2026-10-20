@@ -46,6 +46,9 @@ def current_user(client: Annotated[UserClient, Depends(user_client)]) -> dict:
 
     Soft-archive is authoritative in ``profiles.archived_at`` (app-level).
     GoTrue ban is an additional gate; this check rejects existing JWTs immediately.
+
+    Fail closed: if archive status cannot be verified (transport error, non-200, or
+    missing profile row), raise ``API_UNAVAILABLE`` rather than treating the user as active.
     """
     user = client.get_user()
     user_id = user.get("id")
@@ -57,11 +60,21 @@ def current_user(client: Annotated[UserClient, Depends(user_client)]) -> dict:
             params={"id": f"eq.{user_id}", "select": "archived_at", "limit": "1"},
         )
     except Exception:
-        res = None
-    if res is not None and getattr(res, "status_code", None) == 200:
-        rows = res.json() or []
-        if rows and rows[0].get("archived_at"):
-            raise ApiError(403, "ACCOUNT_INACTIVE", MESSAGES["ACCOUNT_INACTIVE"])
+        logger.warning("profile_archive_lookup_failed user_id=%s", user_id)
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"]) from None
+    if getattr(res, "status_code", None) != 200:
+        logger.warning(
+            "profile_archive_lookup_bad_status user_id=%s status=%s",
+            user_id,
+            getattr(res, "status_code", None),
+        )
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
+    rows = res.json() or []
+    if not rows:
+        logger.warning("profile_archive_lookup_empty user_id=%s", user_id)
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
+    if rows[0].get("archived_at"):
+        raise ApiError(403, "ACCOUNT_INACTIVE", MESSAGES["ACCOUNT_INACTIVE"])
     return user
 
 

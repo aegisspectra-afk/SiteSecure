@@ -67,20 +67,33 @@ describe("public website", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubHe.heroLine1);
     expect(screen.getAllByRole("link", { name: pubHe.login }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: pubHe.joinPilot }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: pubHe.seeProduct })[0]).toHaveAttribute("href", "/#quotes");
+    expect(screen.getAllByRole("link", { name: pubHe.seeProduct })[0]).toHaveAttribute("href", "/#products");
+    expect(document.getElementById("platform")).toBeTruthy();
+    expect(document.getElementById("products")).toBeTruthy();
     expect(document.getElementById("quotes")).toBeTruthy();
     expect(document.getElementById("flow")).toBeTruthy();
     expect(document.getElementById("site-file")).toBeTruthy();
     expect(document.getElementById("assets")).toBeTruthy();
     expect(document.getElementById("field")).toBeTruthy();
+    expect(document.getElementById("solutions")).toBeTruthy();
     expect(document.getElementById("friction")).toBeTruthy();
     expect(document.getElementById("security")).toBeTruthy();
+    expect(document.getElementById("contact")).toBeTruthy();
     expect(document.getElementById("pilot")).toBeTruthy();
     expect(document.getElementById("intelligence")).toBeNull();
+    expect(screen.getByText(pubHe.productsTitle)).toBeInTheDocument();
     expect(screen.getByText(pubHe.quoteA)).toBeInTheDocument();
     expect(screen.getByText(pubHe.securityTitleA)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: pubHe.heroShotAlt })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: pubHe.securityCta })).toHaveAttribute("href", "/legal/security");
+    expect(document.querySelector('[data-product="scheduling"] .public-product-status')?.textContent).toBe(
+      pubHe.statusPlanned,
+    );
+    expect(screen.getAllByText(pubHe.statusPlanned).length).toBeGreaterThan(0);
+    expect(document.querySelector('a[href="/app/ssp"]')).toBeNull();
+    expect(document.querySelector('a[href="/app/fleet"]')).toBeNull();
+    expect(document.querySelector('a[href="/app"]')).toBeNull();
+    expect(screen.getAllByRole("link", { name: pubHe.enterWorkspace })[0]).toHaveAttribute("href", "/login");
     expect(screen.getByRole("link", { name: legal.pages.privacy.title })).toHaveAttribute(
       "href",
       "/legal/privacy",
@@ -135,12 +148,16 @@ describe("public website", () => {
     sessionStub.user = { email: "ilya@example.com" };
     sessionStub.session = { has_workspace: true, email: "ilya@example.com" };
     const { rerender } = render(<PublicHome />);
-    expect(screen.getAllByRole("link", { name: pubHe.enterWorkspace }).length).toBeGreaterThan(0);
+    const signedInWorkspace = screen.getAllByRole("link", { name: pubHe.enterWorkspace });
+    expect(signedInWorkspace.length).toBeGreaterThan(0);
+    expect(signedInWorkspace[0]).toHaveAttribute("href", "/platform");
 
     sessionStub.user = null;
     sessionStub.session = null;
     rerender(<PublicHome />);
-    expect(screen.queryByRole("link", { name: pubHe.enterWorkspace })).not.toBeInTheDocument();
+    const guestWorkspace = screen.getAllByRole("link", { name: pubHe.enterWorkspace });
+    expect(guestWorkspace.length).toBeGreaterThan(0);
+    expect(guestWorkspace[0]).toHaveAttribute("href", "/login");
     expect(screen.queryByRole("button", { name: pubHe.signOut })).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: pubHe.login }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: pubHe.joinPilot }).length).toBeGreaterThan(0);

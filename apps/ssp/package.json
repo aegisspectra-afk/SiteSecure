@@ -1,0 +1,35 @@
+{
+  "name": "@aegis/ssp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "node ../../node_modules/vite-node/vite-node.mjs --script scripts/smoke-ssp-foundation.mts"
+  },
+  "dependencies": {
+    "@site-secure/api-client": "*",
+    "@site-secure/authz": "*",
+    "@site-secure/design-system": "*",
+    "@site-secure/ui": "*",
+    "@supabase/supabase-js": "^2.47.10",
+    "@tanstack/react-query": "^5.62.8",
+    "@tanstack/react-router": "^1.92.6",
+    "jsqr": "^1.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uqr": "^0.1.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6"
+  }
+}

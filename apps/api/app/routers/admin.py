@@ -1716,3 +1716,128 @@ def restore_archive_profile(
         "recovery_link": recovery_link,
         "message": "המשתמש שוחזר וצורף לסביבה. שלחו לו קישור איפוס סיסמה כדי שיוכל להתחבר.",
     }
+
+
+# --- Workspace product entitlements (Platform Admin only) ---
+
+
+class AdminProductOverrideIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    feature_key: str = Field(min_length=1, max_length=80)
+    enabled: bool
+
+
+def _workspace_plan_key(service: ServiceClient, workspace_id: str) -> tuple[dict[str, Any], str]:
+    row = one_or_404(
+        service.get(
+            "workspaces",
+            params={
+                "id": f"eq.{workspace_id}",
+                "select": "id,name,status,subscriptions(plan_key,status)",
+            },
+        )
+    )
+    sub = _nested(row.get("subscriptions"))
+    plan_key = str((sub or {}).get("plan_key") or "solo")
+    return row, plan_key
+
+
+def _effective_features_from_overrides(
+    plan_eligible: frozenset[str],
+    overrides: dict[str, bool],
+) -> frozenset[str]:
+    from ..product_entitlements import effective_enabled
+
+    keys = set(plan_eligible) | set(overrides)
+    return frozenset(
+        k
+        for k in keys
+        if effective_enabled(
+            feature_key=k,
+            plan_eligible=plan_eligible,
+            override=overrides[k] if k in overrides else None,
+        )
+    )
+
+
+def _admin_products_payload(service: ServiceClient, workspace_id: str, plan_key: str) -> dict[str, Any]:
+    from ..product_entitlements import product_rows
+    from .workspace_products import fetch_plan_feature_keys, _load_overrides
+
+    plan_eligible = fetch_plan_feature_keys(service, plan_key)
+    overrides = _load_overrides(service, workspace_id)
+    effective = _effective_features_from_overrides(plan_eligible, overrides)
+    rows = product_rows(
+        plan_key=plan_key,
+        plan_eligible=plan_eligible,
+        effective_features=effective,
+        overrides=overrides,
+    )
+    return {
+        "workspace_id": workspace_id,
+        "plan_key": plan_key,
+        "products": rows,
+    }
+
+
+@router.get("/workspaces/{workspace_id}/products")
+def admin_list_workspace_products(
+    workspace_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    ws = str(workspace_id)
+    _row, plan_key = _workspace_plan_key(service, ws)
+    return _admin_products_payload(service, ws, plan_key)
+
+
+@router.put("/workspaces/{workspace_id}/products/overrides")
+def admin_put_workspace_product_override(
+    workspace_id: UUID,
+    body: AdminProductOverrideIn,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Enable/disable a plan-eligible module for a workspace — Platform Admin only."""
+    require_platform_admin(service, user["id"])
+    from ..product_entitlements import validate_override_request
+    from .workspace_products import fetch_plan_feature_keys, _upsert_override_merge
+
+    ws = str(workspace_id)
+    _row, plan_key = _workspace_plan_key(service, ws)
+    feature_key = body.feature_key.strip()
+    plan_eligible = fetch_plan_feature_keys(service, plan_key)
+    err = validate_override_request(
+        feature_key=feature_key,
+        enabled=body.enabled,
+        plan_key=plan_key,
+        plan_eligible=plan_eligible,
+    )
+    if err == "UNKNOWN_FEATURE":
+        raise ApiError(400, "VALIDATION_ERROR", "מפתח מוצר לא מוכר", details={"feature_key": feature_key})
+    if err == "FEATURE_NOT_TOGGLEABLE":
+        raise ApiError(400, "BUSINESS_RULE", "לא ניתן לשנות מוצר ליבה זה", details={"feature_key": feature_key})
+    if err == "FEATURE_NOT_IN_PLAN":
+        raise ApiError(
+            403,
+            "FEATURE_NOT_INCLUDED",
+            MESSAGES["FEATURE_NOT_INCLUDED"],
+            details={"feature": feature_key, "plan_key": plan_key},
+        )
+
+    _upsert_override_merge(service, ws, feature_key, body.enabled)
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="workspace_product_override",
+        target_workspace_id=ws,
+        metadata={
+            "feature_key": feature_key,
+            "enabled": body.enabled,
+            "plan_key": plan_key,
+            "result": "success",
+        },
+        strict=True,
+    )
+    return _admin_products_payload(service, ws, plan_key)

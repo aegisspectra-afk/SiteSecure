@@ -16,6 +16,7 @@ from ..authz.limits import evaluate_seat_limit
 from ..authz.usage import fetch_occupancy, occupant_for_email
 from ..deps import ServiceClient, UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import MESSAGES, ApiError
+from ..identity import is_workforce_only_principal
 
 router = APIRouter(prefix="/api/v1", tags=["workspaces"])
 
@@ -161,15 +162,35 @@ def _raise_decision(decision) -> None:
 def create_workspace(
     body: WorkspaceCreate,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     _: Annotated[dict, Depends(current_user)],
 ) -> WorkspaceOut:
+    if is_workforce_only_principal(_):
+        raise ApiError(
+            403,
+            "WORKFORCE_USER_CANNOT_CREATE_WORKSPACE",
+            MESSAGES["WORKFORCE_USER_CANNOT_CREATE_WORKSPACE"],
+        )
     plan_key = default_plan_key()
+    # Fail closed before RPC: Solo optional products must be disable-ready when plan-eligible.
+    # After 20261019180000 the RPC seeds overrides atomically; API dual-write remains for compatibility.
+    from .workspace_products import assert_solo_default_off_ready, seed_solo_default_product_overrides
+
+    assert_solo_default_off_ready(svc, plan_key)
+
     res = client.rpc(
         "create_workspace",
         {"p_name": body.name.strip(), "p_plan_key": plan_key},
     )
     if res.status_code != 200:
-        detail = res.text
+        detail = res.text or ""
+        if "PRODUCT_DEFAULTS_UNAVAILABLE" in detail:
+            # Stable client message only — do not forward SQL DETAIL / PostgREST body.
+            raise ApiError(
+                503,
+                "PRODUCT_DEFAULTS_UNAVAILABLE",
+                MESSAGES["PRODUCT_DEFAULTS_UNAVAILABLE"],
+            )
         if "INVALID_NAME" in detail:
             raise ApiError(400, "INVALID_NAME", MESSAGES["INVALID_NAME"])
         raise ApiError(400, "BUSINESS_RULE", "לא ניתן ליצור סביבת עבודה")
@@ -186,6 +207,23 @@ def create_workspace(
         )
         if patched.status_code in {200, 204} and patched.json():
             row = patched.json()[0]
+    # Dual-write: merge-upsert enabled=false for required Solo keys (idempotent with RPC seed).
+    # Existing workspaces are not bulk-changed; only new creates are seeded.
+    try:
+        seed_solo_default_product_overrides(svc, str(workspace_id), plan_key)
+    except ApiError as exc:
+        # Pre-RPC-migration path: workspace may already be committed. Keep explicit failure.
+        raise ApiError(
+            503,
+            "WORKSPACE_PRODUCT_DEFAULTS_FAILED",
+            MESSAGES["WORKSPACE_PRODUCT_DEFAULTS_FAILED"],
+            details={
+                "workspace_id": str(workspace_id),
+                "plan_key": plan_key,
+                "cause": exc.code,
+                "cause_details": exc.details,
+            },
+        ) from exc
     write_audit(
         client,
         str(workspace_id),

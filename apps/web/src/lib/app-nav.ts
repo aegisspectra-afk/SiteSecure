@@ -15,6 +15,30 @@ export type AppNavTo =
   | "/app/projects"
   | "/app/sites"
   | "/app/service"
+  | "/app/fleet"
+  | "/app/ssp"
+  | "/app/ssp/alerts"
+  | "/app/ssp/sites"
+  | "/app/ssp/users"
+  | "/app/ssp/messages"
+  | "/app/ssp/mobility"
+  | "/app/ssp/templates"
+  | "/app/ssp/task-templates"
+  | "/app/ssp/enrollments"
+  | "/app/ssp/forms"
+  | "/app/ssp/submissions"
+  | "/app/ssp/activity"
+  | "/app/ssp/officers"
+  | "/app/ssp/checkpoints"
+  | "/app/ssp/events"
+  | "/app/ssp/patrols"
+  | "/app/ssp/organization"
+  | "/app/ssp/devices"
+  | "/app/workforce"
+  | "/app/workforce/employees"
+  | "/app/workforce/sites"
+  | "/app/workforce/positions"
+  | "/app/workforce/schedules"
   | "/app/warranties"
   | "/app/knowledge"
   | "/app/settings"
@@ -34,6 +58,8 @@ export type NavIconKey =
   | "projects"
   | "sites"
   | "service"
+  | "fleet"
+  | "ssp"
   | "warranties"
   | "knowledge"
   | "team"
@@ -88,6 +114,9 @@ export const TARGET_IA = [
       { id: "projects", status: "live" as const, routeHint: "/app/projects" },
       { id: "site-files", status: "live" as const, routeHint: "/app/sites" },
       { id: "service", status: "live" as const, routeHint: "/app/service" },
+      { id: "fleet", status: "live" as const, routeHint: "/app/fleet" },
+      { id: "ssp", status: "live" as const, routeHint: "/app/ssp" },
+      { id: "workforce", status: "live" as const, routeHint: "/app/workforce" },
       { id: "warranties", status: "live" as const, routeHint: "/app/warranties" },
       { id: "knowledge", status: "live" as const, routeHint: "/app/knowledge" },
     ],
@@ -125,6 +154,12 @@ export function planLabel(planKey: string | undefined): string {
 export function isNavSelected(to: AppNavTo, pathname: string): boolean {
   if (to === "/app/settings") {
     return pathname === "/app/settings" || pathname.startsWith("/app/settings/");
+  }
+  if (to === "/app/ssp") {
+    return pathname === "/app/ssp" || pathname === "/app/ssp/";
+  }
+  if (to === "/app/workforce") {
+    return pathname === "/app/workforce" || pathname === "/app/workforce/";
   }
   return pathname === to || pathname.startsWith(`${to}/`);
 }
@@ -207,6 +242,12 @@ export function appNav(
           label: he.navService,
           icon: "service",
           visible: allow("service.view") && hasFeature(features, "service"),
+        },
+        {
+          to: "/app/fleet",
+          label: he.navFleetMaster,
+          icon: "fleet",
+          visible: allow("fleet.view") && hasFeature(features, "fleet"),
         },
         {
           to: "/app/warranties",
@@ -298,6 +339,12 @@ export function mobileWorkNav(
       visible: allow("service.view") && hasFeature(features, "service"),
     },
     {
+      to: "/app/fleet",
+      label: he.navFleetMaster,
+      icon: "fleet",
+      visible: allow("fleet.view") && hasFeature(features, "fleet"),
+    },
+    {
       to: "/app/sites",
       label: he.navSiteFiles,
       icon: "sites",
@@ -362,6 +409,15 @@ export function mobileCommandSections(
   ];
 
   const opsExtra: AppNavItem[] = [
+    {
+      to: "/app/fleet",
+      label: he.navFleetMaster,
+      icon: "fleet",
+      visible:
+        allow("fleet.view") &&
+        hasFeature(features, "fleet") &&
+        !work.some((item) => item.to === "/app/fleet"),
+    },
     {
       to: "/app/warranties",
       label: he.navWarranties,

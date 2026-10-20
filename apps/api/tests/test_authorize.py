@@ -32,6 +32,11 @@ def test_owner_full():
     assert d.allowed is True
 
 
+def test_owner_workforce_permission_expands_from_star():
+    d = authorize(ctx=_ctx("owner"), action="workforce.employees.create_user")
+    assert d.allowed is True
+
+
 def test_administrator_no_billing():
     d = authorize(ctx=_ctx("administrator"), action="workspace.billing")
     assert d.allowed is False

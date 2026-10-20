@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
 import {
   Bell,
+  Boxes,
   Building2,
   ChevronLeft,
   FileStack,
@@ -30,6 +31,7 @@ export type SettingsNavId =
   | "profile"
   | "security"
   | "general"
+  | "products"
   | "company"
   | "numbering"
   | "quotes"
@@ -122,6 +124,14 @@ export function useSettingsNavItems(): NavItem[] {
       label: he.settingsNavGeneral,
       group: "workspace",
       icon: Settings2,
+      visible: allow("workspace.edit"),
+    },
+    {
+      id: "products",
+      to: "/app/settings/products",
+      label: he.settingsNavProducts,
+      group: "workspace",
+      icon: Boxes,
       visible: allow("workspace.edit"),
     },
     {

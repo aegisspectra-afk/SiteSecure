@@ -37,7 +37,11 @@ packages = ["app"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["live: uses the connected V2 Supabase project with user JWTs"]
+markers = [
+  "live: uses the connected V2 Supabase project with user JWTs",
+  "c5_write: SSP C5 live write / RLS / race / E2E against local Supabase only",
+  "c5_local: SSP C5 isolated local-Supabase target (loopback:54321)",
+]
 
 [tool.ruff]
 line-length = 100

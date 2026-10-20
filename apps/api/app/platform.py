@@ -34,8 +34,13 @@ def write_platform_admin_event(
     target_user_id: str | None = None,
     target_workspace_id: str | None = None,
     metadata: dict[str, Any] | None = None,
+    strict: bool = False,
 ) -> None:
-    """Best-effort Platform Admin audit insert. Never fails the caller action."""
+    """Platform Admin audit insert.
+
+    Default is best-effort (legacy callers). When ``strict=True``, failures raise ApiError
+    so the caller does not report success without an audit row.
+    """
     payload: dict[str, Any] = {
         "actor_user_id": actor_user_id,
         "action": action,
@@ -46,6 +51,12 @@ def write_platform_admin_event(
     if target_workspace_id:
         payload["target_workspace_id"] = target_workspace_id
     try:
-        service.post("platform_admin_events", payload)
+        res = service.post("platform_admin_events", payload)
+        if strict and getattr(res, "status_code", 200) not in {200, 201, 204}:
+            raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
+    except ApiError:
+        raise
     except Exception:
+        if strict:
+            raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"]) from None
         return

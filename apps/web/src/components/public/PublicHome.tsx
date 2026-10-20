@@ -1,25 +1,25 @@
 import type { ReactNode } from "react";
 import { useDocumentMeta } from "../../lib/document-meta";
-import { afterAuthPath } from "../../lib/auth-routes";
+import { afterAuthPath, guestEntryPath } from "../../lib/auth-routes";
 import { useSession } from "../../lib/session";
 import { CtaLink, PublicFooter, PublicHeader } from "./PublicChrome";
 import { PublicLocaleProvider, usePublicCopy, usePublicLocale } from "./PublicLocaleProvider";
 import {
+  ComplementStrip,
   FrictionStrip,
+  HeroStage,
   OpsFlowStrip,
+  ProductGrid,
   ProductShot,
   ProofList,
   SecurityArch,
+  SolutionGroups,
 } from "./PublicSurfaces";
 
 /** Served from /public/landing-v2 — optimized copies of Docs/landing-v2-snapshots. */
 const shots = {
-  quoteBuilder: "/landing-v2/01-quote-builder-desktop.jpg",
   quotePricing: "/landing-v2/02-quote-review-desktop.jpg",
   siteFile: "/landing-v2/03-site-file-desktop.jpg",
-  assets: "/landing-v2/03b-site-equipment-desktop.jpg",
-  today: "/landing-v2/05-today-mobile.jpg",
-  fieldJob: "/landing-v2/06-fieldjob-mobile.jpg",
 } as const;
 
 function HeroEntry({ size = "default" }: { size?: "default" | "strong" }) {
@@ -28,8 +28,8 @@ function HeroEntry({ size = "default" }: { size?: "default" | "strong" }) {
   const className = size === "strong" ? "public-cta-strong" : undefined;
   if (!user) {
     return (
-      <CtaLink to="/register" className={className}>
-        {t.joinPilot}
+      <CtaLink to={guestEntryPath()} className={className}>
+        {t.enterWorkspace}
       </CtaLink>
     );
   }
@@ -86,7 +86,7 @@ function Scene({
   );
 }
 
-function SecondaryExplore({ href = "/#quotes", className }: { href?: string; className?: string }) {
+function SecondaryExplore({ href = "/#products", className }: { href?: string; className?: string }) {
   const t = usePublicCopy();
   return (
     <a href={href} className={className ?? "public-cta-secondary"}>
@@ -112,32 +112,36 @@ function PublicHomeBody() {
       </a>
       <PublicHeader />
       <main id="main" tabIndex={-1} className="outline-none">
-        <section className="public-hero relative flex min-h-[calc(100dvh-3.5rem)] flex-col justify-center px-4 py-12 sm:py-14 lg:py-16">
+        <section
+          id="platform"
+          className="public-hero public-hero-band relative flex min-h-[calc(100dvh-3.5rem)] scroll-mt-24 flex-col justify-center px-4 py-12 sm:py-14 lg:py-16"
+        >
           <div className="public-container mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(22rem,1.1fr)] lg:gap-12 xl:gap-14">
-            <div className="flex max-w-xl flex-col gap-5 lg:gap-6">
+            <div className="flex min-w-0 max-w-xl flex-col gap-5 lg:gap-6">
               <p className="public-mono text-[11px] tracking-[0.2em] text-fg-muted">{t.heroEyebrow}</p>
               <h1 className="public-hero-title">
-                <span className="public-hero-line text-fg">{t.heroLine1}</span>
+                <span className="public-hero-line">{t.heroLine1}</span>
                 <span className="public-hero-line is-muted">{t.heroLine2}</span>
               </h1>
-              <div className="flex max-w-lg flex-col gap-2.5">
-                <p className="text-lg leading-7 text-fg sm:text-[1.2rem] sm:leading-8">{t.heroSupport}</p>
-                <p className="text-[15px] leading-7 text-fg-muted">{t.heroLead}</p>
-              </div>
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+              <p className="max-w-lg text-[15px] leading-7 text-fg-muted sm:text-base sm:leading-8">{t.heroSupport}</p>
+              <div className="flex flex-col gap-3 pt-1 md:flex-row md:flex-wrap md:items-center">
                 <HeroEntry />
-                <SecondaryExplore />
+                <SecondaryExplore className="public-cta-secondary public-cta-on-hero" />
               </div>
             </div>
-            <ProductShot
-              src={shots.quoteBuilder}
-              alt={t.heroShotAlt}
-              label={t.heroShotLabel}
-              variant="hero"
-              priority
-            />
+            <HeroStage />
           </div>
         </section>
+
+        <div className="public-rule" aria-hidden />
+
+        <Scene id="products" index={t.productsIndex} className="public-scene-product">
+          <Manifest lines={[t.productsTitle]} mutedFrom={99} />
+          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-fg-muted sm:text-base">{t.productsSub}</p>
+          <div className="mt-8 lg:mt-10">
+            <ProductGrid />
+          </div>
+        </Scene>
 
         <div className="public-rule" aria-hidden />
 
@@ -172,6 +176,9 @@ function PublicHomeBody() {
           <div className="mt-8 lg:mt-10">
             <OpsFlowStrip />
           </div>
+          <div className="mt-10 lg:mt-12">
+            <ComplementStrip />
+          </div>
         </Scene>
 
         <div className="public-rule" aria-hidden />
@@ -193,48 +200,11 @@ function PublicHomeBody() {
 
         <div className="public-rule" aria-hidden />
 
-        <Scene id="assets" index={t.assetsIndex} density="tight" className="public-scene-control">
-          <div className="public-split lg:grid-cols-[minmax(0,1.1fr)_minmax(16rem,22rem)] lg:items-start lg:gap-12">
-            <div className="public-split-object order-2 mt-8 lg:order-1 lg:mt-0">
-              <ProductShot src={shots.assets} alt={t.assetsShotAlt} label={t.assetsShotLabel} variant="desktop" />
-            </div>
-            <div className="public-split-copy order-1 lg:order-2">
-              <Manifest lines={[t.assetsA, t.assetsB]} />
-              <p className="mt-4 max-w-sm text-[15px] leading-7 text-fg-muted sm:text-base sm:leading-8">
-                {t.assetsSub}
-              </p>
-              <ProofList items={t.assetsProof} />
-            </div>
-          </div>
-        </Scene>
-
-        <div className="public-rule" aria-hidden />
-
-        <Scene id="field" index={t.fieldIndex} className="public-scene-field">
-          <div className="public-split lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center lg:gap-14">
-            <div className="public-split-copy">
-              <Manifest lines={[t.fieldA, t.fieldB]} />
-              <p className="mt-4 max-w-md text-[15px] leading-7 text-fg-muted sm:text-base sm:leading-8">{t.fieldSub}</p>
-              <ProofList items={t.fieldProof} />
-              <p className="public-mono mt-6 text-[11px] tracking-[0.18em] text-fg-muted">{t.fieldOfficeLabel}</p>
-            </div>
-            <div className="public-split-object mt-8 lg:mt-0">
-              <div className="public-field-pair">
-                <ProductShot
-                  src={shots.today}
-                  alt={t.fieldTodayAlt}
-                  label={t.fieldShotLabel}
-                  variant="mobile"
-                />
-                <ProductShot
-                  src={shots.fieldJob}
-                  alt={t.fieldJobAlt}
-                  label={t.fieldJobLabel}
-                  variant="mobile"
-                  className="public-field-secondary"
-                />
-              </div>
-            </div>
+        <Scene id="solutions" index={t.solutionsIndex} className="public-scene-control">
+          <Manifest lines={[t.solutionsTitle]} mutedFrom={99} />
+          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-fg-muted sm:text-base">{t.solutionsSub}</p>
+          <div className="mt-8 lg:mt-10">
+            <SolutionGroups />
           </div>
         </Scene>
 
@@ -256,6 +226,25 @@ function PublicHomeBody() {
           </div>
           <div className="mt-8 lg:mt-10">
             <SecurityArch />
+          </div>
+        </Scene>
+
+        <div className="public-rule" aria-hidden />
+
+        <Scene id="contact" index={t.contactIndex} density="tight" className="public-scene-surface">
+          <div className="max-w-xl">
+            <Manifest lines={[t.contactTitle]} mutedFrom={99} />
+            <p className="mt-4 text-[15px] leading-7 text-fg-muted sm:text-base">{t.contactBody}</p>
+            <p className="mt-5 text-sm text-fg-muted">
+              <span>{t.contactEmailLabel}: </span>
+              <a
+                href={`mailto:${t.contactEmail}`}
+                className="ltr-meta text-action hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                dir="ltr"
+              >
+                {t.contactEmail}
+              </a>
+            </p>
           </div>
         </Scene>
 

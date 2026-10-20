@@ -8,6 +8,10 @@
 -- roles without quotes.view_cost.
 
 -- 1) quote_items — lock cost SELECT
+-- Column is created in 20260927220000; GRANT below needs it on a fresh apply.
+ALTER TABLE public.quote_items
+  ADD COLUMN IF NOT EXISTS is_optional boolean NOT NULL DEFAULT false;
+
 REVOKE SELECT ON TABLE public.quote_items FROM PUBLIC;
 REVOKE SELECT ON TABLE public.quote_items FROM anon;
 REVOKE SELECT ON TABLE public.quote_items FROM authenticated;

@@ -51,11 +51,12 @@ describe("OnboardingForm", () => {
     expect(screen.queryByText(/הצעת מחיר/)).not.toBeInTheDocument();
   });
 
-  it("ready step waits for an explicit enter", () => {
+  it("ready step enters Site Secure only when owner is confirmed", () => {
     render(
       <OnboardingForm
         profileDone
         created
+        ownerConfirmed
         workspaceName="אגיס מערכות בע״מ"
         onSaveProfile={vi.fn()}
         onCreateWorkspace={vi.fn()}
@@ -63,8 +64,24 @@ describe("OnboardingForm", () => {
       />,
     );
     expect(screen.getByText("אגיס מערכות בע״מ")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.enterWorkspace })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.enterWorkspace })).toBeEnabled();
+    expect(screen.queryByText(he.platformPathContinueSetup)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.onboardingPrimary })).not.toBeInTheDocument();
+  });
+
+  it("blocks enter when owner role was not confirmed", () => {
+    render(
+      <OnboardingForm
+        profileDone
+        created
+        ownerConfirmed={false}
+        workspaceName="אגיס מערכות בע״מ"
+        onSaveProfile={vi.fn()}
+        onCreateWorkspace={vi.fn()}
+        onEnter={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: he.enterWorkspace })).toBeDisabled();
   });
 
   it("shows beta welcome copy only for beta workspaces", () => {
@@ -72,6 +89,7 @@ describe("OnboardingForm", () => {
       <OnboardingForm
         profileDone
         created
+        ownerConfirmed
         isBeta
         workspaceName="אגיס מערכות בע״מ"
         onSaveProfile={vi.fn()}
@@ -119,6 +137,8 @@ describe("appNav", () => {
         "/app/projects",
         "/app/sites",
         "/app/service",
+        "/app/fleet",
+        "/app/ssp",
         "/app/warranties",
         "/app/knowledge",
         "/app/settings",
@@ -141,7 +161,10 @@ describe("appNav", () => {
     expect(technician).toContain("/app/service");
     expect(technician).not.toContain("/app/leads");
     expect(technician).not.toContain("/app/settings/users");
-    expect(technician).not.toContain("/app/settings");
+    // Catalog grants technician `settings.view` (profile hub entry). Pre-existing; not an SSP change.
+    // Do not remove settings.view from technician just to hide nav — that would be a permission-model change.
+    expect(technician).toContain("/app/settings");
+
 
     const sales = paths("sales", solo);
     expect(sales).toContain("/app/dashboard");
@@ -170,6 +193,10 @@ describe("appNav", () => {
     expect(soloOwner).toContain("/app/dashboard");
     expect(soloOwner).toContain("/app/customers");
     expect(soloOwner).toContain("/app/sites");
+    expect(paths("owner", [...solo, "ssp"])).not.toContain("/app/ssp");
+    expect(
+      mobileMoreNav("owner", [...solo, "ssp"]).flatMap((group) => group.items.map((item) => item.to)),
+    ).not.toContain("/app/ssp");
     expect(soloOwner).toContain("/app/quotes");
     expect(appNav("owner", solo)[0]?.items[0]?.label).toBe(he.navDashboard);
     expect(appNav("owner", solo).find((group) => group.id === "system")?.items.map((item) => item.to)).toEqual([

@@ -46,7 +46,7 @@ function RegisterPage() {
     setLaunching(true);
     void (async () => {
       const dest = afterAuthPath(session!.has_workspace, next);
-      if (session!.has_workspace && dest === "/app") {
+      if (session!.has_workspace && dest === "/platform") {
         await authLaunchSequence({
           onWorkspace: () => setLaunchReady(false),
           onReady: () => setLaunchReady(true),
@@ -133,7 +133,7 @@ function RegisterPage() {
           try {
             const hydrated = await refresh();
             const dest = afterAuthPath(Boolean(hydrated?.has_workspace), next);
-            if (hydrated?.has_workspace && dest === "/app") {
+            if (hydrated?.has_workspace && dest === "/platform") {
               await authLaunchSequence({
                 onWorkspace: () => setLaunchReady(false),
                 onReady: () => setLaunchReady(true),

@@ -22,10 +22,10 @@ export function withNextParam(path: "/login" | "/register", next: string | null 
   return `${path}?next=${encodeURIComponent(safe)}`;
 }
 
-export function afterAuthPath(hasWorkspace: boolean): "/app" | "/onboarding";
+export function afterAuthPath(hasWorkspace: boolean): "/platform" | "/onboarding";
 export function afterAuthPath(hasWorkspace: boolean, next: string | null | undefined): string;
 export function afterAuthPath(hasWorkspace: boolean, next?: string | null): string {
   const safe = sanitizeNextPath(next);
   if (safe) return safe;
-  return hasWorkspace ? "/app" : "/onboarding";
+  return hasWorkspace ? "/platform" : "/onboarding";
 }

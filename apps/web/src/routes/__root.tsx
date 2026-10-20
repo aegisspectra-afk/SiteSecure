@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { EntitlementRevokeBridge } from "../components/EntitlementRevokeBridge";
 import { VercelAnalytics } from "../components/VercelAnalytics";
 import { ThemeRuntime } from "../lib/use-theme";
 
@@ -10,6 +11,7 @@ function Root() {
   return (
     <>
       <ThemeRuntime />
+      <EntitlementRevokeBridge />
       <Outlet />
       <VercelAnalytics />
     </>

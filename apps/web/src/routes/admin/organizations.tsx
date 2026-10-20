@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AdminSummaryStrip, AdminTabPanel, AdminTabs } from "../../components/admin/AdminTabs";
+import { AdminWorkspaceProductsPanel } from "../../components/admin/AdminWorkspaceProductsPanel";
 import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 
@@ -47,6 +48,7 @@ function AdminOrganizations() {
   const [name, setName] = useState("");
   const [planKey, setPlanKey] = useState("business");
   const [note, setNote] = useState("");
+  const [modulesWorkspace, setModulesWorkspace] = useState<{ id: string; name: string } | null>(null);
   const tab = search.tab;
   const q = search.q ?? "";
 
@@ -234,18 +236,34 @@ function AdminOrganizations() {
                   <td className="ltr-meta py-3 text-fg-muted">{formatCreated(org.created_at)}</td>
                   <td className="py-3 text-fg-muted">{org.is_beta ? he.adminBetaOn : he.adminNotInBeta}</td>
                   <td className="py-3 text-end">
-                    <Button
-                      variant="secondary"
-                      onClick={() => patch.mutate({ id: org.id, is_beta: !org.is_beta })}
-                    >
-                      {org.is_beta ? he.adminLeaveBeta : he.adminEnrollBeta}
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setModulesWorkspace({ id: org.id, name: org.name })}
+                      >
+                        {he.adminWorkspaceProductsCta}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => patch.mutate({ id: org.id, is_beta: !org.is_beta })}
+                      >
+                        {org.is_beta ? he.adminLeaveBeta : he.adminEnrollBeta}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {modulesWorkspace ? (
+          <AdminWorkspaceProductsPanel
+            workspaceId={modulesWorkspace.id}
+            workspaceName={modulesWorkspace.name}
+            onClose={() => setModulesWorkspace(null)}
+          />
+        ) : null}
 
         <ul className="admin-lifecycle-mobile-list">
           {rows.map((org) => (
@@ -254,7 +272,13 @@ function AdminOrganizations() {
               <p className="mt-1 text-xs text-fg-muted">
                 {org.plan_key ?? "—"} · {org.is_beta ? he.adminBetaOn : he.adminNotInBeta}
               </p>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setModulesWorkspace({ id: org.id, name: org.name })}
+                >
+                  {he.adminWorkspaceProductsCta}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => patch.mutate({ id: org.id, is_beta: !org.is_beta })}

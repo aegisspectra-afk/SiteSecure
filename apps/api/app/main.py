@@ -22,23 +22,55 @@ from .routers import (
     dashboard,
     documents,
     feedback,
+    fleet,
+    fleet_ops,
+    fleet_reports,
     health,
     jobs,
     ops_modules,
+    platform_home,
     public_quotes,
+    public_ssp,
+    public_ssp_site,
     quote_cpq,
     quotes,
+    ssp_forms,
+    ssp_ops,
+    ssp_org,
+    ssp_site_activation,
+    ssp_sites,
     system_designs,
     search,
     sites,
     systems,
     team,
     telemetry,
+    workforce,
+    workspace_products,
     workspace_settings,
     workspaces,
 )
 
 logger = logging.getLogger("site-secure")
+
+_SECRET_ERROR_KEYS = frozenset({"password", "password_confirm", "new_password", "old_password", "secret", "token"})
+
+
+def _redact_validation_errors(errors: list) -> list:
+    cleaned: list = []
+    for item in errors:
+        copy = dict(item)
+        loc = copy.get("loc") or ()
+        if any(str(part).lower() in _SECRET_ERROR_KEYS for part in loc):
+            copy["input"] = "[redacted]"
+            ctx = copy.get("ctx")
+            if isinstance(ctx, dict):
+                copy["ctx"] = {
+                    key: "[redacted]" if str(key).lower() in _SECRET_ERROR_KEYS or "password" in str(key).lower() else value
+                    for key, value in ctx.items()
+                }
+        cleaned.append(copy)
+    return cleaned
 
 
 def create_app() -> FastAPI:
@@ -105,7 +137,7 @@ def create_app() -> FastAPI:
                 "error": {
                     "code": "VALIDATION_ERROR",
                     "message": "נתונים לא תקינים",
-                    "details": {"errors": exc.errors()},
+                    "details": {"errors": _redact_validation_errors(exc.errors())},
                 }
             },
             headers={"X-Request-Id": request_id},
@@ -113,8 +145,10 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(platform_home.router)
     app.include_router(workspaces.router)
     app.include_router(workspace_settings.router)
+    app.include_router(workspace_products.router)
     app.include_router(feedback.router)
     app.include_router(telemetry.router)
     app.include_router(admin.router)
@@ -134,6 +168,17 @@ def create_app() -> FastAPI:
     app.include_router(public_quotes.router)
     app.include_router(documents.router)
     app.include_router(dashboard.router)
+    app.include_router(fleet.router)
+    app.include_router(fleet_ops.router)
+    app.include_router(fleet_reports.router)
+    app.include_router(ssp_forms.router)
+    app.include_router(ssp_ops.router)
+    app.include_router(ssp_org.router)
+    app.include_router(ssp_sites.router)
+    app.include_router(ssp_site_activation.router)
+    app.include_router(public_ssp.router)
+    app.include_router(public_ssp_site.router)
+    app.include_router(workforce.router)
     return app
 
 

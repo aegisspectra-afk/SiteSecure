@@ -31,10 +31,11 @@ export function PublicHeader() {
   const [scrolled, setScrolled] = useState(false);
 
   const nav = [
-    { href: "#quotes", label: t.navQuotes },
-    { href: "#site-file", label: t.navSiteFile },
-    { href: "#field", label: t.navField },
+    { href: "#platform", label: t.navPlatform },
+    { href: "#products", label: t.navProducts },
+    { href: "#solutions", label: t.navSolutions },
     { href: "#security", label: t.navSecurity },
+    { href: "#contact", label: t.navContact },
   ] as const;
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export function PublicHeader() {
     : null;
 
   const links = (
-    <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-5" dir={dir}>
+    <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-3 xl:gap-5" dir={dir}>
       {nav.map((item) => (
         <a
           key={item.href}
@@ -114,8 +115,15 @@ export function PublicHeader() {
             {t.login}
           </Link>
           <Link
-            to="/register"
+            to="/login"
             className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] bg-action px-3.5 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
+            onClick={() => setOpen(false)}
+          >
+            {t.enterWorkspace}
+          </Link>
+          <Link
+            to="/register"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] px-2.5 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg lg:hidden"
             onClick={() => setOpen(false)}
           >
             {t.joinPilot}
@@ -134,12 +142,12 @@ export function PublicHeader() {
       /* Chrome layout stays RTL so brand + controls do not jump when locale flips. */
       dir="rtl"
     >
-      <div className="public-nav-inner mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 lg:gap-4">
+      <div className="public-nav-inner mx-auto flex min-w-0 max-w-6xl items-center gap-3 px-4 py-3 lg:gap-4">
         <Link
           to="/"
-          className="shrink-0 text-sm font-semibold tracking-[0.22em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="public-nav-brand shrink-0 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
-          {t.brand}
+          {t.platformBrand}
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center lg:flex" aria-label={t.navAria}>
@@ -159,7 +167,7 @@ export function PublicHeader() {
           </Button>
         </div>
       </div>
-      <Drawer open={open} onClose={() => setOpen(false)} title={t.brand}>
+      <Drawer open={open} onClose={() => setOpen(false)} title={t.platformBrand}>
         <div className="flex flex-col gap-6 p-4" dir={dir}>
           <div className="flex flex-col gap-2">
             <p className="text-xs text-fg-muted">{t.themeLabel}</p>
@@ -179,6 +187,10 @@ export function PublicHeader() {
 
 export function PublicFooter() {
   const { t, dir } = usePublicLocale();
+  const productLinks = t.productCards.map((card) => ({
+    href: card.id === "site_secure" ? "/#quotes" : `/#product-${card.id}`,
+    label: card.name,
+  }));
   return (
     <footer className="border-t border-border px-4 py-16" dir={dir}>
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]">
@@ -187,7 +199,7 @@ export function PublicFooter() {
             to="/"
             className="text-sm font-semibold tracking-[0.22em] text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
-            {t.brand}
+            {t.platformBrand}
           </Link>
           <p className="mt-5 whitespace-pre-line text-sm leading-7 tracking-[0.06em] text-fg-muted">{t.footerTag}</p>
         </div>
@@ -195,11 +207,14 @@ export function PublicFooter() {
         <div>
           <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{t.footerPlatform}</p>
           <nav className="mt-4 flex flex-col gap-3 text-sm" aria-label={t.footerPlatform}>
-            <a href="/#quotes" className="text-fg-muted transition-colors hover:text-fg">
+            <a href="/#platform" className="text-fg-muted transition-colors hover:text-fg">
               {t.navPlatform}
             </a>
-            <a href="/#site-file" className="text-fg-muted transition-colors hover:text-fg">
-              {t.navSiteFile}
+            <a href="/#products" className="text-fg-muted transition-colors hover:text-fg">
+              {t.navProducts}
+            </a>
+            <a href="/#solutions" className="text-fg-muted transition-colors hover:text-fg">
+              {t.navSolutions}
             </a>
             <a href="/#security" className="text-fg-muted transition-colors hover:text-fg">
               {t.navSecurity}
@@ -208,12 +223,14 @@ export function PublicFooter() {
         </div>
 
         <div>
-          <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{t.footerCompany}</p>
-          <nav className="mt-4 flex flex-col gap-3 text-sm" aria-label={t.footerCompany}>
-            <a href="/#pilot" className="text-fg-muted transition-colors hover:text-fg">
-              {t.footerEarlyAccess}
-            </a>
-            <a href="mailto:info@aegisspectra.co.il" className="ltr-meta text-fg-muted transition-colors hover:text-fg">
+          <p className="public-mono text-[11px] tracking-[0.18em] text-fg-muted">{t.footerProducts}</p>
+          <nav className="mt-4 flex flex-col gap-3 text-sm" aria-label={t.footerProducts}>
+            {productLinks.map((item) => (
+              <a key={item.href} href={item.href} className="text-fg-muted transition-colors hover:text-fg">
+                {item.label}
+              </a>
+            ))}
+            <a href="/#contact" className="text-fg-muted transition-colors hover:text-fg">
               {t.footerContact}
             </a>
           </nav>
@@ -224,6 +241,14 @@ export function PublicFooter() {
           <div className="mt-4" dir="rtl">
             <LegalNav className="flex-col items-start gap-y-3 text-fg-muted" />
           </div>
+          <nav className="mt-3 flex flex-col gap-3 text-sm" aria-label={t.footerCompany}>
+            <a href="/#pilot" className="text-fg-muted transition-colors hover:text-fg">
+              {t.footerEarlyAccess}
+            </a>
+            <Link to="/register" className="text-fg-muted transition-colors hover:text-fg">
+              {t.joinPilot}
+            </Link>
+          </nav>
         </div>
       </div>
       <p className="ltr-meta mx-auto mt-14 max-w-6xl text-xs tracking-[0.04em] text-fg-muted">{t.footerCopyright}</p>
@@ -237,7 +262,7 @@ export function CtaLink({
   variant = "primary",
   className,
 }: {
-  to: "/login" | "/register" | "/app" | "/onboarding";
+  to: "/login" | "/register" | "/app" | "/onboarding" | "/platform";
   children: string;
   variant?: "primary" | "secondary";
   className?: string;
@@ -246,7 +271,7 @@ export function CtaLink({
     <Link
       to={to}
       className={cn(
-        "inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] px-5 text-sm font-medium transition-[background-color,border-color] duration-200",
+        "inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] px-5 text-sm font-medium transition-[background-color,border-color] duration-200",
         variant === "primary"
           ? "bg-action text-action-fg hover:bg-action-hover"
           : "border border-border bg-transparent text-fg hover:bg-public-elevated",

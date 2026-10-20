@@ -13,6 +13,7 @@ import {
 } from "react";
 import { isHostedBrowser, isSpaApiUrl, requireProductionApiUrl } from "./public-api-url";
 import { syncAccountAvatarWithUser } from "./account-avatar";
+import { clearWorkspaceScopedCaches } from "./query-client";
 import { supabase } from "./supabase";
 
 function apiClientConfig(): { baseUrl: string; sameOriginProxy: boolean } {
@@ -36,7 +37,10 @@ type SessionState = {
   session: SessionResponse | null;
   error: string | null;
   api: ApiClient;
+  /** True while active-workspace preference is being persisted and session refreshed. */
+  workspaceSwitching: boolean;
   refresh: () => Promise<SessionResponse | null>;
+  switchWorkspace: (workspaceId: string) => Promise<SessionResponse | null>;
   signOut: () => Promise<void>;
 };
 
@@ -47,9 +51,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceSwitching, setWorkspaceSwitching] = useState(false);
   const tokenRef = useRef<string | null>(null);
   const hydrateGen = useRef(0);
   const signingOut = useRef(false);
+  const switchGen = useRef(0);
 
   const api = useMemo(
     () =>
@@ -120,6 +126,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return hydrate(data.session?.user ?? null);
   }, [hydrate]);
 
+  const switchWorkspace = useCallback(
+    async (workspaceId: string): Promise<SessionResponse | null> => {
+      if (signingOut.current) return null;
+      const gen = ++switchGen.current;
+      setWorkspaceSwitching(true);
+      try {
+        await api.setActiveWorkspace(workspaceId);
+        if (gen !== switchGen.current) return null;
+        // Cancel in-flight tenant queries before clear so late responses cannot repopulate.
+        await clearWorkspaceScopedCaches();
+        if (gen !== switchGen.current) return null;
+        const next = await refresh();
+        if (gen !== switchGen.current) return null;
+        if (!next) {
+          await clearWorkspaceScopedCaches();
+          return null;
+        }
+        return next;
+      } finally {
+        if (gen === switchGen.current) setWorkspaceSwitching(false);
+      }
+    },
+    [api, refresh],
+  );
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, authSession) => {
       if (signingOut.current && event !== "SIGNED_OUT") return;
@@ -144,15 +175,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     session,
     error,
     api,
+    workspaceSwitching,
     refresh,
+    switchWorkspace,
     signOut: async () => {
       signingOut.current = true;
+      switchGen.current += 1;
+      setWorkspaceSwitching(false);
       hydrateGen.current += 1;
       tokenRef.current = null;
       setUser(null);
       setSession(null);
       setError(null);
       setLoading(false);
+      await clearWorkspaceScopedCaches();
       try {
         await supabase.auth.signOut({ scope: "local" });
         await supabase.auth.signOut({ scope: "global" });

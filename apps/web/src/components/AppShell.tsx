@@ -22,6 +22,7 @@ import { MobileMoreSheet } from "./MobileMoreSheet";
 import { MobileWorkSheet } from "./MobileWorkSheet";
 import { SidebarAccount, SidebarBrand, SidebarNav } from "./AppSidebar";
 import { UserAccountMenu } from "./UserAccountMenu";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { WorkspaceSystemStatus } from "./WorkspaceSystemStatus";
 import { Search } from "lucide-react";
 
@@ -36,7 +37,7 @@ function readCollapsed(): boolean {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { session, user, error, signOut } = useSession();
+  const { session, user, error, signOut, workspaceSwitching } = useSession();
   const navigate = useNavigate();
   const membership = session?.memberships[0];
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -123,6 +124,62 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("site-secure:open-command-palette", onOpen);
   }, []);
 
+  // SSP and FLEET are separate products — never show the Site Secure CRM sidebar here.
+  const isSspProduct = pathname.startsWith("/app/ssp");
+  const isFleetProduct = pathname.startsWith("/app/fleet");
+  const isWorkforceProduct = pathname.startsWith("/app/workforce");
+  if (isSspProduct || isWorkforceProduct) {
+    return (
+      <div
+        className="min-h-dvh bg-bg"
+        data-testid="product-shell"
+        data-product={isWorkforceProduct ? "workforce" : "ssp"}
+      >
+        {workspaceSwitching ? (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-fg-muted" role="status">
+            {he.workspaceSwitching}
+          </div>
+        ) : (
+          children
+        )}
+        <FeedbackCenter />
+      </div>
+    );
+  }
+  if (isFleetProduct) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-bg" data-testid="product-shell" data-product="fleet">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 lg:px-6">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Aegis Platform · {he.fleetTitle}</p>
+            <p className="truncate text-sm font-semibold text-fg">{workspaceLabel}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="rounded-[var(--radius-control)] border border-border bg-bg-1 px-3 py-2 text-sm text-fg-muted hover:bg-bg-subtle hover:text-fg"
+              onClick={() => void navigate({ to: "/platform" })}
+            >
+              {he.platformHomeTitle}
+            </button>
+            <WorkspaceSwitcher collapsed={false} />
+            <UserAccountMenu {...account} />
+          </div>
+        </header>
+        <main id="main" className="flex-1">
+          {workspaceSwitching ? (
+            <div className="flex min-h-[40vh] items-center justify-center text-sm text-fg-muted" role="status">
+              {he.workspaceSwitching}
+            </div>
+          ) : (
+            children
+          )}
+        </main>
+        <FeedbackCenter />
+      </div>
+    );
+  }
+
   const toggleCollapse = () => {
     setCollapsed((value) => {
       const next = !value;
@@ -152,6 +209,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <aside className="ops-sidebar" aria-label={he.navDesktop} data-collapsed={collapsed ? "true" : "false"}>
         {brand}
+        <div className={collapsed ? "px-1 pb-2" : "px-3 pb-2"}>
+          <WorkspaceSwitcher collapsed={collapsed} />
+        </div>
         <div className="ops-sidebar-scroll">
           <SidebarNav groups={groups} pathname={pathname} collapsed={collapsed} />
         </div>
@@ -185,7 +245,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main id="main" className="ops-main flex-1 p-4 lg:p-6">
-          {children}
+          {workspaceSwitching ? (
+            <div
+              className="flex min-h-[40vh] items-center justify-center text-sm text-fg-muted"
+              role="status"
+              aria-live="polite"
+            >
+              {he.workspaceSwitching}
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />

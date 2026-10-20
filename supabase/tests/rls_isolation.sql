@@ -17,6 +17,19 @@ WHERE nsp.nspname = 'public'
     'profiles_select_coworkers',
     'workspaces_select_member',
     'workspaces_update_privileged',
-    'audit_logs_select'
+    'audit_logs_select',
+    'workforce_employees_select',
+    'workforce_memberships_select',
+    'workforce_sites_select',
+    'workforce_sites_insert'
   )
 ORDER BY pol.polname;
+
+SELECT 'workforce_employees_write_policies' AS check,
+       count(*) AS write_policies
+FROM pg_policy pol
+JOIN pg_class rel ON rel.oid = pol.polrelid
+JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+WHERE nsp.nspname = 'public'
+  AND rel.relname IN ('workforce_employees', 'workforce_memberships')
+  AND pol.polcmd <> 'r';

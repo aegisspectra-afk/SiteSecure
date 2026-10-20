@@ -1,4 +1,4 @@
--- SITE SECURE V2 local config. Does not contain cloud credentials.
+# SITE SECURE V2 local config. Does not contain cloud credentials.
 
 project_id = "site-secure-v2"
 

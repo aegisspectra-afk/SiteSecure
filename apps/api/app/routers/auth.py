@@ -54,6 +54,15 @@ class ProfilePatch(BaseModel):
     locale: str | None = None
 
 
+class ActiveWorkspaceIn(BaseModel):
+    workspace_id: str = Field(min_length=1, max_length=64)
+
+
+class ActiveWorkspaceOut(BaseModel):
+    workspace_id: str
+    last_workspace_id: str
+
+
 @router.get("/auth/session", response_model=SessionOut)
 def get_session(
     client: Annotated[UserClient, Depends(user_client)],
@@ -136,11 +145,15 @@ def get_session(
             recognition_badges=list(profile_row.get("recognition_badges") or []),
         )
 
-    # Prefer last_workspace_id when present (invite accept sets it). Stable sort keeps
-    # created_at.desc among the rest — no workspace switcher required.
-    if last_workspace_id:
+    # Prefer last_workspace_id when present and still a valid active membership.
+    # Invalid / inaccessible preference falls back to created_at.desc without elevating access.
+    member_ids = {m.workspace_id for m in memberships}
+    if last_workspace_id and str(last_workspace_id) in member_ids:
         preferred = str(last_workspace_id)
         memberships.sort(key=lambda m: 0 if m.workspace_id == preferred else 1)
+    elif last_workspace_id and profile is not None:
+        # Stale preference: report a valid fallback id in the session payload only.
+        profile.last_workspace_id = memberships[0].workspace_id if memberships else None
 
     is_admin = bool(profile_row.get("is_platform_admin")) if profile_row else False
     return SessionOut(
@@ -151,6 +164,48 @@ def get_session(
         has_workspace=len(memberships) > 0,
         is_platform_admin=is_admin,
         platform_role=platform_role_for(is_admin),
+    )
+
+
+@router.put("/me/active-workspace", response_model=ActiveWorkspaceOut)
+def set_active_workspace(
+    body: ActiveWorkspaceIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> ActiveWorkspaceOut:
+    """Persist active workspace preference after verifying active membership."""
+    workspace_id = body.workspace_id.strip()
+    if not workspace_id:
+        raise ApiError(400, "VALIDATION_ERROR", "נתונים לא תקינים")
+
+    members_res = client.get(
+        "workspace_memberships",
+        params={
+            "user_id": f"eq.{user['id']}",
+            "workspace_id": f"eq.{workspace_id}",
+            "status": "eq.active",
+            "select": "workspace_id,workspaces(id,status)",
+        },
+    )
+    if members_res.status_code != 200 or not members_res.json():
+        raise ApiError(403, "PERMISSION_DENIED", "אין גישה לסביבת עבודה זו")
+    nested = members_res.json()[0].get("workspaces")
+    if isinstance(nested, list):
+        nested = nested[0] if nested else None
+    if not isinstance(nested, dict) or str(nested.get("status") or "") != "active":
+        raise ApiError(403, "TENANT_INACTIVE", "הסביבה אינה פעילה")
+
+    res = client.patch(
+        "profiles",
+        {"last_workspace_id": workspace_id},
+        params={"id": f"eq.{user['id']}", "select": "id,last_workspace_id"},
+    )
+    if res.status_code not in {200, 204} or not res.json():
+        raise ApiError(400, "BUSINESS_RULE", "לא ניתן לעדכן את סביבת העבודה הפעילה")
+    row = res.json()[0]
+    return ActiveWorkspaceOut(
+        workspace_id=workspace_id,
+        last_workspace_id=str(row.get("last_workspace_id") or workspace_id),
     )
 
 

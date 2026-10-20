@@ -58,6 +58,9 @@ export default defineConfig(({ mode }) => {
       : undefined,
     plugins: [singleInstanceLocalModules(), tanstackRouter({ quoteStyle: "double" }), react(), tailwindcss()],
     resolve: {
+      // Keep junction/subst paths (C:\ssv1) so Windows `&` in the real OneDrive path
+      // cannot split Vite file URLs and serve raw TSX to the browser.
+      preserveSymlinks: true,
       dedupe: ["react", "react-dom"],
       alias: {
         "@": srcDir,

@@ -16,10 +16,40 @@ SYSTEM_ROLE_META = {
     "sales": {"label_he": "מכירות", "description": "מכירות, לידים והצעות מחיר.", "locked": False},
     "technician": {"label_he": "טכנאי", "description": "עבודות שטח ושירות.", "locked": False},
     "viewer": {"label_he": "צפייה בלבד", "description": "צפייה בלבד בכל המודולים הפתוחים.", "locked": False},
+    "workforce_member": {
+        "label_he": "עובד Workforce",
+        "description": "גישת פורטל כוח אדם בלבד. ללא CRM או מוצרים אחרים.",
+        "locked": True,
+    },
 }
 
 # Hard deny: technician must never receive commercial Quotes/Catalog visibility,
 # even if a stale workspace_roles.grants row or old API catalog still lists them.
+WORKFORCE_MEMBER_ROLE = "workforce_member"
+
+
+def _is_workforce_member_role(
+    role_key: str | None, workspace_role_key: str | None = None, base_role_key: str | None = None
+) -> bool:
+    keys = {str(x or "").strip() for x in (role_key, workspace_role_key, base_role_key)}
+    return WORKFORCE_MEMBER_ROLE in keys
+
+
+def clamp_workforce_member_grants(
+    grants: frozenset[str] | list[str],
+    *,
+    role_key: str | None,
+    workspace_role_key: str | None = None,
+    base_role_key: str | None = None,
+) -> frozenset[str]:
+    """Workforce employees cannot inherit CRM or other-product grants from a stale role row."""
+    cleaned = frozenset(grants)
+    if not _is_workforce_member_role(role_key, workspace_role_key, base_role_key):
+        return cleaned
+    allowed = frozenset(catalog_grant_list(WORKFORCE_MEMBER_ROLE))
+    return cleaned & allowed
+
+
 TECHNICIAN_COMMERCIAL_DENY = frozenset(
     {
         "quotes.view",
@@ -163,8 +193,13 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
                 catalog = load_catalog()
                 return frozenset(catalog["_grants"].get("owner") or ())
             if grants:
-                return strip_technician_commercial_grants(
-                    grants,
+                return clamp_workforce_member_grants(
+                    strip_technician_commercial_grants(
+                        grants,
+                        role_key=role_key,
+                        workspace_role_key=effective_key,
+                        base_role_key=base_role_key,
+                    ),
                     role_key=role_key,
                     workspace_role_key=effective_key,
                     base_role_key=base_role_key,
@@ -181,15 +216,25 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
             catalog = load_catalog()
             return frozenset(catalog["_grants"].get("owner") or ())
         if grants:
-            return strip_technician_commercial_grants(
-                grants,
+            return clamp_workforce_member_grants(
+                strip_technician_commercial_grants(
+                    grants,
+                    role_key=role_key,
+                    workspace_role_key=effective_key,
+                    base_role_key=base_role_key,
+                ),
                 role_key=role_key,
                 workspace_role_key=effective_key,
                 base_role_key=base_role_key,
             )
     catalog = load_catalog()
-    return strip_technician_commercial_grants(
-        catalog["_grants"].get(role_key) or (),
+    return clamp_workforce_member_grants(
+        strip_technician_commercial_grants(
+            catalog["_grants"].get(role_key) or (),
+            role_key=role_key,
+            workspace_role_key=effective_key,
+            base_role_key=base_role_key or role_key,
+        ),
         role_key=role_key,
         workspace_role_key=effective_key,
         base_role_key=base_role_key or role_key,

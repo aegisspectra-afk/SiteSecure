@@ -3,20 +3,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ErrorState, ModuleScaffold } from "../../../components/modules/ModuleKit";
-import { RequireSspAction } from "../../../components/ssp/RequireSspAction";
 import { SspHubLinks } from "../../../components/ssp/SspHubLinks";
 import { useSspWorkspace } from "../../../components/ssp/useSspWorkspace";
 import { he } from "../../../i18n/he";
 import { useSession } from "../../../lib/session";
-import { productRoleLabelHe } from "../../../lib/ssp-product-authz";
+import { canOpenSspOrganization, productRoleLabelHe } from "../../../lib/ssp-product-authz";
 
 export const Route = createFileRoute("/app/ssp/organization")({
-  component: () => (
-    <RequireSspAction permission="ssp.org.view">
-      <SspOrganizationPage />
-    </RequireSspAction>
-  ),
+  component: SspOrganizationGate,
 });
+
+function SspOrganizationGate() {
+  const { session } = useSession();
+  const { sspCan, orgLoading } = useSspWorkspace();
+  const workspaceRole = session?.memberships[0]?.role_key || "";
+  if (orgLoading) return <p className="text-sm text-fg-muted">{he.loading}</p>;
+  if (!canOpenSspOrganization({ sspCan, workspaceRole })) {
+    return <ErrorState title={he.forbiddenTitle} description={he.forbiddenBody} />;
+  }
+  return <SspOrganizationPage />;
+}
 
 function SspOrganizationPage() {
   const { api, workspaceId, org, orgLoading, sspCan, productRole } = useSspWorkspace();
@@ -69,7 +75,8 @@ function SspOrganizationPage() {
       <ModuleScaffold title={he.sspOrgTitle} lead={he.sspOrgLead}>
         <SspHubLinks
           items={[
-            { to: "/app/ssp/users", label: he.sspNavUsers },
+            { to: "/app/ssp/offices", label: he.sspNavOffices },
+            { to: "/app/ssp/users", label: he.sspNavPeople },
             { to: "/app/ssp/templates", label: he.sspNavTemplatesHub },
           ]}
         />

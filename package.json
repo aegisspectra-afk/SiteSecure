@@ -4,6 +4,7 @@
   "workspaces": [
     "apps/web",
     "apps/ssp",
+    "apps/WorkForce",
     "packages/*"
   ],
   "scripts": {
@@ -15,7 +16,12 @@
     "ssp:dev": "npm run dev -w @aegis/ssp",
     "ssp:build": "npm run build -w @aegis/ssp",
     "ssp:typecheck": "npm run typecheck -w @aegis/ssp",
-    "ssp:smoke": "npm run smoke -w @aegis/ssp"
+    "ssp:smoke": "npm run smoke -w @aegis/ssp",
+    "workforce:dev": "npm run dev -w @aegis/workforce",
+    "workforce:build": "npm run build -w @aegis/workforce",
+    "workforce:typecheck": "npm run typecheck -w @aegis/workforce",
+    "workforce:test": "npm run test -w @aegis/workforce",
+    "vercel:build": "node scripts/vercel-build.mjs"
   },
   "engines": {
     "node": ">=20"

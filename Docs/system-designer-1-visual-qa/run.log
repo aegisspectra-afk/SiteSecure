@@ -1,0 +1,68 @@
+quote f2b69d36-e0fd-459b-b31d-d7e3e2428b0c ws fc6913cf-172d-4d07-be6d-4d55a474444d
+shot 1440-ip-quick-requirements
+PASS: ip_quick_requirements_open 
+PASS: no_h_overflow_1440 
+shot 1440-ip-quick-review
+PASS: ip_quick_review 
+PASS: apply_readiness_preview 7 רכיבי חובה
+0 נבחרו
+7 דורשים ציוד
+1 אופציונליים
+shot 1440-picker
+PASS: picker_open 
+PASS: picker_escape 
+PASS: no_leak_ip_review 
+NOTE: Apply: disabled
+shot 1440-apply-pending
+PASS: ip_professional_tech 
+PASS: ip_pro_mode 
+shot 1440-ip-professional
+shot 1440-ip-professional-review
+PASS: analog_hd_quick_tech 
+shot 1440-analog
+shot 1440-analog-review
+PASS: analog_review_labels 
+PASS: no_leak_analog_review 
+PASS: analog_hd_professional_tech 
+PASS: analog_hd_pro_mode 
+shot 1440-analog-professional
+shot 1440-analog-professional-review
+PASS: analog_review_labels 
+PASS: no_leak_analog_review 
+PASS: hybrid_quick_tech 
+shot 1440-hybrid
+shot 1440-hybrid-review
+PASS: hybrid_split_visible 
+PASS: hybrid_professional_tech 
+PASS: hybrid_pro_mode 
+shot 1440-hybrid-professional
+shot 1440-hybrid-professional-review
+PASS: hybrid_split_visible 
+PASS: no_h_overflow_1280 
+shot 1280-ip-quick
+PASS: no_h_overflow_1032 
+shot 1032-ip-quick
+PASS: no_h_overflow_768 
+shot 768-ip-quick
+PASS: no_h_overflow_430 
+shot 430-ip-quick
+PASS: no_h_overflow_390 
+shot 390-ip-quick
+PASS: no_h_overflow_360 
+shot 360-ip-quick
+shot 1440-light-review
+PASS: light_mode_review 
+shot 1440-step2
+NOTE: no planned badge on step2
+shot 1440-step3
+PASS: step3_open 
+shot 1440-step4
+PASS: step4_no_block_when_resolved_or_empty 
+shot 1440-reopen
+PASS: reopen_hydrates 
+PASS: recommend_api_ok 
+PASS: empty_catalog_flag 
+PASS: q4s_no_cost_select 
+
+=== CERT DECISION: GO ===
+shots 25 blockers 0

@@ -45,14 +45,9 @@ def _plan_limit_from_response(res: httpx.Response) -> ApiError | None:
     )
 
 
-def schema_missing(res: httpx.Response) -> bool:
-    """PostgREST missing table/column. RLS denials are 401/403, not 404."""
-    if res.status_code == 404:
-        return True
-    if res.status_code != 400:
-        return False
-    code = ""
+def _postgrest_error(res: httpx.Response) -> tuple[str, str]:
     message = res.text or ""
+    code = ""
     try:
         body = res.json()
         if isinstance(body, dict):
@@ -60,18 +55,39 @@ def schema_missing(res: httpx.Response) -> bool:
             message = str(body.get("message") or message)
     except Exception:
         pass
+    return code, message
+
+
+def schema_missing(res: httpx.Response) -> bool:
+    """PostgREST missing table/column. RLS denials are 401/403, not 404."""
+    if res.status_code == 404:
+        return True
+    if res.status_code != 400:
+        return False
+    code, message = _postgrest_error(res)
     blob = f"{code} {message}".lower()
     return code in {"PGRST204", "PGRST205", "42P01"} or (
         "schema cache" in blob and "could not find" in blob
     )
 
 
+def schema_fault(res: httpx.Response) -> bool:
+    """Broken schema/policy (not an authorization decision). Do not map to 403."""
+    if schema_missing(res):
+        return True
+    code, message = _postgrest_error(res)
+    blob = f"{code} {message}".lower()
+    return code == "42P17" or "infinite recursion" in blob
+
+
 def as_list(res: httpx.Response) -> list[dict]:
     if res.status_code == 200:
         data = res.json()
         return data if isinstance(data, list) else []
-    if schema_missing(res):
+    if schema_fault(res):
         raise ApiError(503, "SSP_SCHEMA_UNAVAILABLE", MESSAGES["SSP_SCHEMA_UNAVAILABLE"])
+    if res.status_code >= 500:
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
     if res.status_code in {401, 403}:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
     raise ApiError(400, "BUSINESS_RULE", MESSAGES["BUSINESS_RULE"])
@@ -94,8 +110,10 @@ def created_or_403(res: httpx.Response) -> dict:
     limit_err = _plan_limit_from_response(res)
     if limit_err:
         raise limit_err
-    if schema_missing(res):
+    if schema_fault(res):
         raise ApiError(503, "SSP_SCHEMA_UNAVAILABLE", MESSAGES["SSP_SCHEMA_UNAVAILABLE"])
+    if res.status_code >= 500:
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
     raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
 
 
@@ -110,6 +128,8 @@ def acked_or_403(res: httpx.Response) -> None:
     limit_err = _plan_limit_from_response(res)
     if limit_err:
         raise limit_err
-    if schema_missing(res):
+    if schema_fault(res):
         raise ApiError(503, "SSP_SCHEMA_UNAVAILABLE", MESSAGES["SSP_SCHEMA_UNAVAILABLE"])
+    if res.status_code >= 500:
+        raise ApiError(503, "API_UNAVAILABLE", MESSAGES["API_UNAVAILABLE"])
     raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])

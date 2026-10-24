@@ -12,6 +12,10 @@ _RLS_MIGRATION = (
 )
 _FOUNDATION = _REPO / "supabase" / "migrations" / "20261020180000_workforce_intelligence_foundation.sql"
 _SHIFTS = _REPO / "supabase" / "migrations" / "20261020210000_workforce_shifts_stage3.sql"
+_STAGE4B = _REPO / "supabase" / "migrations" / "20261021120000_workforce_stage4b_staffing.sql"
+_L1 = _REPO / "supabase" / "migrations" / "20261021150000_workforce_l1_rule_catalog.sql"
+_L2 = _REPO / "supabase" / "migrations" / "20261021180000_workforce_l2_shifts_api_only.sql"
+_PORTAL_SHIFTS = _REPO / "supabase" / "migrations" / "20261021190000_workforce_portal_own_shifts.sql"
 
 
 def _sql() -> str:
@@ -76,6 +80,70 @@ def test_stage3_shifts_keep_employee_writes_revoked():
     assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_memberships FROM authenticated" in sql
     assert "workforce_lock_workspace_id" in sql
     assert "CREATE TABLE" in sql and "workforce_shifts" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.ssp_sites" not in sql
+    assert "CREATE TABLE public.sites" not in sql
+
+
+def test_stage4b_separates_demand_from_assignment():
+    sql = _STAGE4B.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_coverage_requirements" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_shift_slots" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_schedule_policies" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_time_off" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_qualifications" in sql
+    assert "employee_id uuid NOT NULL" not in sql.split("workforce_shift_slots", 1)[1].split("CREATE TABLE", 1)[0]
+    assert "ADD COLUMN IF NOT EXISTS slot_id" in sql
+    assert "ADD COLUMN IF NOT EXISTS timezone" in sql
+    assert "FORCE ROW LEVEL SECURITY" in sql
+    assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_employees FROM authenticated" in sql
+    assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_memberships FROM authenticated" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.ssp_sites" not in sql
+    assert "CREATE TABLE public.sites" not in sql
+    assert "workforce.schedules.edit" in sql
+    shifts = _SHIFTS.read_text(encoding="utf-8")
+    assert "employee_id uuid NOT NULL" in shifts
+
+
+def test_l1_catalog_is_versioned_and_not_assignment_enforcement():
+    sql = _L1.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_rules" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_legal_instruments" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.workforce_employment_profiles" in sql
+    assert "verification_status" in sql
+    assert "cannot_be_relaxed" in sql
+    assert "WORKFORCE_RULE_VERSION_IMMUTABLE" in sql
+    assert "workforce_rule_is_active_legal_block" in sql
+    assert "workforce.settings.manage" in sql
+    assert "FORCE ROW LEVEL SECURITY" in sql
+    assert "Does not enforce legal blocks on shift save" in sql
+    assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_employees FROM authenticated" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.ssp_sites" not in sql
+    assert "CREATE TABLE public.sites" not in sql
+    assert "rest_weekday" in sql
+    assert "hours_law_covered" in sql
+
+
+def test_portal_own_shifts_select_does_not_grant_org_board():
+    sql = _PORTAL_SHIFTS.read_text(encoding="utf-8")
+    assert "workforce.portal.view" in sql
+    assert "e.user_id = (SELECT auth.uid())" in sql
+    assert "workforce_shifts_select" in sql
+    assert "GRANT INSERT" not in sql
+    assert "workforce.schedules.view" in sql
+    assert "CREATE TABLE" not in sql
+    assert "CREATE TABLE IF NOT EXISTS public.ssp_sites" not in sql
+    assert "CREATE TABLE public.sites" not in sql
+    assert "Do not apply to cloud" in sql
+
+
+def test_l2_shift_writes_are_revoked_from_authenticated():
+    sql = _L2.read_text(encoding="utf-8")
+    assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_shifts FROM authenticated" in sql
+    assert "GRANT SELECT ON TABLE public.workforce_shifts TO authenticated" in sql
+    assert "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.workforce_shifts TO service_role" in sql
+    assert "WITH CHECK (false)" in sql
+    assert "FORCE ROW LEVEL SECURITY" in sql
+    assert "REVOKE INSERT, UPDATE, DELETE ON TABLE public.workforce_employees FROM authenticated" in sql
     assert "CREATE TABLE IF NOT EXISTS public.ssp_sites" not in sql
     assert "CREATE TABLE public.sites" not in sql
 

@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-09-23T22:12:15.183Z",
+  "shots": [
+    {
+      "name": "desktop-1440-dark-s1-empty",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s1-empty.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s1-customer",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s1-customer.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s2-empty",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s2-empty.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s2-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s2-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s3-empty",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s3-empty.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s3-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s3-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-dark-s4-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-dark-s4-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1440-light-s2-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-light-s2-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "desktop-1440-light-s3-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-light-s3-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "desktop-1440-light-s4-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1440-light-s4-populated.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "desktop-1100-dark-s2",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1100-dark-s2.png",
+      "width": 1100,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1100-dark-s3",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1100-dark-s3.png",
+      "width": 1100,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "desktop-1280-dark-s4",
+      "file": "Docs/quote-builder-guided-v1-qa/desktop-1280-dark-s4.png",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-dark-s1",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-dark-s1.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-dark-s2-empty",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-dark-s2-empty.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-dark-s2-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-dark-s2-populated.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-dark-s3-populated",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-dark-s3-populated.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-dark-s4",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-dark-s4.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark"
+    },
+    {
+      "name": "mobile-390-light-s3",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-390-light-s3.png",
+      "width": 390,
+      "height": 844,
+      "theme": "light"
+    },
+    {
+      "name": "mobile-360-dark-s4",
+      "file": "Docs/quote-builder-guided-v1-qa/mobile-360-dark-s4.png",
+      "width": 360,
+      "height": 740,
+      "theme": "dark"
+    }
+  ]
+}

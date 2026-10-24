@@ -136,6 +136,20 @@ def test_assignment_status_and_due_dates():
     assert classify_assignment(status="paused", starts_at=None, due_at=None, has_submission=False) == "paused"
 
 
+def test_office_snapshot_keeps_active_members_only():
+    from app.ssp.site_assignments import filter_active_site_members
+
+    assert filter_active_site_members(["a", "b", "c"], {"a", "c"}) == ["a", "c"]
+    assert filter_active_site_members(["inactive"], set()) == []
+
+
+def test_same_user_same_form_is_duplicate_assignment():
+    from app.ssp.site_assignments import assigned_user_overlap
+
+    assert assigned_user_overlap({"u1"}, {"u1", "u2"})
+    assert not assigned_user_overlap({"u1"}, {"u3"})
+
+
 def test_duplicate_submit_once_cadence():
     assert duplicate_submit_blocked(
         filler_mode="site", existing_for_assignment=True, existing_for_user=False
@@ -196,6 +210,42 @@ def test_product_grants_sites_not_parallel_tenancy():
     assert "ssp.sites.view" in product_grants("patrol_officer")
     assert "ssp.sites.edit" not in product_grants("patrol_officer")
     assert "ssp.assignments.manage" in product_grants("patrol_manager")
+
+
+def test_duplicate_submit_site_with_targets_is_per_user():
+    assert not duplicate_submit_blocked(
+        filler_mode="site",
+        existing_for_assignment=True,
+        existing_for_user=False,
+        has_targets=True,
+    )
+    assert duplicate_submit_blocked(
+        filler_mode="site",
+        existing_for_assignment=True,
+        existing_for_user=True,
+        has_targets=True,
+    )
+
+
+def test_user_may_fill_site_targets():
+    assert user_may_fill(
+        filler_mode="site",
+        user_id="u1",
+        is_site_member=True,
+        is_manager=False,
+        target_user_ids={"u1"},
+        user_department_id=None,
+        assignment_department_id=None,
+    )
+    assert not user_may_fill(
+        filler_mode="site",
+        user_id="u2",
+        is_site_member=True,
+        is_manager=False,
+        target_user_ids={"u1"},
+        user_department_id=None,
+        assignment_department_id=None,
+    )
 
 
 def test_user_may_fill_modes():
@@ -272,6 +322,8 @@ def test_dashboard_empty_when_company_missing(monkeypatch):
     out = r.ops_dashboard(WS, user={"sub": "u-admin"}, client=MagicMock())
     assert out["data_mode"] == "empty"
     assert out["sites_active"] == 0
+    assert out["users_active"] == 0
+    assert out["offices_active"] == 0
     assert out["company"] is None
     assert out["site_members_active"] == 0
     assert out["user_joins_pending"] == 0
@@ -386,6 +438,7 @@ def test_create_site_assignment_snapshots_published_version(monkeypatch):
 
     client = MagicMock()
     client.post.side_effect = post
+    client.get.return_value = SimpleNamespace(status_code=200, json=lambda: [])
     monkeypatch.setattr(r, "created_or_403", lambda res: res.json()[0])
 
     out = r.create_site_assignments(
@@ -432,8 +485,11 @@ def test_submit_blocks_duplicate_and_unauthorized(monkeypatch):
     client.get.side_effect = [
         SimpleNamespace(status_code=200, json=lambda: [assignment]),
         SimpleNamespace(status_code=200, json=lambda: []),
-        SimpleNamespace(status_code=200, json=lambda: [{"id": "sub-1", "submitted_by": "u1"}]),
     ]
+    svc = MagicMock()
+    svc.get.return_value = SimpleNamespace(
+        status_code=200, json=lambda: [{"id": "sub-1", "submitted_by": "u1"}]
+    )
     monkeypatch.setattr(r, "one_or_404", lambda res: res.json()[0])
     monkeypatch.setattr(r, "as_list", lambda res: res.json() if res.status_code == 200 else [])
 
@@ -444,7 +500,7 @@ def test_submit_blocks_duplicate_and_unauthorized(monkeypatch):
             r.SiteSubmitIn(answers={FID: "ok"}),
             user={"sub": "u1"},
             client=client,
-            svc=MagicMock(),
+            svc=svc,
         )
     assert exc.value.status_code == 409
 
@@ -463,6 +519,24 @@ def test_as_list_schema_missing_is_not_business_rule():
     assert schema_missing(res) is True
     with pytest.raises(ApiError) as exc:
         as_list(res)
+    assert exc.value.status_code == 503
+    assert exc.value.code == "SSP_SCHEMA_UNAVAILABLE"
+
+
+def test_rls_recursion_is_not_permission_denied():
+    from app.rest import created_or_403, schema_fault
+
+    res = SimpleNamespace(
+        status_code=500,
+        text='{"code":"42P17","message":"infinite recursion detected in policy for relation \\"ssp_memberships\\""}',
+        json=lambda: {
+            "code": "42P17",
+            "message": 'infinite recursion detected in policy for relation "ssp_memberships"',
+        },
+    )
+    assert schema_fault(res) is True
+    with pytest.raises(ApiError) as exc:
+        created_or_403(res)
     assert exc.value.status_code == 503
     assert exc.value.code == "SSP_SCHEMA_UNAVAILABLE"
 

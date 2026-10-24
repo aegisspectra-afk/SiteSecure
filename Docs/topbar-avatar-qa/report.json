@@ -1,0 +1,126 @@
+{
+  "shots": [
+    {
+      "name": "desktop-1440-light",
+      "file": "Docs/topbar-avatar-qa/desktop-1440-light.png",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "info": {
+        "present": true,
+        "src": "/src/assets/avatars/avatar-man.png",
+        "w": 38,
+        "h": 38,
+        "visible": true,
+        "objectFit": "cover"
+      }
+    },
+    {
+      "name": "desktop-1440-dark",
+      "file": "Docs/topbar-avatar-qa/desktop-1440-dark.png",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "info": {
+        "present": true,
+        "src": "/src/assets/avatars/avatar-man.png",
+        "w": 38,
+        "h": 38,
+        "visible": true,
+        "objectFit": "cover"
+      }
+    },
+    {
+      "name": "mobile-390-light",
+      "file": "Docs/topbar-avatar-qa/mobile-390-light.png",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "info": {
+        "present": true,
+        "src": "/src/assets/avatars/avatar-man.png",
+        "w": 34,
+        "h": 34,
+        "visible": true,
+        "objectFit": "cover"
+      }
+    },
+    {
+      "name": "mobile-390-dark",
+      "file": "Docs/topbar-avatar-qa/mobile-390-dark.png",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "info": {
+        "present": true,
+        "src": "/src/assets/avatars/avatar-man.png",
+        "w": 34,
+        "h": 34,
+        "visible": true,
+        "objectFit": "cover"
+      }
+    },
+    {
+      "name": "mobile-360-dark",
+      "file": "Docs/topbar-avatar-qa/mobile-360-dark.png",
+      "theme": "dark",
+      "width": 360,
+      "height": 740,
+      "info": {
+        "present": true,
+        "src": "/src/assets/avatars/avatar-man.png",
+        "w": 34,
+        "h": 34,
+        "visible": true,
+        "objectFit": "cover"
+      }
+    }
+  ],
+  "notes": [
+    {
+      "name": "desktop-1440-light",
+      "present": true,
+      "src": "/src/assets/avatars/avatar-man.png",
+      "w": 38,
+      "h": 38,
+      "visible": true,
+      "objectFit": "cover"
+    },
+    {
+      "name": "desktop-1440-dark",
+      "present": true,
+      "src": "/src/assets/avatars/avatar-man.png",
+      "w": 38,
+      "h": 38,
+      "visible": true,
+      "objectFit": "cover"
+    },
+    {
+      "name": "mobile-390-light",
+      "present": true,
+      "src": "/src/assets/avatars/avatar-man.png",
+      "w": 34,
+      "h": 34,
+      "visible": true,
+      "objectFit": "cover"
+    },
+    {
+      "name": "mobile-390-dark",
+      "present": true,
+      "src": "/src/assets/avatars/avatar-man.png",
+      "w": 34,
+      "h": 34,
+      "visible": true,
+      "objectFit": "cover"
+    },
+    {
+      "name": "mobile-360-dark",
+      "present": true,
+      "src": "/src/assets/avatars/avatar-man.png",
+      "w": 34,
+      "h": 34,
+      "visible": true,
+      "objectFit": "cover"
+    }
+  ]
+}

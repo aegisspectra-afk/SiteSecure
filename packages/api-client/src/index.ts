@@ -2455,6 +2455,30 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    patchCustomerContact: (
+      workspaceId: string,
+      customerId: string,
+      contactId: string,
+      body: {
+        full_name?: string;
+        role_title?: string | null;
+        email?: string | null;
+        phone?: string | null;
+        is_primary?: boolean;
+      },
+    ) =>
+      request<CustomerContact>(
+        `/api/v1/workspaces/${workspaceId}/customers/${customerId}/contacts/${contactId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        },
+      ),
+    deleteCustomerContact: (workspaceId: string, customerId: string, contactId: string) =>
+      request<{ ok: true }>(
+        `/api/v1/workspaces/${workspaceId}/customers/${customerId}/contacts/${contactId}`,
+        { method: "DELETE" },
+      ),
     listSites: (
       workspaceId: string,
       opts: { customer_id?: string; q?: string; limit?: number; status?: string } = {},
@@ -4142,6 +4166,14 @@ export function createApiClient(opts: {
       request<void>(`/api/v1/workspaces/${workspaceId}/workforce/sites/${siteId}`, { method: "DELETE" }),
     listWorkforcePositions: (workspaceId: string) =>
       request<{ items: WorkforcePositionOut[] }>(`/api/v1/workspaces/${workspaceId}/workforce/positions`),
+    listMyWorkforceShifts: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<WorkforceMyShiftsOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/me/shifts?${params.toString()}`,
+      );
+    },
     listWorkforceShifts: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
       const params = new URLSearchParams();
       params.set("starts_from", opts.startsFrom);
@@ -4162,6 +4194,156 @@ export function createApiClient(opts: {
       }),
     deleteWorkforceShift: (workspaceId: string, shiftId: string) =>
       request<void>(`/api/v1/workspaces/${workspaceId}/workforce/shifts/${shiftId}`, { method: "DELETE" }),
+    listWorkforceWeek: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<WorkforceWeekOut>(`/api/v1/workspaces/${workspaceId}/workforce/week?${params.toString()}`);
+    },
+    validateWorkforceAssignment: (workspaceId: string, body: WorkforceShiftWrite) =>
+      request<WorkforceValidationOut>(`/api/v1/workspaces/${workspaceId}/workforce/validate`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    validateWorkforceWeek: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<WorkforceWeekValidationOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/validate-week?${params.toString()}`,
+        { method: "POST" },
+      );
+    },
+    listWorkforceCoverage: (workspaceId: string) =>
+      request<{ items: WorkforceCoverageOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/coverage-requirements`,
+      ),
+    createWorkforceCoverage: (workspaceId: string, body: WorkforceCoverageWrite) =>
+      request<WorkforceCoverageOut>(`/api/v1/workspaces/${workspaceId}/workforce/coverage-requirements`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    deleteWorkforceCoverage: (workspaceId: string, coverageId: string) =>
+      request<void>(`/api/v1/workspaces/${workspaceId}/workforce/coverage-requirements/${coverageId}`, {
+        method: "DELETE",
+      }),
+    listWorkforceSlots: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<{ items: WorkforceSlotOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/slots?${params.toString()}`,
+      );
+    },
+    createWorkforceSlot: (workspaceId: string, body: WorkforceSlotWrite) =>
+      request<WorkforceSlotOut>(`/api/v1/workspaces/${workspaceId}/workforce/slots`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    patchWorkforceSlot: (workspaceId: string, slotId: string, body: WorkforceSlotWrite) =>
+      request<WorkforceSlotOut>(`/api/v1/workspaces/${workspaceId}/workforce/slots/${slotId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    materializeWorkforceSlots: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<{ items: WorkforceSlotOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/slots/materialize?${params.toString()}`,
+        { method: "POST" },
+      );
+    },
+    deleteWorkforceSlot: (workspaceId: string, slotId: string) =>
+      request<void>(`/api/v1/workspaces/${workspaceId}/workforce/slots/${slotId}`, { method: "DELETE" }),
+    getWorkforcePolicy: (workspaceId: string) =>
+      request<WorkforcePolicyOut>(`/api/v1/workspaces/${workspaceId}/workforce/policy`),
+    putWorkforcePolicy: (workspaceId: string, body: WorkforcePolicyWrite) =>
+      request<WorkforcePolicyOut>(`/api/v1/workspaces/${workspaceId}/workforce/policy`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    listWorkforceRulePacks: (workspaceId: string) =>
+      request<{ items: WorkforceRulePackOut[]; enforced_on_assignment: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/rule-packs`,
+      ),
+    listWorkforceRules: (workspaceId: string, opts?: { includeExpired?: boolean }) => {
+      const params = new URLSearchParams();
+      if (opts?.includeExpired) params.set("include_expired", "true");
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      return request<{ items: WorkforceRuleOut[]; enforced_on_assignment: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/rules${suffix}`,
+      );
+    },
+    createWorkforceRule: (workspaceId: string, body: WorkforceRuleWrite) =>
+      request<WorkforceRuleOut>(`/api/v1/workspaces/${workspaceId}/workforce/rules`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    closeWorkforceRule: (workspaceId: string, ruleId: string, body?: WorkforceRuleCloseWrite) =>
+      request<WorkforceRuleOut>(`/api/v1/workspaces/${workspaceId}/workforce/rules/${ruleId}/close`, {
+        method: "POST",
+        body: JSON.stringify(body || {}),
+      }),
+    listWorkforceLegalInstruments: (workspaceId: string) =>
+      request<{ items: WorkforceLegalInstrumentOut[]; enforced_on_assignment: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/legal-instruments`,
+      ),
+    createWorkforceLegalInstrument: (workspaceId: string, body: WorkforceLegalInstrumentWrite) =>
+      request<WorkforceLegalInstrumentOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/legal-instruments`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    expireWorkforceLegalInstrument: (workspaceId: string, instrumentId: string) =>
+      request<WorkforceLegalInstrumentOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/legal-instruments/${instrumentId}/expire`,
+        { method: "POST" },
+      ),
+    listWorkforceWorkspacePacks: (workspaceId: string) =>
+      request<{ items: WorkforceWorkspacePackOut[]; enforced_on_assignment: boolean }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/workspace-packs`,
+      ),
+    putWorkforceWorkspacePack: (workspaceId: string, packCode: string, body: WorkforceWorkspacePackWrite) =>
+      request<WorkforceWorkspacePackOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/workspace-packs/${packCode}`,
+        { method: "PUT", body: JSON.stringify(body) },
+      ),
+    getWorkforceEmploymentProfile: (workspaceId: string, employeeId: string) =>
+      request<WorkforceEmploymentProfileOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/employment-profiles/${employeeId}`,
+      ),
+    putWorkforceEmploymentProfile: (
+      workspaceId: string,
+      employeeId: string,
+      body: WorkforceEmploymentProfileWrite,
+    ) =>
+      request<WorkforceEmploymentProfileOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/employment-profiles/${employeeId}`,
+        { method: "PUT", body: JSON.stringify(body) },
+      ),
+    listWorkforceTimeOff: (workspaceId: string, opts: { startsFrom: string; startsTo: string }) => {
+      const params = new URLSearchParams();
+      params.set("starts_from", opts.startsFrom);
+      params.set("starts_to", opts.startsTo);
+      return request<{ items: WorkforceTimeOffOut[] }>(
+        `/api/v1/workspaces/${workspaceId}/workforce/time-off?${params.toString()}`,
+      );
+    },
+    createWorkforceTimeOff: (workspaceId: string, body: WorkforceTimeOffWrite) =>
+      request<WorkforceTimeOffOut>(`/api/v1/workspaces/${workspaceId}/workforce/time-off`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    createWorkforceQualification: (workspaceId: string, body: WorkforceQualificationWrite) =>
+      request<WorkforceQualificationOut>(`/api/v1/workspaces/${workspaceId}/workforce/qualifications`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    createWorkforcePositionRequirement: (workspaceId: string, body: WorkforcePositionRequirementWrite) =>
+      request<WorkforcePositionRequirementOut>(
+        `/api/v1/workspaces/${workspaceId}/workforce/position-requirements`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
 
     // ── SSP digital forms ───────────────────────────────────────────────────
     listSspForms: (workspaceId: string, opts?: string | { status?: string; q?: string; category?: string }) => {
@@ -4237,13 +4419,22 @@ export function createApiClient(opts: {
       ),
     listSspSubmissions: (
       workspaceId: string,
-      query: { form_id?: string; status?: string; from_date?: string; to_date?: string } = {},
+      query: {
+        form_id?: string;
+        status?: string;
+        from_date?: string;
+        to_date?: string;
+        site_id?: string;
+        submitted_by?: string;
+      } = {},
     ) => {
       const params = new URLSearchParams();
       if (query.form_id) params.set("form_id", query.form_id);
       if (query.status) params.set("status", query.status);
       if (query.from_date) params.set("from_date", query.from_date);
       if (query.to_date) params.set("to_date", query.to_date);
+      if (query.site_id) params.set("site_id", query.site_id);
+      if (query.submitted_by) params.set("submitted_by", query.submitted_by);
       const q = params.toString();
       return request<{ items: SspSubmissionSummaryOut[] }>(
         `/api/v1/workspaces/${workspaceId}/ssp/submissions${q ? `?${q}` : ""}`,
@@ -4304,6 +4495,62 @@ export function createApiClient(opts: {
       request<SspSubmissionOut>(
         `/api/v1/workspaces/${workspaceId}/ssp/forms/${formId}/officer-submit`,
         { method: "POST", body: JSON.stringify(body) },
+      ),
+    listSspUsers: (
+      workspaceId: string,
+      opts?: { q?: string; site_id?: string; product_role?: string; status?: string },
+    ) => {
+      const q = new URLSearchParams();
+      if (opts?.q) q.set("q", opts.q);
+      if (opts?.site_id) q.set("site_id", opts.site_id);
+      if (opts?.product_role) q.set("product_role", opts.product_role);
+      if (opts?.status) q.set("status", opts.status);
+      const qs = q.toString() ? `?${q}` : "";
+      return request<{ items: SspPersonOut[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/users${qs}`,
+      );
+    },
+    createSspUser: (
+      workspaceId: string,
+      body: {
+        full_name: string;
+        email: string;
+        password: string;
+        product_role?: "org_admin" | "patrol_manager" | "patrol_officer";
+        phone?: string;
+        site_id?: string;
+        org_unit_id?: string;
+        department_id?: string;
+        manager_user_id?: string;
+      },
+    ) =>
+      request<SspPersonOut>(`/api/v1/workspaces/${workspaceId}/ssp/users`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspUser: (workspaceId: string, userId: string) =>
+      request<SspPersonOut>(`/api/v1/workspaces/${workspaceId}/ssp/users/${userId}`),
+    patchSspUser: (
+      workspaceId: string,
+      userId: string,
+      body: {
+        full_name?: string;
+        phone?: string | null;
+        product_role?: "org_admin" | "patrol_manager" | "patrol_officer";
+        site_id?: string;
+        status?: "active" | "inactive";
+        org_unit_id?: string | null;
+        department_id?: string | null;
+        manager_user_id?: string | null;
+      },
+    ) =>
+      request<SspPersonOut>(`/api/v1/workspaces/${workspaceId}/ssp/users/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    listSspMyForms: (workspaceId: string) =>
+      request<{ items: SspMyFormItem[]; data_mode: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/me/forms`,
       ),
     listSspAlerts: (workspaceId: string) =>
       request<{
@@ -4378,6 +4625,7 @@ export function createApiClient(opts: {
         is_active?: boolean;
         admin_notes?: string | null;
         kind?: "office" | "ops_center" | "physical_site" | "other";
+        code?: string;
       },
     ) =>
       request<SspSiteOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites`, {
@@ -4399,6 +4647,7 @@ export function createApiClient(opts: {
         is_active?: boolean;
         admin_notes?: string | null;
         kind?: "office" | "ops_center" | "physical_site" | "other";
+        code?: string | null;
       },
     ) =>
       request<SspSiteOut>(`/api/v1/workspaces/${workspaceId}/ssp/sites/${siteId}`, {
@@ -4582,6 +4831,64 @@ export function createApiClient(opts: {
           body: JSON.stringify(body),
           headers: { "X-SSP-Device-Token": deviceToken },
         },
+      ),
+    loginSspUnit: (body: { code: string }) =>
+      request<SspUnitLoginOut>(`/api/v1/public/ssp/unit-login`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getSspUnitMe: (unitToken: string) =>
+      request<SspUnitMeOut>(`/api/v1/public/ssp/unit/me`, {
+        headers: { "X-SSP-Unit-Token": unitToken },
+      }),
+    logoutSspUnit: (unitToken: string) =>
+      request<{ ok: boolean }>(`/api/v1/public/ssp/unit/logout`, {
+        method: "POST",
+        headers: { "X-SSP-Unit-Token": unitToken },
+      }),
+    listSspUnitForms: (unitToken: string) =>
+      request<{ items: SspMyFormItem[]; data_mode: string; identity: "unit" }>(
+        `/api/v1/public/ssp/unit/forms`,
+        { headers: { "X-SSP-Unit-Token": unitToken } },
+      ),
+    getSspUnitAssignment: (unitToken: string, assignmentId: string) =>
+      request<{
+        assignment: SspSiteAssignmentOut;
+        form: SspFormOut;
+        definition_snapshot: SspFormDefinition;
+        site: { id: string; name: string };
+        identity: "unit";
+      }>(`/api/v1/public/ssp/unit/assignments/${assignmentId}`, {
+        headers: { "X-SSP-Unit-Token": unitToken },
+      }),
+    submitSspUnitAssignment: (
+      unitToken: string,
+      assignmentId: string,
+      body: { answers: Record<string, unknown> },
+    ) =>
+      request<SspSubmissionOut>(`/api/v1/public/ssp/unit/assignments/${assignmentId}/submit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "X-SSP-Unit-Token": unitToken },
+      }),
+    getSspUnitLoginCode: (workspaceId: string, sitePk: string) =>
+      request<SspUnitCodeOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${sitePk}/unit-login-code`,
+      ),
+    issueSspUnitLoginCode: (workspaceId: string, sitePk: string) =>
+      request<SspUnitCodeOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${sitePk}/unit-login-codes`,
+        { method: "POST", body: JSON.stringify({}) },
+      ),
+    revokeSspUnitLoginCode: (workspaceId: string, codeId: string) =>
+      request<SspUnitCodeOut>(
+        `/api/v1/workspaces/${workspaceId}/ssp/unit-login-codes/${codeId}/revoke`,
+        { method: "POST" },
+      ),
+    revokeSspUnitSessions: (workspaceId: string, sitePk: string) =>
+      request<{ ok: boolean; site_pk: string }>(
+        `/api/v1/workspaces/${workspaceId}/ssp/sites/${sitePk}/unit-sessions/revoke`,
+        { method: "POST" },
       ),
     listSspOfficers: (workspaceId: string) =>
       request<{ items: SspOrgMembershipOut[]; data_mode: string }>(
@@ -4807,6 +5114,8 @@ export type SspDashboardOut = {
   devices_revoked?: number;
   site_members_active?: number;
   user_joins_pending?: number;
+  users_active?: number;
+  offices_active?: number;
   updated_at?: string;
   filters?: Record<string, string | null | undefined>;
   data_mode: "live" | "empty";
@@ -4817,6 +5126,7 @@ export type SspSiteOut = {
   workspace_id: string;
   company_pk: string;
   site_id: string;
+  code?: string | null;
   name: string;
   phone: string | null;
   description: string;
@@ -4908,6 +5218,33 @@ export type SspPublicClaimOut = {
   message: string;
 };
 
+export type SspUnitLoginOut = {
+  unit_token: string;
+  expires_at: string;
+  identity: "unit";
+  workspace_id: string;
+  site: { id: string; name: string | null; kind: string | null; site_id: string | null };
+};
+
+export type SspUnitMeOut = {
+  identity: "unit";
+  workspace_id: string;
+  site: { id: string; name: string | null; kind: string | null; is_active: boolean };
+  session: { id: string; expires_at: string };
+  permissions: string[];
+};
+
+export type SspUnitCodeOut = {
+  id?: string | null;
+  site_pk?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  expires_at?: string | null;
+  remaining_seconds: number;
+  code: string | null;
+  site: { id: string; name: string | null; kind: string | null };
+};
+
 export type SspDeviceMeOut = {
   site: { id: string; name: string; phone: string | null; site_id: string; is_active: boolean };
   device: { id: string; status: string; device_label: string | null };
@@ -4947,7 +5284,9 @@ export type SspSiteAssignmentOut = {
   fill_status?: string;
   submission_count?: number;
   latest_submission_at?: string | null;
-  definition_snapshot?: { fields?: Array<{ id: string; type: string; label: string; required?: boolean }> } | null;
+  target_count?: number;
+  target_names?: string[];
+  definition_snapshot?: { fields?: Array<{ id: string; type: string; label: string; required?: boolean; help_text?: string; options?: Array<{ id: string; label: string }> }> } | null;
 };
 
 export type SspSiteOpsOut = {
@@ -5095,7 +5434,10 @@ export type SspFieldType =
   | "single_choice"
   | "multi_choice"
   | "date"
+  | "datetime"
+  | "heading"
   | "yes_no"
+  | "checkbox"
   | "consent";
 
 export type SspFormField = {
@@ -5169,6 +5511,7 @@ export type SspAssignmentCreatedOut = SspAssignmentOut & {
 export type SspSubmissionSummaryOut = {
   id: string;
   form_id: string;
+  form_title?: string | null;
   form_version_id: string;
   assignment_id: string;
   site_assignment_id?: string | null;
@@ -5176,14 +5519,71 @@ export type SspSubmissionSummaryOut = {
   submitted_at: string;
   has_consent: boolean;
   submitted_by?: string | null;
+  submitted_by_name?: string | null;
+};
+
+export type SspPersonOut = {
+  user_id: string;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  product_role?: "org_admin" | "patrol_manager" | "patrol_officer" | null;
+  status: string;
+  workspace_role_key?: string | null;
+  org_unit_id?: string | null;
+  department_id?: string | null;
+  manager_user_id?: string | null;
+  sites: Array<{ id: string; name?: string | null; kind?: string | null; code?: string | null }>;
+  created_at?: string;
+  ssp_membership_id?: string;
+  created_auth?: boolean;
+  resumed?: boolean;
+  assignments?: Array<{
+    id: string;
+    site_assignment_id: string;
+    created_at?: string;
+    form_id?: string | null;
+    form_title?: string | null;
+    status?: string | null;
+    due_at?: string | null;
+  }>;
+  submissions?: Array<{
+    id: string;
+    form_id: string;
+    site_assignment_id?: string | null;
+    status: string;
+    submitted_at?: string | null;
+  }>;
+};
+
+export type SspMyFormItem = {
+  assignment_id: string;
+  form_id: string;
+  form_title?: string | null;
+  form_category?: string | null;
+  site_id: string;
+  site_name?: string | null;
+  status: string;
+  fill_status: string;
+  due_at?: string | null;
+  starts_at?: string | null;
+  submitted_at?: string | null;
+  submission_id?: string | null;
+  form_version_id?: string | null;
 };
 
 export type SspSubmissionOut = {
   id: string;
   workspace_id: string;
   form_id: string;
+  form_title?: string | null;
   form_version_id: string;
+  form_version?: number | null;
   assignment_id: string;
+  site_assignment_id?: string | null;
+  site_name?: string | null;
+  submitted_by?: string | null;
+  submitted_by_name?: string | null;
   status: string;
   answers: Record<string, unknown>;
   consent: Array<{ field_id: string; accepted: boolean; consent_wording: string }>;
@@ -5244,6 +5644,7 @@ export type WorkforceLookupItem = {
   name: string;
   code?: string | null;
   is_active: boolean;
+  timezone?: string;
 };
 
 export type WorkforceLookupsOut = {
@@ -5298,6 +5699,7 @@ export type WorkforceSiteOut = WorkforceRegionOut & {
   region_id: string | null;
   kind: string;
   address: Record<string, unknown>;
+  timezone: string;
   notes: string | null;
   created_by: string | null;
 };
@@ -5309,6 +5711,7 @@ export type WorkforceSiteWrite = {
   region_id?: string | null;
   address?: Record<string, unknown>;
   is_active?: boolean;
+  timezone?: string;
   notes?: string | null;
   workspace_id?: string;
 };
@@ -5322,6 +5725,7 @@ export type WorkforceShiftOut = {
   site_id: string | null;
   region_id: string | null;
   position_id: string | null;
+  slot_id: string | null;
   starts_at: string;
   ends_at: string;
   notes: string | null;
@@ -5334,15 +5738,352 @@ export type WorkforceShiftOut = {
   position_name: string | null;
 };
 
+export type WorkforceMyShiftOut = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  local_date: string;
+  starts_local: string;
+  ends_local: string;
+  timezone: string;
+  site_id: string | null;
+  site_name: string | null;
+  region_id: string | null;
+  region_name: string | null;
+  position_id: string | null;
+  position_name: string | null;
+  notes: string | null;
+  status: "assigned";
+  overnight: boolean;
+};
+
+export type WorkforceMyShiftsOut = {
+  employee: { id: string; first_name: string; last_name: string };
+  starts_from: string;
+  starts_to: string;
+  items: WorkforceMyShiftOut[];
+};
+
 export type WorkforceShiftWrite = {
   employee_id?: string;
   site_id?: string;
   region_id?: string | null;
   position_id?: string | null;
+  slot_id?: string | null;
   starts_at?: string;
   ends_at?: string;
   notes?: string | null;
   workspace_id?: string;
+};
+
+export type WorkforceIssue = {
+  code: string;
+  severity: "hard" | "soft";
+  category?: "legal" | "policy" | "operational" | "advisory";
+  finding_severity?: "blocking" | "warning" | "informational";
+  message: string;
+  slot_id?: string;
+  required_count?: number;
+  assigned_count?: number;
+  site_id?: string;
+  starts_at?: string;
+  ends_at?: string;
+  qualification_key?: string;
+  rule_code?: string;
+  employee_id?: string;
+};
+
+export type WorkforceSlotOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string | null;
+  region_id: string | null;
+  position_id: string | null;
+  coverage_requirement_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  required_count: number;
+  assigned_count: number;
+  unfilled_count: number;
+  notes: string | null;
+  site_name: string | null;
+  position_name: string | null;
+  timezone: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type WorkforceSlotWrite = {
+  site_id?: string;
+  region_id?: string | null;
+  position_id?: string;
+  coverage_requirement_id?: string | null;
+  starts_at?: string;
+  ends_at?: string;
+  required_count?: number;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforceCoverageOut = {
+  id: string;
+  workspace_id: string;
+  site_id: string | null;
+  position_id: string | null;
+  weekday: number;
+  start_local: string;
+  end_local: string;
+  crosses_midnight: boolean;
+  required_count: number;
+  is_active: boolean;
+  notes: string | null;
+  site_name: string | null;
+  position_name: string | null;
+  timezone: string | null;
+};
+
+export type WorkforceCoverageWrite = {
+  site_id?: string;
+  position_id?: string;
+  weekday?: number;
+  start_local?: string;
+  end_local?: string;
+  crosses_midnight?: boolean;
+  required_count?: number;
+  is_active?: boolean;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforcePolicyOut = {
+  workspace_id: string;
+  max_shift_hours: number;
+  min_rest_hours: number | null;
+  rest_rule_enabled: boolean;
+  weekly_hour_cap: number | null;
+};
+
+export type WorkforcePolicyWrite = {
+  max_shift_hours?: number;
+  min_rest_hours?: number | null;
+  rest_rule_enabled?: boolean;
+  weekly_hour_cap?: number | null;
+  workspace_id?: string;
+};
+
+export type WorkforceRulePackOut = {
+  pack_code: string;
+  name_he: string;
+  description_he: string | null;
+  pack_kind: string;
+};
+
+export type WorkforceRuleOut = {
+  id: string;
+  workspace_id: string | null;
+  pack_code: string;
+  rule_code: string;
+  version: number;
+  name_he: string;
+  description_he: string | null;
+  rule_type: string;
+  verification_status: string;
+  severity: string;
+  source_citation: string;
+  source_section: string | null;
+  source_url: string | null;
+  reviewed_on: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  parameters: Record<string, unknown>;
+  cannot_be_relaxed: boolean;
+  enforced_on_assignment: boolean;
+  would_block_if_engine_on: boolean;
+  origin: "platform" | "workspace";
+};
+
+export type WorkforceRuleWrite = {
+  pack_code?: string;
+  rule_code?: string;
+  name_he?: string;
+  description_he?: string | null;
+  rule_type?: string;
+  verification_status?: string;
+  severity?: string;
+  source_kind?: string;
+  source_citation?: string;
+  source_section?: string | null;
+  source_url?: string | null;
+  reviewed_on?: string;
+  effective_from?: string;
+  scope?: Record<string, unknown>;
+  parameters?: Record<string, unknown>;
+  workspace_id?: string;
+};
+
+export type WorkforceRuleCloseWrite = {
+  verification_status?: "expired" | "superseded";
+  workspace_id?: string;
+};
+
+export type WorkforceLegalInstrumentOut = {
+  id: string;
+  workspace_id: string;
+  instrument_kind: string;
+  code: string;
+  title_he: string;
+  citation: string;
+  verification_status: string;
+  effective_from: string;
+  effective_to: string | null;
+  in_force: boolean;
+  enforced_on_assignment: boolean;
+};
+
+export type WorkforceLegalInstrumentWrite = {
+  instrument_kind?: string;
+  code?: string;
+  title_he?: string;
+  citation?: string;
+  source_url?: string | null;
+  verification_status?: string;
+  effective_from?: string;
+  effective_to?: string | null;
+  scope?: Record<string, unknown>;
+  parameters?: Record<string, unknown>;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforceWorkspacePackOut = {
+  workspace_id: string;
+  pack_code: string;
+  is_enabled: boolean;
+  notes: string | null;
+  enforced_on_assignment: boolean;
+};
+
+export type WorkforceWorkspacePackWrite = {
+  is_enabled?: boolean;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforceEmploymentProfileOut = {
+  employee_id: string;
+  workspace_id: string;
+  rest_weekday: number | null;
+  hours_law_covered: boolean;
+  sector_pack_code: string | null;
+  weekly_pattern: string | null;
+  shortened_weekday: number | null;
+  is_minor: boolean;
+  night_work_restricted: boolean;
+  notes: string | null;
+};
+
+export type WorkforceEmploymentProfileWrite = {
+  rest_weekday?: number | null;
+  hours_law_covered?: boolean;
+  sector_pack_code?: string | null;
+  weekly_pattern?: string | null;
+  shortened_weekday?: number | null;
+  is_minor?: boolean;
+  night_work_restricted?: boolean;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforceTimeOffOut = {
+  id: string;
+  workspace_id: string;
+  employee_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  kind: string;
+  status: string;
+  notes: string | null;
+  employee_name: string | null;
+};
+
+export type WorkforceTimeOffWrite = {
+  employee_id?: string;
+  starts_at?: string;
+  ends_at?: string;
+  kind?: string;
+  status?: string;
+  notes?: string | null;
+  workspace_id?: string;
+};
+
+export type WorkforceQualificationWrite = {
+  employee_id?: string;
+  qualification_key?: string;
+  expires_on?: string | null;
+  is_active?: boolean;
+  workspace_id?: string;
+};
+
+export type WorkforceQualificationOut = {
+  id: string;
+  workspace_id: string;
+  employee_id: string;
+  qualification_key: string;
+  expires_on: string | null;
+  is_active: boolean;
+};
+
+export type WorkforcePositionRequirementWrite = {
+  position_id?: string;
+  qualification_key?: string;
+  enforcement?: "required" | "preferred";
+  workspace_id?: string;
+};
+
+export type WorkforcePositionRequirementOut = {
+  id: string;
+  workspace_id: string;
+  position_id: string;
+  qualification_key: string;
+  enforcement: string;
+};
+
+export type WorkforceValidationOut = {
+  ok: boolean;
+  issues: WorkforceIssue[];
+  hard: WorkforceIssue[];
+  soft: WorkforceIssue[];
+  findings?: WorkforceIssue[];
+  legal?: WorkforceIssue[];
+  policy_findings?: WorkforceIssue[];
+  operational?: WorkforceIssue[];
+  advisory?: WorkforceIssue[];
+  legal_status: "not_certified";
+  certified_legal: false;
+  has_blocking_legal_findings?: boolean;
+  compliance_disclaimer?: string;
+  policy: WorkforcePolicyOut;
+};
+
+export type WorkforceWeekValidationOut = WorkforceValidationOut & {
+  starts_from: string;
+  starts_to: string;
+  slots: WorkforceSlotOut[];
+  assignments: WorkforceShiftOut[];
+  coverage: WorkforceCoverageOut[];
+};
+
+export type WorkforceWeekOut = {
+  starts_from: string;
+  starts_to: string;
+  slots: WorkforceSlotOut[];
+  assignments: WorkforceShiftOut[];
+  coverage: WorkforceCoverageOut[];
+  issues: WorkforceIssue[];
+  policy: WorkforcePolicyOut;
+  legal_status: "not_certified";
+  certified_legal: false;
 };
 
 export type ApiClient = ReturnType<typeof createApiClient>;

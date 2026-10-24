@@ -6,7 +6,9 @@ import { AuthLaunchScreen } from "../../components/auth";
 import { he } from "../../i18n/he";
 import { authLaunchSequence } from "../../lib/auth-launch";
 import { afterAuthPath, guestEntryPath } from "../../lib/auth-routes";
+import { activeMembership } from "../../lib/active-membership";
 import { useSession } from "../../lib/session";
+import { hasUnitSession } from "../../lib/unit-session";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -19,7 +21,8 @@ function AppLayout() {
   const [boot, setBoot] = useState<BootPhase>("loading");
   const lastLaunchedWorkspaceId = useRef<string | null>(null);
   const launchingRef = useRef(false);
-  const activeWorkspaceId = session?.memberships[0]?.workspace_id ?? null;
+  const membership = activeMembership(session);
+  const activeWorkspaceId = membership?.workspace_id ?? null;
 
   useEffect(() => {
     if (loading) {
@@ -63,17 +66,23 @@ function AppLayout() {
     };
   }, [activeWorkspaceId, error, loading, session?.has_workspace, user]);
 
+  if (!loading && !user && hasUnitSession()) {
+    return <Navigate to="/unit" />;
+  }
+
   if (boot !== "done" && (loading || (user && session?.has_workspace))) {
     return (
       <AuthLaunchScreen
         phase={boot === "ready" ? "ready" : boot === "workspace" ? "workspace" : "session"}
-        workspaceName={session?.memberships[0]?.workspace_name}
+        workspaceName={membership?.workspace_name}
         ready={boot === "ready"}
       />
     );
   }
 
-  if (!user) return <Navigate to={guestEntryPath()} />;
+  if (!user) {
+    return <Navigate to={guestEntryPath()} />;
+  }
   if (error && !session) {
     return (
       <ErrorState

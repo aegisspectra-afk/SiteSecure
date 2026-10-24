@@ -33,6 +33,31 @@ def test_validate_definition_ok():
     assert definition["fields"][0]["options"][0]["id"] == oid
 
 
+def test_heading_and_datetime_fields():
+    hid = "11111111-1111-4111-8111-111111111111"
+    did = "22222222-2222-4222-8222-222222222222"
+    definition = validate_definition(
+        {
+            "fields": [
+                _field(hid, "heading", required=True, label="הסבר"),
+                _field(did, "datetime", required=True, label="מועד"),
+            ]
+        }
+    )
+    assert definition["fields"][0]["required"] is False
+    answers, _consent = validate_answers(definition, {did: "2026-10-22T08:30"})
+    assert did in answers
+    assert hid not in answers
+
+
+def test_checkbox_field_accepts_boolean_like_yes_no():
+    fid = "11111111-1111-4111-8111-111111111111"
+    definition = validate_definition({"fields": [_field(fid, "checkbox", required=True, label="נוכח")]})
+    assert definition["fields"][0]["type"] == "checkbox"
+    answers, _consent = validate_answers(definition, {fid: True})
+    assert answers[fid] is True
+
+
 def test_validate_definition_rejects_unknown_type():
     fid = "11111111-1111-4111-8111-111111111111"
     with pytest.raises(ApiError) as exc:

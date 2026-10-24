@@ -11,24 +11,41 @@ export type SspNavOpts = {
 export const SSP_ACTOR_KINDS = ["office", "ops_center"] as const;
 export const SSP_CUSTOMER_SITE_KINDS = ["physical_site", "other"] as const;
 
-const BOTTOM_PREF: AppNavTo[] = [
+const ADMIN_BOTTOM: AppNavTo[] = [
   "/app/ssp",
-  "/app/ssp/alerts",
-  "/app/ssp/patrols",
-  "/app/ssp/activity",
-  "/app/ssp/sites",
+  "/app/ssp/offices",
+  "/app/ssp/users",
+  "/app/ssp/forms",
+  "/app/ssp/submissions",
+];
+
+const OFFICER_BOTTOM: AppNavTo[] = [
+  "/app/ssp/my-forms",
+  "/app/ssp/my-submissions",
+  "/app/ssp/profile",
 ];
 
 /**
- * Action-led IA: keep working capabilities, unify similar screens, defer untrusted modules.
- * Reports stay off the sidebar until real metrics exist.
+ * Admin IA: dashboard, offices, users, form builder, assignments, submissions, reports, settings.
+ * Officer IA: my forms, my submissions, profile.
  */
 export function sspNavGroups(opts: SspNavOpts = {}): AppNavGroup[] {
   const sspCan = opts.sspCan ?? (() => true);
+  const isOfficer = Boolean(opts.isOfficer);
+
+  if (isOfficer) {
+    const items: AppNavGroup["items"] = [
+      { to: "/app/ssp/my-forms", label: he.sspNavMyForms, icon: "today" },
+      { to: "/app/ssp/my-submissions", label: he.sspNavMySubmissions, icon: "audit" },
+      { to: "/app/ssp/profile", label: he.sspNavProfile, icon: "team" },
+    ];
+    return [{ id: "me", label: he.sspNavGroupWorker, items }];
+  }
+
   const canSeeSites = sspCan("ssp.sites.view") || sspCan("ssp.forms.view");
   const canSeeForms = sspCan("ssp.forms.view");
-  const canSeeWork = canSeeForms || sspCan("ssp.submissions.view") || sspCan("ssp.dashboard.view");
-  const canSeeTemplates = canSeeForms || sspCan("ssp.patrols.view") || sspCan("ssp.settings.view") || sspCan("ssp.org.view");
+  const canSeePeople = sspCan("ssp.members.view") || sspCan("ssp.officers.view") || sspCan("ssp.org.view") || canSeeSites;
+  const canSeeSettings = sspCan("ssp.settings.view") || sspCan("ssp.org.view") || canSeeForms;
 
   const items: Array<{ to: AppNavTo; label: string; icon: AppNavGroup["items"][number]["icon"]; show: boolean }> = [
     {
@@ -38,71 +55,61 @@ export function sspNavGroups(opts: SspNavOpts = {}): AppNavGroup[] {
       show: sspCan("ssp.dashboard.view") || canSeeForms,
     },
     {
-      to: "/app/ssp/alerts",
-      label: he.sspNavOpsCenter,
-      icon: "knowledge",
-      show: sspCan("ssp.dashboard.view") || sspCan("ssp.events.view") || canSeeWork,
-    },
-    {
-      to: "/app/ssp/patrols",
-      label: he.sspNavPatrolsMain,
-      icon: "calendar",
-      show: sspCan("ssp.patrols.view"),
-    },
-    {
-      to: "/app/ssp/activity",
-      label: he.sspNavWork,
-      icon: "today",
-      show: canSeeWork,
-    },
-    {
-      to: "/app/ssp/events",
-      label: he.sspNavEventsHub,
-      icon: "audit",
-      show: sspCan("ssp.events.view"),
-    },
-    {
-      to: "/app/ssp/sites",
-      label: he.sspNavCustomerSites,
+      to: "/app/ssp/offices",
+      label: he.sspNavOffices,
       icon: "sites",
       show: canSeeSites,
     },
     {
-      to: "/app/ssp/mobility",
-      label: he.sspNavMobility,
-      icon: "work",
-      show: canSeeSites,
-    },
-    {
       to: "/app/ssp/users",
-      label: he.sspNavUsers,
+      label: he.sspNavPeople,
       icon: "team",
-      show: canSeeSites || sspCan("ssp.officers.view") || sspCan("ssp.org.view"),
+      show: canSeePeople,
     },
     {
-      to: "/app/ssp/messages",
-      label: he.sspNavMessages,
-      icon: "ssp",
-      show: canSeeWork,
+      to: "/app/ssp/forms",
+      label: he.sspNavFormsBuilder,
+      icon: "catalog",
+      show: canSeeForms,
+    },
+    {
+      to: "/app/ssp/assignments",
+      label: he.sspNavAssignments,
+      icon: "work",
+      show: sspCan("ssp.assignments.manage") || canSeeForms,
+    },
+    {
+      to: "/app/ssp/submissions",
+      label: he.sspNavSubmittedForms,
+      icon: "audit",
+      show: sspCan("ssp.submissions.view") || sspCan("ssp.submissions.view_own"),
+    },
+    {
+      to: "/app/ssp/reports",
+      label: he.sspNavReports,
+      icon: "overview",
+      show: sspCan("ssp.dashboard.view") || canSeeForms,
     },
     {
       to: "/app/ssp/templates",
-      label: he.sspNavTemplatesHub,
+      label: he.sspNavSettings,
       icon: "settings",
-      show: canSeeTemplates,
+      show: canSeeSettings,
     },
   ];
 
   const visible = items.filter((item) => item.show).map(({ to, label, icon }) => ({ to, label, icon }));
   if (!visible.length) return [];
-  return [{ id: "ops", label: he.sspNavOps, items: visible }];
+  return [{ id: "ops", label: he.sspNavGroupManage, items: visible }];
 }
 
 export function sspBottomNav(opts: SspNavOpts = {}): BottomNavEntry[] {
   const allowed = new Set(sspNavDestinations(opts));
-  return BOTTOM_PREF.filter((to) => allowed.has(to)).map((to) => {
-    const groups = sspNavGroups(opts);
-    const item = groups[0]?.items.find((entry) => entry.to === to);
+  const pref = opts.isOfficer ? OFFICER_BOTTOM : ADMIN_BOTTOM;
+  const groups = sspNavGroups(opts);
+  const flat = groups.flatMap((group) => group.items);
+  return pref.filter((to) => allowed.has(to)).map((to) => {
+    const item = flat.find((entry) => entry.to === to);
     return {
       kind: "route" as const,
       to,
@@ -121,12 +128,18 @@ export const SSP_SECONDARY_NAV = [
   "/app/ssp/enrollments",
   "/app/ssp/organization",
   "/app/ssp/checkpoints",
-  "/app/ssp/submissions",
   "/app/ssp/devices",
   "/app/ssp/officers",
-  "/app/ssp/forms",
   "/app/ssp/task-templates",
   "/app/ssp/join",
+  "/app/ssp/unit-codes",
+  "/app/ssp/sites",
+  "/app/ssp/alerts",
+  "/app/ssp/patrols",
+  "/app/ssp/activity",
+  "/app/ssp/events",
+  "/app/ssp/mobility",
+  "/app/ssp/messages",
 ] as const;
 
 export const SSP_UNIMPLEMENTED_NAV = [

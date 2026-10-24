@@ -1,0 +1,36 @@
+{
+  "list_status": 200,
+  "count": 4,
+  "codes": [
+    "CAM-004",
+    "CAM-003",
+    "CAM-002",
+    "CAM-001"
+  ],
+  "detail_status": 200,
+  "detail": {
+    "id": "56201822-a186-494f-a8b3-35fb5ca50bcb",
+    "workspace_id": "50339413-11c7-4903-820c-7541fbd2a476",
+    "site_id": "0e854579-7656-45bc-8c91-08bd2e46489d",
+    "system_id": null,
+    "zone_id": null,
+    "category": "camera",
+    "status": "installed",
+    "name": "Camera (4/4)",
+    "manufacturer": null,
+    "model": null,
+    "serial": null,
+    "mac": null,
+    "ip": null,
+    "location_note": null,
+    "installed_at": null,
+    "product_id": null,
+    "project_id": "b28fabc2-f782-4d98-80c7-a3a39d64795e",
+    "project_planned_item_id": "7bf21ed7-aa0b-4d7d-aa63-2f27fa214783",
+    "asset_code": "CAM-004",
+    "created_at": "2026-09-28T10:12:24.02831+00:00",
+    "updated_at": "2026-09-28T10:12:24.02831+00:00"
+  },
+  "patch_status": 200,
+  "patch_ip": "10.20.30.41"
+}

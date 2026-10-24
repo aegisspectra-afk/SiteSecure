@@ -175,6 +175,7 @@ def list_workspace_products(
     _raise(authorize(ctx=ctx, action="workspace.edit"))
     plan_eligible = fetch_plan_feature_keys(svc, ctx.plan_key)
     overrides = _load_overrides(svc, ws)
+    # enabled comes from my_workspace_entitlements (ctx.features), not catalog.
     rows = product_rows(
         plan_key=ctx.plan_key,
         plan_eligible=plan_eligible,

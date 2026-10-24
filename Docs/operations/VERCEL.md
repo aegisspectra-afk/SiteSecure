@@ -1,22 +1,30 @@
-# SITE SECURE V2 — Vercel (Web only)
+# SITE SECURE V2 — Vercel (frontends only)
 
-**Vercel hosts the Vite web app. It does not replace FastAPI.**  
-Service role never goes here. Public Website is **not** this step.
+**Vercel hosts the Vite SPAs. It does not replace FastAPI.**  
+Service role never goes here. Public Website is **not** this step. Do not create a Vercel Python project for this repo.
+
+Three frontend projects can share this Git repository. **Root Directory stays the repository root** for every project. `vercel.json` cannot hold three different Output Directories, so the build script copies the selected app into `vercel-output`.
+
+| Vercel project | `SITESECURE_VERCEL_APP` | Build | Output copied from |
+|----------------|-------------------------|-------|--------------------|
+| SITE SECURE (existing) | unset, or `web` | `npm run web:build` | `apps/web/dist` |
+| WorkForce | `workforce` | `npm run workforce:build` | `apps/WorkForce/dist` |
+| SSP | `ssp` | `npm run ssp:build` | `apps/ssp/dist` |
+
+Do **not** set Root Directory to `apps/web`, `apps/WorkForce`, or `apps/ssp`. npm workspaces live at the repository root. Do **not** set `SITESECURE_VERCEL_APP=workforce` on the existing SITE SECURE project.
 
 ```
-Vercel                          FastAPI (later, separate host)
-  └── SITE SECURE Web             └── API Server
-        /login /register                CORS ← Vercel origin
-        /onboarding                     VITE_API_URL points here
-        /app/dashboard
-        /app/today
+Vercel (static SPAs)            FastAPI (separate host, not Vercel)
+  ├── SITE SECURE Web             └── API Server
+  ├── WorkForce                     CORS ← each Vercel origin
+  └── SSP                           VITE_API_URL points here
               \                        /
                →  Supabase V2  rhxqqudlngimhplvndmz
                     Auth + Database + Storage
 ```
 
-Local daily work stays `http://localhost:5173` + `http://localhost:8000`.  
-Vercel is the first **public Web** origin (`https://site-secure-xxxx.vercel.app`). Custom domain `site-secure.com` comes after this works.
+Local daily work stays `http://localhost:5173` (web), `5174` (SSP), `5175` (WorkForce) + `http://localhost:8000`.  
+Existing public Web origin: `https://site-secure-umber.vercel.app`. Do not invent WorkForce/SSP production hostnames here; set them in the Vercel project after it exists.
 
 ---
 
@@ -29,40 +37,73 @@ Vercel is the first **public Web** origin (`https://site-secure-xxxx.vercel.app`
 
 ---
 
-## 1. Import settings (do not pick `apps/web` as Root Directory)
+## 1. Import settings (Root Directory is always the repository root)
 
-npm workspaces live at the **repository root**. If Root Directory is `apps/web`, `@site-secure/ui` will not install.
+npm workspaces live at the **repository root**. If Root Directory is `apps/web` or `apps/WorkForce`, `@site-secure/ui` will not install.
 
-In the Vercel import screen:
+### SITE SECURE (existing project)
 
 | Field | Value |
 |--------|--------|
 | **Root Directory** | leave empty (repository root `.`) |
 | **Framework Preset** | Other |
-| **Build Command** | `npm run web:build` |
-| **Output Directory** | `apps/web/dist` |
+| **Build Command** | `node scripts/vercel-build.mjs` (from `vercel.json`; default app is web) |
+| **Output Directory** | `vercel-output` |
 | **Install Command** | `npm ci` |
 | **Node.js Version** | `20` |
+| **`SITESECURE_VERCEL_APP`** | leave unset |
 
-`vercel.json` in the repo already encodes build / output / SPA rewrites / `noindex`. Prefer matching the dashboard to that file.
+`vercel.json` encodes install / build / output / SPA rewrites / `noindex`. Prefer matching the dashboard to that file. Unset `SITESECURE_VERCEL_APP` keeps this project on SITE SECURE web.
+
+### WorkForce (new project, same Git repo)
+
+Create a **second** Vercel project. Do not reuse the SITE SECURE project.
+
+| Field | Value |
+|--------|--------|
+| **Root Directory** | leave empty (repository root `.`) |
+| **Framework Preset** | Other |
+| **Build Command** | leave as `vercel.json` (`node scripts/vercel-build.mjs`) |
+| **Output Directory** | leave as `vercel.json` (`vercel-output`) |
+| **Install Command** | `npm ci` |
+| **Node.js Version** | `20` |
+| **`SITESECURE_VERCEL_APP`** | `workforce` (Production and Preview) |
+
+### SSP (new project, same Git repo)
+
+Same as WorkForce, with **`SITESECURE_VERCEL_APP=ssp`**. SSP production env guards are not part of this WorkForce pass.
 
 Do **not** enable a Vercel Python / FastAPI project for this repo.
 
 ---
 
-## 2. Environment variables (Web)
+## 2. Environment variables (frontends)
 
-Set on **Production** and **Preview**. Changing them requires a **Redeploy** (Vite bakes `VITE_*` at build time).
+Set on **Production** and **Preview**. Changing them requires a **Redeploy** (Vite bakes `VITE_*` at build time). Never put `SUPABASE_SERVICE_ROLE_KEY` in a `VITE_` variable.
 
-| Key | Put on Vercel Web? | Value |
-|-----|--------------------|--------|
+### SITE SECURE Web
+
+| Key | Put on this Vercel project? | Value |
+|-----|-----------------------------|--------|
 | `VITE_SUPABASE_URL` | Yes | `https://rhxqqudlngimhplvndmz.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | Yes | anon / `sb_publishable_…` only |
-| `VITE_API_URL` | Yes | public FastAPI origin, **no trailing slash**, **not** `http://localhost:8000` |
+| `VITE_API_URL` | Yes | public FastAPI origin, **no trailing slash**, **not** localhost |
+| `VITE_WORKFORCE_APP_URL` | Yes, after WorkForce has a public origin | WorkForce HTTPS origin, **not** localhost |
+| `SITESECURE_VERCEL_APP` | No | default is web |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Never** | API server only |
-| `SUPABASE_URL` / `SUPABASE_ANON_KEY` without `VITE_` | No | unused by the browser bundle |
 
-Production build **fails** if `VITE_API_URL` is missing or contains `localhost`.
+### WorkForce
+
+| Key | Put on this Vercel project? | Value |
+|-----|-----------------------------|--------|
+| `SITESECURE_VERCEL_APP` | Yes | `workforce` |
+| `VITE_SUPABASE_URL` | Yes | same public Supabase URL as web |
+| `VITE_SUPABASE_ANON_KEY` | Yes | anon / `sb_publishable_…` only |
+| `VITE_API_URL` | Yes | same public FastAPI origin as web, **not** localhost |
+| `VITE_PLATFORM_HOME_URL` | Yes | SITE SECURE origin + `/platform`, **not** localhost |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Never** | API server only |
+
+WorkForce production **build fails** if `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, or `VITE_PLATFORM_HOME_URL` is missing or points at localhost.
 
 Until FastAPI has a public URL, Login/Signup can still talk to **Supabase Auth** from the browser. Onboarding, Dashboard, and Today **will not** work: they need `VITE_API_URL` + CORS on the API. Sequence: deploy Web → publish API → set `VITE_API_URL` → Redeploy Web → set API `WEB_PUBLIC_URL` to the Vercel origin.
 
@@ -108,6 +149,8 @@ http://localhost:5173/app
 
 Preview deployments: add `https://*-site-secure-*.vercel.app/**` only if you send auth emails from those hosts.
 
+After a WorkForce Vercel origin exists, add that origin’s `/login` and `/**` to Redirect URLs. WorkForce has no `/register` or `/reset-password`; password recovery stays on SITE SECURE `/forgot-password`.
+
 Do **not** leave Site URL on `http://localhost:5173` once real users register on Vercel.
 
 ---
@@ -118,9 +161,9 @@ On the API host (Render later, or whatever you choose):
 
 | Key | Value |
 |-----|--------|
-| `WEB_PUBLIC_URL` | `https://<project>.vercel.app` (no path) |
+| `WEB_PUBLIC_URL` | SITE SECURE Vercel origin (no path) |
 | `APP_ENV` | `staging` (so localhost is **not** kept in CORS) |
-| `CORS_EXTRA_ORIGINS` | extra preview origins if needed, comma-separated |
+| `CORS_EXTRA_ORIGINS` | WorkForce Vercel origin, SSP origin, and extra preview origins — comma-separated |
 
 Then rebuild Web with the real `VITE_API_URL`. Confirm in the browser Network tab: requests go to that origin, never `localhost:8000`.
 

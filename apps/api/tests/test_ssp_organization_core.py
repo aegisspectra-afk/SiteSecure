@@ -21,6 +21,7 @@ from app.ssp.product_authz import (
 
 ROOT = Path(__file__).resolve().parents[3]
 ORG_SQL = ROOT / "supabase" / "migrations" / "20261019220000_ssp_organization_core.sql"
+MEMBERSHIPS_RLS_SQL = ROOT / "supabase" / "migrations" / "20261022100000_ssp_memberships_rls_no_recursion.sql"
 
 
 def _ctx(**kwargs) -> AuthzContext:
@@ -49,6 +50,16 @@ def test_migration_file_defines_company_and_roles():
     assert "fleet" not in text.lower() or "FleetMaster" in text or True
     # Must not alter catalog / create_workspace
     assert "create_workspace" not in text
+
+
+def test_memberships_select_policy_is_not_self_recursive():
+    text = MEMBERSHIPS_RLS_SQL.read_text(encoding="utf-8")
+    assert "ssp_auth_product_role" in text
+    assert "SECURITY DEFINER" in text
+    assert "DROP POLICY IF EXISTS ssp_memberships_select" in text
+    assert "FROM public.ssp_memberships me" not in text
+    assert "FORCE ROW LEVEL SECURITY" not in text
+    assert "DISABLE ROW LEVEL SECURITY" not in text
 
 
 def test_company_id_generation_unique_and_format():

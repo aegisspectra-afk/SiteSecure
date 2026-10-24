@@ -1,0 +1,130 @@
+{
+  "suite": "BETA-E2E-1A",
+  "timestamp_utc": "2026-09-30T18:44:33Z",
+  "web": "https://site-secure-umber.vercel.app",
+  "api": "https://site-secure-api-staging.onrender.com",
+  "git_sha_workspace": "d34032dea597af251f71899760db83d49753ac29",
+  "expected_deployed_api_sha": "f8fa9e5a5180c2927c7a2d22b3c7b9362897d96e",
+  "accounts": {
+    "owner": "e2e1a.owner.184433@sitesecure.test",
+    "note": "Passwords omitted"
+  },
+  "ids": {
+    "workspace_id": "8e974e1c-0713-4ab8-97a8-b6c16a2cdb48",
+    "customer_id": "6a0d73be-1b1e-4666-85db-cc6523c4bd90",
+    "quote_defaults_id": "e0372fb0-ca40-419a-ba60-654dbe3d70c3",
+    "site_id": "0e924f38-5d17-44e3-97e1-aef51da33a41",
+    "golden_quote_id": "52f16515-e2bc-4cdb-9bb2-3e147105bc1f",
+    "public_token_present": true,
+    "project_id": "c495fd2c-e2d7-46a8-a505-dcd088c9e2a8"
+  },
+  "cases": {
+    "settings_saved": {
+      "result": "PASS",
+      "scheduling_sites": {
+        "require_address": true,
+        "require_access_notes": true
+      },
+      "quotes": {
+        "validity_days": 21,
+        "payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A"
+      }
+    },
+    "A_require_address_on": {
+      "result": "PASS",
+      "code": 400,
+      "body": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"נדרשת כתובת לאתר לפי הגדרות הסביבה\",\"details\":{}}}"
+    },
+    "B_require_address_off": {
+      "result": "PASS",
+      "code": 200,
+      "body": "{\"id\":\"5f30c825-0704-4457-8c5e-022b5a88b5e2\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"customer_id\":\"6a0d73be-1b1e-4666-85db-cc6523c4bd90\",\"code\":\"AS-S-00001\",\"name\":\""
+    },
+    "C_require_access_notes_on": {
+      "result": "PASS",
+      "code": 400,
+      "body": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"נדרשות הערות גישה לאתר לפי הגדרות הסביבה\",\"details\":{}}}"
+    },
+    "D_require_access_notes_off": {
+      "result": "PASS",
+      "code": 200,
+      "body": "{\"id\":\"510fc8c0-ce2a-4e55-96da-69bd3af34a86\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"customer_id\":\"6a0d73be-1b1e-4666-85db-cc6523c4bd90\",\"code\":\"AS-S-00002\",\"name\":\""
+    },
+    "E_validity_default": {
+      "result": "PASS",
+      "code": 200,
+      "valid_until": "2026-10-21",
+      "expected": "2026-10-21"
+    },
+    "F_payment_terms_default": {
+      "result": "PASS",
+      "payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A",
+      "expected": "40% מקדמה · 60% בגמר התקנה · E2E1A"
+    },
+    "G_explicit_override": {
+      "result": "PASS",
+      "code": 200,
+      "valid_until": "2026-10-07",
+      "payment_terms": "תנאים מפורשים OVERRIDE"
+    },
+    "H_existing_unchanged": {
+      "result": "PASS",
+      "before_valid": "2026-10-21",
+      "after_valid": "2026-10-21"
+    },
+    "golden_quote_defaults": {
+      "result": "PASS",
+      "valid_until": "2026-10-21",
+      "payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A"
+    },
+    "regression_pricing": {
+      "result": "PASS",
+      "total_gross": 2124.0
+    },
+    "regression_autosave": {
+      "result": "PASS",
+      "code": 200
+    },
+    "golden_preview": {
+      "result": "PASS",
+      "code": 200
+    },
+    "golden_pdf": {
+      "result": "PASS",
+      "code": 200,
+      "nbytes": 29267
+    },
+    "golden_send": {
+      "result": "PASS",
+      "code": 200,
+      "body": "{'id': '52f16515-e2bc-4cdb-9bb2-3e147105bc1f', 'workspace_id': '8e974e1c-0713-4ab8-97a8-b6c16a2cdb48', 'number': 'Q-00003', 'status': 'sent', 'customer_id': '6a0d73be-1b1e-4666-85db-cc6523c4bd90', 'si"
+    },
+    "regression_public_cost_protection": {
+      "result": "PASS",
+      "code": 200,
+      "leaks": []
+    },
+    "regression_approval": {
+      "result": "PASS",
+      "code": 200,
+      "body": "{\"id\":\"52f16515-e2bc-4cdb-9bb2-3e147105bc1f\",\"site\":{\"name\":\"אתר זהב 184433\",\"address\":{\"city\":\"תל אביב\",\"line\":\"דרך השלום 10\"}},\"items\":[{\"id\":\"ab472b0d-0c6a-4"
+    },
+    "regression_project_conversion": {
+      "result": "PASS",
+      "code": 200,
+      "body": "{\"id\":\"c495fd2c-e2d7-46a8-a505-dcd088c9e2a8\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"name\":\"הצעת זהב 184433\",\"status\":\"planned\",\"customer_id\":\"6a0d73be-1b1e-4666-85d"
+    }
+  },
+  "defects": [],
+  "api_v1_health": {
+    "status": 200,
+    "body": "{\"ok\":true,\"version\":\"v1\"}"
+  },
+  "summary": {
+    "fails": [],
+    "p0": 0,
+    "p1": 0,
+    "pass_count": 18,
+    "fail_count": 0
+  }
+}

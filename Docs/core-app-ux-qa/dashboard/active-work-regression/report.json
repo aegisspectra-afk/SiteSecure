@@ -1,0 +1,2255 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    "1440-dark-stress.png",
+    "1440-light-stress.png",
+    "1024-dark-stress.png",
+    "1024-light-stress.png",
+    "850-dark-stress.png",
+    "850-light-stress.png",
+    "768-dark-stress.png",
+    "768-light-stress.png",
+    "700-dark-stress.png",
+    "700-light-stress.png",
+    "430-dark-stress.png",
+    "390-dark-stress.png",
+    "390-light-stress.png",
+    "360-dark-stress.png"
+  ],
+  "checks": {
+    "1440-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 1440,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 444.4375,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 392.84375,
+            "r": 471.640625,
+            "t": 332.625,
+            "b": 376.625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 140.015625,
+            "r": 471.640625,
+            "t": 261.765625,
+            "b": 296.640625,
+            "w": 331.625,
+            "h": 34.875
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 131,
+            "r": 471.640625,
+            "t": 220.484375,
+            "b": 260.625,
+            "w": 340.640625,
+            "h": 40.140625
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 113.984375,
+            "r": 471.640625,
+            "t": 332.625,
+            "b": 376.625,
+            "w": 357.65625,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "413.656px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "357.656px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "357.656px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "1440-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 1440,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 444.4375,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 392.84375,
+            "r": 471.640625,
+            "t": 332.625,
+            "b": 376.625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 140.015625,
+            "r": 471.640625,
+            "t": 261.765625,
+            "b": 296.640625,
+            "w": 331.625,
+            "h": 34.875
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 131,
+            "r": 471.640625,
+            "t": 220.484375,
+            "b": 260.625,
+            "w": 340.640625,
+            "h": 40.140625
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 98.59375,
+            "r": 543.03125,
+            "t": 164.328125,
+            "b": 900.171875,
+            "w": 444.4375
+          },
+          "child": {
+            "l": 113.984375,
+            "r": 471.640625,
+            "t": 332.625,
+            "b": 376.625,
+            "w": 357.65625,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "413.656px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "357.656px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "357.656px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "1024-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 1024,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 294.65625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 183.0625,
+            "r": 261.859375,
+            "t": 210.640625,
+            "b": 254.640625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 55.03125,
+            "r": 261.859375,
+            "t": 122.90625,
+            "b": 174.65625,
+            "w": 206.828125,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 62.25,
+            "r": 261.859375,
+            "t": 60.484375,
+            "b": 121.765625,
+            "w": 199.609375,
+            "h": 61.28125
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 53.984375,
+            "r": 261.859375,
+            "t": 210.640625,
+            "b": 254.640625,
+            "w": 207.875,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "263.875px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "207.875px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "207.875px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "1024-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 1024,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 294.65625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 183.0625,
+            "r": 261.859375,
+            "t": 210.640625,
+            "b": 254.640625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 55.03125,
+            "r": 261.859375,
+            "t": 122.90625,
+            "b": 174.65625,
+            "w": 206.828125,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 62.25,
+            "r": 261.859375,
+            "t": 60.484375,
+            "b": 121.765625,
+            "w": 199.609375,
+            "h": 61.28125
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 38.59375,
+            "r": 333.25,
+            "t": 5.328125,
+            "b": 900.390625,
+            "w": 294.65625
+          },
+          "child": {
+            "l": 53.984375,
+            "r": 261.859375,
+            "t": 210.640625,
+            "b": 254.640625,
+            "w": 207.875,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "263.875px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "207.875px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "207.875px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "850-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 850,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 788.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 669.21875,
+            "r": 748.015625,
+            "t": 432.5625,
+            "b": 476.5625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 180.65625,
+            "r": 748.015625,
+            "t": 378.578125,
+            "b": 396.578125,
+            "w": 567.359375,
+            "h": 18
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 306.25,
+            "r": 748.015625,
+            "t": 356.4375,
+            "b": 377.4375,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 748.015625,
+            "t": 432.5625,
+            "b": 476.5625,
+            "w": 702.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "758.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "702.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "702.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "850-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 850,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 788.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 669.21875,
+            "r": 748.015625,
+            "t": 432.5625,
+            "b": 476.5625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 180.65625,
+            "r": 748.015625,
+            "t": 378.578125,
+            "b": 396.578125,
+            "w": 567.359375,
+            "h": 18
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 306.25,
+            "r": 748.015625,
+            "t": 356.4375,
+            "b": 377.4375,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 819.40625,
+            "t": 301.28125,
+            "b": 900.21875,
+            "w": 788.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 748.015625,
+            "t": 432.5625,
+            "b": 476.5625,
+            "w": 702.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "758.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "702.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "702.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "768-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 768,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 706.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 587.21875,
+            "r": 666.015625,
+            "t": 556.5625,
+            "b": 600.5625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 98.65625,
+            "r": 666.015625,
+            "t": 502.578125,
+            "b": 520.578125,
+            "w": 567.359375,
+            "h": 18
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 224.25,
+            "r": 666.015625,
+            "t": 480.4375,
+            "b": 501.4375,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 666.015625,
+            "t": 556.5625,
+            "b": 600.5625,
+            "w": 620.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "676.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "620.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "620.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "768-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 768,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 706.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 587.21875,
+            "r": 666.015625,
+            "t": 556.5625,
+            "b": 600.5625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 98.65625,
+            "r": 666.015625,
+            "t": 502.578125,
+            "b": 520.578125,
+            "w": 567.359375,
+            "h": 18
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 224.25,
+            "r": 666.015625,
+            "t": 480.4375,
+            "b": 501.4375,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 737.40625,
+            "t": 425.28125,
+            "b": 1024.21875,
+            "w": 706.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 666.015625,
+            "t": 556.5625,
+            "b": 600.5625,
+            "w": 620.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "676.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "620.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "620.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "700-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 700,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 638.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 519.21875,
+            "r": 598.015625,
+            "t": 381.46875,
+            "b": 425.46875,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 77.46875,
+            "r": 598.015625,
+            "t": 310.609375,
+            "b": 345.484375,
+            "w": 520.546875,
+            "h": 34.875
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 156.25,
+            "r": 598.015625,
+            "t": 288.46875,
+            "b": 309.46875,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 598.015625,
+            "t": 381.46875,
+            "b": 425.46875,
+            "w": 552.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "608.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "552.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "552.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "700-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 700,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 638.8125,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 519.21875,
+            "r": 598.015625,
+            "t": 381.46875,
+            "b": 425.46875,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 77.46875,
+            "r": 598.015625,
+            "t": 310.609375,
+            "b": 345.484375,
+            "w": 520.546875,
+            "h": 34.875
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 156.25,
+            "r": 598.015625,
+            "t": 288.46875,
+            "b": 309.46875,
+            "w": 441.765625,
+            "h": 21
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 30.59375,
+            "r": 669.40625,
+            "t": 233.3125,
+            "b": 899.75,
+            "w": 638.8125
+          },
+          "child": {
+            "l": 45.984375,
+            "r": 598.015625,
+            "t": 381.46875,
+            "b": 425.46875,
+            "w": 552.03125,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "608.031px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "552.031px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "552.031px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "430-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 430,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 373.625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 401.8125,
+            "t": 79.390625,
+            "b": 899.578125,
+            "w": 373.625
+          },
+          "child": {
+            "l": 252.421875,
+            "r": 331.21875,
+            "t": 264.5625,
+            "b": 308.5625,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 401.8125,
+            "t": 79.390625,
+            "b": 899.578125,
+            "w": 373.625
+          },
+          "child": {
+            "l": 64.59375,
+            "r": 331.21875,
+            "t": 176.828125,
+            "b": 228.578125,
+            "w": 266.625,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 401.8125,
+            "t": 79.390625,
+            "b": 899.578125,
+            "w": 373.625
+          },
+          "child": {
+            "l": 60.421875,
+            "r": 331.21875,
+            "t": 134.546875,
+            "b": 175.6875,
+            "w": 270.796875,
+            "h": 41.140625
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 401.8125,
+            "t": 79.390625,
+            "b": 899.578125,
+            "w": 373.625
+          },
+          "child": {
+            "l": 42.78125,
+            "r": 331.21875,
+            "t": 264.5625,
+            "b": 308.5625,
+            "w": 288.4375,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "344.438px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "288.438px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "288.438px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "390-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 390,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 333.625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 212.421875,
+            "r": 291.21875,
+            "t": 247.28125,
+            "b": 291.28125,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 44.046875,
+            "r": 291.21875,
+            "t": 159.546875,
+            "b": 211.296875,
+            "w": 247.171875,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 61.546875,
+            "r": 291.21875,
+            "t": 117.265625,
+            "b": 158.40625,
+            "w": 229.671875,
+            "h": 41.140625
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 42.78125,
+            "r": 291.21875,
+            "t": 247.28125,
+            "b": 291.28125,
+            "w": 248.4375,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "304.438px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "248.438px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "248.438px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "390-light": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 390,
+      "theme": "light",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 333.625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 212.421875,
+            "r": 291.21875,
+            "t": 247.28125,
+            "b": 291.28125,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 44.046875,
+            "r": 291.21875,
+            "t": 159.546875,
+            "b": 211.296875,
+            "w": 247.171875,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 61.546875,
+            "r": 291.21875,
+            "t": 117.265625,
+            "b": 158.40625,
+            "w": 229.671875,
+            "h": 41.140625
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 361.8125,
+            "t": 62.109375,
+            "b": 882.296875,
+            "w": 333.625
+          },
+          "child": {
+            "l": 42.78125,
+            "r": 291.21875,
+            "t": 247.28125,
+            "b": 291.28125,
+            "w": 248.4375,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "304.438px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "248.438px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "248.438px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    },
+    "360-dark": {
+      "pass": true,
+      "seed": {
+        "ok": true,
+        "seeded": true,
+        "rows": 4
+      },
+      "width": 360,
+      "theme": "dark",
+      "dir": "rtl",
+      "pageOverflow": false,
+      "cardWidth": 303.625,
+      "hasRow": true,
+      "hasCta": true,
+      "ctaText": "פתח עבודה",
+      "ctaMinHeight": 44,
+      "ctaFullyVisible": true,
+      "contextContained": true,
+      "whatContained": true,
+      "rowContained": true,
+      "trailingContained": true,
+      "bounds": {
+        "cta": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 331.8125,
+            "t": -49.140625,
+            "b": 851.609375,
+            "w": 303.625
+          },
+          "child": {
+            "l": 182.421875,
+            "r": 261.21875,
+            "t": 156.171875,
+            "b": 200.171875,
+            "w": 78.796875,
+            "h": 44
+          }
+        },
+        "context": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 331.8125,
+            "t": -49.140625,
+            "b": 851.609375,
+            "w": 303.625
+          },
+          "child": {
+            "l": 45.140625,
+            "r": 261.21875,
+            "t": 68.4375,
+            "b": 120.1875,
+            "w": 216.078125,
+            "h": 51.75
+          }
+        },
+        "what": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 331.8125,
+            "t": -49.140625,
+            "b": 851.609375,
+            "w": 303.625
+          },
+          "child": {
+            "l": 52.3125,
+            "r": 261.21875,
+            "t": 6.015625,
+            "b": 67.296875,
+            "w": 208.90625,
+            "h": 61.28125
+          }
+        },
+        "trailing": {
+          "ok": true,
+          "parent": {
+            "l": 28.1875,
+            "r": 331.8125,
+            "t": -49.140625,
+            "b": 851.609375,
+            "w": 303.625
+          },
+          "child": {
+            "l": 42.78125,
+            "r": 261.21875,
+            "t": 156.171875,
+            "b": 200.171875,
+            "w": 218.4375,
+            "h": 44
+          }
+        }
+      },
+      "css": {
+        "activity": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "274.438px",
+          "marginInlineStart": "0px"
+        },
+        "body": {
+          "display": "flex",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "100%",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 192px",
+          "width": "218.438px",
+          "marginInlineStart": "0px"
+        },
+        "trailing": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "normal",
+          "overflow": "visible",
+          "flex": "1 1 calc(100% - 56px)",
+          "width": "218.438px",
+          "marginInlineStart": "56px"
+        },
+        "context": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "what": {
+          "display": "inline",
+          "flexWrap": "nowrap",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "overflowWrap": "anywhere",
+          "overflow": "visible",
+          "flex": "0 1 auto",
+          "width": "auto",
+          "marginInlineStart": "0px"
+        },
+        "cardOverflowX": "visible"
+      }
+    }
+  },
+  "started": "2026-09-26T23:45:14.835Z",
+  "stress": {
+    "title": "התקנת מערכת אבטחה מקיפה למבנה מסחרי רב-קומתי עם דגש על היקף חיצוני",
+    "context": "לקוח בדיקה ארוך לשם עיצוב · אתר בדיקה — שדרות הרצל 42 תל אביב קומה 7 אגף מזרחי מול הכניסה הראשית"
+  },
+  "pass": true,
+  "finished": "2026-09-26T23:46:56.342Z"
+}

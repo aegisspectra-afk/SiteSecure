@@ -1,0 +1,79 @@
+{
+  "ft_email": "ft.product.e3588aa5@sitesecure.test",
+  "ft_badges": [
+    "founding_technician"
+  ],
+  "ft_role": "technician",
+  "empty_ws": "FT Empty e3588aa5",
+  "golden": {
+    "landing_is_today": true,
+    "today_has_job": true,
+    "today_has_open_cta": true,
+    "badge_visible": true,
+    "hrefs": [
+      "/app/customers",
+      "/app/jobs",
+      "/app/jobs/4c953825-6fb6-488c-b2e5-2cd50b43c4b3",
+      "/app/knowledge",
+      "/app/sites",
+      "/app/tasks",
+      "/app/today"
+    ],
+    "has_projects_href": false,
+    "has_warranties_href": false,
+    "has_settings_href": false,
+    "has_service_href": false,
+    "fieldjob_has_customer": true,
+    "fieldjob_has_site": true,
+    "fieldjob_has_address": true,
+    "fieldjob_has_lifecycle": true,
+    "lifecycle_clicked": true,
+    "jobs_field_lead": true,
+    "jobs_no_unassigned_filter": true,
+    "feedback_categories": true,
+    "profile_badge": true,
+    "profile_role": true,
+    "mobile_fieldjob_overflow": false
+  },
+  "empty": {
+    "has_calm_empty": true,
+    "no_error": true,
+    "no_manager_metrics": true
+  },
+  "authz": {
+    "quotes_status": 403,
+    "admin_status": 403,
+    "admin_ui_denied": true
+  },
+  "journey": {
+    "landing": "PASS",
+    "today_with_work": "PASS",
+    "badge": "PASS",
+    "lifecycle": "PASS",
+    "fieldjob": "PASS",
+    "jobs": "PASS",
+    "feedback": "PASS",
+    "profile": "PASS",
+    "logout": "SKIPPED_IN_QA",
+    "fieldjob_mobile": "PASS",
+    "authz": "PASS",
+    "empty": "PASS"
+  },
+  "api_today_count": 1,
+  "api_today_sample": [
+    {
+      "number": "J-00001",
+      "title": "תיקון מצלמה שער",
+      "customer": "לקוח FT",
+      "site": "אתר FT",
+      "status": "arrived"
+    }
+  ],
+  "api_job": {
+    "status": 200,
+    "number": "J-00001",
+    "customer_name": "לקוח FT",
+    "site_name": "אתר FT",
+    "job_status": "arrived"
+  }
+}

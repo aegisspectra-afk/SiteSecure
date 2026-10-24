@@ -1,0 +1,22 @@
+{
+  "shots": [
+    "1440-dark-company.png",
+    "390-dark-company.png"
+  ],
+  "checks": {
+    "displayName": "Phase1B QA 1790012816",
+    "phone": "03-555-0199",
+    "city": "תל אביב",
+    "hasDemoWord": false,
+    "hasDemoButtons": false,
+    "hasDocsSection": true,
+    "paymentLabel": "PHASE1B QA 1790012816",
+    "paymentOk": true,
+    "hasProductBrandLeak": false,
+    "websitePersisted": true,
+    "websiteAfter": "https://example.com/QA-333930"
+  },
+  "started": "2026-09-24T20:22:07.874Z",
+  "pass": true,
+  "finished": "2026-09-24T20:22:27.476Z"
+}

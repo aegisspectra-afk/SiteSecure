@@ -5,6 +5,7 @@ import { ObserveDashboard, OpsDashboard } from "../../components/dashboard/OpsDa
 import { filterLeadAttention } from "../../components/dashboard/LeadsAttention";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { he } from "../../i18n/he";
+import { activeMembership } from "../../lib/active-membership";
 import { can } from "../../lib/can";
 import { homeVariant } from "../../lib/home";
 import { useSession } from "../../lib/session";
@@ -15,13 +16,14 @@ export const Route = createFileRoute("/app/dashboard")({
 
 function DashboardPage() {
   const { session, api } = useSession();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   const variant = homeVariant(membership?.role_key);
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
   const roleKey = membership?.role_key;
 
   if (variant === "today") return <Navigate to="/app/today" />;
+  if (variant === "workforce") return <Navigate to="/app/workforce" />;
   if (!can(roleKey, "dashboard.view", features)) {
     return <ErrorState title={he.noDashboardPermission} />;
   }

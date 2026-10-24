@@ -16,6 +16,9 @@ def test_solo_field_seat_blocks_at_catalog_cap():
     assert d.code == "PLAN_LIMIT_REACHED"
     assert d.details["limit"] == 3
     assert d.details["limit_key"] == "seats_field"
+    assert "שטח" in d.message_he
+    assert f"{d.details['current']}/{d.details['limit']}" in d.message_he
+    assert d.message_he != "הגעתם למגבלת התוכנית הנוכחית"
 
 
 def test_solo_operator_seat_is_full_with_owner():
@@ -23,6 +26,27 @@ def test_solo_operator_seat_is_full_with_owner():
     assert d.allowed is False
     assert d.code == "PLAN_LIMIT_REACHED"
     assert d.details["limit_key"] == "seats_operator"
+    assert "משרד" in d.message_he
+
+
+def test_raise_plan_limit_keeps_named_seat_copy():
+    from app.authz.limits import raise_plan_limit
+    from app.errors import ApiError
+
+    d = evaluate_seat_limit(
+        plan_key="solo",
+        invite_role="technician",
+        occupied_roles=["owner", "technician", "technician", "viewer"],
+    )
+    try:
+        raise_plan_limit(d)
+    except ApiError as exc:
+        assert exc.status_code == 409
+        assert exc.code == "PLAN_LIMIT_REACHED"
+        assert exc.details["limit_key"] == "seats_field"
+        assert "שטח" in exc.message
+        return
+    raise AssertionError("expected PLAN_LIMIT_REACHED")
 
 
 def test_enterprise_zero_means_unlimited():

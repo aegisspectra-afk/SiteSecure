@@ -1,0 +1,147 @@
+{
+  "ok": true,
+  "web": "http://localhost:5173",
+  "checks": {
+    "rev1_unchanged_after_live_edit": true,
+    "compare_status": 200,
+    "compare_has_changes": true,
+    "compare_fields": [
+      {
+        "key": "Q5-CAM",
+        "change": "modified",
+        "from": {
+          "qty": 2,
+          "unit_price": 250,
+          "discount": 0,
+          "discount_type": "percent",
+          "is_optional": false,
+          "section_id": "fd89981b-f497-4b73-b415-aedc7c352dd9",
+          "description": "מצלמה Q5"
+        },
+        "to": {
+          "qty": 9,
+          "unit_price": 999,
+          "discount": 50,
+          "discount_type": "amount",
+          "is_optional": true,
+          "section_id": "fd89981b-f497-4b73-b415-aedc7c352dd9",
+          "description": "מצלמה Q5"
+        }
+      },
+      {
+        "key": "section:fd89981b-f497-4b73-b415-aedc7c352dd9",
+        "change": "modified",
+        "from": {
+          "name": "סעיף Q5"
+        },
+        "to": {
+          "name": "סעיף מעודכן Rev2"
+        }
+      }
+    ],
+    "timeline_visible": true,
+    "compare_visible": true,
+    "historical_sheet": true,
+    "rtl": true,
+    "dark": true,
+    "light": true
+  },
+  "viewports": {
+    "history-1440-dark": {
+      "width": 1440,
+      "height": 900,
+      "overflow_x": false,
+      "has_version_badge": true,
+      "has_timeline": true,
+      "has_compare": true,
+      "has_historical": false,
+      "has_current": true
+    },
+    "history-768-dark": {
+      "width": 768,
+      "height": 900,
+      "overflow_x": false,
+      "has_version_badge": true,
+      "has_timeline": true,
+      "has_compare": true,
+      "has_historical": false,
+      "has_current": true
+    },
+    "history-390-dark": {
+      "width": 390,
+      "height": 844,
+      "overflow_x": false,
+      "has_version_badge": true,
+      "has_timeline": true,
+      "has_compare": true,
+      "has_historical": false,
+      "has_current": true
+    },
+    "history-360-dark": {
+      "width": 360,
+      "height": 740,
+      "overflow_x": false,
+      "has_version_badge": true,
+      "has_timeline": true,
+      "has_compare": true,
+      "has_historical": true,
+      "has_current": true
+    },
+    "history-1440-light": {
+      "width": 1440,
+      "height": 900,
+      "overflow_x": false,
+      "has_version_badge": true,
+      "has_timeline": true,
+      "has_compare": true,
+      "has_historical": false,
+      "has_current": true
+    }
+  },
+  "shots": [
+    {
+      "name": "history-1440-dark",
+      "file": "Docs/q5-revision-ux-qa/history-1440-dark.png",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "history-768-dark",
+      "file": "Docs/q5-revision-ux-qa/history-768-dark.png",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "name": "history-390-dark",
+      "file": "Docs/q5-revision-ux-qa/history-390-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "history-360-dark",
+      "file": "Docs/q5-revision-ux-qa/history-360-dark.png",
+      "width": 360,
+      "height": 740
+    },
+    {
+      "name": "historical-sheet-1440-dark",
+      "file": "Docs/q5-revision-ux-qa/historical-sheet-1440-dark.png"
+    },
+    {
+      "name": "history-1440-light",
+      "file": "Docs/q5-revision-ux-qa/history-1440-light.png",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "errors": [],
+  "fixture": {
+    "rev1_total": 590,
+    "rev1_qty": 2,
+    "rev1_optional": false,
+    "id": "cf0d41e4-5af9-4f0c-a859-c5ab06557d86",
+    "number": "Q-00021",
+    "version": 2,
+    "status": "draft"
+  }
+}

@@ -1,7 +1,6 @@
 import { Button } from "@site-secure/ui";
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ErrorState } from "../../../components/modules/ModuleKit";
-import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { SspProductShell } from "../../../components/ssp/SspProductShell";
 import { he } from "../../../i18n/he";
 import { hasFeature } from "../../../lib/home";
@@ -26,10 +25,8 @@ function SspLayoutPage() {
     );
   }
   return (
-    <RequirePermission permission="ssp.forms.view">
-      <SspProductShell>
-        <Outlet />
-      </SspProductShell>
-    </RequirePermission>
+    <SspProductShell>
+      <Outlet />
+    </SspProductShell>
   );
 }

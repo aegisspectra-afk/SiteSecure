@@ -21,6 +21,40 @@ from ..deps import ServiceClient, UserClient, current_user, load_authz_context, 
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id, reject_spoofed_workspace
 from ..rest import schema_missing
+from ..workforce.catalog import (
+    ENFORCED_ON_ASSIGNMENT,
+    close_rule,
+    create_instrument,
+    create_workspace_rule,
+    expire_instrument,
+    get_profile,
+    list_instruments,
+    list_open_rules,
+    list_packs,
+    list_rules,
+    list_workspace_packs,
+    reject_policy_relaxing_legal,
+    upsert_profile,
+    upsert_workspace_pack,
+)
+from ..workforce.engine import validate_week
+from ..workforce.demand import (
+    create_coverage,
+    create_position_requirement,
+    create_qualification,
+    create_slot,
+    create_time_off,
+    delete_coverage,
+    delete_slot,
+    update_slot,
+    get_or_default_policy,
+    list_coverage,
+    list_slots,
+    list_time_off,
+    materialize_slots,
+    upsert_policy,
+    week_board,
+)
 from ..workforce.directory import (
     create_region,
     create_site,
@@ -40,7 +74,8 @@ from ..workforce.provision import (
     employee_out,
     provision_employee_user,
 )
-from ..workforce.shifts import create_shift, delete_shift, list_shifts, update_shift
+from ..workforce.shifts import create_shift, delete_shift, list_my_shifts, list_shifts, update_shift
+from ..workforce.validation import validate_assignment
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["workforce"])
 
@@ -103,6 +138,7 @@ class SiteWrite(BaseModel):
     region_id: str | None = None
     address: dict[str, Any] | None = None
     is_active: bool | None = None
+    timezone: str | None = None
     notes: str | None = None
     workspace_id: str | None = None
 
@@ -114,8 +150,146 @@ class ShiftWrite(BaseModel):
     site_id: str | None = None
     region_id: str | None = None
     position_id: str | None = None
+    slot_id: str | None = None
     starts_at: str | None = None
     ends_at: str | None = None
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class CoverageWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    site_id: str | None = None
+    position_id: str | None = None
+    weekday: int | None = None
+    start_local: str | None = None
+    end_local: str | None = None
+    crosses_midnight: bool | None = None
+    required_count: int | None = None
+    is_active: bool | None = None
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class SlotWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    site_id: str | None = None
+    region_id: str | None = None
+    position_id: str | None = None
+    coverage_requirement_id: str | None = None
+    starts_at: str | None = None
+    ends_at: str | None = None
+    required_count: int | None = None
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class PolicyWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_shift_hours: float | None = None
+    min_rest_hours: float | None = None
+    rest_rule_enabled: bool | None = None
+    weekly_hour_cap: float | None = None
+    workspace_id: str | None = None
+
+
+class TimeOffWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    employee_id: str | None = None
+    starts_at: str | None = None
+    ends_at: str | None = None
+    kind: str | None = None
+    status: str | None = None
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class QualificationWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    employee_id: str | None = None
+    qualification_key: str | None = None
+    expires_on: str | None = None
+    is_active: bool | None = None
+    workspace_id: str | None = None
+
+
+class PositionRequirementWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    position_id: str | None = None
+    qualification_key: str | None = None
+    enforcement: str | None = None
+    workspace_id: str | None = None
+
+
+class RuleWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pack_code: str | None = None
+    rule_code: str | None = None
+    name_he: str | None = None
+    description_he: str | None = None
+    rule_type: str | None = None
+    verification_status: str | None = None
+    severity: str | None = None
+    source_kind: str | None = None
+    source_citation: str | None = None
+    source_section: str | None = None
+    source_url: str | None = None
+    reviewed_on: str | None = None
+    effective_from: str | None = None
+    scope: dict[str, Any] | None = None
+    parameters: dict[str, Any] | None = None
+    workspace_id: str | None = None
+
+
+class RuleCloseWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    verification_status: Literal["expired", "superseded"] = "expired"
+    workspace_id: str | None = None
+
+
+class InstrumentWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    instrument_kind: str | None = None
+    code: str | None = None
+    title_he: str | None = None
+    citation: str | None = None
+    source_url: str | None = None
+    verification_status: str | None = None
+    effective_from: str | None = None
+    effective_to: str | None = None
+    scope: dict[str, Any] | None = None
+    parameters: dict[str, Any] | None = None
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class WorkspacePackWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_enabled: bool = False
+    notes: str | None = None
+    workspace_id: str | None = None
+
+
+class EmploymentProfileWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rest_weekday: int | None = None
+    hours_law_covered: bool | None = None
+    sector_pack_code: str | None = None
+    weekly_pattern: str | None = None
+    shortened_weekday: int | None = None
+    is_minor: bool | None = None
+    night_work_restricted: bool | None = None
     notes: str | None = None
     workspace_id: str | None = None
 
@@ -166,9 +340,20 @@ def _rows(res: Any) -> list[dict]:
     raise ApiError(400, "BUSINESS_RULE", MESSAGES["BUSINESS_RULE"])
 
 
-def _lookup_items(client: UserClient, table: str, workspace_id: str) -> list[dict[str, Any]]:
-    rows = _rows(
-        client.get(
+def _lookup_items(client: UserClient, table: str, workspace_id: str, *, extra_select: str = "") -> list[dict[str, Any]]:
+    select = "id,name,code,is_active" + (f",{extra_select}" if extra_select else "")
+    res = client.get(
+        table,
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "select": select,
+            "order": "name.asc",
+            "limit": "500",
+        },
+    )
+    if extra_select and schema_missing(res):
+        extra_select = ""
+        res = client.get(
             table,
             params={
                 "workspace_id": f"eq.{workspace_id}",
@@ -177,16 +362,21 @@ def _lookup_items(client: UserClient, table: str, workspace_id: str) -> list[dic
                 "limit": "500",
             },
         )
-    )
-    return [
-        {
+    rows = _rows(res)
+    items = []
+    for row in rows:
+        item = {
             "id": str(row.get("id") or ""),
             "name": row.get("name") or "",
             "code": row.get("code"),
             "is_active": bool(row.get("is_active", True)),
         }
-        for row in rows
-    ]
+        if extra_select:
+            for key in extra_select.split(","):
+                if key == "timezone":
+                    item["timezone"] = row.get("timezone") or "Asia/Jerusalem"
+        items.append(item)
+    return items
 
 
 def _list_employee_rows(client: UserClient, params: dict[str, str]) -> list[dict]:
@@ -247,7 +437,7 @@ def workforce_lookups(
     ws = str(workspace_id)
     return {
         "regions": _lookup_items(client, "workforce_regions", ws),
-        "sites": _lookup_items(client, "workforce_sites", ws),
+        "sites": _lookup_items(client, "workforce_sites", ws, extra_select="timezone"),
         "positions": _lookup_items(client, "workforce_positions", ws),
         "product_roles": sorted(PRODUCT_ROLES),
     }
@@ -529,6 +719,30 @@ def list_workforce_positions(
     return {"items": list_positions(client, str(workspace_id))}
 
 
+@router.get("/workforce/me/shifts")
+def list_my_workforce_shifts(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+    employee_id: Annotated[str | None, Query()] = None,
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.portal.view")
+    if employee_id is not None:
+        raise ApiError(400, "VALIDATION_ERROR", "לא ניתן לבחור עובד אחר")
+    return list_my_shifts(
+        client,
+        str(workspace_id),
+        actor_id(user),
+        starts_from=starts_from,
+        starts_to=starts_to,
+        directory=svc,
+    )
+
+
 @router.get("/workforce/shifts")
 def list_workforce_shifts(
     workspace_id: UUID,
@@ -547,6 +761,7 @@ def create_workforce_shift(
     workspace_id: UUID,
     body: ShiftWrite,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
 ):
     ctx = _ctx(client, user, workspace_id)
@@ -557,6 +772,7 @@ def create_workforce_shift(
         ws,
         body.model_dump(exclude_none=True, exclude={"workspace_id"}),
         actor_user_id=actor_id(user),
+        writer=svc,
     )
     write_audit(
         client,
@@ -575,12 +791,19 @@ def patch_workforce_shift(
     shift_id: UUID,
     body: ShiftWrite,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "workforce.schedules.edit")
     ws = _guard_workspace(workspace_id, body.workspace_id)
-    updated = update_shift(client, ws, str(shift_id), body.model_dump(exclude_unset=True, exclude={"workspace_id"}))
+    updated = update_shift(
+        client,
+        ws,
+        str(shift_id),
+        body.model_dump(exclude_unset=True, exclude={"workspace_id"}),
+        writer=svc,
+    )
     write_audit(
         client,
         ws,
@@ -597,11 +820,12 @@ def delete_workforce_shift(
     workspace_id: UUID,
     shift_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "workforce.schedules.edit")
-    delete_shift(client, str(workspace_id), str(shift_id))
+    delete_shift(client, str(workspace_id), str(shift_id), writer=svc)
     write_audit(
         client,
         str(workspace_id),
@@ -611,3 +835,563 @@ def delete_workforce_shift(
         metadata=_safe_audit_metadata({"result": "deleted", "shift_id": str(shift_id)}),
     )
     return Response(status_code=204)
+
+
+@router.get("/workforce/week")
+def workforce_week_board(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return week_board(client, str(workspace_id), starts_from=starts_from, starts_to=starts_to)
+
+
+@router.post("/workforce/validate")
+def workforce_validate_assignment(
+    workspace_id: UUID,
+    body: ShiftWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    return validate_assignment(client, ws, body.model_dump(exclude_none=True, exclude={"workspace_id"}))
+
+
+@router.post("/workforce/validate-week")
+def workforce_validate_week(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return validate_week(client, str(workspace_id), starts_from=starts_from, starts_to=starts_to)
+
+
+@router.get("/workforce/coverage-requirements")
+def list_workforce_coverage(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return {"items": list_coverage(client, str(workspace_id))}
+
+
+@router.post("/workforce/coverage-requirements", status_code=201)
+def create_workforce_coverage(
+    workspace_id: UUID,
+    body: CoverageWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_coverage(
+        client,
+        ws,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.schedules.edit",
+        entity_type="workforce_coverage_requirement",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "coverage_id": created.get("id")}),
+    )
+    return created
+
+
+@router.delete("/workforce/coverage-requirements/{coverage_id}", status_code=204)
+def delete_workforce_coverage(
+    workspace_id: UUID,
+    coverage_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    delete_coverage(client, str(workspace_id), str(coverage_id))
+    write_audit(
+        client,
+        str(workspace_id),
+        "workforce.schedules.edit",
+        entity_type="workforce_coverage_requirement",
+        entity_id=str(coverage_id),
+        metadata=_safe_audit_metadata({"result": "deleted", "coverage_id": str(coverage_id)}),
+    )
+    return Response(status_code=204)
+
+
+@router.get("/workforce/slots")
+def list_workforce_slots(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return {"items": list_slots(client, str(workspace_id), starts_from=starts_from, starts_to=starts_to)}
+
+
+@router.post("/workforce/slots", status_code=201)
+def create_workforce_slot(
+    workspace_id: UUID,
+    body: SlotWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_slot(
+        client,
+        ws,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.schedules.edit",
+        entity_type="workforce_shift_slot",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "slot_id": created.get("id")}),
+    )
+    return created
+
+
+@router.patch("/workforce/slots/{slot_id}")
+def patch_workforce_slot(
+    workspace_id: UUID,
+    slot_id: UUID,
+    body: SlotWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    updated = update_slot(
+        client,
+        ws,
+        str(slot_id),
+        body.model_dump(exclude_unset=True, exclude={"workspace_id"}),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.schedules.edit",
+        entity_type="workforce_shift_slot",
+        entity_id=str(slot_id),
+        metadata=_safe_audit_metadata({"result": "success", "slot_id": str(slot_id)}),
+    )
+    return updated
+
+
+@router.post("/workforce/slots/materialize", status_code=201)
+def materialize_workforce_slots(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    created = materialize_slots(
+        client,
+        str(workspace_id),
+        starts_from=starts_from,
+        starts_to=starts_to,
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "workforce.schedules.edit",
+        entity_type="workforce_shift_slot",
+        metadata=_safe_audit_metadata({"result": "materialized", "count": len(created)}),
+    )
+    return {"items": created}
+
+
+@router.delete("/workforce/slots/{slot_id}", status_code=204)
+def delete_workforce_slot(
+    workspace_id: UUID,
+    slot_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    delete_slot(client, str(workspace_id), str(slot_id))
+    write_audit(
+        client,
+        str(workspace_id),
+        "workforce.schedules.edit",
+        entity_type="workforce_shift_slot",
+        entity_id=str(slot_id),
+        metadata=_safe_audit_metadata({"result": "deleted", "slot_id": str(slot_id)}),
+    )
+    return Response(status_code=204)
+
+
+@router.get("/workforce/policy")
+def get_workforce_policy(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return get_or_default_policy(client, str(workspace_id))
+
+
+@router.put("/workforce/policy")
+def put_workforce_policy(
+    workspace_id: UUID,
+    body: PolicyWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    payload = body.model_dump(exclude_unset=True, exclude={"workspace_id"})
+    merged_policy = {**get_or_default_policy(client, ws), **payload}
+    reject_policy_relaxing_legal(merged_policy, list_open_rules(client, ws))
+    updated = upsert_policy(client, ws, payload)
+    write_audit(
+        client,
+        ws,
+        "workforce.schedules.edit",
+        entity_type="workforce_schedule_policy",
+        entity_id=ws,
+        metadata=_safe_audit_metadata({"result": "success"}),
+    )
+    return updated
+
+
+@router.get("/workforce/time-off")
+def list_workforce_time_off(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    starts_from: Annotated[str, Query()],
+    starts_to: Annotated[str, Query()],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.view")
+    return {"items": list_time_off(client, str(workspace_id), starts_from=starts_from, starts_to=starts_to)}
+
+
+@router.post("/workforce/time-off", status_code=201)
+def create_workforce_time_off(
+    workspace_id: UUID,
+    body: TimeOffWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.schedules.edit")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_time_off(
+        client,
+        ws,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.schedules.edit",
+        entity_type="workforce_time_off",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "time_off_id": created.get("id")}),
+    )
+    return created
+
+
+@router.post("/workforce/qualifications", status_code=201)
+def create_workforce_qualification(
+    workspace_id: UUID,
+    body: QualificationWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.employees.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_qualification(client, ws, body.model_dump(exclude_none=True, exclude={"workspace_id"}))
+    write_audit(
+        client,
+        ws,
+        "workforce.employees.manage",
+        entity_type="workforce_qualification",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "qualification_id": created.get("id")}),
+    )
+    return created
+
+
+@router.post("/workforce/position-requirements", status_code=201)
+def create_workforce_position_requirement(
+    workspace_id: UUID,
+    body: PositionRequirementWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.sites.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_position_requirement(client, ws, body.model_dump(exclude_none=True, exclude={"workspace_id"}))
+    write_audit(
+        client,
+        ws,
+        "workforce.sites.manage",
+        entity_type="workforce_position_requirement",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "requirement_id": created.get("id")}),
+    )
+    return created
+
+
+@router.get("/workforce/rule-packs")
+def get_workforce_rule_packs(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.schedules.view", "workforce.audit.view"])
+    return {"items": list_packs(client), "enforced_on_assignment": ENFORCED_ON_ASSIGNMENT}
+
+
+@router.get("/workforce/rules")
+def get_workforce_rules(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    include_expired: Annotated[bool, Query()] = False,
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.schedules.view", "workforce.audit.view"])
+    return {
+        "items": list_rules(client, str(workspace_id), include_expired=include_expired),
+        "enforced_on_assignment": ENFORCED_ON_ASSIGNMENT,
+    }
+
+
+@router.post("/workforce/rules", status_code=201)
+def post_workforce_rule(
+    workspace_id: UUID,
+    body: RuleWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.settings.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_workspace_rule(
+        client,
+        ws,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.settings.manage",
+        entity_type="workforce_rule",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "rule_code": created.get("rule_code")}),
+    )
+    return created
+
+
+@router.post("/workforce/rules/{rule_id}/close")
+def post_workforce_rule_close(
+    workspace_id: UUID,
+    rule_id: UUID,
+    body: RuleCloseWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.settings.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    updated = close_rule(
+        client,
+        ws,
+        str(rule_id),
+        status=body.verification_status,
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.settings.manage",
+        entity_type="workforce_rule",
+        entity_id=str(rule_id),
+        metadata=_safe_audit_metadata({"result": "closed", "status": body.verification_status}),
+    )
+    return updated
+
+
+@router.get("/workforce/legal-instruments")
+def get_workforce_legal_instruments(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.schedules.view", "workforce.audit.view"])
+    return {"items": list_instruments(client, str(workspace_id)), "enforced_on_assignment": ENFORCED_ON_ASSIGNMENT}
+
+
+@router.post("/workforce/legal-instruments", status_code=201)
+def post_workforce_legal_instrument(
+    workspace_id: UUID,
+    body: InstrumentWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.settings.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    created = create_instrument(
+        client,
+        ws,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.settings.manage",
+        entity_type="workforce_legal_instrument",
+        entity_id=created.get("id"),
+        metadata=_safe_audit_metadata({"result": "success", "code": created.get("code")}),
+    )
+    return created
+
+
+@router.post("/workforce/legal-instruments/{instrument_id}/expire")
+def post_workforce_legal_instrument_expire(
+    workspace_id: UUID,
+    instrument_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.settings.manage")
+    updated = expire_instrument(client, str(workspace_id), str(instrument_id), actor_user_id=actor_id(user))
+    write_audit(
+        client,
+        str(workspace_id),
+        "workforce.settings.manage",
+        entity_type="workforce_legal_instrument",
+        entity_id=str(instrument_id),
+        metadata=_safe_audit_metadata({"result": "expired"}),
+    )
+    return updated
+
+
+@router.get("/workforce/workspace-packs")
+def get_workforce_workspace_packs(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.schedules.view", "workforce.audit.view"])
+    return {"items": list_workspace_packs(client, str(workspace_id)), "enforced_on_assignment": ENFORCED_ON_ASSIGNMENT}
+
+
+@router.put("/workforce/workspace-packs/{pack_code}")
+def put_workforce_workspace_pack(
+    workspace_id: UUID,
+    pack_code: str,
+    body: WorkspacePackWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "workforce.settings.manage")
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    updated = upsert_workspace_pack(
+        client,
+        ws,
+        pack_code,
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.settings.manage",
+        entity_type="workforce_workspace_pack",
+        entity_id=pack_code,
+        metadata=_safe_audit_metadata({"result": "success", "is_enabled": updated.get("is_enabled")}),
+    )
+    return updated
+
+
+@router.get("/workforce/employment-profiles/{employee_id}")
+def get_workforce_employment_profile(
+    workspace_id: UUID,
+    employee_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.employees.view", "workforce.schedules.view"])
+    profile = get_profile(client, str(workspace_id), str(employee_id))
+    if not profile:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    return profile
+
+
+@router.put("/workforce/employment-profiles/{employee_id}")
+def put_workforce_employment_profile(
+    workspace_id: UUID,
+    employee_id: UUID,
+    body: EmploymentProfileWrite,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    _require_any(ctx, ["workforce.settings.manage", "workforce.employees.manage"])
+    ws = _guard_workspace(workspace_id, body.workspace_id)
+    updated = upsert_profile(
+        client,
+        ws,
+        str(employee_id),
+        body.model_dump(exclude_none=True, exclude={"workspace_id"}),
+        actor_user_id=actor_id(user),
+    )
+    write_audit(
+        client,
+        ws,
+        "workforce.settings.manage",
+        entity_type="workforce_employment_profile",
+        entity_id=str(employee_id),
+        metadata=_safe_audit_metadata({"result": "success"}),
+    )
+    return updated
+

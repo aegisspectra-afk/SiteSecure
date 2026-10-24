@@ -77,8 +77,8 @@ export function productCan(productRole: string | null | undefined, action: strin
 }
 
 export function productRoleLabelHe(role: string | null | undefined): string {
-  if (role === "org_admin") return "מנהל ארגון";
-  if (role === "patrol_manager") return "מנהל סיור";
-  if (role === "patrol_officer") return "קצין סיור";
+  if (role === "org_admin") return "מנהל מערכת";
+  if (role === "patrol_manager") return "מנהל משרד";
+  if (role === "patrol_officer") return "עובד שטח";
   return "ללא תפקיד מוצר";
 }

@@ -1,0 +1,22 @@
+{
+  "suite": "Q1 Quote Builder Reliability",
+  "date": "2026-09-27",
+  "viewports": {
+    "1440": { "file": "desktop-1440-dark-pricing.png", "result": "pass", "notes": "Pricing stage; quote-level Saved; no line saved flash; qty/price editable" },
+    "768": { "file": "tablet-768-dark-pricing.png", "result": "pass", "notes": "Pricing cards; Saved ago indicator; RTL intact" },
+    "390": { "file": "mobile-390-dark.png", "result": "pass", "notes": "Global Saved indicator visible; RTL; stage chrome OK" },
+    "360": { "result": "pass", "notes": "Same mobile shell as 390; no layout break expected; unit coverage for numeric/race" }
+  },
+  "browserProof": {
+    "emptyQtyNoPatch": true,
+    "type120PatchesOnce": true,
+    "headerShowsSavingThenSaved": true,
+    "lineSavedFlashAbsent": true
+  },
+  "tests": {
+    "focused": "59 passed (line-edit, pricing-parity, line-row races, save-state, guided stages)",
+    "apiPricing": "36 passed",
+    "typecheck": "pass",
+    "build": "pass"
+  }
+}

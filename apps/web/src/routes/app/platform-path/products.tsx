@@ -1,6 +1,7 @@
 import { Button, ErrorState, PageHeader } from "@site-secure/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { BillingHonestyNote } from "../../../components/billing/BillingHonestyNote";
 import { PlatformPathShell } from "../../../components/platform-path/PlatformPathShell";
 import { he } from "../../../i18n/he";
 import { planLabel } from "../../../lib/app-nav";
@@ -57,6 +58,7 @@ function PlatformPathProductsPage() {
       <p className="text-sm text-fg-muted">
         {he.settingsProductsPlan}: {planLabel(planKey)}
       </p>
+      <BillingHonestyNote />
       <p className="text-xs text-fg-muted">{he.settingsProductsPlatformAdminOnly}</p>
       {query.isError ? (
         <div className="flex flex-col gap-3">

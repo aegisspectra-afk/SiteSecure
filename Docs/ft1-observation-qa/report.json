@@ -1,0 +1,36 @@
+{
+  "started": "2026-09-29T22:11:21.516Z",
+  "web": "http://localhost:5174",
+  "ft_email": "ft.product.e3588aa5@sitesecure.test",
+  "ft_role": "technician",
+  "ft_badges": [
+    "founding_technician"
+  ],
+  "ft_ws": "FT Product e3588aa5",
+  "journey": {
+    "landing": "PASS",
+    "today_work": "PASS",
+    "badge": "PARTIAL",
+    "open_job": "PASS",
+    "jobs_list": "PASS",
+    "settings_hub": "PASS",
+    "settings_authz": "PASS",
+    "settings_profile": "PASS",
+    "settings_appearance": "PARTIAL",
+    "settings_general_denied": "PASS",
+    "quotes_403": "PASS",
+    "empty_today": "PASS"
+  },
+  "stuck": [
+    {
+      "step": "badge_sidebar",
+      "severity": "minor",
+      "detail": "founding badge not visible on Today body/sidebar",
+      "at": "2026-09-29T22:11:29.668Z"
+    }
+  ],
+  "notes": [],
+  "finished": "2026-09-29T22:11:53.469Z",
+  "blocker_count": 0,
+  "major_count": 0
+}

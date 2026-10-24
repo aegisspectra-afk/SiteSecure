@@ -1,0 +1,29 @@
+{
+  "checkpoint": "Q7-A",
+  "title": "Delivery Truth + UX",
+  "date": "2026-09-28",
+  "fixture": {
+    "quote_id": "ab19fc76-a69b-4887-8cf7-86d50ce5a3f9",
+    "number": "Q-00022",
+    "status": "draft",
+    "version": 2
+  },
+  "viewports": {
+    "1440": "pass",
+    "390": "pass",
+    "360": "pass"
+  },
+  "rtl": "pass",
+  "themes": {
+    "light": "pass",
+    "dark": "pass"
+  },
+  "tests": {
+    "web_delivery_mobile_lifecycle_revision": "26 passed",
+    "api_share_public_snapshot_revision_a3": "33 passed",
+    "typecheck": "pass",
+    "build": "pass"
+  },
+  "backend_semantics_changed": false,
+  "email_subsystem": "not_implemented"
+}

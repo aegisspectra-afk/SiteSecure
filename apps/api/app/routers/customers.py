@@ -62,6 +62,15 @@ class ContactCreate(BaseModel):
     is_primary: bool = False
 
 
+class ContactPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    role_title: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    is_primary: bool | None = None
+
+
 class ContactOut(BaseModel):
     id: str
     customer_id: str
@@ -90,6 +99,53 @@ class CustomerOut(BaseModel):
 
 def _ctx(client: UserClient, user: dict, workspace_id: UUID):
     return load_authz_context(client, actor_id(user), str(workspace_id))
+
+
+CONTACT_SELECT = "id,customer_id,full_name,role_title,email,phone,is_primary"
+
+
+def _contact_out(row: dict) -> ContactOut:
+    return ContactOut(
+        id=row["id"],
+        customer_id=row["customer_id"],
+        full_name=row["full_name"],
+        role_title=row.get("role_title"),
+        email=row.get("email"),
+        phone=row.get("phone"),
+        is_primary=bool(row.get("is_primary")),
+    )
+
+
+def _require_customer(
+    client: UserClient,
+    workspace_id: UUID,
+    customer_id: UUID,
+) -> dict:
+    return one_or_404(
+        client.get(
+            "customers",
+            params={"id": f"eq.{customer_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+        )
+    )
+
+
+def _require_contact(
+    client: UserClient,
+    workspace_id: UUID,
+    customer_id: UUID,
+    contact_id: UUID,
+) -> dict:
+    return one_or_404(
+        client.get(
+            "customer_contacts",
+            params={
+                "id": f"eq.{contact_id}",
+                "customer_id": f"eq.{customer_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": CONTACT_SELECT,
+            },
+        )
+    )
 
 
 def _out(row: dict) -> CustomerOut:
@@ -260,24 +316,19 @@ def list_contacts(
 ) -> list[ContactOut]:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "crm.view")
-    one_or_404(
-        client.get(
-            "customers",
-            params={"id": f"eq.{customer_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
-        )
-    )
+    _require_customer(client, workspace_id, customer_id)
     rows = as_list(
         client.get(
             "customer_contacts",
             params={
                 "customer_id": f"eq.{customer_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,customer_id,full_name,role_title,email,phone,is_primary",
+                "select": CONTACT_SELECT,
                 "order": "created_at.asc",
             },
         )
     )
-    return [ContactOut(**row) for row in rows]
+    return [_contact_out(row) for row in rows]
 
 
 @router.post("/customers/{customer_id}/contacts", response_model=ContactOut)
@@ -289,13 +340,8 @@ def create_contact(
     user: Annotated[dict, Depends(current_user)],
 ) -> ContactOut:
     ctx = _ctx(client, user, workspace_id)
-    require(ctx, "crm.edit", resource=ResourceRef(type="customer", id=str(customer_id)))
-    one_or_404(
-        client.get(
-            "customers",
-            params={"id": f"eq.{customer_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
-        )
-    )
+    customer = _require_customer(client, workspace_id, customer_id)
+    require(ctx, "crm.edit", resource=ResourceRef(type="customer", id=customer["id"]))
     row = created_or_403(
         client.post(
             "customer_contacts",
@@ -306,12 +352,61 @@ def create_contact(
             },
         )
     )
-    return ContactOut(
-        id=row["id"],
-        customer_id=row["customer_id"],
-        full_name=row["full_name"],
-        role_title=row.get("role_title"),
-        email=row.get("email"),
-        phone=row.get("phone"),
-        is_primary=bool(row.get("is_primary")),
+    return _contact_out(row)
+
+
+@router.patch("/customers/{customer_id}/contacts/{contact_id}", response_model=ContactOut)
+def patch_contact(
+    workspace_id: UUID,
+    customer_id: UUID,
+    contact_id: UUID,
+    body: ContactPatch,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> ContactOut:
+    ctx = _ctx(client, user, workspace_id)
+    customer = _require_customer(client, workspace_id, customer_id)
+    existing = _require_contact(client, workspace_id, customer_id, contact_id)
+    require(ctx, "crm.edit", resource=ResourceRef(type="customer", id=customer["id"]))
+    patch = body.model_dump(exclude_unset=True)
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    row = patched_or_403(
+        client.patch(
+            "customer_contacts",
+            patch,
+            params={
+                "id": f"eq.{existing['id']}",
+                "customer_id": f"eq.{customer_id}",
+                "workspace_id": f"eq.{workspace_id}",
+            },
+        )
     )
+    return _contact_out(row)
+
+
+@router.delete("/customers/{customer_id}/contacts/{contact_id}")
+def delete_contact(
+    workspace_id: UUID,
+    customer_id: UUID,
+    contact_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    customer = _require_customer(client, workspace_id, customer_id)
+    existing = _require_contact(client, workspace_id, customer_id, contact_id)
+    require(ctx, "crm.delete", resource=ResourceRef(type="customer", id=customer["id"]))
+    # RLS DELETE is owner/administrator only; catalog also grants crm.delete to managers.
+    acked_or_403(
+        svc.delete(
+            "customer_contacts",
+            params={
+                "id": f"eq.{existing['id']}",
+                "customer_id": f"eq.{customer_id}",
+                "workspace_id": f"eq.{workspace_id}",
+            },
+        )
+    )
+    return {"ok": True}

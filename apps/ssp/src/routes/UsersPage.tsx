@@ -47,13 +47,12 @@ function UsersBody() {
       <PageHeader title={he.navUsers} description={he.usersLead} />
       <SspHubLinks
         items={[
-          { to: "/organization", label: he.navOrg },
           ...(sspCan("ssp.officers.view") ? [{ to: "/officers", label: he.navOfficers }] : []),
+          { to: "/organization", label: he.navOrg },
           { to: "/devices", label: he.navDevices },
-          ...(!isOfficer ? [{ to: "/enrollments", label: he.navEnrollments }] : []),
+          ...(!isOfficer ? [{ to: "/enrollments", label: he.openEnrollments }] : []),
         ]}
       />
-      <p className="text-xs text-fg-muted">{he.actorNotPerson}</p>
       <DataModeNote mode={list.data?.data_mode} waitingDb={list.isError} />
       {sspCan("ssp.sites.edit") ? (
         <div className="flex flex-wrap items-end gap-2">

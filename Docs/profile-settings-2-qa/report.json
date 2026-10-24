@@ -1,0 +1,81 @@
+{
+  "started": "2026-09-29T22:28:27.903Z",
+  "shots": [
+    {
+      "name": "1440-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/1440-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "1032-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/1032-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "768-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/768-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "430-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/430-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "390-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/390-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "360-dark",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/360-dark.png",
+      "overflow": false
+    },
+    {
+      "name": "1440-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/1440-light.png",
+      "overflow": false
+    },
+    {
+      "name": "1032-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/1032-light.png",
+      "overflow": false
+    },
+    {
+      "name": "768-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/768-light.png",
+      "overflow": false
+    },
+    {
+      "name": "430-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/430-light.png",
+      "overflow": false
+    },
+    {
+      "name": "390-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/390-light.png",
+      "overflow": false
+    },
+    {
+      "name": "360-light",
+      "file": "/Users/valeria/Downloads/SiteSecureV1/Docs/profile-settings-2-qa/360-light.png",
+      "overflow": false
+    }
+  ],
+  "checks": {
+    "hasLead": true,
+    "hasPersonal": true,
+    "hasAccount": true,
+    "hasSecurity": true,
+    "hasSaveCopy": true,
+    "hasChangeIllustration": true,
+    "noUploadWording": true,
+    "securityHref": 2,
+    "passwordHref": 1,
+    "saveDisabled": 1,
+    "rtl": true,
+    "bottomNav": 1
+  },
+  "issues": [],
+  "finished": "2026-09-29T22:28:34.345Z"
+}

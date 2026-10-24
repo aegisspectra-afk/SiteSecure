@@ -1,0 +1,19 @@
+{
+  "service_filter": 200,
+  "service_count": 1,
+  "service_titles": [
+    "CAM-001 — No video signal"
+  ],
+  "lifecycle": 200,
+  "lifecycle_kinds": [
+    "service",
+    "connection",
+    "asset_created"
+  ],
+  "lifecycle_count": 3,
+  "equipment_docs": 200,
+  "equipment_doc_count": 0,
+  "site_docs": 200,
+  "topology_edges": 7,
+  "ipam_networks": 3
+}

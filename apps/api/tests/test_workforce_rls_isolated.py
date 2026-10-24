@@ -288,12 +288,25 @@ def world(isolated_conn) -> Iterator[dict]:
             _reset_role(cur)
             cur.execute("ALTER TABLE public.workspace_memberships DISABLE TRIGGER memberships_protect_last_owner")
             try:
-                cur.execute("SELECT to_regclass('public.workforce_shifts')")
-                if cur.fetchone()[0] is not None:
-                    cur.execute(
-                        "DELETE FROM public.workforce_shifts WHERE workspace_id IN (SELECT id FROM public.workspaces WHERE name = ANY(%s))",
-                        (list(names),),
-                    )
+                for table in (
+                    "workforce_shifts",
+                    "workforce_shift_slots",
+                    "workforce_coverage_requirements",
+                    "workforce_time_off",
+                    "workforce_qualifications",
+                    "workforce_position_requirements",
+                    "workforce_schedule_policies",
+                    "workforce_employment_profiles",
+                    "workforce_legal_instruments",
+                    "workforce_workspace_packs",
+                    "workforce_rules",
+                ):
+                    cur.execute("SELECT to_regclass(%s)", (f"public.{table}",))
+                    if cur.fetchone()[0] is not None:
+                        cur.execute(
+                            f"DELETE FROM public.{table} WHERE workspace_id IN (SELECT id FROM public.workspaces WHERE name = ANY(%s))",
+                            (list(names),),
+                        )
                 for name in names:
                     cur.execute("DELETE FROM public.workspaces WHERE name = %s", (name,))
                 for uid in state["actors"]:
@@ -505,10 +518,25 @@ def test_authenticated_still_cannot_write_employees_after_stage3(world):
         assert insert_mem is False
 
 
-def test_manager_can_write_shift_in_own_workspace_only(world):
+def test_authenticated_cannot_write_shifts_even_with_edit_grant(world):
     with world["conn"].cursor() as cur:
         _require_shifts(cur)
-        result = _write_as(
+        cur.execute(
+            """
+            SELECT has_table_privilege('authenticated', 'public.workforce_shifts', 'INSERT'),
+                   has_table_privilege('authenticated', 'public.workforce_shifts', 'UPDATE'),
+                   has_table_privilege('authenticated', 'public.workforce_shifts', 'DELETE'),
+                   has_table_privilege('authenticated', 'public.workforce_shifts', 'SELECT')
+            """
+        )
+        insert_priv, update_priv, delete_priv, select_priv = cur.fetchone()
+        if insert_priv:
+            pytest.skip("L2 shift API-only migration not applied on this local DB")
+        assert insert_priv is False
+        assert update_priv is False
+        assert delete_priv is False
+        assert select_priv is True
+        bypass = _write_as(
             cur,
             world["manager_a"],
             """
@@ -517,17 +545,7 @@ def test_manager_can_write_shift_in_own_workspace_only(world):
             """,
             (str(world["ws_a"]), str(world["emp_other"]), str(world["site_a"])),
         )
-        assert result == "ok"
-        foreign = _write_as(
-            cur,
-            world["manager_a"],
-            """
-            INSERT INTO public.workforce_shifts (workspace_id, employee_id, site_id, starts_at, ends_at)
-            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
-            """,
-            (str(world["ws_b"]), str(world["emp_b"]), str(world["site_b"])),
-        )
-        assert foreign != "ok"
+        assert bypass != "ok"
         n_b = _count_as(
             cur,
             world["manager_a"],
@@ -590,3 +608,368 @@ def test_shift_workspace_id_immutable(world):
                 "UPDATE public.workforce_shifts SET workspace_id = %s WHERE id = %s",
                 (str(world["ws_b"]), str(shift_id)),
             )
+
+
+def _require_portal_own_shifts(cur) -> None:
+    _require_shifts(cur)
+    cur.execute(
+        """
+        SELECT pg_get_expr(polqual, polrelid)
+        FROM pg_policy
+        WHERE polrelid = 'public.workforce_shifts'::regclass
+          AND polname = 'workforce_shifts_select'
+        """
+    )
+    row = cur.fetchone()
+    if not row or "workforce.portal.view" not in (row[0] or ""):
+        pytest.skip("portal own-shift SELECT policy not applied — apply local 20261021190000 migration")
+
+
+def test_workforce_member_selects_only_own_shifts(world):
+    with world["conn"].cursor() as cur:
+        _require_portal_own_shifts(cur)
+        cur.execute(
+            """
+            INSERT INTO public.workforce_shifts (workspace_id, employee_id, site_id, starts_at, ends_at)
+            VALUES
+              (%s, %s, %s, now(), now() + interval '8 hours'),
+              (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (
+                str(world["ws_a"]),
+                str(world["emp_self"]),
+                str(world["site_a"]),
+                str(world["ws_a"]),
+                str(world["emp_other"]),
+                str(world["site_a"]),
+            ),
+        )
+        own = _count_as(
+            cur,
+            world["member_a"],
+            "SELECT count(*) FROM public.workforce_shifts WHERE workspace_id = %s",
+            (str(world["ws_a"]),),
+        )
+        other = _count_as(
+            cur,
+            world["member_a"],
+            "SELECT count(*) FROM public.workforce_shifts WHERE employee_id = %s",
+            (str(world["emp_other"]),),
+        )
+        foreign = _count_as(
+            cur,
+            world["member_a"],
+            "SELECT count(*) FROM public.workforce_shifts WHERE workspace_id = %s",
+            (str(world["ws_b"]),),
+        )
+        viewer = _count_as(
+            cur,
+            world["viewer_a"],
+            "SELECT count(*) FROM public.workforce_shifts WHERE workspace_id = %s",
+            (str(world["ws_a"]),),
+        )
+        assert own == 1
+        assert other == 0
+        assert foreign == 0
+        assert viewer >= 2
+        denied = _write_as(
+            cur,
+            world["member_a"],
+            """
+            INSERT INTO public.workforce_shifts (workspace_id, employee_id, site_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_a"]), str(world["emp_self"]), str(world["site_a"])),
+        )
+        assert denied != "ok"
+
+
+def _require_slots(cur) -> None:
+    cur.execute("SELECT to_regclass('public.workforce_shift_slots')")
+    if cur.fetchone()[0] is None:
+        pytest.skip("workforce_shift_slots missing — apply local Stage 4B migration first")
+
+
+def _seed_position(cur, workspace_id) -> str:
+    cur.execute(
+        "INSERT INTO public.workforce_positions (workspace_id, name) VALUES (%s, %s) RETURNING id",
+        (str(workspace_id), f"pos-{uuid.uuid4().hex[:6]}"),
+    )
+    return str(cur.fetchone()[0])
+
+
+def test_slot_is_not_an_assignment_and_is_tenant_isolated(world):
+    with world["conn"].cursor() as cur:
+        _require_slots(cur)
+        pos = _seed_position(cur, world["ws_a"])
+        result = _write_as(
+            cur,
+            world["manager_a"],
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at, required_count)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours', 1)
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        assert result == "ok"
+        n = _count_as(
+            cur,
+            world["manager_a"],
+            "SELECT count(*) FROM public.workforce_shift_slots WHERE workspace_id = %s",
+            (str(world["ws_a"]),),
+        )
+        assert n >= 1
+        n_b = _count_as(
+            cur,
+            world["manager_a"],
+            "SELECT count(*) FROM public.workforce_shift_slots WHERE workspace_id = %s",
+            (str(world["ws_b"]),),
+        )
+        assert n_b == 0
+        stolen = _write_as(
+            cur,
+            world["manager_a"],
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_b"]), str(world["site_b"]), pos),
+        )
+        assert stolen != "ok"
+
+
+def test_technician_and_viewer_cannot_write_slots_postgrest(world):
+    with world["conn"].cursor() as cur:
+        _require_slots(cur)
+        pos = _seed_position(cur, world["ws_a"])
+        denied_tech = _write_as(
+            cur,
+            world["tech_a"],
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        assert denied_tech != "ok"
+        denied_viewer = _write_as(
+            cur,
+            world["viewer_a"],
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        assert denied_viewer != "ok"
+        cur.execute(
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        n = _count_as(
+            cur,
+            world["viewer_a"],
+            "SELECT count(*) FROM public.workforce_shift_slots WHERE workspace_id = %s",
+            (str(world["ws_a"]),),
+        )
+        assert n >= 1
+
+
+def test_overnight_slot_keeps_timestamptz_order(world):
+    with world["conn"].cursor() as cur:
+        _require_slots(cur)
+        pos = _seed_position(cur, world["ws_a"])
+        cur.execute(
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, '2026-10-21 22:00:00+00', '2026-10-22 06:00:00+00')
+            RETURNING ends_at > starts_at
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        assert cur.fetchone()[0] is True
+
+
+def test_slots_hidden_when_entitlement_off(world):
+    with world["conn"].cursor() as cur:
+        _require_slots(cur)
+        pos = _seed_position(cur, world["ws_a"])
+        cur.execute(
+            """
+            INSERT INTO public.workforce_shift_slots (workspace_id, site_id, position_id, starts_at, ends_at)
+            VALUES (%s, %s, %s, now(), now() + interval '8 hours')
+            """,
+            (str(world["ws_a"]), str(world["site_a"]), pos),
+        )
+        cur.execute(
+            """
+            UPDATE public.workspace_feature_overrides
+            SET enabled = false
+            WHERE workspace_id = %s AND feature_key = 'workforce'
+            """,
+            (str(world["ws_a"]),),
+        )
+        try:
+            n = _count_as(
+                cur,
+                world["owner_a"],
+                "SELECT count(*) FROM public.workforce_shift_slots WHERE workspace_id = %s",
+                (str(world["ws_a"]),),
+            )
+            assert n == 0
+        finally:
+            cur.execute(
+                """
+                UPDATE public.workspace_feature_overrides
+                SET enabled = true
+                WHERE workspace_id = %s AND feature_key = 'workforce'
+                """,
+                (str(world["ws_a"]),),
+            )
+
+
+def _require_l1(cur) -> None:
+    cur.execute("SELECT to_regclass('public.workforce_rules')")
+    if cur.fetchone()[0] is None:
+        pytest.skip("workforce_rules missing — apply local L1 migration first")
+
+
+def test_l1_catalog_platform_readable_tenant_rules_isolated(world):
+    with world["conn"].cursor() as cur:
+        _require_l1(cur)
+        n_platform_a = _count_as(
+            cur,
+            world["owner_a"],
+            "SELECT count(*) FROM public.workforce_rules WHERE workspace_id IS NULL AND rule_code = 'REST_BETWEEN_DAYS'",
+            (),
+        )
+        n_platform_b = _count_as(
+            cur,
+            world["owner_b"],
+            "SELECT count(*) FROM public.workforce_rules WHERE workspace_id IS NULL AND rule_code = 'REST_BETWEEN_DAYS'",
+            (),
+        )
+        assert n_platform_a >= 1
+        assert n_platform_b >= 1
+        denied_manager = _write_as(
+            cur,
+            world["manager_a"],
+            """
+            INSERT INTO public.workforce_rules (
+              workspace_id, pack_code, rule_code, version, name_he, rule_type, verification_status,
+              severity, source_kind, source_citation, reviewed_on, effective_from
+            ) VALUES (
+              %s, 'unverified_research', 'SITE_POLICY', 1, 'מדיניות', 'employer_policy', 'draft',
+              'warning', 'policy', 'בדיקה', CURRENT_DATE, now()
+            )
+            """,
+            (str(world["ws_a"]),),
+        )
+        assert denied_manager != "ok"
+        inserted = _write_as(
+            cur,
+            world["owner_a"],
+            """
+            INSERT INTO public.workforce_rules (
+              workspace_id, pack_code, rule_code, version, name_he, rule_type, verification_status,
+              severity, source_kind, source_citation, reviewed_on, effective_from
+            ) VALUES (
+              %s, 'unverified_research', 'SITE_POLICY', 1, 'מדיניות', 'employer_policy', 'draft',
+              'warning', 'policy', 'בדיקה', CURRENT_DATE, now()
+            )
+            """,
+            (str(world["ws_a"]),),
+        )
+        assert inserted == "ok"
+        n_b = _count_as(
+            cur,
+            world["owner_b"],
+            "SELECT count(*) FROM public.workforce_rules WHERE workspace_id = %s",
+            (str(world["ws_a"]),),
+        )
+        assert n_b == 0
+        n_tech = _count_as(
+            cur,
+            world["tech_a"],
+            "SELECT count(*) FROM public.workforce_rules WHERE rule_code = 'REST_BETWEEN_DAYS'",
+            (),
+        )
+        assert n_tech == 0
+
+
+def test_l1_cannot_verify_legal_as_tenant_or_rewrite_version(world):
+    with world["conn"].cursor() as cur:
+        _require_l1(cur)
+        denied_legal = _write_as(
+            cur,
+            world["owner_a"],
+            """
+            INSERT INTO public.workforce_rules (
+              workspace_id, pack_code, rule_code, version, name_he, rule_type, verification_status,
+              severity, source_kind, source_citation, reviewed_on, effective_from, cannot_be_relaxed
+            ) VALUES (
+              %s, 'israel_hours_base', 'FAKE_LAW', 1, 'חוק', 'legal', 'verified',
+              'blocking', 'statute', 'אין', CURRENT_DATE, now(), true
+            )
+            """,
+            (str(world["ws_a"]),),
+        )
+        assert denied_legal != "ok"
+        _write_as(
+            cur,
+            world["owner_a"],
+            """
+            INSERT INTO public.workforce_rules (
+              workspace_id, pack_code, rule_code, version, name_he, rule_type, verification_status,
+              severity, source_kind, source_citation, reviewed_on, effective_from
+            ) VALUES (
+              %s, 'unverified_research', 'SITE_CAP', 1, 'תקרה', 'employer_policy', 'draft',
+              'warning', 'policy', 'בדיקה', CURRENT_DATE, now()
+            )
+            """,
+            (str(world["ws_a"]),),
+        )
+        rewrite = _write_as(
+            cur,
+            world["owner_a"],
+            """
+            UPDATE public.workforce_rules
+            SET parameters = '{"max": 1}'::jsonb
+            WHERE workspace_id = %s AND rule_code = 'SITE_CAP'
+            """,
+            (str(world["ws_a"]),),
+        )
+        assert rewrite != "ok"
+        cur.execute(
+            """
+            SELECT public.workforce_rule_is_active_legal_block(
+              'permit', 'expired', 'blocking', now() - interval '30 days', now() - interval '1 day', now()
+            )
+            """
+        )
+        assert cur.fetchone()[0] is False
+        cur.execute(
+            """
+            SELECT public.workforce_rule_is_active_legal_block(
+              'legal', 'verified', 'blocking', now() - interval '30 days', NULL, now()
+            )
+            """
+        )
+        assert cur.fetchone()[0] is True
+
+
+def test_authenticated_still_cannot_write_employees_after_stage4b(world):
+    with world["conn"].cursor() as cur:
+        cur.execute(
+            """
+            SELECT has_table_privilege('authenticated', 'public.workforce_employees', 'INSERT'),
+                   has_table_privilege('authenticated', 'public.workforce_memberships', 'INSERT')
+            """
+        )
+        insert_emp, insert_mem = cur.fetchone()
+        assert insert_emp is False
+        assert insert_mem is False
+

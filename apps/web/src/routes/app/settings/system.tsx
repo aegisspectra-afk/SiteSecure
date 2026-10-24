@@ -1,7 +1,9 @@
 import { PageHeader } from "@site-secure/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BillingHonestyNote } from "../../../components/billing/BillingHonestyNote";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
+import { subscriptionAccessLabel } from "../../../lib/billing-honesty";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/settings/system")({
@@ -33,6 +35,10 @@ function SystemBody() {
           <dd className="ltr-meta">{membership?.plan_key ?? "—"}</dd>
         </div>
         <div>
+          <dt>{he.settingsSystemBilling}</dt>
+          <dd>{subscriptionAccessLabel()}</dd>
+        </div>
+        <div>
           <dt>{he.roleCaption}</dt>
           <dd className="ltr-meta">{membership?.role_key ?? "—"}</dd>
         </div>
@@ -41,6 +47,7 @@ function SystemBody() {
           <dd>{membership?.workspace_status === "active" ? he.workspaceMetaActive : he.workspaceMetaInactive}</dd>
         </div>
       </dl>
+      <BillingHonestyNote />
       <div className="settings-inline-links">
         <Link to="/app/settings/security" className="ops-section-link">
           {he.navSecurity} →

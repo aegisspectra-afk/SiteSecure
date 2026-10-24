@@ -122,6 +122,8 @@ def ops_dashboard(
             "devices_revoked": 0,
             "site_members_active": 0,
             "user_joins_pending": 0,
+            "users_active": 0,
+            "offices_active": 0,
             "updated_at": now_iso,
             "filters": {
                 "status": status,
@@ -180,6 +182,15 @@ def ops_dashboard(
     if dept:
         mem_params["department_id"] = f"eq.{dept}"
     officers = len(_try_list(client, "ssp_memberships", mem_params))
+    users_params = {
+        "workspace_id": f"eq.{workspace_id}",
+        "company_pk": f"eq.{company['id']}",
+        "status": "eq.active",
+        "select": "id",
+    }
+    if dept:
+        users_params["department_id"] = f"eq.{dept}"
+    users_active = len(_try_list(client, "ssp_memberships", users_params))
 
     # Overdue distributions: active + due_at in past with pending targets (best-effort count)
     dist_params = _scope_params(workspace_id, company, membership, select="id,due_at,status")
@@ -202,7 +213,7 @@ def ops_dashboard(
         "workspace_id": f"eq.{workspace_id}",
         "company_pk": f"eq.{company['id']}",
         "is_active": "eq.true",
-        "select": "id,org_unit_id,department_id,manager_user_id",
+        "select": "id,org_unit_id,department_id,manager_user_id,kind",
     }
     if org_unit_id:
         site_params["org_unit_id"] = f"eq.{org_unit_id}"
@@ -388,6 +399,10 @@ def ops_dashboard(
                 )
                 if not visible_site_ids or str(d.get("site_pk")) in visible_site_ids
             ]
+        ),
+        "users_active": users_active,
+        "offices_active": len(
+            [s for s in sites if str(s.get("kind") or "") in {"office", "ops_center"}]
         ),
         "sites_pending_activation": len(
             [

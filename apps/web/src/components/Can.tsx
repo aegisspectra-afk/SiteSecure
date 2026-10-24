@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { activeMembership } from "../lib/active-membership";
 import { can, canAny } from "../lib/can";
 import { useSession } from "../lib/session";
 
@@ -10,7 +11,7 @@ export function Can({
   children: ReactNode;
 }) {
   const { session } = useSession();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   if (!can(membership?.role_key, permission, membership?.features ?? [])) return null;
   return children;
 }
@@ -23,7 +24,7 @@ export function CanAny({
   children: ReactNode;
 }) {
   const { session } = useSession();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   if (!canAny(membership?.role_key, permissions, membership?.features ?? [])) return null;
   return children;
 }

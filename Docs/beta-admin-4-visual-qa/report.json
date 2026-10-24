@@ -1,0 +1,94 @@
+{
+  "checkpoint": "BETA-ADMIN-4",
+  "date": "2026-09-30",
+  "origin": "http://localhost:5173/admin",
+  "rtl": true,
+  "platform_admin": true,
+  "viewports": {
+    "1440-dark": {
+      "theme": "dark",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    },
+    "1440-light": {
+      "theme": "light",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    },
+    "1032-dark": {
+      "theme": "dark",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    },
+    "768-dark": {
+      "theme": "dark",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    },
+    "390-dark": {
+      "theme": "dark",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    },
+    "360-dark": {
+      "theme": "dark",
+      "overflowX": false,
+      "title": "Founding Beta Operations",
+      "attentionRows": 2,
+      "attentionEmpty": true,
+      "statusOk": 1,
+      "statusDisconnected": 5,
+      "result": "PASS"
+    }
+  },
+  "captures": [
+    "1440-dark.png",
+    "1440-light.png",
+    "1032-dark.png",
+    "768-dark.png",
+    "390-dark.png",
+    "360-dark.png",
+    "attention-populated.png",
+    "grouped-qa-noise.png",
+    "long-email.png",
+    "status-connected-disconnected.png",
+    "attention-empty-feedback.png"
+  ],
+  "checks": {
+    "heading": true,
+    "cta": true,
+    "attention": true,
+    "snapshot": true,
+    "funnel": true,
+    "systemDetails": true,
+    "requestId": true,
+    "noSearch": true,
+    "classifierNote": true,
+    "denied": false
+  }
+}

@@ -14,7 +14,10 @@ FIELD_TYPES = frozenset(
         "single_choice",
         "multi_choice",
         "date",
+        "datetime",
+        "heading",
         "yes_no",
+        "checkbox",
         "consent",
     }
 )
@@ -70,6 +73,8 @@ def validate_definition(raw: object) -> dict[str, Any]:
 
         help_text = _as_str(item.get("help_text") or "", max_len=1000)
         required = bool(item.get("required", False))
+        if ftype == "heading":
+            required = False
 
         field: dict[str, Any] = {
             "id": field_id,
@@ -146,6 +151,9 @@ def validate_answers(
         raw = answers.get(field_id, None)
         present = raw is not None and raw != "" and raw != []
 
+        if ftype == "heading":
+            continue
+
         if required and not present and ftype != "consent":
             raise _bad({"reason": "required_missing", "field_id": field_id})
 
@@ -197,7 +205,12 @@ def validate_answers(
             if not re.match(r"^\d{4}-\d{2}-\d{2}$", text):
                 raise _bad({"reason": "invalid_date", "field_id": field_id})
             normalized[field_id] = text
-        elif ftype == "yes_no":
+        elif ftype == "datetime":
+            text = _as_str(raw, max_len=40)
+            if not re.match(r"^\d{4}-\d{2}-\d{2}[T ]([01]\d|2[0-3]):[0-5]\d", text):
+                raise _bad({"reason": "invalid_datetime", "field_id": field_id})
+            normalized[field_id] = text.replace(" ", "T")[:16]
+        elif ftype in {"yes_no", "checkbox"}:
             if raw is True or raw == "yes" or raw == "true":
                 normalized[field_id] = True
             elif raw is False or raw == "no" or raw == "false":

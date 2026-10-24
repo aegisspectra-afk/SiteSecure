@@ -1,0 +1,52 @@
+{
+  "shots": [
+    "sidebar-1440-dark.png",
+    "sidebar-1440-light.png"
+  ],
+  "checks": {
+    "dark": {
+      "visible": true,
+      "groups": [
+        "בית",
+        "לקוחות",
+        "עבודה",
+        "משימות",
+        "עוד"
+      ],
+      "linkCount": 15,
+      "badges": [
+        "Enterprise",
+        "Active"
+      ],
+      "iconW": 18,
+      "activeBorderInlineStart": "rgb(11, 107, 203)",
+      "activeBorderInlineStartWidth": "2px",
+      "hasAccount": true,
+      "dir": "rtl",
+      "bottomNavDisplay": "none",
+      "focusVisibleOutline": true
+    },
+    "light": {
+      "visible": true,
+      "groups": [
+        "בית",
+        "לקוחות",
+        "עבודה",
+        "משימות",
+        "עוד"
+      ],
+      "linkCount": 15,
+      "badges": [
+        "Enterprise",
+        "Active"
+      ],
+      "iconW": 18,
+      "activeBorderInlineStart": "rgb(11, 107, 203)",
+      "activeBorderInlineStartWidth": "2px",
+      "hasAccount": true,
+      "dir": "rtl",
+      "bottomNavDisplay": "none",
+      "focusVisibleOutline": true
+    }
+  }
+}

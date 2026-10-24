@@ -1,0 +1,121 @@
+{
+  "url": "http://localhost:5173",
+  "captures": [
+    {
+      "viewport": "1440-dark",
+      "hero": "1440-dark-hero.png",
+      "full": "1440-dark-full.png",
+      "sections": {
+        "quotes": "1440-dark-section-quotes.png",
+        "flow": "1440-dark-section-flow.png",
+        "site-file": "1440-dark-section-site-file.png",
+        "assets": "1440-dark-section-assets.png",
+        "field": "1440-dark-section-field.png",
+        "security": "1440-dark-section-security.png",
+        "pilot": "1440-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflow": false
+      }
+    },
+    {
+      "viewport": "1280-dark",
+      "hero": "1280-dark-hero.png",
+      "full": "1280-dark-full.png",
+      "sections": {
+        "quotes": "1280-dark-section-quotes.png",
+        "flow": "1280-dark-section-flow.png",
+        "site-file": "1280-dark-section-site-file.png",
+        "assets": "1280-dark-section-assets.png",
+        "field": "1280-dark-section-field.png",
+        "security": "1280-dark-section-security.png",
+        "pilot": "1280-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "overflow": false
+      }
+    },
+    {
+      "viewport": "1032-dark",
+      "hero": "1032-dark-hero.png",
+      "full": "1032-dark-full.png",
+      "sections": {
+        "quotes": "1032-dark-section-quotes.png",
+        "flow": "1032-dark-section-flow.png",
+        "site-file": "1032-dark-section-site-file.png",
+        "assets": "1032-dark-section-assets.png",
+        "field": "1032-dark-section-field.png",
+        "security": "1032-dark-section-security.png",
+        "pilot": "1032-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 1032,
+        "clientWidth": 1032,
+        "overflow": false
+      }
+    },
+    {
+      "viewport": "768-dark",
+      "hero": "768-dark-hero.png",
+      "full": "768-dark-full.png",
+      "sections": {
+        "quotes": "768-dark-section-quotes.png",
+        "flow": "768-dark-section-flow.png",
+        "site-file": "768-dark-section-site-file.png",
+        "assets": "768-dark-section-assets.png",
+        "field": "768-dark-section-field.png",
+        "security": "768-dark-section-security.png",
+        "pilot": "768-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "overflow": false
+      }
+    },
+    {
+      "viewport": "390-dark",
+      "hero": "390-dark-hero.png",
+      "full": "390-dark-full.png",
+      "sections": {
+        "quotes": "390-dark-section-quotes.png",
+        "flow": "390-dark-section-flow.png",
+        "site-file": "390-dark-section-site-file.png",
+        "assets": "390-dark-section-assets.png",
+        "field": "390-dark-section-field.png",
+        "security": "390-dark-section-security.png",
+        "pilot": "390-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflow": false
+      }
+    },
+    {
+      "viewport": "360-dark",
+      "hero": "360-dark-hero.png",
+      "full": "360-dark-full.png",
+      "sections": {
+        "quotes": "360-dark-section-quotes.png",
+        "flow": "360-dark-section-flow.png",
+        "site-file": "360-dark-section-site-file.png",
+        "assets": "360-dark-section-assets.png",
+        "field": "360-dark-section-field.png",
+        "security": "360-dark-section-security.png",
+        "pilot": "360-dark-section-pilot.png"
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "overflow": false
+      }
+    }
+  ],
+  "overflow": [],
+  "generatedAt": "2026-09-30T18:31:19.846Z"
+}

@@ -1,0 +1,10 @@
+{
+  "pass": true,
+  "zones": [
+    "ops",
+    "commercial"
+  ],
+  "pulseTitle": "מצב ההצעות",
+  "oldPulseGone": true,
+  "shot": "owner-1440-dark-zoned.png"
+}

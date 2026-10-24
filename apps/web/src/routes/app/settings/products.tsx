@@ -1,6 +1,7 @@
 import { ErrorState, PageHeader } from "@site-secure/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { BillingHonestyNote } from "../../../components/billing/BillingHonestyNote";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { planLabel } from "../../../lib/app-nav";
@@ -63,6 +64,7 @@ function ProductsSettingsBody() {
       <p className="text-sm text-fg-muted">
         {he.settingsProductsPlan}: {planLabel(planKey)}
       </p>
+      <BillingHonestyNote />
       <p className="text-xs text-fg-muted">{he.settingsProductsPlatformAdminOnly}</p>
       <ul className="divide-y divide-border rounded-[var(--radius-control)] border border-border bg-bg-1">
         {products.map((p) => (

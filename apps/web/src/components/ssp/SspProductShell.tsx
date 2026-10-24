@@ -111,7 +111,9 @@ export function SspProductShell({ children }: { children?: ReactNode }) {
         <header className="ops-topbar lg:px-6">
           <div className="min-w-0">
             <p className="ops-topbar-title">{workspaceLabel}</p>
-            <p className="ops-topbar-meta">{he.sspProductLine}</p>
+            <p className="ops-topbar-meta">
+              <bdi dir="ltr">{he.sspProductLine}</bdi>
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link

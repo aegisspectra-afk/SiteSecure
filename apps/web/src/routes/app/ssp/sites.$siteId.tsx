@@ -4,6 +4,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ErrorState, ModuleScaffold } from "../../../components/modules/ModuleKit";
 import { SiteActivationPanel } from "../../../components/ssp/SiteActivationPanel";
+import { SspFormFields } from "../../../components/ssp/SspFormFields";
 import { useSspWorkspace } from "../../../components/ssp/useSspWorkspace";
 import { he } from "../../../i18n/he";
 
@@ -23,6 +24,7 @@ function SspSiteDetailPage() {
   const { api, workspaceId, canEdit, isOfficer } = useSspWorkspace();
   const qc = useQueryClient();
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -30,6 +32,7 @@ function SspSiteDetailPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [fillId, setFillId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [addUserId, setAddUserId] = useState("");
 
   const ops = useQuery({
     queryKey: ["ssp-site-ops", workspaceId, siteId],
@@ -41,6 +44,7 @@ function SspSiteDetailPage() {
   useEffect(() => {
     if (!ops.data?.site) return;
     setName(ops.data.site.name);
+    setCode(ops.data.site.code || "");
     setPhone(ops.data.site.phone || "");
     setDescription(ops.data.site.description || "");
     setIsActive(ops.data.site.is_active);
@@ -58,6 +62,7 @@ function SspSiteDetailPage() {
     mutationFn: () =>
       api.patchSspSite(workspaceId!, siteId, {
         name: name.trim(),
+        code: code.trim() || null,
         phone: phone.trim() || null,
         description,
         is_active: isActive,
@@ -67,6 +72,20 @@ function SspSiteDetailPage() {
       setMsg(he.save);
       await qc.invalidateQueries({ queryKey: ["ssp-site-ops", workspaceId, siteId] });
       await qc.invalidateQueries({ queryKey: ["ssp-sites", workspaceId] });
+    },
+    onError: (e: unknown) => setMsg(e instanceof Error ? e.message : he.apiUnavailable),
+  });
+  const people = useQuery({
+    queryKey: ["ssp-people", workspaceId, "active"],
+    enabled: Boolean(workspaceId) && canEdit,
+    queryFn: () => api.listSspUsers(workspaceId!, { status: "active" }),
+    retry: false,
+  });
+  const addMember = useMutation({
+    mutationFn: () => api.addSspSiteMember(workspaceId!, siteId, { user_id: addUserId }),
+    onSuccess: async () => {
+      setAddUserId("");
+      await qc.invalidateQueries({ queryKey: ["ssp-site-ops", workspaceId, siteId] });
     },
     onError: (e: unknown) => setMsg(e instanceof Error ? e.message : he.apiUnavailable),
   });
@@ -113,7 +132,7 @@ function SspSiteDetailPage() {
         lead={`${he.sspSiteId}: ${site.site_id}`}
         action={
           <Link
-            to={site.kind === "office" || site.kind === "ops_center" ? "/app/ssp/users" : "/app/ssp/sites"}
+            to={site.kind === "office" || site.kind === "ops_center" ? "/app/ssp/offices" : "/app/ssp/sites"}
             className="ops-section-link"
           >
             {site.kind === "office" || site.kind === "ops_center" ? he.sspBackToActors : he.sspBackToSites}
@@ -149,6 +168,7 @@ function SspSiteDetailPage() {
           {canEdit ? (
             <>
               <Input id="site-name" label={he.name} value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="site-code" label={he.sspOfficeCode} value={code} onChange={(e) => setCode(e.target.value)} />
               <Input id="site-phone" label={he.sspSitePhone} value={phone} onChange={(e) => setPhone(e.target.value)} />
               <label className="flex flex-col gap-1 text-sm">
                 <span>{he.sspSiteKind}</span>
@@ -199,13 +219,38 @@ function SspSiteDetailPage() {
 
         <Card className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-fg">{he.sspSiteMembers}</h2>
+          {canEdit ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+                <span>{he.sspNewUser}</span>
+                <select
+                  className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm"
+                  value={addUserId}
+                  onChange={(e) => setAddUserId(e.target.value)}
+                  aria-label={he.sspNewUser}
+                >
+                  <option value="">—</option>
+                  {(people.data?.items ?? []).map((person) => (
+                    <option key={person.user_id} value={person.user_id}>
+                      {person.full_name || person.email || person.user_id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button type="button" onClick={() => addMember.mutate()} disabled={!addUserId || addMember.isPending}>
+                {he.save}
+              </Button>
+            </div>
+          ) : null}
           {!(ops.data.members ?? []).length ? (
             <p className="ss-module-empty-text">{he.sspNoItems}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {(ops.data.members ?? []).map((m) => (
                 <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <code className="text-xs">{m.user_id}</code>
+                  <Link to="/app/ssp/users/$userId" params={{ userId: m.user_id }} className="underline">
+                    {people.data?.items.find((p) => p.user_id === m.user_id)?.full_name || m.user_id.slice(0, 8)}
+                  </Link>
                   {canEdit ? (
                     <Button
                       type="button"
@@ -228,15 +273,12 @@ function SspSiteDetailPage() {
           <Card className="flex flex-col gap-3" data-testid="ssp-site-fill">
             <h2 className="text-base font-semibold text-fg">{he.sspFillForm}</h2>
             {fillDetail.isLoading ? <p className="text-sm text-fg-muted">{he.loading}</p> : null}
-            {(fillDetail.data?.definition_snapshot?.fields ?? []).map((field) => (
-              <Input
-                key={field.id}
-                id={`fill-${field.id}`}
-                label={field.label}
-                value={String(answers[field.id] ?? "")}
-                onChange={(e) => setAnswers((prev) => ({ ...prev, [field.id]: e.target.value }))}
-              />
-            ))}
+            <SspFormFields
+              fields={fillDetail.data?.definition_snapshot?.fields ?? []}
+              answers={answers}
+              onChange={setAnswers}
+              disabled={submitFill.isPending}
+            />
             <div className="flex gap-2">
               <Button type="button" onClick={() => submitFill.mutate()} disabled={submitFill.isPending}>
                 {he.sspSubmit}
@@ -247,6 +289,23 @@ function SspSiteDetailPage() {
             </div>
           </Card>
         ) : null}
+
+        <Card className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-fg">{he.sspSubmissions}</h2>
+          {!(ops.data.submissions ?? []).length ? (
+            <p className="ss-module-empty-text">{he.sspNoSubmissions}</p>
+          ) : (
+            <ul className="divide-y divide-border text-sm">
+              {(ops.data.submissions ?? []).map((s) => (
+                <li key={s.id} className="py-2">
+                  <Link to="/app/ssp/submissions/$submissionId" params={{ submissionId: s.id }} className="underline">
+                    {(s.submitted_at && new Date(s.submitted_at).toLocaleString("he-IL")) || s.id.slice(0, 8)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
         <Card className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-fg">{he.sspAssignedForms}</h2>

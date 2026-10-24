@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-09-23T22:26:41.341Z",
+  "shots": [
+    {
+      "name": "desktop-1440-dark-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1440-dark-stage2.png"
+    },
+    {
+      "name": "desktop-1440-dark-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1440-dark-stage3.png"
+    },
+    {
+      "name": "desktop-1440-light-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1440-light-stage2.png"
+    },
+    {
+      "name": "desktop-1440-light-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1440-light-stage3.png"
+    },
+    {
+      "name": "desktop-1100-dark-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1100-dark-stage2.png"
+    },
+    {
+      "name": "desktop-1100-dark-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1100-dark-stage3.png"
+    },
+    {
+      "name": "mobile-390-dark-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-390-dark-stage2.png"
+    },
+    {
+      "name": "mobile-390-dark-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-390-dark-stage3.png"
+    },
+    {
+      "name": "mobile-390-light-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-390-light-stage2.png"
+    },
+    {
+      "name": "mobile-390-light-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-390-light-stage3.png"
+    },
+    {
+      "name": "mobile-360-dark-stage2",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-360-dark-stage2.png"
+    },
+    {
+      "name": "mobile-360-dark-stage3",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-360-dark-stage3.png"
+    },
+    {
+      "name": "desktop-1440-dark-side-by-side",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/desktop-1440-dark-side-by-side.png"
+    },
+    {
+      "name": "mobile-390-dark-side-by-side",
+      "file": "Docs/quote-builder-structural-stage-separation-qa/mobile-390-dark-side-by-side.png"
+    }
+  ]
+}

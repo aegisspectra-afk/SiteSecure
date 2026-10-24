@@ -10,8 +10,24 @@ from .types import Decision
 TECHNICIAN_ROLE_KEYS = frozenset({"technician", "founding_technician"})
 
 
+def _plan_limit_message(details: dict[str, object]) -> str:
+    resource = str(details.get("resource") or details.get("limit_key") or "")
+    base = _RESOURCE_MESSAGES.get(resource, MESSAGES["PLAN_LIMIT_REACHED"])
+    try:
+        current = int(details["current"])  # type: ignore[arg-type]
+        limit = int(details["limit"])  # type: ignore[arg-type]
+    except (KeyError, TypeError, ValueError):
+        return base
+    if limit > 0:
+        return f"{base} ({current}/{limit})"
+    return base
+
+
 def _deny(code: str, **details: object) -> Decision:
-    return Decision(False, code, MESSAGES.get(code, code), details)
+    message = MESSAGES.get(code, code)
+    if code == "PLAN_LIMIT_REACHED":
+        message = _plan_limit_message(details)
+    return Decision(False, code, message, details)
 
 
 def _allow() -> Decision:
@@ -129,6 +145,10 @@ _RESOURCE_MESSAGES = {
     "storage": "אין מספיק שטח אחסון להעלאת הקובץ",
     "members": "הגעת למגבלת חברי הצוות בתוכנית שלך",
     "technicians": "הגעת למגבלת הטכנאים בתוכנית שלך",
+    "max_members": "הגעת למגבלת חברי הצוות בתוכנית שלך",
+    "max_technicians": "הגעת למגבלת הטכנאים בתוכנית שלך",
+    "seats_operator": "הגעת למגבלת המשתמשים במשרד בתוכנית שלך",
+    "seats_field": "הגעת למגבלת המשתמשים בשטח בתוכנית שלך",
 }
 
 

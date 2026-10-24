@@ -4,6 +4,8 @@
 !.env.example
 apps/api/.env
 apps/web/.env
+apps/WorkForce/.env
+apps/ssp/.env
 apps/mobile/.env
 
 # Live verification tokens / artifacts (never commit)
@@ -21,6 +23,7 @@ __pycache__/
 # Build
 dist/
 build/
+vercel-output/
 coverage/
 .cache/
 .vite/

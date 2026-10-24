@@ -23,7 +23,6 @@ import {
 } from "../../lib/site-assets";
 import { warrantyStatusLabel, warrantyTypeLabel } from "../../lib/warranties";
 import { useSession } from "../../lib/session";
-import { AssetConnectionsSection } from "./AssetConnectionsSection";
 import { AssetDocumentsSection } from "./AssetDocumentsSection";
 import { AssetActivitySection, AssetServiceHistorySection } from "./AssetLifecycleSections";
 
@@ -128,12 +127,6 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
     queryKey: ["site-warranties", workspaceId, siteId],
     enabled: Boolean(workspaceId && canWarranties),
     queryFn: () => api.listWarranties(workspaceId!, { site_id: siteId, limit: 100 }),
-  });
-
-  const ipamQuery = useQuery({
-    queryKey: ["equipment-ips", workspaceId, assetId],
-    enabled: Boolean(workspaceId),
-    queryFn: () => api.listEquipmentIpAddresses(workspaceId!, assetId),
   });
 
   const asset = assetQuery.data;
@@ -407,65 +400,13 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
       </Section>
 
       <Section id="network" title={he.assetSectionNetwork}>
-        {(() => {
-          const ipamItems = ipamQuery.data?.items ?? [];
-          const primary = ipamItems[0] ?? null;
-          const legacyIp = ipamQuery.data?.legacy_ip ?? asset.ip;
-          const legacyMac = ipamQuery.data?.legacy_mac ?? asset.mac;
-          if (primary) {
-            return (
-              <div className="space-y-2" data-testid="asset-ipam">
-                <dl className="divide-y divide-border border-y border-border">
-                  <FieldRow label={he.assetIpamPrimary} value={primary.ip_address} ltr />
-                  <FieldRow label="MAC" value={primary.mac_address || legacyMac || "—"} ltr />
-                  <FieldRow
-                    label={he.siteNetworksTitle}
-                    value={
-                      primary.network_name
-                        ? `${primary.network_name}${primary.network_cidr ? ` (${primary.network_cidr})` : ""}`
-                        : "—"
-                    }
-                  />
-                  <FieldRow
-                    label={he.siteVlanTitle}
-                    value={
-                      primary.vlan_number != null
-                        ? `${primary.vlan_number}${primary.vlan_name ? ` — ${primary.vlan_name}` : ""}`
-                        : "—"
-                    }
-                  />
-                  {ipamItems.length > 1 ? (
-                    <FieldRow
-                      label={he.siteIpamTitle}
-                      value={
-                        <span className="public-mono text-xs" dir="ltr">
-                          {ipamItems.map((r) => r.ip_address).join(", ")}
-                        </span>
-                      }
-                    />
-                  ) : null}
-                </dl>
-                <p className="text-xs text-fg-muted">{he.assetNetworkBasicNote}</p>
-              </div>
-            );
-          }
-          return (
-            <div data-testid="asset-ipam-legacy">
-              <dl className="divide-y divide-border border-y border-border">
-                <FieldRow label="IP" value={legacyIp || "—"} ltr />
-                <FieldRow label="MAC" value={legacyMac || "—"} ltr />
-              </dl>
-              <p className="mt-2 text-xs text-fg-muted">
-                {legacyIp || legacyMac ? he.assetIpamLegacyFallback : he.assetIpamEmpty}
-              </p>
-              <p className="mt-1 text-xs text-fg-muted">{he.assetNetworkBasicNote}</p>
-            </div>
-          );
-        })()}
-      </Section>
-
-      <Section id="connections" title={he.assetSectionConnections} defaultOpen={false}>
-        <AssetConnectionsSection siteId={siteId} assetId={assetId} canEdit={canEdit} />
+        <div data-testid="asset-network-equipment">
+          <dl className="divide-y divide-border border-y border-border">
+            <FieldRow label="IP" value={asset.ip || "—"} ltr />
+            <FieldRow label="MAC" value={asset.mac || "—"} ltr />
+          </dl>
+          <p className="mt-2 text-xs text-fg-muted">{he.assetNetworkBasicNote}</p>
+        </div>
       </Section>
 
       <Section id="lifecycle" title={he.assetSectionLifecycle} defaultOpen={false}>

@@ -85,9 +85,9 @@ export const LOTTIE_ANIMATIONS = {
       purpose:
         "Provides immediate visual confirmation that the server successfully completed an outbound email action.",
       where:
-        "Quote send confirmation (QuoteBuilder, 48px, after send succeeds); forgot-password email sent (/forgot-password, 72px)",
-      why: "The action is literally dispatching a message to the recipient.",
-      trigger: "After send / reset-email succeeds",
+        "Forgot-password email sent (/forgot-password, 72px). Not used for quote send — send mints a public link, it does not email.",
+      why: "Only real outbound Auth email uses this mark.",
+      trigger: "After reset-email succeeds",
       loop: false,
       durationMs: 1533,
     },

@@ -8,6 +8,7 @@ import { authLaunchSequence } from "../lib/auth-launch";
 import { afterAuthPath, sanitizeNextPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
+import { clearUnitSession, hasUnitSession, saveUnitSession } from "../lib/unit-session";
 
 type AuthNextSearch = { next?: string };
 
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { loading, user, session, error, refresh, signOut } = useSession();
+  const { loading, user, session, error, refresh, signOut, api } = useSession();
   const navigate = useNavigate();
   const { next: nextRaw } = Route.useSearch();
   const next = sanitizeNextPath(nextRaw);
@@ -39,6 +40,13 @@ function LoginPage() {
 
   const workspaceName = session?.memberships[0]?.workspace_name ?? null;
   const ready = Boolean(user && session && !loading);
+
+  useEffect(() => {
+    if (loading || user) return;
+    if (hasUnitSession()) {
+      void navigate({ to: "/unit" });
+    }
+  }, [loading, navigate, user]);
 
   useEffect(() => {
     if (!ready || formError || submitting) return;
@@ -100,11 +108,33 @@ function LoginPage() {
       <LoginForm
         loading={submitting}
         error={formError}
+        onSubmitUnit={async (code) => {
+          setSubmitting(true);
+          setFormError(null);
+          try {
+            await supabase.auth.signOut({ scope: "local" });
+            const result = await api.loginSspUnit({ code });
+            saveUnitSession({
+              token: result.unit_token,
+              expiresAt: result.expires_at,
+              workspaceId: result.workspace_id,
+              siteId: result.site.id,
+              siteName: result.site.name || "",
+            });
+            await navigate({ to: "/unit" });
+          } catch (err) {
+            clearUnitSession();
+            setFormError(err instanceof Error ? err.message : he.sspUnitLoginInvalid);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
         onSubmit={async (email, password) => {
           setSubmitting(true);
           setFormError(null);
           setLaunching(true);
           setLaunchReady(false);
+          clearUnitSession();
           const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
           if (authError) {
             setSubmitting(false);

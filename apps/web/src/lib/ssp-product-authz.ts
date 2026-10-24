@@ -78,8 +78,22 @@ export function productCan(productRole: string | null | undefined, action: strin
 }
 
 export function productRoleLabelHe(role: string | null | undefined): string {
-  if (role === "org_admin") return "מנהל ארגון";
-  if (role === "patrol_manager") return "מנהל סיור";
-  if (role === "patrol_officer") return "קצין סיור";
+  if (role === "org_admin") return "מנהל מערכת";
+  if (role === "patrol_manager") return "מנהל משרד";
+  if (role === "patrol_officer") return "עובד שטח";
   return "ללא תפקיד מוצר";
+}
+
+/** First server snapshot only. Later form-detail refetches must not wipe unsaved builder fields. */
+export function shouldHydrateSspFormFields(hydratedFormId: string | null, formId: string): boolean {
+  return hydratedFormId !== formId;
+}
+
+/** Workspace owner/admin must reach bootstrap before an ssp_memberships row exists. */
+export function canOpenSspOrganization(opts: {
+  sspCan: (action: string) => boolean;
+  workspaceRole?: string | null;
+}): boolean {
+  if (opts.sspCan("ssp.org.view")) return true;
+  return opts.workspaceRole === "owner" || opts.workspaceRole === "administrator";
 }

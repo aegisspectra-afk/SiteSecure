@@ -1,0 +1,206 @@
+{
+  "ok": true,
+  "web": "http://localhost:5173",
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "shots": [
+    "1440-dark",
+    "1440-dark-bottom",
+    "1440-light",
+    "1440-light-bottom",
+    "1032-dark",
+    "1032-dark-bottom",
+    "1032-light",
+    "1032-light-bottom",
+    "1024-dark",
+    "1024-dark-bottom",
+    "768-dark",
+    "768-dark-bottom",
+    "390-dark",
+    "390-dark-bottom",
+    "390-light",
+    "390-light-bottom",
+    "360-dark",
+    "360-dark-bottom",
+    "1440-dark-pricing",
+    "1032-dark-pricing",
+    "390-dark-pricing",
+    "1440-light-pricing",
+    "390-light-pricing"
+  ],
+  "checks": {
+    "dark_light": {
+      "dark": 12,
+      "light": 6
+    },
+    "rtl": true,
+    "optional_seen": false,
+    "cost_authorized_ui": false,
+    "discount_seen": false
+  },
+  "errors": [],
+  "viewports": {
+    "1440-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": true,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflow": false
+      }
+    },
+    "1440-light": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": true,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflow": false
+      }
+    },
+    "1032-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": true,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1032,
+        "clientWidth": 1032,
+        "overflow": false
+      }
+    },
+    "1032-light": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": true,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1032,
+        "clientWidth": 1032,
+        "overflow": false
+      }
+    },
+    "1024-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": true,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "overflow": false
+      }
+    },
+    "768-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": false,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "overflow": false
+      }
+    },
+    "390-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": false,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflow": false
+      }
+    },
+    "390-light": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": false,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflow": false
+      }
+    },
+    "360-dark": {
+      "rtl": true,
+      "optional": false,
+      "discount": false,
+      "summary": false,
+      "cost_margin": false,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "overflow": false
+      }
+    }
+  },
+  "quoteId": "39a3ff91-e52f-4468-801d-f22b1e8fa104",
+  "api_authorized": {
+    "has_cost_total": true,
+    "has_item_cost": true,
+    "has_optional": true,
+    "optional_subtotal": 150,
+    "margin_percent": 47.94,
+    "snap_cost": false
+  },
+  "pricing_stage": {
+    "1440-dark-pricing": {
+      "optional": false,
+      "discount": false,
+      "cost_margin": false,
+      "summary": false,
+      "rtl": true
+    },
+    "1032-dark-pricing": {
+      "optional": false,
+      "discount": false,
+      "cost_margin": false,
+      "summary": false,
+      "rtl": true
+    },
+    "390-dark-pricing": {
+      "optional": false,
+      "discount": false,
+      "cost_margin": false,
+      "summary": false,
+      "rtl": true
+    },
+    "1440-light-pricing": {
+      "optional": false,
+      "discount": false,
+      "cost_margin": false,
+      "summary": false,
+      "rtl": true
+    },
+    "390-light-pricing": {
+      "optional": false,
+      "discount": false,
+      "cost_margin": false,
+      "summary": false,
+      "rtl": true
+    }
+  }
+}

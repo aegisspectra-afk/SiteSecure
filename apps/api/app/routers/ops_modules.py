@@ -825,19 +825,175 @@ def create_job_from_service_call(
 # ── Warranties ────────────────────────────────────────────────────────────────
 
 
+WARRANTY_TYPES = frozenset({"manufacturer", "installation", "extended", "maintenance_contract"})
+WARRANTY_STATUSES = frozenset({"draft", "active", "expiring_soon", "expired", "cancelled"})
+
+WARRANTY_SELECT = (
+    "id,workspace_id,number,title,type,status,customer_id,site_id,installed_equipment_id,"
+    "starts_on,ends_on,policy,document_id,created_at,updated_at"
+)
+
+
 class WarrantyCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     customer_id: str
-    site_id: str
+    site_id: str | None = None
     type: str = "installation"
     starts_on: str
     ends_on: str
+    equipment_id: str | None = None
+    title: str | None = None
+    status: str | None = None
+    policy: dict | None = None
 
 
-WARRANTY_SELECT = (
-    "id,workspace_id,number,type,status,customer_id,site_id,starts_on,ends_on,"
-    "document_id,created_at,updated_at"
-)
+class WarrantyPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str | None = None
+    starts_on: str | None = None
+    ends_on: str | None = None
+    type: str | None = None
+    equipment_id: str | None = None
+    title: str | None = None
+    policy: dict | None = None
+
+
+def _validate_warranty_fields(*, type: str | None = None, status: str | None = None) -> None:
+    if type is not None and type not in WARRANTY_TYPES:
+        raise ApiError(400, "VALIDATION_ERROR", "סוג אחריות אינו תקין")
+    if status is not None and status not in WARRANTY_STATUSES:
+        raise ApiError(400, "VALIDATION_ERROR", "סטטוס אחריות אינו תקין")
+
+
+def _validate_warranty_dates(starts_on: str | None, ends_on: str | None) -> None:
+    if starts_on and ends_on and ends_on < starts_on:
+        raise ApiError(400, "VALIDATION_ERROR", "תאריך הסיום חייב להיות אחרי תאריך ההתחלה")
+
+
+def _assert_warranty_site(
+    client: UserClient,
+    workspace_id: UUID,
+    *,
+    customer_id: str,
+    site_id: str,
+) -> None:
+    one_or_404(
+        client.get(
+            "sites",
+            params={
+                "id": f"eq.{site_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "customer_id": f"eq.{customer_id}",
+                "select": "id",
+            },
+        )
+    )
+
+
+def _assert_warranty_equipment(
+    client: UserClient,
+    workspace_id: UUID,
+    equipment_id: str,
+    site_id: str | None,
+) -> None:
+    equipment = one_or_404(
+        client.get(
+            "equipment",
+            params={
+                "id": f"eq.{equipment_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,site_id",
+            },
+        )
+    )
+    if site_id and str(equipment.get("site_id") or "") != site_id:
+        raise ApiError(400, "VALIDATION_ERROR", "הציוד אינו שייך לאתר שנבחר")
+
+
+def _index_by_id(rows: list[dict]) -> dict[str, dict]:
+    return {str(row["id"]): row for row in rows if row.get("id")}
+
+
+def _enrich_warranty_row(
+    row: dict,
+    customers: dict[str, dict],
+    sites: dict[str, dict],
+    equipment: dict[str, dict],
+) -> dict:
+    out = dict(row)
+    equipment_id = out.pop("installed_equipment_id", None)
+    out["equipment_id"] = equipment_id
+    customer = customers.get(str(out.get("customer_id") or ""))
+    site = sites.get(str(out.get("site_id") or ""))
+    item = equipment.get(str(equipment_id or ""))
+    out["customer_name"] = customer.get("display_name") if customer else None
+    out["site_name"] = site.get("name") if site else None
+    out["equipment_name"] = item.get("name") if item else None
+    out["equipment_manufacturer"] = item.get("manufacturer") if item else None
+    out["equipment_model"] = item.get("model") if item else None
+    out["equipment_serial"] = item.get("serial") if item else None
+    return out
+
+
+def _enrich_warranties(client: UserClient, workspace_id: UUID, rows: list[dict]) -> list[dict]:
+    if not rows:
+        return []
+    customer_ids = sorted({str(row["customer_id"]) for row in rows if row.get("customer_id")})
+    site_ids = sorted({str(row["site_id"]) for row in rows if row.get("site_id")})
+    equipment_ids = sorted(
+        {str(row["installed_equipment_id"]) for row in rows if row.get("installed_equipment_id")}
+    )
+    customers: dict[str, dict] = {}
+    sites: dict[str, dict] = {}
+    equipment: dict[str, dict] = {}
+    if customer_ids:
+        customers = _index_by_id(
+            as_list(
+                client.get(
+                    "customers",
+                    params={
+                        "id": f"in.({','.join(customer_ids)})",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "id,display_name",
+                    },
+                )
+            )
+        )
+    if site_ids:
+        sites = _index_by_id(
+            as_list(
+                client.get(
+                    "sites",
+                    params={
+                        "id": f"in.({','.join(site_ids)})",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "id,name",
+                    },
+                )
+            )
+        )
+    if equipment_ids:
+        equipment = _index_by_id(
+            as_list(
+                client.get(
+                    "equipment",
+                    params={
+                        "id": f"in.({','.join(equipment_ids)})",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "id,name,manufacturer,model,serial",
+                    },
+                )
+            )
+        )
+    return [_enrich_warranty_row(row, customers, sites, equipment) for row in rows]
+
+
+def _warranty_payload(body: WarrantyCreate, workspace_id: UUID) -> dict:
+    payload = {"workspace_id": str(workspace_id), **body.model_dump(exclude_none=True)}
+    equipment_id = payload.pop("equipment_id", None)
+    if equipment_id:
+        payload["installed_equipment_id"] = equipment_id
+    return payload
 
 
 @router.get("/warranties")
@@ -871,7 +1027,7 @@ def list_warranties(
         params["created_at"] = f"lt.{before}"
     rows = as_list(client.get("warranties", params=params))
     page = page_from_rows(rows, page_size)
-    return {"items": page.items, "next_cursor": page.next_cursor}
+    return {"items": _enrich_warranties(client, workspace_id, page.items), "next_cursor": page.next_cursor}
 
 
 @router.post("/warranties")
@@ -883,19 +1039,99 @@ def create_warranty(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "warranties.issue", resource=ResourceRef(type="warranty", site_id=body.site_id))
+    _validate_warranty_fields(type=body.type, status=body.status)
+    _validate_warranty_dates(body.starts_on, body.ends_on)
     one_or_404(
         client.get(
-            "sites",
+            "customers",
             params={
-                "id": f"eq.{body.site_id}",
+                "id": f"eq.{body.customer_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "customer_id": f"eq.{body.customer_id}",
                 "select": "id",
             },
         )
     )
-    payload = {"workspace_id": str(workspace_id), **body.model_dump()}
-    return created_or_403(client.post("warranties", payload))
+    if body.site_id:
+        _assert_warranty_site(
+            client, workspace_id, customer_id=body.customer_id, site_id=body.site_id
+        )
+    if body.equipment_id:
+        _assert_warranty_equipment(client, workspace_id, body.equipment_id, body.site_id)
+    created = created_or_403(client.post("warranties", _warranty_payload(body, workspace_id)))
+    return _enrich_warranties(client, workspace_id, [created])[0]
+
+
+@router.get("/warranties/{warranty_id}")
+def get_warranty(
+    workspace_id: UUID,
+    warranty_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "warranties.view")
+    row = one_or_404(
+        client.get(
+            "warranties",
+            params={
+                "id": f"eq.{warranty_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": WARRANTY_SELECT,
+            },
+        )
+    )
+    return _enrich_warranties(client, workspace_id, [row])[0]
+
+
+@router.patch("/warranties/{warranty_id}")
+def patch_warranty(
+    workspace_id: UUID,
+    warranty_id: UUID,
+    body: WarrantyPatch,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    existing = one_or_404(
+        client.get(
+            "warranties",
+            params={
+                "id": f"eq.{warranty_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": WARRANTY_SELECT,
+            },
+        )
+    )
+    require(
+        ctx,
+        "warranties.issue",
+        resource=ResourceRef(type="warranty", id=str(existing.get("id")), site_id=existing.get("site_id")),
+    )
+    patch = body.model_dump(exclude_unset=True)
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    _validate_warranty_fields(type=patch.get("type"), status=patch.get("status"))
+    _validate_warranty_dates(
+        patch.get("starts_on", existing.get("starts_on")),
+        patch.get("ends_on", existing.get("ends_on")),
+    )
+    if "equipment_id" in patch:
+        equipment_id = patch.pop("equipment_id")
+        if equipment_id:
+            _assert_warranty_equipment(
+                client, workspace_id, equipment_id, existing.get("site_id")
+            )
+            patch["installed_equipment_id"] = equipment_id
+        else:
+            patch["installed_equipment_id"] = None
+    updated = patched_or_403(
+        client.patch(
+            "warranties",
+            patch,
+            params={"id": f"eq.{warranty_id}", "workspace_id": f"eq.{workspace_id}"},
+        )
+    )
+    return _enrich_warranties(client, workspace_id, [updated])[0]
 
 
 # ── Tasks (calendar) ──────────────────────────────────────────────────────────

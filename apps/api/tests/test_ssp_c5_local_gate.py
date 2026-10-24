@@ -30,6 +30,10 @@ SITES = ROOT / "supabase" / "migrations" / "20261020120000_ssp_sites_and_form_as
 FORMS = ROOT / "supabase" / "migrations" / "20261019140000_ssp_digital_forms_v1.sql"
 ORG = ROOT / "supabase" / "migrations" / "20261019220000_ssp_organization_core.sql"
 
+RLS = ROOT / "supabase" / "migrations" / "20261022100000_ssp_memberships_rls_no_recursion.sql"
+CODE = ROOT / "supabase" / "migrations" / "20261022120000_ssp_sites_office_code.sql"
+UNIT = ROOT / "supabase" / "migrations" / "20261023140000_ssp_unit_login.sql"
+
 _SSP_CHAIN = (
     FORMS.name,
     "20261019160000_ssp_forms_hardening.sql",
@@ -39,6 +43,9 @@ _SSP_CHAIN = (
     SITES.name,
     ACT.name,
     JOIN.name,
+    RLS.name,
+    CODE.name,
+    UNIT.name,
 )
 
 
@@ -54,7 +61,8 @@ def test_c5_ssp_migration_files_exist_in_lex_order():
     names = sorted(p.name for p in (ROOT / "supabase" / "migrations").glob("[0-9]*.sql"))
     positions = [names.index(n) for n in _SSP_CHAIN]
     assert positions == sorted(positions)
-    assert names[-1] == JOIN.name
+    ssp_names = [n for n in names if "_ssp_" in n]
+    assert ssp_names[-1] == UNIT.name
 
 
 def test_c5_guard_rejects_hosted_and_fallback_urls():

@@ -1,0 +1,116 @@
+{
+  "shots": [
+    {
+      "name": "1440-dark-populated",
+      "file": "1440-dark-populated.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": true,
+      "hasEmpty": false,
+      "hasFiltered": false,
+      "hasUnassigned": true
+    },
+    {
+      "name": "1440-light-populated",
+      "file": "1440-light-populated.png",
+      "width": 1440,
+      "colorScheme": "light",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": true,
+      "hasEmpty": false,
+      "hasFiltered": false,
+      "hasUnassigned": true
+    },
+    {
+      "name": "1100-dark-populated",
+      "file": "1100-dark-populated.png",
+      "width": 1100,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": true,
+      "hasEmpty": false,
+      "hasFiltered": false,
+      "hasUnassigned": true
+    },
+    {
+      "name": "1440-dark-filtered",
+      "file": "1440-dark-filtered.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": false,
+      "hasEmpty": false,
+      "hasFiltered": true,
+      "hasUnassigned": false
+    },
+    {
+      "name": "390-dark-populated",
+      "file": "390-dark-populated.png",
+      "width": 390,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": true,
+      "hasEmpty": false,
+      "hasFiltered": false,
+      "hasUnassigned": true
+    },
+    {
+      "name": "360-dark-populated",
+      "file": "360-dark-populated.png",
+      "width": 360,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": true,
+      "hasEmpty": false,
+      "hasFiltered": false,
+      "hasUnassigned": true
+    },
+    {
+      "name": "390-light-empty",
+      "file": "390-light-empty.png",
+      "width": 390,
+      "colorScheme": "light",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": false,
+      "hasEmpty": false,
+      "hasFiltered": true,
+      "hasUnassigned": false
+    },
+    {
+      "name": "1440-dark-empty",
+      "file": "1440-dark-empty.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasTitle": true,
+      "hasOpen": false,
+      "hasEmpty": false,
+      "hasFiltered": true,
+      "hasUnassigned": false
+    }
+  ],
+  "checks": {
+    "noOverflow": true,
+    "noPageErrors": true,
+    "populatedHasOpen": true
+  },
+  "started": "2026-09-24T17:24:43.774Z",
+  "finished": "2026-09-24T17:25:32.062Z",
+  "note": "1440-dark-empty / 390-light-empty capture filtered-empty (cancelled) because QA workspace has Jobs; product empty state covered by unit tests."
+}

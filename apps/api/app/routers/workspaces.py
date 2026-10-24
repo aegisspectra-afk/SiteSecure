@@ -172,6 +172,8 @@ def create_workspace(
             MESSAGES["WORKFORCE_USER_CANNOT_CREATE_WORKSPACE"],
         )
     plan_key = default_plan_key()
+    # RPC inserts subscriptions.status='active' as process-granted access, not a paid invoice.
+    # Do not expose this as billed. Payment providers are Phase 7 (deferred).
     # Fail closed before RPC: Solo optional products must be disable-ready when plan-eligible.
     # After 20261019180000 the RPC seeds overrides atomically; API dual-write remains for compatibility.
     from .workspace_products import assert_solo_default_off_ready, seed_solo_default_product_overrides

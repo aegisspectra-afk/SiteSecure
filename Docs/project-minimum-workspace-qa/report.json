@@ -1,0 +1,96 @@
+{
+  "shots": [
+    {
+      "name": "1440-dark-empty",
+      "file": "1440-dark-empty.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": true,
+      "hasOpenJob": false,
+      "hasSummary": true
+    },
+    {
+      "name": "1440-dark-populated",
+      "file": "1440-dark-populated.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": false,
+      "hasOpenJob": true,
+      "hasSummary": true
+    },
+    {
+      "name": "1440-light-populated",
+      "file": "1440-light-populated.png",
+      "width": 1440,
+      "colorScheme": "light",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": false,
+      "hasOpenJob": true,
+      "hasSummary": true
+    },
+    {
+      "name": "1100-dark-populated",
+      "file": "1100-dark-populated.png",
+      "width": 1100,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": false,
+      "hasOpenJob": true,
+      "hasSummary": true
+    },
+    {
+      "name": "390-dark-empty",
+      "file": "390-dark-empty.png",
+      "width": 390,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": true,
+      "hasOpenJob": false,
+      "hasSummary": true
+    },
+    {
+      "name": "390-dark-populated",
+      "file": "390-dark-populated.png",
+      "width": 390,
+      "colorScheme": "dark",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": false,
+      "hasOpenJob": true,
+      "hasSummary": true
+    },
+    {
+      "name": "360-light-populated",
+      "file": "360-light-populated.png",
+      "width": 360,
+      "colorScheme": "light",
+      "overflow": false,
+      "errors": [],
+      "hasJobsHeading": true,
+      "hasEmpty": false,
+      "hasOpenJob": true,
+      "hasSummary": true
+    }
+  ],
+  "checks": {
+    "noOverflow": true,
+    "noPageErrors": true,
+    "emptyHasEmptyCopy": true,
+    "populatedHasOpen": true
+  },
+  "started": "2026-09-24T17:08:48.669Z",
+  "finished": "2026-09-24T17:09:28.970Z"
+}

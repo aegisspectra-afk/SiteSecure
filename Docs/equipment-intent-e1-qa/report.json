@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-09-23T19:52:46.357Z",
+  "shots": [
+    {
+      "name": "desktop-empty-catalog",
+      "file": "Docs/equipment-intent-e1-qa/desktop-empty-catalog.png",
+      "width": 1280,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "desktop-partial-catalog",
+      "file": "Docs/equipment-intent-e1-qa/desktop-partial-catalog.png",
+      "width": 1280,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "desktop-resolved-catalog",
+      "file": "Docs/equipment-intent-e1-qa/desktop-resolved-catalog.png",
+      "width": 1280,
+      "height": 900,
+      "theme": "light"
+    },
+    {
+      "name": "mobile-390-empty",
+      "file": "Docs/equipment-intent-e1-qa/mobile-390-empty.png",
+      "width": 390,
+      "height": 844,
+      "theme": "light"
+    },
+    {
+      "name": "mobile-360-empty",
+      "file": "Docs/equipment-intent-e1-qa/mobile-360-empty.png",
+      "width": 360,
+      "height": 740,
+      "theme": "light"
+    },
+    {
+      "name": "mobile-390-resolved",
+      "file": "Docs/equipment-intent-e1-qa/mobile-390-resolved.png",
+      "width": 390,
+      "height": 844,
+      "theme": "light"
+    },
+    {
+      "name": "dark-desktop-empty",
+      "file": "Docs/equipment-intent-e1-qa/dark-desktop-empty.png",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark"
+    }
+  ]
+}

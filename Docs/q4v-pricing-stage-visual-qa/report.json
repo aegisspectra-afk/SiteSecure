@@ -1,0 +1,325 @@
+{
+  "ok": true,
+  "web": "http://localhost:5173",
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "navigation": "Open /app/quotes/{id} → wait for .cpq-builder + commercial lines → click QuoteStepper aria-label הצעה ומחיר → wait for [data-testid=stage3-financial-summary] + [data-testid=stage3-commercial-workspace]",
+  "race_root_cause": "Prior Q4-S pricing automation used waitForSelector(...).catch(()=>{}) which swallowed load timeouts, then clicked stage CTA / screenshot while the Builder was still on the Hebrew loading spinner (טוען). Also reused WEB_URL=127.0.0.1 while Vite listens on IPv6 localhost. This is a QA navigation/wait bug, not a Builder stage initialization race.",
+  "fixture": {
+    "quoteId": "4b39e3bb-3fa5-490d-919f-f92535e82e08",
+    "sectionId": "239dc389-8b4a-408f-990d-fd7e6dea732c",
+    "api": {
+      "number": "Q-00020",
+      "items": [
+        {
+          "desc": "QA Camera 4MP Turret",
+          "type": "catalog",
+          "optional": false,
+          "unit_price": 287.44,
+          "discount": 10,
+          "cost": 119.9
+        },
+        {
+          "desc": "QA Installation Labor",
+          "type": "labor",
+          "optional": false,
+          "unit_price": 350,
+          "discount": 0,
+          "cost": 90
+        },
+        {
+          "desc": "Optional spare camera",
+          "type": "catalog",
+          "optional": true,
+          "unit_price": 150,
+          "discount": 0,
+          "cost": 119.9
+        }
+      ],
+      "sections": [
+        {
+          "name": "ציוד ראשי",
+          "discount_type": "percent",
+          "discount_value": 5
+        }
+      ],
+      "subtotal_net": 1766.87,
+      "vat_amount": 318.04,
+      "total_gross": 2084.91,
+      "optional_subtotal": 150,
+      "total_with_options_gross": 2261.91,
+      "cost_total": 599.8,
+      "margin_amount": 1167.07,
+      "margin_percent": 66.05,
+      "quote_discount": 3
+    },
+    "deleted": false,
+    "url": "http://localhost:5173/app/quotes/4b39e3bb-3fa5-490d-919f-f92535e82e08"
+  },
+  "checks": {
+    "profitability_tab": {
+      "cost": true,
+      "gp": true,
+      "margin": true,
+      "internal_badge": true
+    },
+    "preview": {
+      "opened": true,
+      "mode": "api-preview-json",
+      "hides_cost_margin": true,
+      "shows_optional_semantics": true,
+      "shows_totals": true,
+      "optional_subtotal": 150.0,
+      "total_with_options_gross": 2261.91,
+      "item_count": 3,
+      "pdf_bytes": 35253,
+      "pdf_clean": true
+    },
+    "optional": {
+      "toggle": true,
+      "badge": true
+    },
+    "discounts": {
+      "line": true,
+      "section": true,
+      "quote": true
+    },
+    "override": true,
+    "cost_margin_authorized": {
+      "margin_percent_on_pricing_rail": true,
+      "cost_on_profit_tab": true,
+      "gp_on_profit_tab": true
+    },
+    "summary": {
+      "present": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true
+    },
+    "rtl": true,
+    "overflow_any": false,
+    "mobile_margin_note": "On ≤768px desktop summary rail is collapsed; authorized margin appears in mobile dock and רווחיות tab. Confirmed visually on 390-dark-bottom (dock) and 1440-dark-profitability."
+  },
+  "viewports": {
+    "1440-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": true,
+      "cost": false,
+      "margin": true,
+      "gp": true,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 · Enterprise · Active בית לקוחות עבודה משימות עוד חשבון חיפוש Ctrl K מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 ← הצעות מחיר הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטי ההצעה תכנון וציוד הצעה ומחיר תנאים ושליחה שמירה תצוגת לקוח שליחה לאישור הלקוח ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על"
+    },
+    "1440-light": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": true,
+      "cost": false,
+      "margin": true,
+      "gp": true,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 · Enterprise · Active בית לקוחות עבודה משימות עוד חשבון חיפוש Ctrl K מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 ← הצעות מחיר הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטי ההצעה תכנון וציוד הצעה ומחיר תנאים ושליחה שמירה תצוגת לקוח שליחה לאישור הלקוח ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על"
+    },
+    "1032-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1032,
+        "clientWidth": 1032,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": true,
+      "cost": false,
+      "margin": true,
+      "gp": true,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 חיפוש Ctrl K מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 ← הצעות מחיר הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטי ההצעה תכנון וציוד הצעה ומחיר תנאים ושליחה שמירה תצוגת לקוח שליחה לאישור הלקוח ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הס"
+    },
+    "1024-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": true,
+      "cost": false,
+      "margin": true,
+      "gp": true,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 חיפוש Ctrl K מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 ← הצעות מחיר הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטי ההצעה תכנון וציוד הצעה ומחיר תנאים ושליחה שמירה תצוגת לקוח שליחה לאישור הלקוח ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הס"
+    },
+    "768-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": false,
+      "cost": false,
+      "margin": false,
+      "gp": false,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 חיפוש Ctrl K מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטים תכנון מחיר שליחה שלב 3 מתוך 4 הצעה ומחיר ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הסר הנחת סעיף מק״ט תיאור שינוי מחיר (‏249.95 ‏₪) או"
+    },
+    "390-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": false,
+      "cost": false,
+      "margin": false,
+      "gp": false,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטים תכנון מחיר שליחה שלב 3 מתוך 4 הצעה ומחיר ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הסר הנחת סעיף מק״ט תיאור שינוי מחיר (‏249.95 ‏₪) אופציונלי כמות "
+    },
+    "390-light": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": false,
+      "cost": false,
+      "margin": false,
+      "gp": false,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטים תכנון מחיר שליחה שלב 3 מתוך 4 הצעה ומחיר ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הסר הנחת סעיף מק״ט תיאור שינוי מחיר (‏249.95 ‏₪) אופציונלי כמות "
+    },
+    "360-dark": {
+      "rtl": true,
+      "overflow": false,
+      "overflow_detail": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "overflow": false
+      },
+      "optional_toggle": true,
+      "optional_badge": true,
+      "line_discount_inputs": 3,
+      "section_discount": true,
+      "quote_discount": true,
+      "override_signal": true,
+      "summary": true,
+      "subtotal": true,
+      "vat": true,
+      "optional_amount": true,
+      "total_with_options": true,
+      "margin_percent_rail": false,
+      "cost": false,
+      "margin": false,
+      "gp": false,
+      "text_sample": "דלגו לתוכן Phase1B QA 1790012816 מצב המערכת: מצב המערכת: תקינה חשבון הצעת מחיר #Q-00020 הצעת מחיר #Q-00020 טיוטה גרסה 1 נשמר פרטים תכנון מחיר שליחה שלב 3 מתוך 4 הצעה ומחיר ההצעה המסחרית 3 שורות בהצעה בדקו את הפריטים, הכמויות והמחירים לפני הצגת ההצעה ללקוח. חזרה לתכנון וציוד הוסף סעיף הוסף סעיף 3 שורות בהצעה · ‏2,067.39 ‏₪ · הנחת סעיף הנחה על סעיף זה בלבד — לא על שורה בודדת ולא על כל ההצעה הנחת סעיף: 5% סוג הנחה אחוז סכום הנחה % החל הסר הנחת סעיף מק״ט תיאור שינוי מחיר (‏249.95 ‏₪) אופציונלי כמות "
+    }
+  },
+  "shots": [
+    "1440-dark",
+    "1440-light",
+    "1032-dark",
+    "1024-dark",
+    "768-dark",
+    "768-dark-bottom",
+    "390-dark",
+    "390-dark-bottom",
+    "390-light",
+    "390-light-bottom",
+    "360-dark",
+    "360-dark-bottom",
+    "1440-dark-profitability",
+    "1440-dark-preview"
+  ],
+  "errors": [],
+  "unauthorized": {
+    "attempted": false,
+    "limitation": "QA workspace only has owner + technician. Technician lacks quotes.view on this quote and catalog.view. Authz unit matrix already proves sales/technician/viewer cannot quotes.view_cost. No persistent membership created."
+  }
+}

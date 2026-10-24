@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from app.authz.catalog import load_catalog
 from app.authz.engine import authorize
-from app.authz.types import AuthzContext, ResourceRef
+from app.authz.types import AuthzContext
+from app.product_entitlements import effective_feature_set, product_rows
 
 
 def _ctx(*, plan: str, features: frozenset[str], role: str = "owner") -> AuthzContext:
@@ -83,3 +84,28 @@ def test_inactive_subscription_still_denied_before_feature():
     d = authorize(ctx=ctx, action="audit.view")
     assert d.allowed is False
     assert d.code == "SUBSCRIPTION_INVALID"
+
+
+def test_missing_features_do_not_grant_mapped_actions():
+    d = authorize(ctx=_ctx(plan="business", features=frozenset()), action="audit.view")
+    assert d.allowed is False
+    assert d.code == "FEATURE_NOT_INCLUDED"
+
+
+def test_product_toggle_rows_match_authorize_for_override_pair():
+    catalog = load_catalog()
+    eligible = frozenset(catalog["_plan_features"]["business"])
+    overrides = {"audit": False}
+    features = effective_feature_set(
+        plan_eligible=eligible,
+        overrides=overrides,
+        subscription_status="active",
+    )
+    rows = {r["feature_key"]: r for r in product_rows(
+        plan_key="business",
+        plan_eligible=eligible,
+        effective_features=features,
+        overrides=overrides,
+    )}
+    assert rows["audit"]["enabled"] is False
+    assert authorize(ctx=_ctx(plan="business", features=features), action="audit.view").allowed is False

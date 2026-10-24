@@ -113,8 +113,10 @@ function SitesListBody() {
       <PageHeader title={he.sitesTitle} description={he.sitesLead} />
       <SspHubLinks
         items={[
-          { to: "/checkpoints", label: he.navCheckpoints },
-          ...(!isOfficer ? [{ to: "/enrollments", label: he.navEnrollments }] : []),
+          { to: "/users", label: he.openUsers },
+          ...(sspCan("ssp.officers.view") ? [{ to: "/officers", label: he.navOfficers }] : []),
+          { to: "/checkpoints", label: he.openCheckpoints },
+          ...(!isOfficer ? [{ to: "/enrollments", label: he.openEnrollments }] : []),
         ]}
       />
       <DataModeNote mode={list.data?.data_mode} waitingDb={list.isError} />

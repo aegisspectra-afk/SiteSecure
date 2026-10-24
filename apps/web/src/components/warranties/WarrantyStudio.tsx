@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 import {
   CONTACT_OPTIONS,
@@ -75,11 +76,78 @@ export function WarrantyStudio({
   onSaved: () => void;
 }) {
   if (!open) return null;
+  if (mode === "edit" && source?.id) {
+    return (
+      <WarrantyStudioEditLoader
+        sourceId={source.id}
+        presetCustomerId={presetCustomerId}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    );
+  }
   return (
     <WarrantyStudioBody
       key={`${mode}:${source?.id ?? "new"}:${presetCustomerId ?? ""}`}
       mode={mode}
       source={source}
+      presetCustomerId={presetCustomerId}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function WarrantyStudioEditLoader({
+  sourceId,
+  presetCustomerId,
+  onClose,
+  onSaved,
+}: {
+  sourceId: string;
+  presetCustomerId?: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { session, api } = useSession();
+  const workspaceId = session?.memberships[0]?.workspace_id ?? "";
+  const liveQuery = useQuery({
+    queryKey: ["warranty", workspaceId, sourceId],
+    enabled: Boolean(workspaceId && sourceId),
+    queryFn: () => api.getWarranty(workspaceId, sourceId),
+  });
+
+  if (liveQuery.isLoading || !liveQuery.data) {
+    if (liveQuery.isError) {
+      return createPortal(
+        <div className="warranty-studio" role="dialog" aria-modal="true" data-testid="warranty-studio-error">
+          <div className="warranty-studio-panel">
+            <p className="warranty-error">
+              {liveQuery.error instanceof ApiClientError ? liveQuery.error.message : he.warrantiesDetailError}
+            </p>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {he.cancel}
+            </Button>
+          </div>
+        </div>,
+        document.body,
+      );
+    }
+    return createPortal(
+      <div className="warranty-studio" role="dialog" aria-modal="true" data-testid="warranty-studio-loading">
+        <div className="warranty-studio-panel">
+          <p className="warranty-hint">{he.loading}</p>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
+  return (
+    <WarrantyStudioBody
+      key={`edit:${liveQuery.data.id}:${liveQuery.data.updated_at}`}
+      mode="edit"
+      source={liveQuery.data}
       presetCustomerId={presetCustomerId}
       onClose={onClose}
       onSaved={onSaved}
@@ -329,7 +397,7 @@ function WarrantyStudioBody({
   );
 
   return createPortal(
-    <div className="warranty-studio" role="dialog" aria-modal="true" aria-labelledby="warranty-studio-title">
+    <div className="warranty-studio" role="dialog" aria-modal="true" aria-labelledby="warranty-studio-title" data-testid="warranty-studio">
       <div className="warranty-studio-panel">
         <header className="warranty-studio-bar">
           <div>
@@ -736,10 +804,10 @@ function WarrantyStudioBody({
             </Button>
           ) : (
             <div className="warranty-save-row">
-              <Button type="button" variant="secondary" disabled={saving} onClick={() => void save(false)}>
+              <Button type="button" variant="secondary" disabled={saving} data-testid="warranty-studio-save-draft" onClick={() => void save(false)}>
                 שמירה כטיוטה
               </Button>
-              <Button type="button" disabled={saving || !accepted} onClick={() => void save(true)}>
+              <Button type="button" disabled={saving || !accepted} data-testid="warranty-studio-save" onClick={() => void save(true)}>
                 {saving ? "שומרים…" : "שמירת אחריות"}
               </Button>
             </div>

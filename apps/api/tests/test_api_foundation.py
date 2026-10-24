@@ -77,6 +77,19 @@ def test_cors_staging_excludes_localhost():
     origins = parse_cors_origins("https://staging.example.com", extra="", app_env="staging")
     assert origins == ["https://staging.example.com"]
     assert "http://localhost:5173" not in origins
+    assert "http://localhost:5175" not in origins
+
+
+def test_cors_production_requires_explicit_workforce_origin():
+    origins = parse_cors_origins("https://app.example.com", extra="", app_env="production")
+    assert "http://localhost:5175" not in origins
+    with_extra = parse_cors_origins(
+        "https://app.example.com",
+        extra="https://workforce.example.com",
+        app_env="production",
+    )
+    assert "https://workforce.example.com" in with_extra
+    assert "http://localhost:5175" not in with_extra
 
 
 def test_cors_extra_and_dev_localhost():
@@ -88,6 +101,8 @@ def test_cors_extra_and_dev_localhost():
     assert origins == ["https://app.example.com", "https://preview.example.com"]
     dev = parse_cors_origins("http://localhost:5173", app_env="development")
     assert "http://localhost:8081" in dev
+    assert "http://localhost:5174" in dev
+    assert "http://localhost:5175" in dev
 
 
 def test_cors_preflight_allows_web_origin():

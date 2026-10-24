@@ -55,8 +55,8 @@ describe("auth routing", () => {
     expect(guestEntryPath()).not.toBe("/register");
   });
 
-  it("sends authenticated users to app or onboarding", () => {
-    expect(afterAuthPath(true)).toBe("/app");
+  it("sends authenticated users to platform home or onboarding", () => {
+    expect(afterAuthPath(true)).toBe("/platform");
     expect(afterAuthPath(false)).toBe("/onboarding");
   });
 });
@@ -257,7 +257,12 @@ describe("VerifyEmailPanel", () => {
 describe("AuthLayout", () => {
   it("is a quiet product entry that belongs to the same system as the app", () => {
     render(
-      <AuthLayout kicker={he.authWelcomeBack} title={he.loginTitle} heading={he.loginLead}>
+      <AuthLayout
+        kicker={he.authWelcomeBack}
+        title={he.loginTitle}
+        heading={he.loginLead}
+        description={he.loginDescription}
+      >
         <p>form</p>
       </AuthLayout>,
     );
@@ -287,6 +292,9 @@ describe("AuthLayout", () => {
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/legal/terms");
     expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute("href", "/legal/security");
     expect(screen.getByRole("heading", { name: he.loginLead })).toBeInTheDocument();
+    expect(screen.getByText(he.loginDescription)).toBeInTheDocument();
+    expect(he.loginLead).toContain("SITE SECURE");
+    expect(he.loginDescription).toMatch(/מערכות אבטחה ושירות/);
     expect(document.querySelector(".auth-root")).toHaveClass("auth-premium");
     const skip = screen.getByRole("link", { name: he.skipToForm });
     expect(skip).toHaveAttribute("href", "#auth-form");

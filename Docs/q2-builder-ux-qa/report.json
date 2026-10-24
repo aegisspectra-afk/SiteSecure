@@ -1,0 +1,20 @@
+{
+  "suite": "Q2 Builder UX",
+  "date": "2026-09-27",
+  "preGate": {
+    "fullWebSuite": "629/629 pass",
+    "startFromTemplateFlake": "5/5 isolated pass — not deterministic regression"
+  },
+  "postGate": {
+    "fullWebSuite": "633/633 pass",
+    "typecheck": "pass",
+    "build": "pass",
+    "apiRelevant": "41 pass"
+  },
+  "browserProof": {
+    "knownContextEntersStage2": true,
+    "headerShowsCustomerSiteStatusSave": true,
+    "cctvEntryVisible": true,
+    "templateFastPathOnStage2": true
+  }
+}

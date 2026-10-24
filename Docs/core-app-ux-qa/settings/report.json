@@ -1,0 +1,50 @@
+{
+  "shots": [
+    {
+      "name": "1440-dark",
+      "file": "1440-dark.png",
+      "width": 1440,
+      "colorScheme": "dark",
+      "overflow": false,
+      "selectVisible": false,
+      "desktopVisible": true,
+      "hasTitle": true
+    },
+    {
+      "name": "1440-light",
+      "file": "1440-light.png",
+      "width": 1440,
+      "colorScheme": "light",
+      "overflow": false,
+      "selectVisible": false,
+      "desktopVisible": true,
+      "hasTitle": true
+    },
+    {
+      "name": "390-dark",
+      "file": "390-dark.png",
+      "width": 390,
+      "colorScheme": "dark",
+      "overflow": false,
+      "selectVisible": true,
+      "desktopVisible": false,
+      "hasTitle": true
+    },
+    {
+      "name": "360-dark",
+      "file": "360-dark.png",
+      "width": 360,
+      "colorScheme": "dark",
+      "overflow": false,
+      "selectVisible": true,
+      "desktopVisible": false,
+      "hasTitle": true
+    }
+  ],
+  "started": "2026-09-24T20:12:11.932Z",
+  "pass": {
+    "desktop": true,
+    "mobile": true
+  },
+  "finished": "2026-09-24T20:12:30.002Z"
+}

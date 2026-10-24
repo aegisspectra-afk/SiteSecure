@@ -1,0 +1,263 @@
+{
+  "shots": [
+    "owner-1440-dark-sidebar.png",
+    "owner-390-dark-more.png",
+    "owner-360-dark-more.png",
+    "owner-390-light-more.png",
+    "tech-390-dark-more.png",
+    "tech-1440-dark-sidebar.png"
+  ],
+  "checks": {
+    "ownerDesktop1440": {
+      "links": [
+        {
+          "href": "/app/dashboard",
+          "label": "לוח בקרה"
+        },
+        {
+          "href": "/app/customers",
+          "label": "לקוחות"
+        },
+        {
+          "href": "/app/today",
+          "label": "ביקורים"
+        },
+        {
+          "href": "/app/projects",
+          "label": "פרויקטים"
+        },
+        {
+          "href": "/app/jobs",
+          "label": "עבודות"
+        },
+        {
+          "href": "/app/service",
+          "label": "שירות"
+        },
+        {
+          "href": "/app/sites",
+          "label": "תיקי אתר"
+        },
+        {
+          "href": "/app/tasks",
+          "label": "משימות"
+        },
+        {
+          "href": "/app/leads",
+          "label": "לידים"
+        },
+        {
+          "href": "/app/quotes",
+          "label": "הצעות מחיר"
+        },
+        {
+          "href": "/app/catalog",
+          "label": "קטלוג"
+        },
+        {
+          "href": "/app/warranties",
+          "label": "אחריות"
+        },
+        {
+          "href": "/app/knowledge",
+          "label": "מודיעין טכני"
+        },
+        {
+          "href": "/app/settings",
+          "label": "הגדרות"
+        },
+        {
+          "href": "/app/dashboard",
+          "label": "בית"
+        },
+        {
+          "href": "/app/customers",
+          "label": "לקוחות"
+        },
+        {
+          "href": "/app/tasks",
+          "label": "משימות"
+        }
+      ],
+      "settings": true,
+      "quotes": true,
+      "knowledge": true,
+      "jobsInSidebar": true,
+      "overflow": false,
+      "dir": "rtl",
+      "backOk": true
+    },
+    "ownerMobile390": {
+      "placeholder": "חיפוש באפשרויות נוספות",
+      "hint": "סינון היעדים ברשימה זו בלבד",
+      "sections": [
+        "מכירות",
+        "משאבים",
+        "ניהול",
+        "משאבים"
+      ],
+      "rows": [
+        "לידים",
+        "הצעות מחיר",
+        "קטלוג",
+        "אחריות",
+        "מודיעין טכני",
+        "הגדרות",
+        "אתר Aegis"
+      ],
+      "quick": [
+        "ליד"
+      ],
+      "workspaceHasChevron": false,
+      "hasCustomersWordInSections": false,
+      "mentionsGlobalEntities": false,
+      "hasWorkDup": false,
+      "hasQuotes": true,
+      "hasKnowledge": true,
+      "hasSettings": true,
+      "hasLeads": true,
+      "hasVisitQuick": false,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "ownerMobile360": {
+      "placeholder": "חיפוש באפשרויות נוספות",
+      "hint": "סינון היעדים ברשימה זו בלבד",
+      "sections": [
+        "מכירות",
+        "משאבים",
+        "ניהול",
+        "משאבים"
+      ],
+      "rows": [
+        "לידים",
+        "הצעות מחיר",
+        "קטלוג",
+        "אחריות",
+        "מודיעין טכני",
+        "הגדרות",
+        "אתר Aegis"
+      ],
+      "quick": [
+        "ליד"
+      ],
+      "workspaceHasChevron": false,
+      "hasCustomersWordInSections": false,
+      "mentionsGlobalEntities": false,
+      "hasWorkDup": false,
+      "hasQuotes": true,
+      "hasKnowledge": true,
+      "hasSettings": true,
+      "hasLeads": true,
+      "hasVisitQuick": false,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "ownerLight390": {
+      "placeholder": "חיפוש באפשרויות נוספות",
+      "hint": "סינון היעדים ברשימה זו בלבד",
+      "sections": [
+        "מכירות",
+        "משאבים",
+        "ניהול",
+        "משאבים"
+      ],
+      "rows": [
+        "לידים",
+        "הצעות מחיר",
+        "קטלוג",
+        "אחריות",
+        "מודיעין טכני",
+        "הגדרות",
+        "אתר Aegis"
+      ],
+      "quick": [
+        "ליד"
+      ],
+      "workspaceHasChevron": false,
+      "hasCustomersWordInSections": false,
+      "mentionsGlobalEntities": false,
+      "hasWorkDup": false,
+      "hasQuotes": true,
+      "hasKnowledge": true,
+      "hasSettings": true,
+      "hasLeads": true,
+      "hasVisitQuick": false,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "technician390": {
+      "placeholder": "חיפוש באפשרויות נוספות",
+      "hint": "סינון היעדים ברשימה זו בלבד",
+      "sections": [
+        "משאבים",
+        "משאבים"
+      ],
+      "rows": [
+        "מודיעין טכני",
+        "אתר Aegis"
+      ],
+      "quick": [],
+      "workspaceHasChevron": false,
+      "hasCustomersWordInSections": false,
+      "mentionsGlobalEntities": false,
+      "hasWorkDup": false,
+      "hasQuotes": false,
+      "hasKnowledge": true,
+      "hasSettings": false,
+      "hasLeads": false,
+      "hasVisitQuick": false,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "technicianDesktop": {
+      "links": [
+        {
+          "href": "/app/today",
+          "label": "היום"
+        },
+        {
+          "href": "/app/customers",
+          "label": "לקוחות"
+        },
+        {
+          "href": "/app/jobs",
+          "label": "עבודות"
+        },
+        {
+          "href": "/app/sites",
+          "label": "תיקי אתר"
+        },
+        {
+          "href": "/app/tasks",
+          "label": "משימות"
+        },
+        {
+          "href": "/app/knowledge",
+          "label": "מודיעין טכני"
+        },
+        {
+          "href": "/app/today",
+          "label": "בית"
+        },
+        {
+          "href": "/app/customers",
+          "label": "לקוחות"
+        },
+        {
+          "href": "/app/tasks",
+          "label": "משימות"
+        }
+      ],
+      "settings": false,
+      "quotes": false,
+      "knowledge": true,
+      "jobsInSidebar": true,
+      "overflow": false,
+      "focusedTag": "BUTTON"
+    }
+  },
+  "started": "2026-09-26T21:26:01.490Z",
+  "finished": "2026-09-26T21:26:27.891Z",
+  "pass": true
+}

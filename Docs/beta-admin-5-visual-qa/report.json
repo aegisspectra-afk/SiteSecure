@@ -1,0 +1,161 @@
+{
+  "checkpoint": "BETA-ADMIN-5",
+  "date": "2026-09-30",
+  "origin": "http://localhost:5173",
+  "rtl": true,
+  "platform_admin": true,
+  "captures": [
+    {
+      "name": "users-active-1440-dark",
+      "file": "users-active-1440-dark.png",
+      "path": "/admin/users?tab=active",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "users-archived-1440-dark",
+      "file": "users-archived-1440-dark.png",
+      "path": "/admin/users?tab=archived",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "users-invitations-1440-dark",
+      "file": "users-invitations-1440-dark.png",
+      "path": "/admin/users?tab=invitations",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "users-active-390-dark",
+      "file": "users-active-390-dark.png",
+      "path": "/admin/users?tab=active",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "orgs-active-1440-dark",
+      "file": "orgs-active-1440-dark.png",
+      "path": "/admin/organizations?tab=active",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "orgs-archived-1440-dark",
+      "file": "orgs-archived-1440-dark.png",
+      "path": "/admin/organizations?tab=archived",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "beta-overview-1440-dark",
+      "file": "beta-overview-1440-dark.png",
+      "path": "/admin/beta?tab=overview",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "beta-badges-1440-dark",
+      "file": "beta-badges-1440-dark.png",
+      "path": "/admin/beta?tab=badges",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "beta-flags-1440-dark",
+      "file": "beta-flags-1440-dark.png",
+      "path": "/admin/beta?tab=flags",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    },
+    {
+      "name": "users-active-1440-light",
+      "file": "users-active-1440-light.png",
+      "path": "/admin/users?tab=active",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "overflowX": false
+    },
+    {
+      "name": "admin-home-1440-dark",
+      "file": "admin-home-1440-dark.png",
+      "path": "/admin",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflowX": false
+    }
+  ],
+  "checks": {
+    "invitations_redirect": true,
+    "archive_redirect": true,
+    "badges_redirect": true,
+    "flags_redirect": true,
+    "nav_has_users": true,
+    "nav_has_beta": true,
+    "nav_no_archive_top": true,
+    "nav_no_invitations_top": true,
+    "nav_no_badges_top": true,
+    "overflow_any": false
+  },
+  "nav": {
+    "ops": [
+      "לוח תפעול",
+      "סביבות עבודה",
+      "משתמשים",
+      "פידבק",
+      "Audit"
+    ],
+    "platform": [
+      "בטא"
+    ],
+    "removed_top_level": [
+      "הזמנות",
+      "ארכיון",
+      "Badges",
+      "דגלי יכולת"
+    ]
+  },
+  "result": "PASS"
+}

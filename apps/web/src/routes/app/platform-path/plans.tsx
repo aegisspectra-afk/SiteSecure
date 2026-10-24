@@ -3,6 +3,7 @@ import { Button, PageHeader } from "@site-secure/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { BillingHonestyNote } from "../../../components/billing/BillingHonestyNote";
 import {
   PlatformPathShell,
   readDemoPlanKey,
@@ -41,7 +42,8 @@ function PlatformPathPlansPage() {
       <p className="rounded-[var(--radius-control)] border border-border bg-bg-subtle px-3 py-2 text-sm text-fg-muted">
         {he.platformPathPlansCurrent}: <span className="font-medium text-fg">{planLabel(currentPlan)}</span>
       </p>
-      <p className="text-xs text-amber-700 dark:text-amber-300">{he.platformPathNoPayment}</p>
+      <BillingHonestyNote />
+      <p className="text-xs text-fg-muted">{he.billingComparisonOnly}</p>
       <p className="text-xs text-fg-muted">{he.platformPathPricePending}</p>
 
       <ul className="flex flex-col gap-3">

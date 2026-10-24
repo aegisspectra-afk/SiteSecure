@@ -25,7 +25,9 @@ def parse_cors_origins(web_public_url: str, extra: str = "", app_env: str = "dev
     env = app_env.strip().lower()
     web = web_public_url.strip().rstrip("/")
     if env in {"development", "dev", "test"} or web.startswith("http://localhost"):
-        add("http://localhost:5173")
+        add("http://localhost:5173")  # Site Secure
+        add("http://localhost:5174")  # SSP
+        add("http://localhost:5175")  # WorkForce
         add("http://localhost:8081")
     return seen
 

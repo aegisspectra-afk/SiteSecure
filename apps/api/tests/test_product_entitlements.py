@@ -7,6 +7,7 @@ from app.authz.types import AuthzContext
 from app.product_entitlements import (
     SOLO_DEFAULT_DISABLED,
     effective_enabled,
+    effective_feature_set,
     is_toggleable,
     plan_eligible_features_catalog,
     product_rows,
@@ -115,3 +116,123 @@ def test_disable_removes_feature_from_authorize():
     d2 = authorize(ctx=ctx, action="fleet.view")
     assert d2.allowed is False
     assert d2.code == "FEATURE_NOT_INCLUDED"
+
+
+def test_catalog_plan_list_does_not_grant_without_plan_eligible():
+    """Catalog solo includes fleet; omitting DB plan_eligible must not enable."""
+    assert "fleet" in plan_eligible_features_catalog("solo")
+    err = validate_override_request(feature_key="fleet", enabled=True, plan_key="solo")
+    assert err == "FEATURE_NOT_IN_PLAN"
+
+
+def test_plan_feature_on_without_override():
+    eligible = frozenset({"core", "quotes", "fleet"})
+    features = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={},
+        subscription_status="active",
+    )
+    assert "fleet" in features
+    assert "ssp" not in features
+
+
+def test_plan_feature_off_when_subscription_inactive():
+    eligible = frozenset({"core", "fleet"})
+    features = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={},
+        subscription_status="canceled",
+    )
+    assert features == frozenset()
+    features_override = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={"fleet": True},
+        subscription_status="canceled",
+    )
+    assert features_override == frozenset({"fleet"})
+
+
+def test_two_workspaces_do_not_share_effective_overrides():
+    eligible = frozenset({"core", "fleet", "ssp"})
+    ws_a = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={"fleet": False},
+        subscription_status="active",
+    )
+    ws_b = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={"ssp": False},
+        subscription_status="active",
+    )
+    assert "fleet" not in ws_a
+    assert "ssp" in ws_a
+    assert "fleet" in ws_b
+    assert "ssp" not in ws_b
+    assert ws_a != ws_b
+
+
+def test_authorize_and_product_rows_agree_on_effective_set():
+    eligible = frozenset({"core", "quotes", "fleet", "ssp"})
+    overrides = {"fleet": False}
+    features = effective_feature_set(
+        plan_eligible=eligible,
+        overrides=overrides,
+        subscription_status="active",
+    )
+    rows = {r["feature_key"]: r for r in product_rows(
+        plan_key="solo",
+        plan_eligible=eligible,
+        effective_features=features,
+        overrides=overrides,
+    )}
+    ctx = AuthzContext(
+        user_id="u1",
+        workspace_id="w1",
+        role_key="owner",
+        workspace_status="active",
+        subscription_status="active",
+        plan_key="solo",
+        features=features,
+        grants=frozenset({"*"}),
+    )
+    assert rows["fleet"]["enabled"] is False
+    assert authorize(ctx=ctx, action="fleet.view").allowed is False
+    assert authorize(ctx=ctx, action="fleet.view").code == "FEATURE_NOT_INCLUDED"
+    assert rows["ssp"]["enabled"] is True
+    assert authorize(ctx=ctx, action="ssp.forms.view").allowed is True
+
+
+def test_enable_override_and_disable_override_agree_with_authorize():
+    eligible = frozenset({"core", "fleet"})
+    enabled = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={"fleet": True},
+        subscription_status="active",
+    )
+    disabled = effective_feature_set(
+        plan_eligible=eligible,
+        overrides={"fleet": False},
+        subscription_status="active",
+    )
+    ctx_on = AuthzContext(
+        user_id="u1",
+        workspace_id="wa",
+        role_key="owner",
+        workspace_status="active",
+        subscription_status="active",
+        plan_key="solo",
+        features=enabled,
+        grants=frozenset({"*"}),
+    )
+    ctx_off = AuthzContext(
+        user_id="u1",
+        workspace_id="wb",
+        role_key="owner",
+        workspace_status="active",
+        subscription_status="active",
+        plan_key="solo",
+        features=disabled,
+        grants=frozenset({"*"}),
+    )
+    assert authorize(ctx=ctx_on, action="fleet.view").allowed is True
+    assert authorize(ctx=ctx_off, action="fleet.view").allowed is False

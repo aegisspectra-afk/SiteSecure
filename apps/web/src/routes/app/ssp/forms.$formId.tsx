@@ -1,25 +1,34 @@
 import type { SspFieldType, SspFormDefinition, SspFormField } from "@site-secure/api-client";
-import { Button, Card, Input, LoadingBlock, PageHeader, Textarea } from "@site-secure/ui";
+import { Button, Card, Input, LoadingBlock, PageHeader, Select, Textarea } from "@site-secure/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ErrorState, useMutation, useQuery } from "../../../components/modules/ModuleKit";
 import { FormSiteAssignPanel } from "../../../components/ssp/FormSiteAssignPanel";
+import { SspFormFields } from "../../../components/ssp/SspFormFields";
+import { useSspWorkspace } from "../../../components/ssp/useSspWorkspace";
 import { he } from "../../../i18n/he";
-import { can } from "../../../lib/can";
-import { useSession } from "../../../lib/session";
+import { shouldHydrateSspFormFields } from "../../../lib/ssp-product-authz";
 
 export const Route = createFileRoute("/app/ssp/forms/$formId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    preview: search.preview === true || search.preview === "1" || search.preview === 1,
+  }),
   component: SspFormDetailPage,
 });
 
 const FIELD_TYPES: Array<{ type: SspFieldType; label: string }> = [
   { type: "short_text", label: he.sspFieldShortText },
   { type: "long_text", label: he.sspFieldLongText },
+  { type: "number", label: he.sspFieldNumber },
+  { type: "date", label: he.sspFieldDate },
+  { type: "time", label: he.sspFieldTime },
+  { type: "datetime", label: he.sspFieldDateTime },
   { type: "single_choice", label: he.sspFieldSingle },
   { type: "multi_choice", label: he.sspFieldMulti },
-  { type: "date", label: he.sspFieldDate },
   { type: "yes_no", label: he.sspFieldYesNo },
+  { type: "checkbox", label: he.sspFieldCheckbox },
+  { type: "heading", label: he.sspFieldHeading },
   { type: "consent", label: he.sspFieldConsent },
 ];
 
@@ -50,19 +59,21 @@ function emptyField(type: SspFieldType): SspFormField {
 
 function SspFormDetailPage() {
   const { formId } = Route.useParams();
-  const { session, api } = useSession();
-  const workspaceId = session?.memberships[0]?.workspace_id;
-  const roleKey = session?.memberships[0]?.role_key;
-  const features = session?.memberships[0]?.features ?? [];
-  const permissions = session?.memberships[0]?.permissions;
+  const { preview: previewFromSearch } = Route.useSearch();
+  const { api, workspaceId, sspCan } = useSspWorkspace();
   const queryClient = useQueryClient();
   const [fields, setFields] = useState<SspFormField[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [maxSubmissions, setMaxSubmissions] = useState("1");
   const [createdLink, setCreatedLink] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [addType, setAddType] = useState<SspFieldType>("short_text");
+  const [previewing, setPreviewing] = useState(Boolean(previewFromSearch));
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, unknown>>({});
+  const hydratedFormId = useRef<string | null>(null);
 
   const detail = useQuery({
     queryKey: ["ssp-form", workspaceId, formId],
@@ -73,7 +84,7 @@ function SspFormDetailPage() {
 
   const assignments = useQuery({
     queryKey: ["ssp-assignments", workspaceId, formId],
-    enabled: Boolean(workspaceId) && can(roleKey, "ssp.assignments.manage", features, permissions),
+    enabled: Boolean(workspaceId) && sspCan("ssp.assignments.manage"),
     queryFn: () => api.listSspAssignments(workspaceId!, formId),
   });
 
@@ -81,20 +92,27 @@ function SspFormDetailPage() {
     if (!detail.data) return;
     setTitle(detail.data.form.title);
     setDescription(detail.data.form.description || "");
+    setCategory(detail.data.form.category || "");
+    if (!shouldHydrateSspFormFields(hydratedFormId.current, formId)) return;
     const def =
       detail.data.draft_version?.definition ??
       detail.data.latest_published?.definition ??
       ({ fields: [] } as SspFormDefinition);
     setFields(def.fields ?? []);
-  }, [detail.data]);
+    hydratedFormId.current = formId;
+  }, [detail.data, formId]);
 
-  const canEdit = can(roleKey, "ssp.forms.edit", features, permissions);
-  const canPublish = can(roleKey, "ssp.forms.publish", features, permissions);
-  const canAssign = can(roleKey, "ssp.assignments.manage", features, permissions);
+  useEffect(() => {
+    if (previewFromSearch) setPreviewing(true);
+  }, [previewFromSearch]);
+
+  const canEdit = sspCan("ssp.forms.edit");
+  const canPublish = sspCan("ssp.forms.publish");
+  const canAssign = sspCan("ssp.assignments.manage");
   const archived = detail.data?.form.status === "archived";
 
   const saveMeta = useMutation({
-    mutationFn: () => api.patchSspForm(workspaceId!, formId, { title, description }),
+    mutationFn: () => api.patchSspForm(workspaceId!, formId, { title, description, category: category || null }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ssp-form", workspaceId, formId] });
       setMessage("נשמר");
@@ -109,6 +127,21 @@ function SspFormDetailPage() {
     },
     onError: (e: unknown) => setMessage(e instanceof Error ? e.message : he.apiUnavailable),
   });
+
+  function publishBlockReason(): string | null {
+    if (!fields.length) return he.sspPublishNeedsFields;
+    if (fields.some((field) => field.type !== "heading" && !field.label.trim())) return he.sspPublishNeedsLabels;
+    if (
+      fields.some(
+        (field) =>
+          (field.type === "single_choice" || field.type === "multi_choice") &&
+          !(field.options ?? []).some((opt) => opt.label.trim()),
+      )
+    ) {
+      return he.sspPublishNeedsOptions;
+    }
+    return null;
+  }
 
   const publish = useMutation({
     mutationFn: async () => {
@@ -184,7 +217,7 @@ function SspFormDetailPage() {
     <div className="ss-module space-y-5" data-testid="ssp-form-detail">
       <PageHeader
         title={detail.data.form.title}
-        description={`${detail.data.form.status} · v${detail.data.form.latest_published_version ?? "—"}`}
+        description={`${he.sspNavFormsBuilder} · ${detail.data.form.status} · ${detail.data.form.latest_published_version ? `v${detail.data.form.latest_published_version}` : he.sspVersionUnpublished}`}
         action={
           <div className="flex flex-wrap gap-2">
             {canEdit && !archived ? (
@@ -198,7 +231,18 @@ function SspFormDetailPage() {
               </Button>
             ) : null}
             {canPublish && !archived ? (
-              <Button type="button" onClick={() => publish.mutate()}>
+              <Button
+                type="button"
+                onClick={() => {
+                  const blocked = publishBlockReason();
+                  if (blocked) {
+                    setMessage(blocked);
+                    return;
+                  }
+                  if (!window.confirm(he.sspConfirmPublish)) return;
+                  publish.mutate();
+                }}
+              >
                 {he.sspPublish}
               </Button>
             ) : null}
@@ -207,6 +251,16 @@ function SspFormDetailPage() {
                 {he.sspDuplicate}
               </Button>
             ) : null}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setPreviewing((v) => !v);
+                setPreviewAnswers({});
+              }}
+            >
+              {previewing ? he.sspClosePreview : he.sspPreview}
+            </Button>
             {canEdit && !archived ? (
               <Button type="button" variant="secondary" onClick={() => archive.mutate()}>
                 {he.sspArchive}
@@ -223,6 +277,13 @@ function SspFormDetailPage() {
 
       <Card className="flex flex-col gap-3">
         <Input id="ssp-title" label={he.name} value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canEdit || archived} />
+        <Input
+          id="ssp-category"
+          label="קטגוריה"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          disabled={!canEdit || archived}
+        />
         <Textarea
           id="ssp-desc"
           label="תיאור"
@@ -233,21 +294,52 @@ function SspFormDetailPage() {
         />
       </Card>
 
+      <Card className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold">{he.sspVersions}</h2>
+        <ul className="divide-y divide-border text-sm">
+          {(detail.data.versions ?? []).map((version) => (
+            <li key={version.id} className="flex justify-between gap-2 py-1.5">
+              <span>
+                v{version.version} · {version.status === "published" ? he.sspStatusPublished : he.sspStatusDraft}
+              </span>
+              <span className="text-xs text-fg-muted">
+                {version.published_at
+                  ? new Date(version.published_at).toLocaleString("he-IL")
+                  : new Date(version.created_at).toLocaleString("he-IL")}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {!(detail.data.versions ?? []).length ? <p className="ss-module-empty-text">{he.sspStatusDraft}</p> : null}
+      </Card>
+
+      {previewing ? (
+        <Card className="flex flex-col gap-3" data-testid="ssp-form-preview">
+          <h2 className="text-base font-semibold">{he.sspPreview}</h2>
+          <SspFormFields fields={fields} answers={previewAnswers} onChange={setPreviewAnswers} />
+        </Card>
+      ) : null}
+
       <Card className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">{he.sspForms}</h2>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h2 className="text-base font-semibold">{he.sspNavFormsBuilder}</h2>
           {canEdit && !archived ? (
-            <div className="flex flex-wrap gap-2">
-              {FIELD_TYPES.map((ft) => (
-                <Button
-                  key={ft.type}
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setFields((prev) => [...prev, emptyField(ft.type)])}
-                >
-                  {he.sspAddField}: {ft.label}
-                </Button>
-              ))}
+            <div className="flex flex-wrap items-end gap-2">
+              <Select
+                id="ssp-add-field-type"
+                label={he.sspAddFieldType}
+                value={addType}
+                onChange={(e) => setAddType(e.target.value as SspFieldType)}
+              >
+                {FIELD_TYPES.map((ft) => (
+                  <option key={ft.type} value={ft.type}>
+                    {ft.label}
+                  </option>
+                ))}
+              </Select>
+              <Button type="button" variant="secondary" onClick={() => setFields((prev) => [...prev, emptyField(addType)])}>
+                {he.sspAddField}
+              </Button>
             </div>
           ) : null}
         </div>
@@ -258,13 +350,57 @@ function SspFormDetailPage() {
                 #{index + 1} · {FIELD_TYPES.find((t) => t.type === field.type)?.label ?? field.type}
               </span>
               {canEdit && !archived ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setFields((prev) => prev.filter((f) => f.id !== field.id))}
-                >
-                  מחיקה
-                </Button>
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setFields((prev) => {
+                        if (index === 0) return prev;
+                        const next = [...prev];
+                        [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                        return next;
+                      })
+                    }
+                  >
+                    {he.sspMoveUp}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setFields((prev) => {
+                        if (index === prev.length - 1) return prev;
+                        const next = [...prev];
+                        [next[index + 1], next[index]] = [next[index], next[index + 1]];
+                        return next;
+                      })
+                    }
+                  >
+                    {he.sspMoveDown}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setFields((prev) => {
+                        const copy = { ...field, id: crypto.randomUUID() };
+                        const next = [...prev];
+                        next.splice(index + 1, 0, copy);
+                        return next;
+                      })
+                    }
+                  >
+                    {he.sspDuplicateField}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setFields((prev) => prev.filter((f) => f.id !== field.id))}
+                  >
+                    מחיקה
+                  </Button>
+                </div>
               ) : null}
             </div>
             <Input
@@ -294,19 +430,50 @@ function SspFormDetailPage() {
             {(field.type === "single_choice" || field.type === "multi_choice") && (
               <div className="flex flex-col gap-2">
                 {(field.options ?? []).map((opt, oidx) => (
-                  <Input
-                    key={opt.id}
-                    id={`opt-${opt.id}`}
-                    label={`אפשרות ${oidx + 1}`}
-                    value={opt.label}
-                    disabled={!canEdit || archived}
-                    onChange={(e) => {
-                      const options = [...(field.options ?? [])];
-                      options[oidx] = { ...opt, label: e.target.value };
-                      updateField(field.id, { options });
-                    }}
-                  />
+                  <div key={opt.id} className="flex flex-wrap items-end gap-2">
+                    <Input
+                      id={`opt-${opt.id}`}
+                      label={`אפשרות ${oidx + 1}`}
+                      value={opt.label}
+                      disabled={!canEdit || archived}
+                      onChange={(e) => {
+                        const options = [...(field.options ?? [])];
+                        options[oidx] = { ...opt, label: e.target.value };
+                        updateField(field.id, { options });
+                      }}
+                    />
+                    {canEdit && !archived ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={(field.options ?? []).length <= 1}
+                        onClick={() =>
+                          updateField(field.id, {
+                            options: (field.options ?? []).filter((item) => item.id !== opt.id),
+                          })
+                        }
+                      >
+                        {he.sspRemoveOption}
+                      </Button>
+                    ) : null}
+                  </div>
                 ))}
+                {canEdit && !archived ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      updateField(field.id, {
+                        options: [
+                          ...(field.options ?? []),
+                          { id: newId(), label: `אפשרות ${(field.options ?? []).length + 1}` },
+                        ],
+                      })
+                    }
+                  >
+                    {he.sspAddOption}
+                  </Button>
+                ) : null}
               </div>
             )}
             <label className="flex items-center gap-2 text-sm">
@@ -324,7 +491,9 @@ function SspFormDetailPage() {
       </Card>
 
       {canAssign && !archived ? (
-        <Card className="flex flex-col gap-3">
+        <details className="ops-card p-3">
+          <summary className="cursor-pointer text-sm font-medium text-fg">{he.sspPublicTabletLegacy}</summary>
+          <div className="mt-3 flex flex-col gap-3">
           <h2 className="text-base font-semibold">{he.sspCreateAssignment}</h2>
           <Input
             id="ssp-access-code"
@@ -379,7 +548,8 @@ function SspFormDetailPage() {
               </li>
             ))}
           </ul>
-        </Card>
+          </div>
+        </details>
       ) : null}
     </div>
   );

@@ -64,8 +64,14 @@ export function SidebarBrand({
               <p className="ops-sidebar-workspace-name" title={primary}>
                 {primary}
               </p>
-              {meta ? <p className="ops-sidebar-workspace-meta">{meta}</p> : null}
-              <p className="sr-only">{he.brand}</p>
+              {meta ? (
+                <p className="ops-sidebar-workspace-meta">
+                  <bdi dir="ltr">{meta}</bdi>
+                </p>
+              ) : null}
+              <p className="sr-only">
+                <bdi dir="ltr">{he.brand}</bdi>
+              </p>
             </div>
           ) : (
             <span className="sr-only">

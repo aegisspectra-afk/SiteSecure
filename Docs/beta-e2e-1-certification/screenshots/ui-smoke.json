@@ -1,0 +1,11 @@
+{
+  "web": "https://site-secure-umber.vercel.app",
+  "shots": [
+    "desktop-1440-login",
+    "desktop-1440-forgot-password",
+    "mobile-390-login",
+    "mobile-390-forgot-password"
+  ],
+  "ok": true,
+  "note": "Skipped authenticated UI shots — set BETA_E2E_OWNER_PASS to capture post-login"
+}

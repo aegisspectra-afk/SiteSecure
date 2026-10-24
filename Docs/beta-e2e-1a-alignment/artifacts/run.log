@@ -1,0 +1,19 @@
+[PASS] settings_saved: {"scheduling_sites": {"require_address": true, "require_access_notes": true}, "quotes": {"validity_days": 21, "payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A"}}
+[PASS] A_require_address_on: {"code": 400, "body": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"נדרשת כתובת לאתר לפי הגדרות הסביבה\",\"details\":{}}}"}
+[PASS] B_require_address_off: {"code": 200, "body": "{\"id\":\"5f30c825-0704-4457-8c5e-022b5a88b5e2\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"customer_id\":\"6a0d73be-1b1e-4666-85db-cc6523c4bd90\",\"code\":\"AS-S-00001\",\"name\":\""}
+[PASS] C_require_access_notes_on: {"code": 400, "body": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"נדרשות הערות גישה לאתר לפי הגדרות הסביבה\",\"details\":{}}}"}
+[PASS] D_require_access_notes_off: {"code": 200, "body": "{\"id\":\"510fc8c0-ce2a-4e55-96da-69bd3af34a86\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"customer_id\":\"6a0d73be-1b1e-4666-85db-cc6523c4bd90\",\"code\":\"AS-S-00002\",\"name\":\""}
+[PASS] E_validity_default: {"code": 200, "valid_until": "2026-10-21", "expected": "2026-10-21"}
+[PASS] F_payment_terms_default: {"payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A", "expected": "40% מקדמה · 60% בגמר התקנה · E2E1A"}
+[PASS] G_explicit_override: {"code": 200, "valid_until": "2026-10-07", "payment_terms": "תנאים מפורשים OVERRIDE"}
+[PASS] H_existing_unchanged: {"before_valid": "2026-10-21", "after_valid": "2026-10-21"}
+[PASS] golden_quote_defaults: {"valid_until": "2026-10-21", "payment_terms": "40% מקדמה · 60% בגמר התקנה · E2E1A"}
+[PASS] regression_pricing: {"total_gross": 2124.0}
+[PASS] regression_autosave: {"code": 200}
+[PASS] golden_preview: {"code": 200}
+[PASS] golden_pdf: {"code": 200, "nbytes": 29267}
+[PASS] golden_send: {"code": 200, "body": "{'id': '52f16515-e2bc-4cdb-9bb2-3e147105bc1f', 'workspace_id': '8e974e1c-0713-4ab8-97a8-b6c16a2cdb48', 'number': 'Q-00003', 'status': 'sent', 'customer_id': '6a0d73be-1b1e-4666-85db-cc6523c4bd90', 'si"}
+[PASS] regression_public_cost_protection: {"code": 200, "leaks": []}
+[PASS] regression_approval: {"code": 200, "body": "{\"id\":\"52f16515-e2bc-4cdb-9bb2-3e147105bc1f\",\"site\":{\"name\":\"אתר זהב 184433\",\"address\":{\"city\":\"תל אביב\",\"line\":\"דרך השלום 10\"}},\"items\":[{\"id\":\"ab472b0d-0c6a-4"}
+[PASS] regression_project_conversion: {"code": 200, "body": "{\"id\":\"c495fd2c-e2d7-46a8-a505-dcd088c9e2a8\",\"workspace_id\":\"8e974e1c-0713-4ab8-97a8-b6c16a2cdb48\",\"name\":\"הצעת זהב 184433\",\"status\":\"planned\",\"customer_id\":\"6a0d73be-1b1e-4666-85d"}
+SUMMARY {"fails": [], "p0": 0, "p1": 0, "pass_count": 18, "fail_count": 0}

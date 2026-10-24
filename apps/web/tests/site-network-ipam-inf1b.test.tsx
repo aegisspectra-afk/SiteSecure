@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssetDetail } from "../src/components/sites/AssetDetail";
 import { SiteNetworkPanel } from "../src/components/sites/SiteNetworkPanel";
-import { he } from "../src/i18n/he";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -159,53 +158,17 @@ describe("INF-1B AssetDetail IPAM", () => {
     api.getCatalogProduct.mockRejectedValue(new Error("none"));
   });
 
-  it("prefers IPAM assignment over legacy equipment.ip", async () => {
-    api.listEquipmentIpAddresses.mockResolvedValue({
-      items: [
-        {
-          id: "ip1",
-          workspace_id: "ws1",
-          site_id: "s1",
-          network_id: "n1",
-          ip_address: "10.10.20.101",
-          status: "assigned",
-          assignment_type: "static",
-          network_name: "CCTV",
-          network_cidr: "10.10.20.0/24",
-          vlan_number: 20,
-          vlan_name: "CCTV",
-          created_at: "",
-          updated_at: "",
-        },
-      ],
-      legacy_ip: "192.168.1.50",
-      legacy_mac: "AA:BB:CC:DD:EE:FF",
-    });
+  it("shows equipment IP/MAC on the live asset page without calling IPAM", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
         <AssetDetail siteId="s1" assetId="eq1" />
       </QueryClientProvider>,
     );
-    expect(await screen.findByTestId("asset-ipam")).toBeTruthy();
-    expect(screen.getByText("10.10.20.101")).toBeTruthy();
-    expect(screen.getAllByText(/CCTV/).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("falls back to legacy equipment.ip when no IPAM rows", async () => {
-    api.listEquipmentIpAddresses.mockResolvedValue({
-      items: [],
-      legacy_ip: "192.168.1.50",
-      legacy_mac: "AA:BB:CC:DD:EE:FF",
-    });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <AssetDetail siteId="s1" assetId="eq1" />
-      </QueryClientProvider>,
-    );
-    expect(await screen.findByTestId("asset-ipam-legacy")).toBeTruthy();
+    expect(await screen.findByTestId("asset-network-equipment")).toBeTruthy();
     expect(screen.getByText("192.168.1.50")).toBeTruthy();
-    expect(screen.getByText(he.assetIpamLegacyFallback)).toBeTruthy();
+    expect(screen.getByText("AA:BB:CC:DD:EE:FF")).toBeTruthy();
+    expect(screen.queryByTestId("asset-ipam")).toBeNull();
+    expect(api.listEquipmentIpAddresses).not.toHaveBeenCalled();
   });
 });

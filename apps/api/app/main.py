@@ -32,13 +32,16 @@ from .routers import (
     public_quotes,
     public_ssp,
     public_ssp_site,
+    public_ssp_unit,
     quote_cpq,
     quotes,
     ssp_forms,
     ssp_ops,
     ssp_org,
     ssp_site_activation,
+    ssp_unit_codes,
     ssp_sites,
+    ssp_users,
     system_designs,
     search,
     sites,
@@ -73,6 +76,11 @@ def _redact_validation_errors(errors: list) -> list:
     return cleaned
 
 
+def http_rate_limit_burst(app_env: str) -> int:
+    """Per-IP requests in a 60s window. Development allows a local UI walk."""
+    return 1200 if (app_env or "").strip().lower() == "development" else 120
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     logging.basicConfig(level=settings.log_level)
@@ -103,7 +111,7 @@ def create_app() -> FastAPI:
         window = buckets[key]
         while window and now - window[0] > 60:
             window.popleft()
-        if len(window) > 120:
+        if len(window) > http_rate_limit_burst(settings.app_env):
             return JSONResponse(
                 status_code=429,
                 content={"error": {"code": "RATE_LIMITED", "message": "יותר מדי בקשות", "details": {}}},
@@ -175,9 +183,12 @@ def create_app() -> FastAPI:
     app.include_router(ssp_ops.router)
     app.include_router(ssp_org.router)
     app.include_router(ssp_sites.router)
+    app.include_router(ssp_users.router)
     app.include_router(ssp_site_activation.router)
+    app.include_router(ssp_unit_codes.router)
     app.include_router(public_ssp.router)
     app.include_router(public_ssp_site.router)
+    app.include_router(public_ssp_unit.router)
     app.include_router(workforce.router)
     return app
 

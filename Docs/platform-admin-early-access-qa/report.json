@@ -1,0 +1,121 @@
+{
+  "api_summary": {
+    "status": 200,
+    "body": {
+      "organizations": 558,
+      "beta_organizations": 0,
+      "users": 167,
+      "feedback_open": 7,
+      "feedback_total": 7,
+      "beta_participants_active": 3,
+      "beta_participants_total": 4
+    }
+  },
+  "session_admin": {
+    "is_platform_admin": true,
+    "email": "aegisspectra@gmail.com",
+    "platform_role": "platform_super_admin"
+  },
+  "routes": {
+    "/admin": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nלוח ניהול\n\nארגונים, משתמשים, פידבק ודגלי יכולת — מחוץ ל־RBAC של סביבת העבודה.\n\nארגונים\n\n558\n\nתוכנית בטא\n\n0\n\nמשתמשים\n\n167\n\nפניות פתוחות\n\n7",
+      "numbers": {
+        "orgs": "558",
+        "beta": "0",
+        "users": "167",
+        "feedback": "7",
+        "hasEmDash": true
+      },
+      "shot": "desktop-1440-admin.png",
+      "failures": []
+    },
+    "/admin/organizations": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nארגונים\nשם\tתוכנית\tתוכנית בטא\t\nDup Invite 0e70cfaa\tsolo\tאין ארגונים בתוכנית Beta\t\nצירוף לבטא\n\nSeat Limit 5cc414bc\tsolo\tאין ארגונים בתוכנית Beta\t\nצירוף לבטא\n\nDefault Invite 16c396c3\tsolo\tאין ארגונים בתוכנית Beta\t\nצירוף לבטא\n\nFT Invite 12d6e28d\tsolo\tאין ארג",
+      "shot": "desktop-1440-admin-organizations.png",
+      "failures": []
+    },
+    "/admin/users": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nמשתמשים\n\nמשתמשים, תפקידי סביבה, Beta ו־Badges — ללא גישה לתוכן לקוח.\n\nחיפוש משתמש\nשם\tדוא״ל\tתפקיד / סביבה\tBeta\tBadge\tפלטפורמה\tבחירה\n—\tphase1b.tech.1790012816@sitesecure.test\ttechnician · Phase1B QA 1790012816\t—\t—\t—\t\nבחר\n\n—\tphase1b.owner.1790012816@sitesec",
+      "shot": "desktop-1440-admin-users.png",
+      "failures": []
+    },
+    "/admin/beta": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nתוכנית בטא\n\nהשתתפות Beta ברמת משתתף + הרשמת ארגונים. לא מעניקה הרשאות.\n\nארגונים בתוכנית Beta\n\nאין ארגונים בתוכנית Beta\n\nמשתתפי Beta\nסינון סטטוס\nהכל\ninvited\nregistered\nactivated\nactive\npaused\nexited\nסינון Badge\nהכל\nFounding Technician\nמשתתף\tסביבה\tתפקיד\tסט",
+      "shot": "desktop-1440-admin-beta.png",
+      "failures": []
+    },
+    "/admin/badges": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nBadges\n\nהענקת Recognition Badges מתבצעת ממסך המשתמשים.\n\nחבר בקבוצת הטכנאים הראשונים שעבדו עם SITE SECURE וסייעו בעיצוב ושיפור המוצר.\n\nמשתמשים",
+      "shot": "desktop-1440-admin-badges.png",
+      "failures": []
+    },
+    "/admin/feedback": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nפידבק\nסטטוס\nהכול\nnew\ntriage\nin_progress\nresolved\nwont_fix\n\nExt beta smoke 6f789dd7\n\nFB-A19D8C98\n\nDisposable external smoke feedback item 6f789dd7\n\nbug · low · https://site-secure-umber.vercel.app/app\n\nסטטוס\nnew\ntriage\nin_progress\nresolved\nwont_fix\nהערות ",
+      "shot": "desktop-1440-admin-feedback.png",
+      "failures": []
+    },
+    "/admin/audit": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nAudit\n\nיומן פעולות פלטפורמה — קריאה בלבד ל־Platform Admin.\n\nזמן\tWorkspace\tפעולה\tישות\tשחקן\n2026-09-24T17:08:05.314881+00:00\tPhase1B QA 1790012816\tjobs.assign\tjob · ce72a357\tphase1b.owner.1790012816@sitesecure.test\n2026-09-24T17:06:16.991896+00:00\tPhase1B ",
+      "shot": "desktop-1440-admin-audit.png",
+      "failures": []
+    },
+    "/admin/flags": {
+      "denied": false,
+      "body_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nדגלי יכולת\n\nfeedback_center\n\nIn-app feedback intake for every workspace member\n\nפעיל בבטא\nפעיל בייצור\n\nops_insights\n\nOperational insights preview for beta workspaces\n\nפעיל בבטא\nפעיל בייצור",
+      "shot": "desktop-1440-admin-flags.png",
+      "failures": []
+    }
+  },
+  "deny": {
+    "email": "phase1b.tech.1790012816@sitesecure.test",
+    "ui_denied": true,
+    "api_status": 403,
+    "is_platform_admin": false
+  },
+  "mobile_admin_snip": "SITE SECURE / PLATFORM ADMIN\n\naegisspectra@gmail.com\n\nלוח ניהול\nארגונים\nמשתמשים\nתוכנית בטא\nBadges\nפידבק\nAudit\nדגלי יכולת\nחזרה ל-SITE SECURE\nהתנתק\nלוח ניהול\n\nארגונים, משתמשים, פידבק ודגלי יכולת — מחוץ ל־RBAC של סביבת העבודה.\n\nארגונים\n\n558\n\nתוכנית בטא\n\n0\n\nמשתמשים\n\n167\n\nפניות פתוחות\n\n7",
+  "network": [
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/summary",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/organizations",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/users",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/organizations",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/beta/participants",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/feedback",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/audit?limit=100",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/feature-flags",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/v1/admin/summary",
+      "status": 200
+    }
+  ]
+}

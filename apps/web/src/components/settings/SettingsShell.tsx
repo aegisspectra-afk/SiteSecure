@@ -21,6 +21,7 @@ import {
 import type { ReactNode } from "react";
 import { he } from "../../i18n/he";
 import { accountAvatarUrl } from "../../lib/account-avatar";
+import { activeMembership } from "../../lib/active-membership";
 import { can, canAny } from "../../lib/can";
 import { roleLabel } from "../../lib/app-nav";
 import { useAccountAvatar } from "../../lib/use-account-avatar";
@@ -95,9 +96,10 @@ export function isSettingsNavActive(pathname: string, to: string): boolean {
 
 export function useSettingsNavItems(): NavItem[] {
   const { session } = useSession();
-  const roleKey = session?.memberships[0]?.role_key;
-  const features = session?.memberships[0]?.features ?? [];
-  const grants = session?.memberships[0]?.permissions ?? null;
+  const membership = activeMembership(session);
+  const roleKey = membership?.role_key;
+  const features = membership?.features ?? [];
+  const grants = membership?.permissions ?? null;
   const allow = (permission: string) => can(roleKey, permission, features, grants);
   const allowAny = (permissions: string[]) => canAny(roleKey, permissions, features, grants);
 
@@ -230,7 +232,7 @@ export function useSettingsNavGroups(): NavGroup[] {
 export function useSettingsIdentity() {
   const { session } = useSession();
   const avatarId = useAccountAvatar();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   const rawName = session?.profile?.full_name?.trim() || "";
   const email = session?.email?.trim() || "";
   const role = roleLabel(membership?.role_key);
@@ -351,7 +353,7 @@ function SettingsNav() {
 /** Hub is the landing for everyone with settings access — no forced redirect. */
 function SettingsHubGate({ children }: { children: ReactNode }) {
   const { session } = useSession();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   const allowed = canAny(
     membership?.role_key,
     [

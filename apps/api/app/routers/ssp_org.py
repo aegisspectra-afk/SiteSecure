@@ -69,6 +69,101 @@ def _require_workspace_managerial(ctx) -> None:
             raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
 
 
+def _first_row(client: UserClient, table: str, params: dict[str, str]) -> dict[str, Any] | None:
+    rows = as_list(client.get(table, params=params))
+    return rows[0] if rows else None
+
+
+def _complete_bootstrap_graph(
+    client: UserClient,
+    *,
+    workspace_id: str,
+    company: dict[str, Any],
+    user_id: str,
+    root_unit_name: str,
+    patrol_department_name: str,
+) -> dict[str, Any]:
+    """Ensure root unit, patrol department, and actor org_admin membership exist."""
+    completed_gap = False
+    root = _first_row(
+        client,
+        "ssp_org_units",
+        {
+            "workspace_id": f"eq.{workspace_id}",
+            "company_pk": f"eq.{company['id']}",
+            "unit_type": "eq.root",
+            "select": "id,workspace_id,company_pk,parent_id,name,unit_type,sort_order",
+            "limit": "1",
+        },
+    )
+    if not root:
+        completed_gap = True
+        root = created_or_403(
+            client.post(
+                "ssp_org_units",
+                json={
+                    "workspace_id": workspace_id,
+                    "company_pk": company["id"],
+                    "parent_id": None,
+                    "name": root_unit_name,
+                    "unit_type": "root",
+                    "sort_order": 0,
+                },
+            )
+        )
+    patrol = _first_row(
+        client,
+        "ssp_departments",
+        {
+            "workspace_id": f"eq.{workspace_id}",
+            "company_pk": f"eq.{company['id']}",
+            "key": "eq.patrol",
+            "select": "id,workspace_id,company_pk,org_unit_id,key,name_he,name_en",
+            "limit": "1",
+        },
+    )
+    if not patrol:
+        completed_gap = True
+        patrol = created_or_403(
+            client.post(
+                "ssp_departments",
+                json={
+                    "workspace_id": workspace_id,
+                    "company_pk": company["id"],
+                    "org_unit_id": root["id"],
+                    "key": "patrol",
+                    "name_he": patrol_department_name,
+                    "name_en": "Patrol",
+                },
+            )
+        )
+    membership = load_ssp_membership(client, workspace_id=workspace_id, user_id=user_id)
+    if not membership:
+        completed_gap = True
+        membership = created_or_403(
+            client.post(
+                "ssp_memberships",
+                json={
+                    "workspace_id": workspace_id,
+                    "company_pk": company["id"],
+                    "user_id": user_id,
+                    "org_unit_id": root["id"],
+                    "department_id": None,
+                    "product_role": "org_admin",
+                    "created_by": user_id,
+                    "status": "active",
+                },
+            )
+        )
+    return {
+        "company": company,
+        "root_unit": root,
+        "patrol_department": patrol,
+        "membership": membership,
+        "completed_gap": completed_gap,
+    }
+
+
 @router.get("/me")
 def org_me(
     workspace_id: UUID,
@@ -101,7 +196,23 @@ def bootstrap_company(
 
     existing = load_company(client, workspace_id=str(workspace_id))
     if existing:
-        raise ApiError(409, "BUSINESS_RULE", "כבר קיימת חברת SSP לסביבה זו", {"company_id": existing.get("company_id")})
+        graph = _complete_bootstrap_graph(
+            client,
+            workspace_id=str(workspace_id),
+            company=existing,
+            user_id=ctx.user_id,
+            root_unit_name=body.root_unit_name.strip(),
+            patrol_department_name=body.patrol_department_name.strip(),
+        )
+        membership = graph["membership"]
+        if membership and membership.get("id") and not graph.get("completed_gap"):
+            raise ApiError(
+                409,
+                "BUSINESS_RULE",
+                "כבר קיימת חברת SSP לסביבה זו",
+                {"company_id": existing.get("company_id")},
+            )
+        return graph
 
     company_id = new_company_id()
     company = created_or_403(
@@ -115,49 +226,14 @@ def bootstrap_company(
             },
         )
     )
-    root = created_or_403(
-        client.post(
-            "ssp_org_units",
-            json={
-                "workspace_id": str(workspace_id),
-                "company_pk": company["id"],
-                "parent_id": None,
-                "name": body.root_unit_name.strip(),
-                "unit_type": "root",
-                "sort_order": 0,
-            },
-        )
+    return _complete_bootstrap_graph(
+        client,
+        workspace_id=str(workspace_id),
+        company=company,
+        user_id=ctx.user_id,
+        root_unit_name=body.root_unit_name.strip(),
+        patrol_department_name=body.patrol_department_name.strip(),
     )
-    patrol = created_or_403(
-        client.post(
-            "ssp_departments",
-            json={
-                "workspace_id": str(workspace_id),
-                "company_pk": company["id"],
-                "org_unit_id": root["id"],
-                "key": "patrol",
-                "name_he": body.patrol_department_name.strip(),
-                "name_en": "Patrol",
-            },
-        )
-    )
-    # Bootstrapper becomes org_admin (distinct from patrol_manager).
-    membership = created_or_403(
-        client.post(
-            "ssp_memberships",
-            json={
-                "workspace_id": str(workspace_id),
-                "company_pk": company["id"],
-                "user_id": ctx.user_id,
-                "org_unit_id": root["id"],
-                "department_id": None,
-                "product_role": "org_admin",
-                "created_by": ctx.user_id,
-                "status": "active",
-            },
-        )
-    )
-    return {"company": company, "root_unit": root, "patrol_department": patrol, "membership": membership}
 
 
 @router.get("/units")

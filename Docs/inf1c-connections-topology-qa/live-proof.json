@@ -1,0 +1,36 @@
+{
+  "topology_status": 200,
+  "nodes": 10,
+  "edges": 7,
+  "directional": true,
+  "node_codes": [
+    "AC-01",
+    "AP-01",
+    "CAM-001",
+    "CAM-002",
+    "CAM-003",
+    "CAM-004",
+    "CORE-SW-01",
+    "FW-QA-01",
+    "NVR-01",
+    "SW-CCTV-01"
+  ],
+  "edge_types": [
+    "ethernet",
+    "ethernet",
+    "ethernet",
+    "poe",
+    "poe",
+    "uplink",
+    "wan"
+  ],
+  "site_connections": 200,
+  "site_connection_count": 7,
+  "cam_connections": 200,
+  "cam_connection_count": 1,
+  "self_blocked": 400,
+  "cross_site_or_missing": 404,
+  "duplicate_blocked": 409,
+  "ipam_overview": 200,
+  "ipam_networks": 3
+}

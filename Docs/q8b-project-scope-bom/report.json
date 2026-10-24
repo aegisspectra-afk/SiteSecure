@@ -1,0 +1,20 @@
+{
+  "checkpoint": "Q8-B",
+  "title": "Project planned scope / BOM continuity",
+  "date": "2026-09-28",
+  "reuse_decision": "CREATE project_planned_items — no existing project-scoped BOM",
+  "migration": "20260928094533_project_planned_items.sql",
+  "applied_remote": "rhxqqudlngimhplvndmz",
+  "optional_behavior": "excluded unless accepted (no acceptance mechanism → exclude is_optional)",
+  "source": "quote_versions.snapshot for projects.source_quote_version pin",
+  "live_proof": {
+    "Q-00028": "scope_count=2 Camera+Install, Rev2 unchanged, dup 409",
+    "followup_kinds": "equipment + labor after free/labor item_type fix"
+  },
+  "tests": {
+    "api_scope_project_revision_snapshot": "37+17 passed",
+    "web_project_workspace_lifecycle": "25 passed",
+    "typecheck": "pass",
+    "build": "pass"
+  }
+}

@@ -14,6 +14,10 @@
 3. **IP spoofing** — uses `X-Forwarded-For` first hop when present; trust depends on proxy config.
 4. **Does not replace auth** — only slows guessing; tokens remain the primary secret.
 
+Additional in-process limiters (same limitations):
+- Site activate (`public_ssp_site.py`): 8 fails / 600s per peer IP.
+- Unit login (`public_ssp_unit.py`): 8 fails / 600s per peer IP. Uniform invalid message; does not reveal whether a code exists.
+
 ## Recommended shared-store approach (not implemented — needs approval)
 
 Prefer a store already in the Site Secure / Supabase stack before adding Redis:

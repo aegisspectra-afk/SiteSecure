@@ -1,0 +1,21 @@
+[
+  "accept_invitation",
+  "auth_assigned",
+  "auth_customer_visible",
+  "auth_feature",
+  "auth_is_assigned_scope",
+  "auth_is_managerial",
+  "auth_is_member",
+  "auth_is_privileged",
+  "auth_job_visible",
+  "auth_role",
+  "auth_role_in",
+  "auth_site_visible",
+  "auth_workspace_ids",
+  "create_workspace",
+  "my_workspace_entitlements",
+  "next_code",
+  "peek_invitation",
+  "seed_workspace_defaults",
+  "token_sha256"
+]

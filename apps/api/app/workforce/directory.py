@@ -5,11 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 from ..errors import ApiError, MESSAGES
+from ..rest import schema_missing
 from .store import (
+    DEFAULT_SITE_TIMEZONE,
     POSITION_SELECT,
     REGION_SELECT,
     SITE_KINDS,
     SITE_SELECT,
+    SITE_SELECT_LEGACY,
     WorkforceTableStore,
     assert_ref,
     created_row,
@@ -20,8 +23,10 @@ from .store import (
     optional_code,
     patched_row,
     require_name,
+    require_timezone,
     require_uuid,
     rows,
+    rows_with_fallback,
     site_out,
     validation,
 )
@@ -99,13 +104,15 @@ def delete_region(store: WorkforceTableStore, workspace_id: str, region_id: str)
         store, "workforce_memberships", {"workspace_id": f"eq.{workspace_id}", "region_id": f"eq.{region_id}"}
     )
     shifts = exists(store, "workforce_shifts", {"workspace_id": f"eq.{workspace_id}", "region_id": f"eq.{region_id}"})
-    if sites or employees or memberships or shifts:
+    slots = exists(store, "workforce_shift_slots", {"workspace_id": f"eq.{workspace_id}", "region_id": f"eq.{region_id}"})
+    if sites or employees or memberships or shifts or slots:
         raise in_use(
             "region",
             sites=int(sites),
             employees=int(employees),
             memberships=int(memberships),
             shifts=int(shifts),
+            slots=int(slots),
         )
     res = store.delete(
         "workforce_regions",
@@ -117,16 +124,16 @@ def delete_region(store: WorkforceTableStore, workspace_id: str, region_id: str)
 
 
 def list_sites(store: WorkforceTableStore, workspace_id: str) -> list[dict[str, Any]]:
-    found = rows(
-        store.get(
-            "workforce_sites",
-            params={
-                "workspace_id": f"eq.{workspace_id}",
-                "select": SITE_SELECT,
-                "order": "name.asc",
-                "limit": "500",
-            },
-        )
+    found = rows_with_fallback(
+        store,
+        "workforce_sites",
+        {
+            "workspace_id": f"eq.{workspace_id}",
+            "select": SITE_SELECT,
+            "order": "name.asc",
+            "limit": "500",
+        },
+        fallback_select=SITE_SELECT_LEGACY,
     )
     return [site_out(row) for row in found]
 
@@ -152,15 +159,15 @@ def create_site(
         "region_id": region_id,
         "address": address,
         "is_active": bool(payload.get("is_active", True)),
+        "timezone": require_timezone(payload.get("timezone") or DEFAULT_SITE_TIMEZONE),
         "notes": optional_code(payload.get("notes")),
         "created_by": actor_user_id,
     }
-    return site_out(
-        created_row(
-            store.post("workforce_sites", json=body, params={"select": SITE_SELECT}),
-            conflict_message="שם האתר כבר קיים בסביבה זו",
-        )
-    )
+    res = store.post("workforce_sites", json=body, params={"select": SITE_SELECT})
+    if schema_missing(res) and "timezone" in body:
+        slim = {key: value for key, value in body.items() if key != "timezone"}
+        res = store.post("workforce_sites", json=slim, params={"select": SITE_SELECT_LEGACY})
+    return site_out(created_row(res, conflict_message="שם האתר כבר קיים בסביבה זו"))
 
 
 def update_site(
@@ -169,7 +176,7 @@ def update_site(
     site_id: str,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    must_get(store, "workforce_sites", workspace_id, site_id, SITE_SELECT)
+    must_get(store, "workforce_sites", workspace_id, site_id, SITE_SELECT, fallback_select=SITE_SELECT_LEGACY)
     patch: dict[str, Any] = {}
     if "name" in payload and payload.get("name") is not None:
         patch["name"] = require_name(payload.get("name"))
@@ -188,6 +195,8 @@ def update_site(
         patch["address"] = payload.get("address") if isinstance(payload.get("address"), dict) else {}
     if "is_active" in payload and payload.get("is_active") is not None:
         patch["is_active"] = bool(payload.get("is_active"))
+    if "timezone" in payload and payload.get("timezone") is not None:
+        patch["timezone"] = require_timezone(payload.get("timezone"))
     if "notes" in payload:
         patch["notes"] = optional_code(payload.get("notes"))
     if not patch:
@@ -213,12 +222,18 @@ def delete_site(store: WorkforceTableStore, workspace_id: str, site_id: str) -> 
         store, "workforce_memberships", {"workspace_id": f"eq.{workspace_id}", "site_id": f"eq.{site_id}"}
     )
     shifts = exists(store, "workforce_shifts", {"workspace_id": f"eq.{workspace_id}", "site_id": f"eq.{site_id}"})
-    if employees or memberships or shifts:
+    slots = exists(store, "workforce_shift_slots", {"workspace_id": f"eq.{workspace_id}", "site_id": f"eq.{site_id}"})
+    coverage = exists(
+        store, "workforce_coverage_requirements", {"workspace_id": f"eq.{workspace_id}", "site_id": f"eq.{site_id}"}
+    )
+    if employees or memberships or shifts or slots or coverage:
         raise in_use(
             "site",
             employees=int(employees),
             memberships=int(memberships),
             shifts=int(shifts),
+            slots=int(slots),
+            coverage=int(coverage),
         )
     res = store.delete(
         "workforce_sites",

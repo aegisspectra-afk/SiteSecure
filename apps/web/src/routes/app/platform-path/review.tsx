@@ -2,6 +2,7 @@ import { planLabel } from "@site-secure/authz";
 import { Button, PageHeader } from "@site-secure/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { BillingHonestyNote } from "../../../components/billing/BillingHonestyNote";
 import {
   PlatformPathShell,
   readDemoPlanKey,
@@ -52,7 +53,9 @@ function PlatformPathReviewPage() {
         {preferred !== currentPlan ? (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{he.platformPathReviewPlanNotApplied}</p>
         ) : null}
-        <p className="mt-2 text-xs text-fg-muted">{he.platformPathNoPayment}</p>
+        <div className="mt-2">
+          <BillingHonestyNote />
+        </div>
       </section>
 
       <section className="rounded-[var(--radius-control)] border border-border bg-bg-1 p-4">

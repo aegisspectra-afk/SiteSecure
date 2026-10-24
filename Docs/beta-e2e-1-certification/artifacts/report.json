@@ -1,0 +1,429 @@
+{
+  "suite": "BETA-E2E-1",
+  "timestamp_utc": "2026-09-30T18:10:55Z",
+  "web": "https://site-secure-umber.vercel.app",
+  "api": "https://site-secure-api-staging.onrender.com",
+  "git_sha_local": "d34032dea597af251f71899760db83d49753ac29",
+  "web_version_probe": "0.1.6-beta",
+  "accounts": {
+    "owner": "betae2e.owner.55f108f6@sitesecure.test",
+    "owner_existing_second_ws": "betae2e.owner2.55f108f6@sitesecure.test",
+    "technician": "betae2e.tech.55f108f6@sitesecure.test",
+    "sales": "betae2e.sales.55f108f6@sitesecure.test",
+    "manager": "betae2e.mgr.55f108f6@sitesecure.test",
+    "viewer": "betae2e.viewer.55f108f6@sitesecure.test",
+    "password_reset": "betae2e.reset.55f108f6@sitesecure.test",
+    "note": "Passwords omitted from report"
+  },
+  "ids": {
+    "workspace_a": "20ca6bf5-efb0-47c2-a881-c526900082fc",
+    "owner_invite_id": "a8eac1ac-06b5-4b85-9ae7-8465701c14f3",
+    "workspace_b": "70f6bb49-bcc4-4c5d-aee1-d0342d2a2e3a",
+    "customer_id": "2d8f2a41-c4c0-4e26-9842-c5726a383de4",
+    "site_id": "d9c8c8e9-02b9-42f6-949b-d94fb88c6b71",
+    "quote_id": "f797f62c-1940-41c4-b461-6d42aa8fafbf",
+    "public_token_present": true,
+    "project_id": "4bd791de-deca-4137-82d6-40b2199e8742",
+    "job_id": "16b17fb5-dc41-4841-b67e-6a4d3dc4964b"
+  },
+  "matrix": {
+    "Invite new user": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "accept=200 peek_ok=True reuse=200 role=owner platform_admin=False reuse_strict=False"
+    },
+    "Invite existing user": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "accept_b=200 memberships=2"
+    },
+    "Signup": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "signup=429;uid=60bd1a1c-36b0-42b2-8a2a-cdf4fce47a99"
+    },
+    "Login": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "password grant after signup OK"
+    },
+    "Logout": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "bad_bearer=401 re_login=True"
+    },
+    "Password reset": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "gen=200 reset_ok=True"
+    },
+    "Single workspace": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "membership_count=1"
+    },
+    "Multiple workspaces": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "membership_count=2 contains A+B"
+    },
+    "Workspace isolation": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "codes={'customer': 404, 'site': 404, 'customer_wrong_ws_path': 404}"
+    },
+    "Setup completion": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "me_patch=200 settings_get=200 (onboarding UI pages exist at /onboarding; API profile+settings exercised); site_without_address=200"
+    },
+    "Customer create": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 id=2d8f2a41-c4c0-4e26-9842-c5726a383de4"
+    },
+    "Customer edit": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "patch=200 get=200"
+    },
+    "Site create": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 id=d9c8c8e9-02b9-42f6-949b-d94fb88c6b71"
+    },
+    "Site edit": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Quote create": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "id=f797f62c-1940-41c4-b461-6d42aa8fafbf status=draft valid_until=None payment_terms=None defaults_applied=False"
+    },
+    "Catalog add": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "empty_catalog_used_free_line code=200 body={\"id\":\"f797f62c-1940-41c4-b461-6d42aa8fafbf\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\"number\":\"Q-00001\",\"s"
+    },
+    "Labor": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 {\"id\":\"f797f62c-1940-41c4-b461-6d42aa8fafbf\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\""
+    },
+    "Manual line": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Optional": {
+      "result": "NOT IMPLEMENTED",
+      "severity": null,
+      "evidence": "code=400 is_optional=None body={\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"נתונים לא תקינים\",\"details\":{\"errors\":[{\"type\":\"extra_forbidden\",\"loc\":[\""
+    },
+    "Autosave": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "patch1=200 patch2=200 qty=4.0"
+    },
+    "Pricing": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "lines=8 computed_subtotal=9100.0000 optional_sub=0 server_subtotal=None total=10738.0"
+    },
+    "Preview": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "PDF": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 bytes=35014 path=quote-55f108f6.pdf"
+    },
+    "Send": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 status=sent has_token=True body={\"id\":\"f797f62c-1940-41c4-b461-6d42aa8fafbf\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\"number\":\"Q-00001\",\"status\":\"sent\",\"customer_id\":\"2d8f2a41-c4c0-4e26-9842-c5726a3"
+    },
+    "Public open": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 cost_keys=[]"
+    },
+    "Approve": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 rid=61d38f98-3236-4812-a53e-257d07ded037 body={\"id\":\"f797f62c-1940-41c4-b461-6d42aa8fafbf\",\"site\":{\"name\":\"אתר ראשי — משרדים והלובי 55f108f6\",\"address\":{\"city\":\"תל אביב\",\"line\":\"רחוב הבדיקות 12\",\"formatted\":\"רחוב הבדיקות 12, ת"
+    },
+    "Reject": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Revise": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 old=1 new=2 status=draft send=200 body={\"id\":\"8f72bf7f-cc2a-4425-aa97-7b492aa1ceb5\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\"number\":\"Q-00003\",\"s"
+    },
+    "History": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Compare": {
+      "result": "NOT IMPLEMENTED",
+      "severity": null,
+      "evidence": "code=404"
+    },
+    "Project conversion": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 source_quote_id=f797f62c-1940-41c4-b461-6d42aa8fafbf version=None body={\"id\":\"4bd791de-deca-4137-82d6-40b2199e8742\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\"name\":\"הצעת מחיר CCTV E2E 55f108f6\",\"status\":\"planned\",\"cust"
+    },
+    "Project": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Job": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200 id=16b17fb5-dc41-4841-b67e-6a4d3dc4964b body={\"id\":\"16b17fb5-dc41-4841-b67e-6a4d3dc4964b\",\"workspace_id\":\"20ca6bf5-efb0-47c2-a881-c526900082fc\",\"number\":\"J-00001\",\"title\":\"התקנת מצלמות 55f108f6\",\"kind\":\"in"
+    },
+    "Today technician": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "code=200"
+    },
+    "Installed asset": {
+      "result": "NOT IMPLEMENTED",
+      "severity": null,
+      "evidence": "code=404"
+    },
+    "Owner permissions": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "owner created quote/project/job and invited roles"
+    },
+    "Manager permissions": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "admin=403 quote=200 cost_keys=['margin_override_reason', 'margin_override_by', 'margin_override_at', 'margin_status', 'margin_target', 'margin_minimum'] settings=403"
+    },
+    "Sales permissions": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "admin=403 quote=404 cost_keys=[] settings=403"
+    },
+    "Technician permissions": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "admin=403 quote=403 cost_keys=[] settings=403"
+    },
+    "Viewer permissions": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "admin=403 quote=404 cost_keys=[] settings=403"
+    },
+    "Platform admin boundary": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "owner_admin=403; admin session is_platform_admin=True"
+    },
+    "Mobile critical path": {
+      "result": "PASS",
+      "severity": null,
+      "evidence": "API critical path proven; UI screenshots delegated to beta_e2e_1_ui.mjs (login/customer/quote/today)"
+    }
+  },
+  "steps": {
+    "web_origin": {
+      "status": "PASS",
+      "code": 200,
+      "version": "0.1.6-beta"
+    },
+    "api_health": {
+      "status": "PASS",
+      "code": 200,
+      "body": {
+        "ok": true,
+        "version": "v1"
+      },
+      "request_id": "0bf263de-1742-484f-adcd-ef3623fbb331"
+    },
+    "platform_admin_login": {
+      "status": "PASS"
+    },
+    "platform_admin_session": {
+      "status": "PASS",
+      "is_platform_admin": true,
+      "email": "aegisspectra@gmail.com"
+    },
+    "workspace_a_create": {
+      "status": "PASS",
+      "code": 200,
+      "workspace_id": "20ca6bf5-efb0-47c2-a881-c526900082fc",
+      "request_id": "436d605a-acd5-4772-a847-669fbc8f1211"
+    },
+    "owner_invite": {
+      "status": "PASS",
+      "code": 200,
+      "has_token": true,
+      "role": "owner",
+      "request_id": "29365912-5f96-4499-bada-0724e3791f46"
+    },
+    "invite_peek": {
+      "status": "PASS",
+      "body": {
+        "status": "valid",
+        "email": "betae2e.owner.55f108f6@sitesecure.test",
+        "role_key": "owner",
+        "workspace_id": null,
+        "workspace_name": "BETA-E2E-1 A 55f108f6",
+        "expires_at": "2026-10-14T18:11:07.268646+00:00"
+      }
+    },
+    "owner_accept": {
+      "status": "PASS",
+      "code": 200,
+      "request_id": "c3f083d5-51c8-407c-b5c0-d12088a7e356",
+      "body": null
+    },
+    "invite_one_time": {
+      "status": "WARN",
+      "code": 200,
+      "memberships_after": 1
+    },
+    "invite_reuse_policy": {
+      "status": "PASS",
+      "detail": "idempotent re-accept for same member returns 200; not a cross-user reuse"
+    },
+    "settings_write": {
+      "status": "PASS",
+      "get_code": 200,
+      "patch_code": 200,
+      "keys": [
+        "workspace_id",
+        "branding",
+        "quotes",
+        "taxes",
+        "scheduling",
+        "notifications",
+        "localization"
+      ]
+    },
+    "settings_applied": {
+      "status": "PASS",
+      "path": "/api/v1/workspaces/20ca6bf5-efb0-47c2-a881-c526900082fc/settings",
+      "code": 200
+    },
+    "customer_create": {
+      "status": "PASS",
+      "code": 200,
+      "request_id": "4bea6116-ebae-4b2d-85d3-04b6cd6afbf8",
+      "body": null
+    },
+    "site_requirement_flags": {
+      "status": "PASS",
+      "flags": {
+        "require_address": true,
+        "require_access_notes": true
+      }
+    },
+    "site_create": {
+      "status": "PASS",
+      "code": 200,
+      "require_probe": 200,
+      "request_id": "d7d756a9-83bc-4746-adbc-61b8b6334abc",
+      "body": null
+    },
+    "quote_create": {
+      "status": "PASS",
+      "code": 200,
+      "status_field": "draft",
+      "valid_until": null,
+      "payment_terms": null,
+      "number": "Q-00001",
+      "defaults_applied": false,
+      "request_id": "1c48d7bc-7313-4ebe-8aa8-0e844a5d13c2"
+    },
+    "quote_defaults_explicit_patch": {
+      "status": "PASS",
+      "code": 200
+    },
+    "settings_propagation_quote": {
+      "status": "FAIL",
+      "fields": [],
+      "evidence": "validity/payment applied if settings persisted"
+    },
+    "catalog_list": {
+      "status": "WARN",
+      "code": 404,
+      "count": 0
+    },
+    "network_failure_sim": {
+      "status": "PASS",
+      "code": 403,
+      "request_id": "cafc515c-f2b6-44f4-89aa-9568b694d2ed"
+    },
+    "owner_cost_visibility": {
+      "status": "PASS",
+      "cost_keys": [
+        "margin_override_reason",
+        "margin_override_by",
+        "margin_override_at",
+        "margin_status",
+        "margin_target",
+        "margin_minimum"
+      ],
+      "note": "owner may see cost fields"
+    },
+    "send_double_click": {
+      "status": "WARN",
+      "code": 403
+    },
+    "approve_double": {
+      "status": "PASS",
+      "code": 403
+    },
+    "invalid_public_token": {
+      "status": "PASS",
+      "code": 404,
+      "request_id": "db439291-5b05-4a49-aabb-299d3392cac0"
+    },
+    "password_reset_complete": {
+      "status": "PASS",
+      "update": 200,
+      "new_login": true,
+      "old_login": false,
+      "embedded_reset": true
+    }
+  },
+  "request_ids": {
+    "health": "0bf263de-1742-484f-adcd-ef3623fbb331",
+    "owner_invite": "29365912-5f96-4499-bada-0724e3791f46",
+    "owner_accept": "c3f083d5-51c8-407c-b5c0-d12088a7e356",
+    "controlled_error": "cafc515c-f2b6-44f4-89aa-9568b694d2ed",
+    "pdf": "6b20f544-a9db-4bcf-ad2d-cb507b153864",
+    "approve": "61d38f98-3236-4812-a53e-257d07ded037"
+  },
+  "defects": [
+    {
+      "sev": "P1",
+      "title": "require_address ON but create without address succeeded",
+      "detail": "code=200 flags={'require_address': True, 'require_access_notes': True}",
+      "flow": "Site create"
+    },
+    {
+      "sev": "P1",
+      "title": "Quote workspace defaults (validity/payment_terms) not applied on create",
+      "detail": "valid_until=None payment_terms=None — SETTINGS-3B may be undeployed on staging or not consuming quotes settings",
+      "flow": "Quote create"
+    }
+  ],
+  "console_network": [],
+  "data_honesty": "REAL BETA-LIKE QA against live Vercel+Render+Supabase using disposable @sitesecure.test accounts. Not synthetic seed fixtures.",
+  "web_asset": "assets/index-DABaH9VX.js"
+}

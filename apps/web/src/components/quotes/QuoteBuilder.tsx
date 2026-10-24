@@ -3,7 +3,6 @@ import { ApiClientError, type QuoteGap, type QuoteOut } from "@site-secure/api-c
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LottieAnimation } from "../lottie";
 import { he } from "../../i18n/he";
 import { planQuotaMessage } from "../../lib/plan-quota";
 import { can } from "../../lib/can";
@@ -2236,10 +2235,10 @@ export function QuoteBuilder({
           </section>
         ) : null}
         {justSent && publicUrl ? (
-          <section className="ops-card flex items-center gap-4 p-4">
-            <LottieAnimation name="sentEmail" size={48} />
+          <section className="ops-card flex items-center gap-4 p-4" data-testid="quote-sent-honesty">
             <div className="min-w-0">
               <p className="text-sm font-medium">{he.quoteSentTitle}</p>
+              <p className="text-xs text-fg-muted">{he.quoteSentNoEmail}</p>
               <p className="text-xs text-fg-muted">{he.quoteSentLockedHint}</p>
               <a className="break-all text-sm text-action" href={publicUrl} target="_blank" rel="noreferrer">
                 {publicUrl}

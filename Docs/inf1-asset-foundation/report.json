@@ -1,0 +1,16 @@
+{
+  "checkpoint": "INF-1",
+  "title": "Asset foundation on equipment",
+  "date": "2026-09-28",
+  "migration": "20260928095836_equipment_asset_foundation.sql",
+  "applied_remote": "rhxqqudlngimhplvndmz",
+  "new_assets_table": false,
+  "q8c": false,
+  "network_ipam": false,
+  "tests": {
+    "api_equipment_warranty_scope_portal": "35 passed",
+    "web_site_field_project": "22 passed",
+    "typecheck": "pass",
+    "build": "pass"
+  }
+}

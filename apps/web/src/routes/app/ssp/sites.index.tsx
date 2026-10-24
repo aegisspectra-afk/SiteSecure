@@ -39,7 +39,7 @@ function activationLabel(status?: string) {
 }
 
 function SspSitesPage() {
-  const { api, workspaceId, canEdit, isOfficer } = useSspWorkspace();
+  const { api, workspaceId, canEdit, isOfficer, sspCan } = useSspWorkspace();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const search = Route.useSearch();
@@ -85,40 +85,65 @@ function SspSitesPage() {
 
   if (!workspaceId) return <ErrorState title={he.sessionError} />;
   const schemaUnavailable = list.data?.data_mode === "unavailable" || list.isError;
+  const createReady = canEdit && !schemaUnavailable && list.isSuccess;
 
   return (
     <div data-testid="ssp-sites">
-      <ModuleScaffold title={he.sspNavCustomerSites} lead={he.sspCustomerSitesLead}>
+      <ModuleScaffold
+        title={he.sspNavCustomerSites}
+        lead={he.sspCustomerSitesLead}
+        action={
+          canEdit ? (
+            <Button
+              type="button"
+              disabled={!createReady}
+              title={!createReady ? he.sspCreateBlocked : undefined}
+              onClick={() => {
+                setCreating(true);
+                setFormError(null);
+              }}
+            >
+              {he.sspNewCustomerSite}
+            </Button>
+          ) : null
+        }
+      >
       <SspHubLinks
         items={[
-          { to: "/app/ssp/checkpoints", label: he.sspNavCheckpoints },
-          ...(!isOfficer ? [{ to: "/app/ssp/enrollments" as const, label: he.sspNavEnrollments }] : []),
+          { to: "/app/ssp/offices", label: he.sspNavOffices },
+          { to: "/app/ssp/users", label: he.sspNavPeople },
+          ...(sspCan("ssp.officers.view") ? [{ to: "/app/ssp/officers" as const, label: he.sspNavOfficers }] : []),
+          { to: "/app/ssp/checkpoints", label: he.sspOpenCheckpoints },
+          ...(!isOfficer ? [{ to: "/app/ssp/enrollments" as const, label: he.sspOpenEnrollments }] : []),
         ]}
       />
-      <p className="text-xs text-fg-muted">{he.sspSiteNoSchedule}</p>
       <SearchCreateBar
         query={q}
         onQuery={setQ}
-        canCreate={canEdit && !schemaUnavailable && list.isSuccess}
+        canCreate={canEdit}
+        createDisabled={!createReady}
+        createDisabledHint={he.sspCreateBlocked}
         creating={creating}
         onToggleCreate={() => {
           setCreating((v) => !v);
           setFormError(null);
         }}
         createLabel={he.sspNewCustomerSite}
+        extra={
+          <Select
+            id="ssp-site-activation"
+            label={he.sspFilterActivation}
+            value={activation}
+            onChange={(e) => setActivation(e.target.value)}
+          >
+            <option value="">הכול</option>
+            <option value="awaiting_activation">{he.sspActivationAwaiting}</option>
+            <option value="code_issued">{he.sspActivationCodeIssued}</option>
+            <option value="pending_approval">{he.sspActivationPendingApproval}</option>
+            <option value="device_active">{he.sspActivationDeviceActive}</option>
+          </Select>
+        }
       />
-      <Select
-        id="ssp-site-activation"
-        label={he.sspFilterActivation}
-        value={activation}
-        onChange={(e) => setActivation(e.target.value)}
-      >
-        <option value="">הכול</option>
-        <option value="awaiting_activation">{he.sspActivationAwaiting}</option>
-        <option value="code_issued">{he.sspActivationCodeIssued}</option>
-        <option value="pending_approval">{he.sspActivationPendingApproval}</option>
-        <option value="device_active">{he.sspActivationDeviceActive}</option>
-      </Select>
 
       <CreatePanel
         open={creating}

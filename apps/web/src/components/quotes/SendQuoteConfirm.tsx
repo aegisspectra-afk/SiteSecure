@@ -83,6 +83,7 @@ export function SendQuoteConfirm({
 
         <section className="flex flex-col gap-2">
           <p className="text-sm font-medium text-fg">{he.cpqSendHowTitle}</p>
+          <p className="text-xs text-fg-muted">{he.cpqSendHowLead}</p>
           <div className="grid gap-2 sm:grid-cols-3">
             <Button
               variant="secondary"
@@ -98,6 +99,7 @@ export function SendQuoteConfirm({
               {he.quoteMailtoShare}
             </Button>
           </div>
+          <p className="text-xs text-fg-muted">{he.quoteMailtoShareHint}</p>
         </section>
 
         <div className="flex flex-wrap justify-end gap-2">

@@ -1,0 +1,79 @@
+{
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "web": "http://127.0.0.1:5173",
+  "shots": [
+    {
+      "name": "desktop-dark-1440",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-dark-1440.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "desktop-dark-1280",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-dark-1280.png",
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "desktop-dark-1100",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-dark-1100.png",
+      "width": 1100,
+      "height": 800,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "desktop-dark-1600",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-dark-1600.png",
+      "width": 1600,
+      "height": 900,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "desktop-light-1440",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-light-1440.png",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "extra": null
+    },
+    {
+      "name": "desktop-dark-status-popover",
+      "file": "Docs/dashboard-premium-command-center-qa/desktop-dark-status-popover.png",
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "extra": "status"
+    },
+    {
+      "name": "mobile-dark-390",
+      "file": "Docs/dashboard-premium-command-center-qa/mobile-dark-390.png",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "mobile-dark-360",
+      "file": "Docs/dashboard-premium-command-center-qa/mobile-dark-360.png",
+      "width": 360,
+      "height": 740,
+      "theme": "dark",
+      "extra": null
+    },
+    {
+      "name": "mobile-light-390",
+      "file": "Docs/dashboard-premium-command-center-qa/mobile-light-390.png",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "extra": null
+    }
+  ],
+  "notes": []
+}

@@ -1,26 +1,24 @@
 import { Button, Card, LoadingBlock, Status } from "@site-secure/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { ErrorState, ModuleScaffold, useQuery } from "../../../components/modules/ModuleKit";
-import { RequirePermission } from "../../../components/settings/RequirePermission";
+import { useSspWorkspace } from "../../../components/ssp/useSspWorkspace";
 import { he } from "../../../i18n/he";
-import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/ssp/submissions/$submissionId")({
   component: SspSubmissionDetailPage,
 });
 
 function SspSubmissionDetailPage() {
-  return (
-    <RequirePermission permission="ssp.submissions.view">
-      <SspSubmissionDetailBody />
-    </RequirePermission>
-  );
+  const { canViewSubmissions } = useSspWorkspace();
+  if (!canViewSubmissions) {
+    return <ErrorState title={he.forbiddenTitle} description={he.forbiddenBody} />;
+  }
+  return <SspSubmissionDetailBody />;
 }
 
 function SspSubmissionDetailBody() {
   const { submissionId } = Route.useParams();
-  const { session, api } = useSession();
-  const workspaceId = session?.memberships[0]?.workspace_id;
+  const { api, workspaceId } = useSspWorkspace();
 
   const detail = useQuery({
     queryKey: ["ssp-submission", workspaceId, submissionId],
@@ -50,11 +48,11 @@ function SspSubmissionDetailBody() {
   return (
     <div data-testid="ssp-submission-detail">
       <ModuleScaffold
-        title={he.sspViewSubmission}
+        title={row.form_title || he.sspViewSubmission}
         lead={`${he.sspSubmittedAt}: ${new Date(row.submitted_at).toLocaleString("he-IL")}`}
       >
         <Card className="flex flex-col gap-3">
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-xs text-fg-muted">סטטוס</dt>
               <dd className="mt-0.5">
@@ -62,8 +60,28 @@ function SspSubmissionDetailBody() {
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-fg-muted">טופס</dt>
-              <dd className="mt-0.5 font-mono text-xs text-fg">{row.form_id}</dd>
+              <dt className="text-xs text-fg-muted">{he.sspForms}</dt>
+              <dd className="mt-0.5 font-medium text-fg">{row.form_title || row.form_id.slice(0, 8)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.sspFormVersion}</dt>
+              <dd className="mt-0.5 font-medium text-fg">
+                {row.form_version != null ? `v${row.form_version}` : row.form_version_id.slice(0, 8)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.sspSubmittedBy}</dt>
+              <dd className="mt-0.5 font-medium text-fg">{row.submitted_by_name || row.submitted_by || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.sspAssignOffice}</dt>
+              <dd className="mt-0.5 font-medium text-fg">{row.site_name || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-fg-muted">{he.sspAssignmentTarget}</dt>
+              <dd className="mt-0.5 font-mono text-xs text-fg">
+                {(row.site_assignment_id || row.assignment_id || "").slice(0, 8) || "—"}
+              </dd>
             </div>
           </dl>
         </Card>
@@ -71,10 +89,13 @@ function SspSubmissionDetailBody() {
           <h2 className="text-base font-semibold text-fg">תשובות</h2>
           {fields.map((field) => {
             const value = row.answers[field.id];
+            const optionLabel = (id: string) =>
+              (field.options ?? []).find((opt) => opt.id === id)?.label || id;
             let display = "—";
             if (value === true) display = "כן";
             else if (value === false) display = "לא";
-            else if (Array.isArray(value)) display = value.join(", ");
+            else if (Array.isArray(value)) display = value.map((item) => optionLabel(String(item))).join(", ");
+            else if (field.type === "single_choice" && value != null && value !== "") display = optionLabel(String(value));
             else if (value != null && value !== "") display = String(value);
             return (
               <div key={field.id} className="border-b border-border pb-2 last:border-0">
@@ -83,6 +104,7 @@ function SspSubmissionDetailBody() {
               </div>
             );
           })}
+          {!fields.length ? <p className="ss-module-empty-text">{he.sspNoItems}</p> : null}
         </Card>
         {row.consent?.length ? (
           <Card className="flex flex-col gap-3 text-sm">

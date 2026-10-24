@@ -9,15 +9,34 @@ from ..errors import ApiError, MESSAGES
 from ..rest import schema_missing
 
 SITE_KINDS = frozenset({"physical_site", "office", "ops_center", "other"})
+DEFAULT_SITE_TIMEZONE = "Asia/Jerusalem"
 REGION_SELECT = "id,workspace_id,name,code,is_active,created_at,updated_at"
-SITE_SELECT = (
+SITE_SELECT_LEGACY = (
     "id,workspace_id,region_id,name,code,kind,address,is_active,notes,created_by,created_at,updated_at"
 )
+SITE_SELECT = SITE_SELECT_LEGACY.replace("address,is_active", "address,timezone,is_active")
 POSITION_SELECT = "id,workspace_id,name,code,is_active,created_at,updated_at"
-SHIFT_SELECT = (
+SHIFT_SELECT_LEGACY = (
     "id,workspace_id,employee_id,site_id,region_id,position_id,starts_at,ends_at,notes,"
     "created_by,created_at,updated_at"
 )
+SHIFT_SELECT = SHIFT_SELECT_LEGACY.replace("position_id,starts_at", "position_id,slot_id,starts_at")
+SLOT_SELECT = (
+    "id,workspace_id,site_id,region_id,position_id,coverage_requirement_id,starts_at,ends_at,"
+    "required_count,notes,created_by,created_at,updated_at"
+)
+COVERAGE_SELECT = (
+    "id,workspace_id,site_id,position_id,weekday,start_local,end_local,crosses_midnight,"
+    "required_count,is_active,notes,created_by,created_at,updated_at"
+)
+POLICY_SELECT = (
+    "workspace_id,max_shift_hours,min_rest_hours,rest_rule_enabled,weekly_hour_cap,created_at,updated_at"
+)
+TIME_OFF_SELECT = (
+    "id,workspace_id,employee_id,starts_at,ends_at,kind,status,notes,created_by,created_at,updated_at"
+)
+QUAL_SELECT = "id,workspace_id,employee_id,qualification_key,expires_on,is_active,created_at,updated_at"
+POS_REQ_SELECT = "id,workspace_id,position_id,qualification_key,enforcement,created_at,updated_at"
 
 
 class WorkforceTableStore(Protocol):
@@ -59,6 +78,35 @@ def optional_code(value: str | None) -> str | None:
     return code or None
 
 
+def require_timezone(value: str | None) -> str:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    name = (value or DEFAULT_SITE_TIMEZONE).strip() or DEFAULT_SITE_TIMEZONE
+    if "/" not in name:
+        raise validation("אזור הזמן אינו תקין. יש להזין מזהה IANA, למשל Asia/Jerusalem")
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise validation("אזור הזמן אינו מוכר") from None
+    return name
+
+
+def rows_with_fallback(
+    store: WorkforceTableStore,
+    table: str,
+    params: dict[str, str],
+    *,
+    fallback_select: str | None = None,
+) -> list[dict]:
+    res = store.get(table, params=params)
+    status = getattr(res, "status_code", None)
+    if status == 200 or not fallback_select or not schema_missing(res):
+        return rows(res)
+    retry = dict(params)
+    retry["select"] = fallback_select
+    return rows(store.get(table, params=retry))
+
+
 def rows(res: Any) -> list[dict]:
     status = getattr(res, "status_code", None)
     if status == 200:
@@ -79,15 +127,23 @@ def get_one(store: WorkforceTableStore, table: str, params: dict[str, str]) -> d
     return found[0] if found else None
 
 
-def must_get(store: WorkforceTableStore, table: str, workspace_id: str, row_id: str, select: str) -> dict:
-    row = get_one(
+def must_get(
+    store: WorkforceTableStore,
+    table: str,
+    workspace_id: str,
+    row_id: str,
+    select: str,
+    fallback_select: str | None = None,
+) -> dict:
+    found = rows_with_fallback(
         store,
         table,
         {"id": f"eq.{row_id}", "workspace_id": f"eq.{workspace_id}", "select": select, "limit": "1"},
+        fallback_select=fallback_select,
     )
-    if not row:
+    if not found:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
-    return row
+    return found[0]
 
 
 def assert_ref(
@@ -168,11 +224,13 @@ def directory_out(row: dict) -> dict[str, Any]:
 
 def site_out(row: dict) -> dict[str, Any]:
     address = row.get("address")
+    timezone = (row.get("timezone") or DEFAULT_SITE_TIMEZONE).strip() or DEFAULT_SITE_TIMEZONE
     return {
         **directory_out(row),
         "region_id": str(row["region_id"]) if row.get("region_id") else None,
         "kind": row.get("kind") or "physical_site",
         "address": address if isinstance(address, dict) else {},
+        "timezone": timezone,
         "notes": row.get("notes"),
         "created_by": str(row["created_by"]) if row.get("created_by") else None,
     }

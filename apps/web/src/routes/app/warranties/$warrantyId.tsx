@@ -95,7 +95,11 @@ function WarrantyDetailBody() {
     );
   }
   if (detailQuery.isLoading || !detailQuery.data) {
-    return <ErrorState title={he.loading} />;
+    return (
+      <p className="text-sm text-fg-muted" data-testid="warranty-detail-loading">
+        {he.loading}
+      </p>
+    );
   }
 
   const row = detailQuery.data;
@@ -243,7 +247,12 @@ function WarrantyDetailBody() {
             onChange={(ev) => setEndsOn(ev.target.value)}
           />
           {formError ? <p className="text-sm text-danger">{formError}</p> : null}
-          <Button type="submit" disabled={patch.isPending}>
+          {patch.isSuccess ? (
+            <p className="text-sm text-fg-muted" data-testid="warranty-detail-saved">
+              {he.warrantiesSaved}
+            </p>
+          ) : null}
+          <Button type="submit" disabled={patch.isPending} data-testid="warranty-detail-save">
             {patch.isPending ? he.saving : he.warrantiesSaveDates}
           </Button>
         </form>

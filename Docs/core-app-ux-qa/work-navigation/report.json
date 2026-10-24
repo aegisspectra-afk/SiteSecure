@@ -1,0 +1,110 @@
+{
+  "shots": [
+    "owner-1440-dark-work.png",
+    "owner-390-dark-work-sheet.png",
+    "owner-390-dark-customers.png",
+    "owner-360-dark-jobs.png",
+    "owner-1440-light-sidebar.png",
+    "tech-390-dark-work-sheet.png",
+    "tech-1440-dark-sidebar.png",
+    "owner-390-quotes.png"
+  ],
+  "checks": {
+    "ownerDesktop": {
+      "groupLabels": [
+        "בית",
+        "לקוחות",
+        "עבודה",
+        "משימות",
+        "עוד"
+      ],
+      "linkLabels": [
+        "לוח בקרה",
+        "לקוחות",
+        "ביקורים",
+        "פרויקטים",
+        "עבודות",
+        "שירות",
+        "תיקי אתר",
+        "משימות",
+        "לידים",
+        "הצעות מחיר",
+        "קטלוג",
+        "אחריות",
+        "מודיעין טכני",
+        "הגדרות"
+      ],
+      "hasWork": true,
+      "hasCustomers": true,
+      "hasTasks": true,
+      "hasMore": true,
+      "jobsActive": true,
+      "backOk": true,
+      "overflow": false,
+      "settingsReachable": true
+    },
+    "ownerMobile390": {
+      "workRows": [
+        "ביקורים",
+        "פרויקטים",
+        "עבודות",
+        "שירות",
+        "תיקי אתר"
+      ],
+      "hasJobs": true,
+      "hasProjects": true,
+      "hasService": true,
+      "overflow": false,
+      "customersOk": true
+    },
+    "ownerMobile360": {
+      "overflow": false,
+      "url": "http://127.0.0.1:5173/app/jobs"
+    },
+    "ownerLight": {
+      "overflow": false
+    },
+    "techNoAssignedJob": true,
+    "technician": {
+      "bottomLabels": [
+        "בית",
+        "לקוחות",
+        "עבודה",
+        "משימות",
+        "עוד"
+      ],
+      "workRows": [
+        "עבודות",
+        "תיקי אתר"
+      ],
+      "leaked": false,
+      "moreLeak": false,
+      "fieldJobOk": true,
+      "overflow": false,
+      "homeIsToday": true
+    },
+    "techDesktop": {
+      "techLinks": [
+        "היום",
+        "לקוחות",
+        "עבודות",
+        "תיקי אתר",
+        "משימות",
+        "מודיעין טכני"
+      ],
+      "noQuotes": true,
+      "noSettings": true,
+      "noProjects": true,
+      "hasJobs": true
+    },
+    "quoteListBottomNav": true
+  },
+  "started": "2026-09-26T20:47:03.248Z",
+  "pass": {
+    "ownerDesktop": true,
+    "ownerMobile390": true,
+    "ownerMobile360": true,
+    "technician": true
+  },
+  "finished": "2026-09-26T20:47:39.858Z"
+}

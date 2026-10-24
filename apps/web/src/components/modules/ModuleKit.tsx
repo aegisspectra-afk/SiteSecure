@@ -33,6 +33,9 @@ export function SearchCreateBar({
   creating,
   onToggleCreate,
   createLabel,
+  extra,
+  createDisabled = false,
+  createDisabledHint,
 }: {
   query: string;
   onQuery: (value: string) => void;
@@ -40,14 +43,24 @@ export function SearchCreateBar({
   creating: boolean;
   onToggleCreate: () => void;
   createLabel: string;
+  extra?: ReactNode;
+  createDisabled?: boolean;
+  createDisabledHint?: string;
 }) {
   return (
     <div className="ss-module-toolbar">
       <div className="ss-module-search min-w-[12rem] flex-1">
         <Input id="module-search" label={he.search} value={query} onChange={(ev) => onQuery(ev.target.value)} />
       </div>
+      {extra}
       {canCreate ? (
-        <Button type="button" variant={creating ? "secondary" : "primary"} onClick={onToggleCreate}>
+        <Button
+          type="button"
+          variant={creating ? "secondary" : "primary"}
+          disabled={!creating && createDisabled}
+          title={!creating && createDisabled ? createDisabledHint : undefined}
+          onClick={onToggleCreate}
+        >
           {creating ? he.cancel : createLabel}
         </Button>
       ) : null}

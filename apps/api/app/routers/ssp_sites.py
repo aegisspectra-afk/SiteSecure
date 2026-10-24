@@ -25,8 +25,10 @@ from ..ssp.product_authz import (
     require_ssp_action,
 )
 from ..ssp.site_assignments import (
+    assigned_user_overlap,
     classify_assignment,
     duplicate_submit_blocked,
+    filter_active_site_members,
     user_may_fill,
 )
 from ..ssp.site_ids import new_site_id
@@ -35,7 +37,7 @@ from ..supabase_service import ServiceClient
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/ssp", tags=["ssp-sites"])
 
 SITE_SELECT = (
-    "id,workspace_id,company_pk,site_id,name,phone,description,admin_notes,"
+    "id,workspace_id,company_pk,site_id,code,name,phone,description,admin_notes,"
     "org_unit_id,department_id,manager_user_id,is_active,kind,created_at,updated_at"
 )
 MEMBER_SELECT = "id,workspace_id,site_pk,user_id,created_at"
@@ -109,6 +111,7 @@ def _guard_site(
 class SiteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=200)
+    code: str | None = Field(default=None, max_length=40)
     phone: str | None = Field(default=None, max_length=32)
     description: str = Field(default="", max_length=2000)
     org_unit_id: str | None = None
@@ -122,6 +125,7 @@ class SiteCreate(BaseModel):
 class SitePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    code: str | None = Field(default=None, max_length=40)
     phone: str | None = Field(default=None, max_length=32)
     description: str | None = Field(default=None, max_length=2000)
     org_unit_id: str | None = None
@@ -216,6 +220,7 @@ def list_sites(
             if needle in str(s.get("name") or "").lower()
             or needle in str(s.get("phone") or "").lower()
             or needle in str(s.get("site_id") or "").lower()
+            or needle in str(s.get("code") or "").lower()
         ]
     items = filter_sites_for_membership(
         items,
@@ -258,6 +263,7 @@ def create_site(
         "company_pk": company["id"],
         "site_id": new_site_id(),
         "name": body.name.strip(),
+        "code": (body.code or "").strip() or None,
         "phone": (body.phone or "").strip() or None,
         "description": (body.description or "").strip(),
         "org_unit_id": body.org_unit_id or (membership.get("org_unit_id") if membership else None),
@@ -314,6 +320,8 @@ def patch_site(
     patch: dict[str, Any] = {}
     if body.name is not None:
         patch["name"] = body.name.strip()
+    if body.code is not None:
+        patch["code"] = body.code.strip() or None
     if body.phone is not None:
         patch["phone"] = body.phone.strip() or None
     if body.description is not None:
@@ -568,6 +576,40 @@ def list_site_assignments(
     assign_ids = [str(a["id"]) for a in items if a.get("id")]
     by_assign: dict[str, int] = {}
     latest_by_assign: dict[str, str | None] = {}
+    targets_by: dict[str, int] = {}
+    target_users: dict[str, list[str]] = {}
+    if assign_ids:
+        for t in as_list(
+            client.get(
+                "ssp_form_site_assignment_targets",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "site_assignment_id": f"in.({','.join(assign_ids)})",
+                    "select": "site_assignment_id,user_id",
+                },
+            )
+        ):
+            aid = str(t.get("site_assignment_id") or "")
+            uid = str(t.get("user_id") or "")
+            if aid:
+                targets_by[aid] = targets_by.get(aid, 0) + 1
+                if uid:
+                    target_users.setdefault(aid, []).append(uid)
+    name_by_user: dict[str, str] = {}
+    all_target_users = list({uid for uids in target_users.values() for uid in uids})
+    if all_target_users:
+        for profile in as_list(
+            client.get(
+                "profiles",
+                params={
+                    "id": f"in.({','.join(all_target_users[:80])})",
+                    "select": "id,full_name,email",
+                },
+            )
+        ):
+            pid = str(profile.get("id") or "")
+            if pid:
+                name_by_user[pid] = str(profile.get("full_name") or profile.get("email") or pid[:8])
     if assign_ids:
         for sub in as_list(
             client.get(
@@ -606,6 +648,8 @@ def list_site_assignments(
                 "form_status": form.get("status"),
                 "fill_status": bucket,
                 "submission_count": count,
+                "target_count": targets_by.get(aid, 0),
+                "target_names": [name_by_user.get(uid, uid[:8]) for uid in target_users.get(aid, [])][:12],
                 "latest_submission_at": latest_by_assign.get(aid),
             }
         )
@@ -660,11 +704,70 @@ def create_site_assignments(
         raise ApiError(400, "VALIDATION_ERROR", "יש לבחור מחלקה להקצאה לקבוצה")
     created: list[dict[str, Any]] = []
     snapshot = version["definition"]
+    existing_active = as_list(
+        client.get(
+            "ssp_form_site_assignments",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "form_id": f"eq.{form['id']}",
+                "status": "eq.active",
+                "select": "id,site_pk,filler_mode",
+            },
+        )
+    )
+    existing_target_ids: set[str] = set()
+    existing_ids = [str(a["id"]) for a in existing_active if a.get("id")]
+    if existing_ids:
+        for row in as_list(
+            client.get(
+                "ssp_form_site_assignment_targets",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "site_assignment_id": f"in.({','.join(existing_ids)})",
+                    "select": "user_id",
+                },
+            )
+        ):
+            if row.get("user_id"):
+                existing_target_ids.add(str(row["user_id"]))
     for site_pk in body.site_ids:
         site = _load_site(client, workspace_id, UUID(site_pk))
         if str(site.get("company_pk")) != str(company["id"]):
             raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
         _guard_site(ctx, client, membership, site, catalog_action="ssp.assignments.manage")
+        if body.filler_mode == "site" and any(str(a.get("site_pk")) == str(site["id"]) for a in existing_active):
+            raise ApiError(409, "BUSINESS_RULE", "הטופס כבר הוקצה למשרד זה")
+        target_ids = list(body.user_ids)
+        if body.filler_mode == "site":
+            members = as_list(
+                client.get(
+                    "ssp_site_members",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "site_pk": f"eq.{site['id']}",
+                        "select": "user_id",
+                    },
+                )
+            )
+            member_ids = [str(m["user_id"]) for m in members if m.get("user_id")]
+            active_ids: set[str] = set()
+            if member_ids:
+                for mem in as_list(
+                    client.get(
+                        "ssp_memberships",
+                        params={
+                            "workspace_id": f"eq.{workspace_id}",
+                            "user_id": f"in.({','.join(member_ids)})",
+                            "status": "eq.active",
+                            "select": "user_id",
+                        },
+                    )
+                ):
+                    if mem.get("user_id"):
+                        active_ids.add(str(mem["user_id"]))
+            target_ids = filter_active_site_members(member_ids, active_ids)
+        if assigned_user_overlap(existing_target_ids, set(target_ids)):
+            raise ApiError(409, "BUSINESS_RULE", "הטופס כבר הוקצה למשתמש זה")
         row = created_or_403(
             client.post(
                 "ssp_form_site_assignments",
@@ -686,8 +789,8 @@ def create_site_assignments(
                 params={"select": ASSIGN_SELECT},
             )
         )
-        if body.filler_mode == "users":
-            for uid in body.user_ids:
+        if body.filler_mode in {"users", "site"}:
+            for uid in target_ids:
                 created_or_403(
                     client.post(
                         "ssp_form_site_assignment_targets",
@@ -699,6 +802,8 @@ def create_site_assignments(
                         params={"select": "id,workspace_id,site_assignment_id,user_id,created_at"},
                     )
                 )
+            existing_target_ids.update(str(uid) for uid in target_ids)
+        existing_active.append({"id": row["id"], "site_pk": site["id"], "filler_mode": body.filler_mode})
         created.append(row)
     write_audit(
         client,
@@ -989,7 +1094,7 @@ def submit_site_assignment(
         raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
 
     existing = as_list(
-        client.get(
+        svc.get(
             "ssp_form_submissions",
             params={
                 "workspace_id": f"eq.{workspace_id}",
@@ -1003,6 +1108,7 @@ def submit_site_assignment(
         filler_mode=str(row.get("filler_mode") or "site"),
         existing_for_assignment=bool(existing),
         existing_for_user=existing_for_user,
+        has_targets=bool(targets),
     ):
         raise ApiError(409, "BUSINESS_RULE", "הטופס כבר הוגש להקצאה זו")
 
@@ -1010,24 +1116,26 @@ def submit_site_assignment(
     if not isinstance(snapshot, dict):
         snapshot = {"fields": []}
     answers, consent = validate_answers(snapshot, body.answers)
-    created = created_or_403(
-        svc.post(
-            "ssp_form_submissions",
-            json={
-                "workspace_id": str(workspace_id),
-                "form_id": row["form_id"],
-                "form_version_id": row["form_version_id"],
-                "assignment_id": None,
-                "site_assignment_id": str(assignment_id),
-                "status": "submitted",
-                "answers": answers,
-                "consent": consent,
-                "definition_snapshot": snapshot,
-                "submitted_by": ctx.user_id,
-            },
-            params={"select": SUBMISSION_SELECT},
-        )
+    posted = svc.post(
+        "ssp_form_submissions",
+        json={
+            "workspace_id": str(workspace_id),
+            "form_id": row["form_id"],
+            "form_version_id": row["form_version_id"],
+            "assignment_id": None,
+            "site_assignment_id": str(assignment_id),
+            "status": "submitted",
+            "answers": answers,
+            "consent": consent,
+            "definition_snapshot": snapshot,
+            "submitted_by": ctx.user_id,
+        },
+        params={"select": SUBMISSION_SELECT},
     )
+    text = (getattr(posted, "text", None) or "").lower()
+    if getattr(posted, "status_code", None) in {409, 422} or "duplicate" in text or "23505" in text:
+        raise ApiError(409, "BUSINESS_RULE", "הטופס כבר הוגש להקצאה זו")
+    created = created_or_403(posted)
     write_audit(
         client,
         str(workspace_id),

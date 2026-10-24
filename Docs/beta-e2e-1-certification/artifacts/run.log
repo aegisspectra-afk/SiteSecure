@@ -1,0 +1,31 @@
+[PASS] web_origin: {"code": 200, "version": "0.1.6-beta"}
+[PASS] api_health: {"code": 200, "body": {"ok": true, "version": "v1"}, "request_id": "0bf263de-1742-484f-adcd-ef3623fbb331"}
+[PASS] platform_admin_login: {}
+[PASS] platform_admin_session: {"is_platform_admin": true, "email": "aegisspectra@gmail.com"}
+[PASS] workspace_a_create: {"code": 200, "workspace_id": "20ca6bf5-efb0-47c2-a881-c526900082fc", "request_id": "436d605a-acd5-4772-a847-669fbc8f1211"}
+[PASS] owner_invite: {"code": 200, "has_token": true, "role": "owner", "request_id": "29365912-5f96-4499-bada-0724e3791f46"}
+[PASS] invite_peek: {"body": {"status": "valid", "email": "betae2e.owner.55f108f6@sitesecure.test", "role_key": "owner", "workspace_id": null, "workspace_name": "BETA-E2E-1 A 55f108f6", "expires_at": "2026-10-14T18:11:07.268646+00:00"}}
+[PASS] owner_accept: {"code": 200, "request_id": "c3f083d5-51c8-407c-b5c0-d12088a7e356", "body": null}
+[WARN] invite_one_time: {"code": 200, "memberships_after": 1}
+[PASS] invite_reuse_policy: {"detail": "idempotent re-accept for same member returns 200; not a cross-user reuse"}
+[PASS] settings_write: {"get_code": 200, "patch_code": 200, "keys": ["workspace_id", "branding", "quotes", "taxes", "scheduling", "notifications", "localization"]}
+[PASS] settings_applied: {"path": "/api/v1/workspaces/20ca6bf5-efb0-47c2-a881-c526900082fc/settings", "code": 200}
+[PASS] customer_create: {"code": 200, "request_id": "4bea6116-ebae-4b2d-85d3-04b6cd6afbf8", "body": null}
+[PASS] site_requirement_flags: {"flags": {"require_address": true, "require_access_notes": true}}
+[PASS] site_create: {"code": 200, "require_probe": 200, "request_id": "d7d756a9-83bc-4746-adbc-61b8b6334abc", "body": null}
+DEFECT[P1] require_address ON but create without address succeeded :: code=200 flags={'require_address': True, 'require_access_notes': True}
+[PASS] quote_create: {"code": 200, "status_field": "draft", "valid_until": null, "payment_terms": null, "number": "Q-00001", "defaults_applied": false, "request_id": "1c48d7bc-7313-4ebe-8aa8-0e844a5d13c2"}
+DEFECT[P1] Quote workspace defaults (validity/payment_terms) not applied on create :: valid_until=None payment_terms=None — SETTINGS-3B may be undeployed on staging or not consuming quotes settings
+[PASS] quote_defaults_explicit_patch: {"code": 200}
+[FAIL] settings_propagation_quote: {"fields": [], "evidence": "validity/payment applied if settings persisted"}
+[WARN] catalog_list: {"code": 404, "count": 0}
+[PASS] network_failure_sim: {"code": 403, "request_id": "cafc515c-f2b6-44f4-89aa-9568b694d2ed"}
+[PASS] owner_cost_visibility: {"cost_keys": ["margin_override_reason", "margin_override_by", "margin_override_at", "margin_status", "margin_target", "margin_minimum"], "note": "owner may see cost fields"}
+[WARN] send_double_click: {"code": 403}
+[PASS] approve_double: {"code": 403}
+[PASS] invalid_public_token: {"code": 404, "request_id": "db439291-5b05-4a49-aabb-299d3392cac0"}
+[PASS] password_reset_complete: {"update": 200, "new_login": true, "old_login": false, "embedded_reset": true}
+WROTE /Users/valeria/Downloads/SiteSecureV1/Docs/beta-e2e-1-certification/artifacts/report.json
+WROTE /Users/valeria/Downloads/SiteSecureV1/Docs/beta-e2e-1-certification/matrix.md
+MATRIX_FAILS: []
+P0: []

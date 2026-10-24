@@ -40,6 +40,7 @@ function beforeSend(event: BeforeSendEvent): BeforeSendEvent | null {
  */
 export function VercelAnalytics() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (import.meta.env.DEV) return null;
 
   return <Analytics route={pathname} path={pathname} beforeSend={beforeSend} />;
 }

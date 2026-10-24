@@ -1,13 +1,15 @@
-"""Manual weekly shifts. No publish, optimizer, or notifications."""
+"""Manual weekly assignments. Demand lives on slots, not nullable employee_id."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..errors import ApiError, MESSAGES
+from .clock import overlaps, parse_dt, site_zone, to_iso
 from .store import (
+    DEFAULT_SITE_TIMEZONE,
     SHIFT_SELECT,
+    SHIFT_SELECT_LEGACY,
     WorkforceTableStore,
     assert_ref,
     created_row,
@@ -18,34 +20,10 @@ from .store import (
     patched_row,
     require_uuid,
     rows,
+    rows_with_fallback,
     validation,
 )
-
-MAX_SHIFT = timedelta(hours=36)
-
-
-def _parse_dt(value: str | None, label: str) -> datetime:
-    raw = (value or "").strip()
-    if not raw:
-        raise validation(f"{label} חובה")
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        raise validation(f"{label} אינו תקין") from None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _iso(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def _validate_range(starts: datetime, ends: datetime) -> None:
-    if ends <= starts:
-        raise validation("שעת הסיום חייבת להיות אחרי שעת ההתחלה")
-    if ends - starts > MAX_SHIFT:
-        raise validation("משך המשמרת אינו תקין")
+from .validation import overlapping_rows, raise_if_hard, validate_assignment
 
 
 def _map_by_id(store: WorkforceTableStore, table: str, workspace_id: str, ids: set[str], select: str) -> dict[str, dict]:
@@ -71,6 +49,7 @@ def shift_out(row: dict, related: dict[str, dict[str, dict]] | None = None) -> d
     site_id = str(row["site_id"]) if row.get("site_id") else None
     region_id = str(row["region_id"]) if row.get("region_id") else None
     position_id = str(row["position_id"]) if row.get("position_id") else None
+    slot_id = str(row["slot_id"]) if row.get("slot_id") else None
     employees = (related or {}).get("employees") or {}
     sites = (related or {}).get("sites") or {}
     regions = (related or {}).get("regions") or {}
@@ -86,6 +65,7 @@ def shift_out(row: dict, related: dict[str, dict[str, dict]] | None = None) -> d
         "site_id": site_id,
         "region_id": region_id,
         "position_id": position_id,
+        "slot_id": slot_id,
         "starts_at": row.get("starts_at"),
         "ends_at": row.get("ends_at"),
         "notes": row.get("notes"),
@@ -141,83 +121,126 @@ def list_shifts(
     starts_from: str,
     starts_to: str,
 ) -> list[dict[str, Any]]:
-    start = _parse_dt(starts_from, "תחילת טווח")
-    end = _parse_dt(starts_to, "סוף טווח")
+    start = parse_dt(starts_from, "תחילת טווח")
+    end = parse_dt(starts_to, "סוף טווח")
     if end <= start:
         raise validation("טווח התאריכים אינו תקין")
-    found = rows(
-        store.get(
-            "workforce_shifts",
-            params={
-                "workspace_id": f"eq.{workspace_id}",
-                "and": f"(starts_at.gte.{_iso(start)},starts_at.lt.{_iso(end)})",
-                "select": SHIFT_SELECT,
-                "order": "starts_at.asc",
-                "limit": "1000",
-            },
-        )
+    found = overlapping_rows(
+        store,
+        "workforce_shifts",
+        workspace_id,
+        start,
+        end,
+        select=SHIFT_SELECT,
+        fallback_select=SHIFT_SELECT_LEGACY,
+        limit=1000,
     )
     related = _related_for(store, workspace_id, found)
     return [shift_out(row, related) for row in found]
 
 
-def get_shift(store: WorkforceTableStore, workspace_id: str, shift_id: str) -> dict[str, Any]:
-    row = must_get(store, "workforce_shifts", workspace_id, shift_id, SHIFT_SELECT)
-    return shift_out(row, _related_for(store, workspace_id, [row]))
-
-
-def _assert_active_employee(store: WorkforceTableStore, workspace_id: str, employee_id: str) -> None:
-    row = get_one(
+def _linked_employee(store: WorkforceTableStore, workspace_id: str, actor_user_id: str) -> dict:
+    found = get_one(
         store,
         "workforce_employees",
         {
-            "id": f"eq.{employee_id}",
             "workspace_id": f"eq.{workspace_id}",
-            "select": "id,workspace_id,employment_status",
+            "user_id": f"eq.{actor_user_id}",
+            "select": "id,workspace_id,user_id,first_name,last_name,employment_status",
         },
     )
-    if not row:
-        raise validation("עובד אינו שייך לסביבה זו")
-    if row.get("employment_status") == "terminated":
-        raise validation("לא ניתן לשבץ עובד שהעסקתו הסתיימה")
+    if not found:
+        raise ApiError(404, "WORKFORCE_EMPLOYEE_NOT_LINKED", MESSAGES["WORKFORCE_EMPLOYEE_NOT_LINKED"])
+    return found
 
 
-def _assert_active_site(store: WorkforceTableStore, workspace_id: str, site_id: str) -> dict:
-    row = get_one(
-        store,
-        "workforce_sites",
-        {"id": f"eq.{site_id}", "workspace_id": f"eq.{workspace_id}", "select": "id,workspace_id,region_id,is_active"},
-    )
-    if not row:
-        raise validation("אתר אינו שייך לסביבה זו")
-    return row
+def my_shift_out(row: dict, related: dict[str, dict[str, dict]] | None = None) -> dict[str, Any]:
+    mapped = shift_out(row, related)
+    site = ((related or {}).get("sites") or {}).get(mapped.get("site_id") or "") or {}
+    timezone_name = (site.get("timezone") or DEFAULT_SITE_TIMEZONE).strip() or DEFAULT_SITE_TIMEZONE
+    zone = site_zone(timezone_name)
+    start = parse_dt(str(mapped.get("starts_at") or ""), "התחלה").astimezone(zone)
+    end = parse_dt(str(mapped.get("ends_at") or ""), "סיום").astimezone(zone)
+    return {
+        "id": mapped["id"],
+        "starts_at": mapped["starts_at"],
+        "ends_at": mapped["ends_at"],
+        "local_date": start.date().isoformat(),
+        "starts_local": start.strftime("%H:%M"),
+        "ends_local": end.strftime("%H:%M"),
+        "timezone": zone.key,
+        "site_id": mapped["site_id"],
+        "site_name": mapped["site_name"],
+        "region_id": mapped["region_id"],
+        "region_name": mapped["region_name"],
+        "position_id": mapped["position_id"],
+        "position_name": mapped["position_name"],
+        "notes": mapped["notes"],
+        "status": "assigned",
+        "overnight": start.date() != end.date(),
+    }
 
 
-def _reject_overlap(
+def list_my_shifts(
     store: WorkforceTableStore,
     workspace_id: str,
+    actor_user_id: str,
     *,
-    employee_id: str,
-    starts: datetime,
-    ends: datetime,
-    exclude_id: str | None = None,
-) -> None:
-    found = rows(
-        store.get(
-            "workforce_shifts",
-            params={
-                "workspace_id": f"eq.{workspace_id}",
-                "employee_id": f"eq.{employee_id}",
-                "and": f"(starts_at.lt.{_iso(ends)},ends_at.gt.{_iso(starts)})",
-                "select": "id,starts_at,ends_at",
-                "limit": "20",
-            },
-        )
+    starts_from: str,
+    starts_to: str,
+    directory: WorkforceTableStore | None = None,
+) -> dict[str, Any]:
+    employee = _linked_employee(store, workspace_id, actor_user_id)
+    start = parse_dt(starts_from, "תחילת טווח")
+    end = parse_dt(starts_to, "סוף טווח")
+    if end <= start:
+        raise validation("טווח התאריכים אינו תקין")
+    found = overlapping_rows(
+        store,
+        "workforce_shifts",
+        workspace_id,
+        start,
+        end,
+        extra={"employee_id": f"eq.{employee['id']}"},
+        select=SHIFT_SELECT,
+        fallback_select=SHIFT_SELECT_LEGACY,
+        limit=500,
     )
+    mine: list[dict] = []
+    employee_id = str(employee["id"])
     for row in found:
-        if exclude_id and str(row.get("id") or "") == exclude_id:
+        if str(row.get("employee_id") or "") != employee_id:
             continue
-        raise validation("לעובד כבר יש משמרת חופפת בטווח הזה")
+        try:
+            row_start = parse_dt(str(row.get("starts_at") or ""), "התחלה")
+            row_end = parse_dt(str(row.get("ends_at") or ""), "סיום")
+        except ApiError:
+            continue
+        if overlaps(row_start, row_end, start, end):
+            mine.append(row)
+    related = _related_for(directory or store, workspace_id, mine)
+    return {
+        "employee": {
+            "id": employee_id,
+            "first_name": employee.get("first_name") or "",
+            "last_name": employee.get("last_name") or "",
+        },
+        "starts_from": to_iso(start),
+        "starts_to": to_iso(end),
+        "items": [my_shift_out(row, related) for row in mine],
+    }
+
+
+def get_shift(store: WorkforceTableStore, workspace_id: str, shift_id: str) -> dict[str, Any]:
+    row = must_get(
+        store,
+        "workforce_shifts",
+        workspace_id,
+        shift_id,
+        SHIFT_SELECT,
+        fallback_select=SHIFT_SELECT_LEGACY,
+    )
+    return shift_out(row, _related_for(store, workspace_id, [row]))
 
 
 def create_shift(
@@ -226,37 +249,33 @@ def create_shift(
     payload: dict[str, Any],
     *,
     actor_user_id: str | None = None,
+    writer: WorkforceTableStore | None = None,
 ) -> dict[str, Any]:
-    employee_id = require_uuid(payload.get("employee_id"), "עובד")
-    site_id = require_uuid(payload.get("site_id"), "אתר")
-    if not employee_id or not site_id:
-        raise validation("יש לבחור עובד ואתר")
-    _assert_active_employee(store, workspace_id, employee_id)
-    site = _assert_active_site(store, workspace_id, site_id)
-    position_id = require_uuid(payload.get("position_id"), "משרה")
-    assert_ref(store, "workforce_positions", workspace_id, position_id, "משרה")
-    region_id = require_uuid(payload.get("region_id"), "אזור")
+    result = validate_assignment(store, workspace_id, payload)
+    raise_if_hard(result)
+    employee_id = result["employee_id"]
+    site_id = result["site_id"]
+    position_id = result["position_id"]
+    slot_id = result["slot_id"]
+    region_id = require_uuid(payload.get("region_id"), "אזור") if payload.get("region_id") else result.get("region_id")
     if region_id:
         assert_ref(store, "workforce_regions", workspace_id, region_id, "אזור")
-    elif site.get("region_id"):
-        region_id = str(site["region_id"])
-    starts = _parse_dt(payload.get("starts_at"), "שעת התחלה")
-    ends = _parse_dt(payload.get("ends_at"), "שעת סיום")
-    _validate_range(starts, ends)
-    _reject_overlap(store, workspace_id, employee_id=employee_id, starts=starts, ends=ends)
     body = {
         "workspace_id": workspace_id,
         "employee_id": employee_id,
         "site_id": site_id,
         "region_id": region_id,
         "position_id": position_id,
-        "starts_at": _iso(starts),
-        "ends_at": _iso(ends),
+        "starts_at": result["starts_at"],
+        "ends_at": result["ends_at"],
         "notes": optional_code(payload.get("notes")),
         "created_by": actor_user_id,
     }
+    if slot_id:
+        body["slot_id"] = slot_id
+    write = writer or store
     row = created_row(
-        store.post("workforce_shifts", json=body, params={"select": SHIFT_SELECT}),
+        write.post("workforce_shifts", json=body, params={"select": SHIFT_SELECT if slot_id else SHIFT_SELECT_LEGACY}),
         conflict_message="לא ניתן ליצור את המשמרת",
     )
     return shift_out(row, _related_for(store, workspace_id, [row]))
@@ -267,62 +286,64 @@ def update_shift(
     workspace_id: str,
     shift_id: str,
     payload: dict[str, Any],
+    *,
+    writer: WorkforceTableStore | None = None,
 ) -> dict[str, Any]:
-    current = must_get(store, "workforce_shifts", workspace_id, shift_id, SHIFT_SELECT)
+    current = must_get(
+        store,
+        "workforce_shifts",
+        workspace_id,
+        shift_id,
+        SHIFT_SELECT,
+        fallback_select=SHIFT_SELECT_LEGACY,
+    )
+    merged = {
+        "employee_id": payload.get("employee_id", current.get("employee_id")),
+        "site_id": payload.get("site_id", current.get("site_id")),
+        "region_id": payload.get("region_id", current.get("region_id")),
+        "position_id": payload.get("position_id", current.get("position_id")),
+        "slot_id": payload.get("slot_id", current.get("slot_id")),
+        "starts_at": payload.get("starts_at", current.get("starts_at")),
+        "ends_at": payload.get("ends_at", current.get("ends_at")),
+    }
+    if payload.get("starts_at") == "":
+        raise validation("שעת התחלה חובה")
+    if payload.get("ends_at") == "":
+        raise validation("שעת סיום חובה")
+    result = validate_assignment(store, workspace_id, merged, exclude_shift_id=shift_id)
+    raise_if_hard(result)
     patch: dict[str, Any] = {}
-    employee_id = require_uuid(payload.get("employee_id"), "עובד") if "employee_id" in payload else None
-    site_id = require_uuid(payload.get("site_id"), "אתר") if "site_id" in payload else None
     if "employee_id" in payload:
-        if not employee_id:
-            raise validation("יש לבחור עובד")
-        _assert_active_employee(store, workspace_id, employee_id)
-        patch["employee_id"] = employee_id
+        patch["employee_id"] = result["employee_id"]
     if "site_id" in payload:
-        if not site_id:
-            raise validation("יש לבחור אתר")
-        site = _assert_active_site(store, workspace_id, site_id)
-        patch["site_id"] = site_id
-        if "region_id" not in payload and site.get("region_id") and not current.get("region_id"):
-            patch["region_id"] = str(site["region_id"])
+        patch["site_id"] = result["site_id"]
+        if "region_id" not in payload and result.get("region_id") and not current.get("region_id"):
+            patch["region_id"] = result["region_id"]
     if "region_id" in payload:
         region_id = require_uuid(payload.get("region_id"), "אזור")
         assert_ref(store, "workforce_regions", workspace_id, region_id, "אזור")
         patch["region_id"] = region_id
     if "position_id" in payload:
-        position_id = require_uuid(payload.get("position_id"), "משרה")
-        assert_ref(store, "workforce_positions", workspace_id, position_id, "משרה")
-        patch["position_id"] = position_id
-    starts = _parse_dt(payload.get("starts_at"), "שעת התחלה") if payload.get("starts_at") else None
-    ends = _parse_dt(payload.get("ends_at"), "שעת סיום") if payload.get("ends_at") else None
-    if starts is None and payload.get("starts_at") == "":
-        raise validation("שעת התחלה חובה")
-    if ends is None and payload.get("ends_at") == "":
-        raise validation("שעת סיום חובה")
-    next_starts = starts or _parse_dt(str(current.get("starts_at") or ""), "שעת התחלה")
-    next_ends = ends or _parse_dt(str(current.get("ends_at") or ""), "שעת סיום")
-    if starts or ends:
-        _validate_range(next_starts, next_ends)
-        patch["starts_at"] = _iso(next_starts)
-        patch["ends_at"] = _iso(next_ends)
+        patch["position_id"] = result["position_id"]
+    if "slot_id" in payload:
+        patch["slot_id"] = result["slot_id"]
+    if "starts_at" in payload or "ends_at" in payload:
+        patch["starts_at"] = result["starts_at"]
+        patch["ends_at"] = result["ends_at"]
     if "notes" in payload:
         patch["notes"] = optional_code(payload.get("notes"))
     if not patch:
         raise validation("אין שדות לעדכון")
-    next_employee = str(patch.get("employee_id") or current.get("employee_id") or "")
-    if next_employee:
-        _reject_overlap(
-            store,
-            workspace_id,
-            employee_id=next_employee,
-            starts=next_starts,
-            ends=next_ends,
-            exclude_id=shift_id,
-        )
+    write = writer or store
     row = patched_row(
-        store.patch(
+        write.patch(
             "workforce_shifts",
             patch,
-            params={"id": f"eq.{shift_id}", "workspace_id": f"eq.{workspace_id}", "select": SHIFT_SELECT},
+            params={
+                "id": f"eq.{shift_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": SHIFT_SELECT if "slot_id" in patch else SHIFT_SELECT_LEGACY,
+            },
         ),
         conflict_message="לא ניתן לעדכן את המשמרת",
     )
@@ -331,10 +352,17 @@ def update_shift(
     return shift_out(row, _related_for(store, workspace_id, [row]))
 
 
-def delete_shift(store: WorkforceTableStore, workspace_id: str, shift_id: str) -> None:
+def delete_shift(
+    store: WorkforceTableStore,
+    workspace_id: str,
+    shift_id: str,
+    *,
+    writer: WorkforceTableStore | None = None,
+) -> None:
     must_get(store, "workforce_shifts", workspace_id, shift_id, "id,workspace_id")
     if exists(store, "workforce_shifts", {"id": f"eq.{shift_id}", "workspace_id": f"eq.{workspace_id}"}):
-        res = store.delete(
+        write = writer or store
+        res = write.delete(
             "workforce_shifts",
             params={"id": f"eq.{shift_id}", "workspace_id": f"eq.{workspace_id}"},
         )

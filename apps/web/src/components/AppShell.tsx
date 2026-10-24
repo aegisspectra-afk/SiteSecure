@@ -12,6 +12,7 @@ import {
 import { can, canAny } from "../lib/can";
 import { useDocumentMeta } from "../lib/document-meta";
 import { displayWorkspaceName } from "../lib/quotes";
+import { activeMembership } from "../lib/active-membership";
 import { useOnlineStatus } from "../lib/use-online-status";
 import { useSession } from "../lib/session";
 import { workspaceSystemChecks } from "../lib/workspace-header";
@@ -39,7 +40,7 @@ function readCollapsed(): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const { session, user, error, signOut, workspaceSwitching } = useSession();
   const navigate = useNavigate();
-  const membership = session?.memberships[0];
+  const membership = activeMembership(session);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
   const [workOpen, setWorkOpen] = useState(false);
@@ -124,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("site-secure:open-command-palette", onOpen);
   }, []);
 
-  // SSP and FLEET are separate products — never show the Site Secure CRM sidebar here.
+  // SSP, FLEET, and leftover Workforce bookmarks are not Site Secure CRM.
   const isSspProduct = pathname.startsWith("/app/ssp");
   const isFleetProduct = pathname.startsWith("/app/fleet");
   const isWorkforceProduct = pathname.startsWith("/app/workforce");

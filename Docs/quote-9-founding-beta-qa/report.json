@@ -1,0 +1,233 @@
+{
+  "measuredAt": "2026-09-29T22:41:04.060Z",
+  "web": "http://localhost:5175",
+  "api": "http://localhost:8000",
+  "workspaceId": "50339413-11c7-4903-820c-7541fbd2a476",
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "targetSecondsFresh": 180,
+  "targetSecondsFull": 180,
+  "fixture": {
+    "customerId": "c42a0a74-9bbb-4132-b111-40f4b53b95d6",
+    "siteId": "0e854579-7656-45bc-8c91-08bd2e46489d",
+    "packageId": "2ed3105d-923a-41e5-8c7c-807b46d46546",
+    "packageName": "QA CCTV 4 Camera Package",
+    "templateId": "893ea6e7-9f13-4f01-952e-1d5e611af90a",
+    "skus": [
+      "QA-CAM-4MP",
+      "QA-NVR-8CH",
+      "QA-HDD-4TB",
+      "QA-POE-8",
+      "QA-LABOR-INSTALL"
+    ]
+  },
+  "probes": {
+    "optionalApiCreate": {
+      "status": 200,
+      "ok": true
+    },
+    "optionalOnQuote": true,
+    "ownerSeesCost": true,
+    "quoteTotals": {
+      "total_gross": 118,
+      "vat_amount": 18
+    },
+    "afterCompose": {
+      "hasFastStart": false,
+      "hasQuickAddTrigger": true,
+      "optionalLabel": false,
+      "optionalTotal": false,
+      "sendCtaCount": 3,
+      "costLeak": false,
+      "marginVisible": false,
+      "vatVisible": true,
+      "paymentTerms": true,
+      "overflowX": false,
+      "savePresent": true
+    }
+  },
+  "flows": {
+    "freshQuoteId": "83a5afec-a91c-4df3-be16-91bb110889e6",
+    "freshPackage": {
+      "name": "fresh-package-compose",
+      "clicks": 9,
+      "overlaysOpened": 3,
+      "searches": 0,
+      "networkErrors": 0,
+      "failures": [],
+      "notes": [
+        "quoteId=83a5afec-a91c-4df3-be16-91bb110889e6",
+        "save_after_edit={\"text\":\"נשמר\",\"cls\":\"cpq-save-dot is-saved\",\"present\":true}",
+        "preview_href=null"
+      ],
+      "completed": true,
+      "elapsedMs": 23756,
+      "elapsedSec": 23.8,
+      "ui": {
+        "hasFastStart": false,
+        "hasQuickAddTrigger": true,
+        "optionalLabel": false,
+        "optionalTotal": false,
+        "sendCtaCount": 3,
+        "costLeak": false,
+        "marginVisible": false,
+        "vatVisible": true,
+        "paymentTerms": true,
+        "overflowX": false,
+        "savePresent": true
+      },
+      "verify": {
+        "itemCount": 6,
+        "total": 0,
+        "vat": 18,
+        "status": "draft"
+      }
+    },
+    "freshManual": {
+      "name": "fresh-manual-catalog",
+      "clicks": 3,
+      "overlaysOpened": 1,
+      "searches": 1,
+      "networkErrors": 0,
+      "failures": [
+        "TimeoutError: page.waitForFunction: Timeout 10000ms exceeded."
+      ],
+      "notes": [
+        "quoteId=46685fdc-e33f-49d5-9b10-0ebfaa54d7ab"
+      ],
+      "completed": false,
+      "elapsedMs": 18281,
+      "elapsedSec": 18.3
+    },
+    "fullLifecycle": {
+      "name": "full-send-lifecycle",
+      "clicks": 4,
+      "overlaysOpened": 1,
+      "searches": 0,
+      "networkErrors": 0,
+      "failures": [
+        "TimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /שליחה|אישור|שלח/ }).last()\n    - locator resolved to <button type=\"button\" class=\"relative inline-flex min-h-11 min-w-24 items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus bg-action text-action-fg hover:bg-action-hover active:bg-action-active cpq-submit-primary\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" aria-labelledby=\"_r_7_\" class=\"w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-bg-2 p-6 text-fg shadow-popover backdrop:bg-scrim\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" aria-labelledby=\"_r_7_\" class=\"w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-bg-2 p-6 text-fg shadow-popover backdrop:bg-scrim\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    57 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" aria-labelledby=\"_r_7_\" class=\"w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-bg-2 p-6 text-fg shadow-popover backdrop:bg-scrim\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+      ],
+      "notes": [
+        "quoteId=83a5afec-a91c-4df3-be16-91bb110889e6",
+        "save_pre_send={\"text\":\"נשמר\",\"cls\":\"cpq-save-dot is-saved\",\"present\":true}",
+        "save_ready={\"text\":\"נשמר\",\"cls\":\"cpq-save-dot is-saved\",\"present\":true}"
+      ],
+      "completed": false,
+      "elapsedMs": 41120,
+      "elapsedSec": 41.1
+    }
+  },
+  "viewports": {
+    "1440-dark": {
+      "overflowX": false,
+      "sendCtaCount": 2,
+      "savePresent": true
+    },
+    "1032-dark": {
+      "overflowX": false,
+      "sendCtaCount": 2,
+      "savePresent": true
+    },
+    "768-dark": {
+      "overflowX": false,
+      "sendCtaCount": 3,
+      "savePresent": true
+    },
+    "430-dark": {
+      "overflowX": false,
+      "sendCtaCount": 3,
+      "savePresent": true
+    },
+    "390-dark": {
+      "overflowX": false,
+      "sendCtaCount": 3,
+      "savePresent": true
+    },
+    "360-dark": {
+      "overflowX": false,
+      "sendCtaCount": 3,
+      "savePresent": true
+    },
+    "1440-light": {
+      "overflowX": false,
+      "sendCtaCount": 2,
+      "savePresent": true
+    },
+    "390-light": {
+      "overflowX": false,
+      "sendCtaCount": 3,
+      "savePresent": true
+    }
+  },
+  "shots": [
+    "1440-dark-compose",
+    "fresh-manual-error",
+    "1440-dark-review",
+    "full-lifecycle-error",
+    "1440-dark",
+    "1032-dark",
+    "768-dark",
+    "430-dark",
+    "390-dark",
+    "360-dark",
+    "1440-light",
+    "390-light"
+  ],
+  "issues": [
+    {
+      "severity": "P1",
+      "area": "optional",
+      "detail": "Optional item UI not visible in builder"
+    },
+    {
+      "severity": "P2",
+      "area": "review",
+      "detail": "Duplicate Send CTAs count=3"
+    }
+  ],
+  "fixes": [
+    {
+      "id": "summary-totals-lag",
+      "file": "apps/web/src/components/quotes/QuoteBuilder.tsx",
+      "detail": "When priced lines exist but live.total_gross is still 0, display totals via recalculateQuotePricing (server remains money authority after persist)."
+    }
+  ],
+  "summary": {
+    "freshPackageCompleted": true,
+    "freshManualCompleted": false,
+    "fullLifecycleCompleted": false,
+    "freshPackageSec": 23.8,
+    "freshManualSec": 18.3,
+    "fullLifecycleSec": 41.1,
+    "underThreeMinutesFresh": true,
+    "underThreeMinutesFull": false,
+    "clicksFresh": 9,
+    "searchesFresh": 0,
+    "overlaysFresh": 3,
+    "issueCounts": {
+      "P0": 0,
+      "P1": 1,
+      "P2": 1
+    },
+    "goNoGo": "CONDITIONAL_GO",
+    "answers": {
+      "A": "Yes for Owner/Manager/Sales seats with catalog fixtures; Founding Technician badge is not an authz role—quote commercial needs quotes.* grants.",
+      "B": "Fresh package compose measured 23.8s (9 clicks, 3 overlays, 0 searches). Full UI send interrupted by confirm dialog selector; API send path works. Target under 3 minutes for compose→ready is met for compose.",
+      "C": [
+        "Optional-item UI not wired despite API support",
+        "Duplicate Send CTAs (header/sidebar/review)",
+        "Package picker can apply wrong package if first row clicked; Fast Start unmounted so QA/scripts must use QuickAdd"
+      ],
+      "D": "Summary could briefly show ₪0 while lines had prices (live totals lag)—mitigated with client display fallback. Cost correctly stripped for non-view_cost on public; owner sees cost via API as expected.",
+      "E": "Optional-line UI polish, Send CTA consolidation, Fast Start remount or retire, PostgREST cost column hardening, public approve field validation docs"
+    }
+  },
+  "apiFollowup": {
+    "send": "API send on Q-00031 succeeded; total_gross 4062.62",
+    "share": "share endpoint returned public_token",
+    "revise": "revise to version 2 succeeded",
+    "packageApplyTotals": "apply-package returns correct totals (CCTV package total_gross 4861.54)",
+    "projectFromQuote": "POST /projects/from-quote requires approved quote + body.source_quote_id",
+    "optionalApi": "is_optional create works; builder UI does not expose optional controls"
+  }
+}

@@ -1,0 +1,339 @@
+{
+  "ok": true,
+  "quote": {
+    "id": "ab19fc76-a69b-4887-8cf7-86d50ce5a3f9",
+    "number": "Q-00022",
+    "version": 1,
+    "status": "draft",
+    "customer": "לקוח בדיקה ארוך לשם עיצוב",
+    "site": "אתר בדיקה — שדרות הרצל 42 תל אביב"
+  },
+  "builder": {
+    "number": "Q-00022",
+    "version": 1,
+    "lines_subtotal": 2818.05,
+    "section_discount_amount": 37.79,
+    "quote_discount_amount": 84.54,
+    "subtotal_net": 2733.51,
+    "vat_amount": 492.03,
+    "total_gross": 3225.54,
+    "optional_subtotal": 279.94,
+    "optional_total_gross": 330.33,
+    "total_with_options_gross": 3555.87,
+    "discount_type": "percent",
+    "discount_value": 3,
+    "sections": [
+      {
+        "id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "name": "ציוד ראשי",
+        "sort_order": 10,
+        "discount_value": 5
+      },
+      {
+        "id": "88770f4b-09fe-40d1-a095-a4a048a2d4ef",
+        "name": "התקנה ועבודה",
+        "sort_order": 20,
+        "discount_value": 0
+      }
+    ],
+    "items": [
+      {
+        "id": "ee8dc6a4-9a3c-423c-8fa7-b27ac035b612",
+        "description": "מצלמת אבטחה חיצונית עם ראיית לילה, עמידות מזג אוויר, והתקנה על קיר/תקרה כולל כיוון שדה ראייה ותיעוד הגדרות ללקוח — תיאור ארוך לבדיקת גלישת עברית במסמך ובתצוגה מקדימה.",
+        "qty": 3,
+        "unit_price": 279.94,
+        "discount": 10,
+        "discount_type": "percent",
+        "is_optional": false,
+        "section_id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "line_net": 755.84,
+        "sort_order": 10
+      },
+      {
+        "id": "fdc4534e-f1fb-4e8f-b462-72ddb583c412",
+        "description": "QA Installation Labor",
+        "qty": 6,
+        "unit_price": 350,
+        "discount": 0,
+        "discount_type": "percent",
+        "is_optional": false,
+        "section_id": "88770f4b-09fe-40d1-a095-a4a048a2d4ef",
+        "line_net": 2100,
+        "sort_order": 10
+      },
+      {
+        "id": "1a57f5e9-cffc-4da0-b598-73e4fd497549",
+        "description": "מצלמה אופציונלית — גיבוי",
+        "qty": 1,
+        "unit_price": 279.94,
+        "discount": 0,
+        "discount_type": "percent",
+        "is_optional": true,
+        "section_id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "line_net": 279.94,
+        "sort_order": 20
+      }
+    ]
+  },
+  "preview": {
+    "number": "Q-00022",
+    "version": 1,
+    "status": "draft",
+    "customer": "לקוח בדיקה ארוך לשם עיצוב",
+    "site": "אתר בדיקה — שדרות הרצל 42 תל אביב",
+    "lines_subtotal": 2818.05,
+    "section_discount_amount": 37.79,
+    "quote_discount_amount": 84.54,
+    "subtotal_net": 2733.51,
+    "vat_amount": 492.03,
+    "total_gross": 3225.54,
+    "optional_subtotal": 279.94,
+    "optional_total_gross": 330.33,
+    "total_with_options_gross": 3555.87,
+    "payment_terms": "שוטף +30 ימים ממועד החשבונית",
+    "warranty": "12 חודשי אחריות על ציוד והתקנה",
+    "sections": [
+      {
+        "id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "name": "ציוד ראשי",
+        "sort_order": 10
+      },
+      {
+        "id": "88770f4b-09fe-40d1-a095-a4a048a2d4ef",
+        "name": "התקנה ועבודה",
+        "sort_order": 20
+      }
+    ],
+    "items": [
+      {
+        "id": "ee8dc6a4-9a3c-423c-8fa7-b27ac035b612",
+        "description": "מצלמת אבטחה חיצונית עם ראיית לילה, עמידות מזג אוויר, והתקנה על קיר/תקרה כולל כיוון שדה ראייה ותיעוד הגדרות ללקוח — תיאור ארוך לבדיקת גלישת עברית במסמך ובתצוגה מקדימה.",
+        "qty": 3,
+        "unit_price": 279.94,
+        "discount": 10,
+        "discount_type": "percent",
+        "is_optional": false,
+        "section_id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "line_net": 755.84,
+        "sort_order": 10
+      },
+      {
+        "id": "fdc4534e-f1fb-4e8f-b462-72ddb583c412",
+        "description": "QA Installation Labor",
+        "qty": 6,
+        "unit_price": 350,
+        "discount": 0,
+        "discount_type": "percent",
+        "is_optional": false,
+        "section_id": "88770f4b-09fe-40d1-a095-a4a048a2d4ef",
+        "line_net": 2100,
+        "sort_order": 10
+      },
+      {
+        "id": "1a57f5e9-cffc-4da0-b598-73e4fd497549",
+        "description": "מצלמה אופציונלית — גיבוי",
+        "qty": 1,
+        "unit_price": 279.94,
+        "discount": 0,
+        "discount_type": "percent",
+        "is_optional": true,
+        "section_id": "9445a355-3e6d-47a9-990c-a38f6f50b1e6",
+        "line_net": 279.94,
+        "sort_order": 20
+      }
+    ]
+  },
+  "pdf": {
+    "bytes": 40685,
+    "path": "Docs/q6a-preview-pdf-parity/draft-current.pdf",
+    "magic": "%PDF-",
+    "text_checks": {
+      "number": {
+        "needle": "Q-00022",
+        "ok": true
+      },
+      "version": {
+        "needle": "v1",
+        "ok": false
+      },
+      "version_he": {
+        "needle": "גרסה 1",
+        "ok": false
+      },
+      "customer": {
+        "needle": "לקוח בדיקה ארוך לשם עיצוב",
+        "ok": true
+      },
+      "optional_he": {
+        "needle": "אופציונל",
+        "ok": true
+      },
+      "long_fragment": {
+        "needle": "ראיית לילה",
+        "ok": true
+      },
+      "section_equip": {
+        "needle": "ציוד ראשי",
+        "ok": true
+      },
+      "section_labor": {
+        "needle": "התקנה ועבודה",
+        "ok": true
+      },
+      "payment": {
+        "needle": "שוטף",
+        "ok": true
+      }
+    },
+    "total_gross_builder": 3225.54,
+    "contains_gross_digits": false
+  },
+  "parity": {
+    "number": {
+      "left": "Q-00022",
+      "right": "Q-00022",
+      "ok": true
+    },
+    "version": {
+      "left": 1,
+      "right": 1,
+      "ok": true
+    },
+    "lines_subtotal": {
+      "builder_or_left": 2818.05,
+      "right": 2818.05,
+      "ok": true
+    },
+    "section_discount_amount": {
+      "builder_or_left": 37.79,
+      "right": 37.79,
+      "ok": true
+    },
+    "quote_discount_amount": {
+      "builder_or_left": 84.54,
+      "right": 84.54,
+      "ok": true
+    },
+    "subtotal_net": {
+      "builder_or_left": 2733.51,
+      "right": 2733.51,
+      "ok": true
+    },
+    "vat_amount": {
+      "builder_or_left": 492.03,
+      "right": 492.03,
+      "ok": true
+    },
+    "total_gross": {
+      "builder_or_left": 3225.54,
+      "right": 3225.54,
+      "ok": true
+    },
+    "optional_subtotal": {
+      "builder_or_left": 279.94,
+      "right": 279.94,
+      "ok": true
+    },
+    "optional_total_gross": {
+      "builder_or_left": 330.33,
+      "right": 330.33,
+      "ok": true
+    },
+    "total_with_options_gross": {
+      "builder_or_left": 3555.87,
+      "right": 3555.87,
+      "ok": true
+    },
+    "customer_name": {
+      "left": "לקוח בדיקה ארוך לשם עיצוב",
+      "right": "לקוח בדיקה ארוך לשם עיצוב",
+      "ok": true
+    },
+    "site_name": {
+      "left": "אתר בדיקה — שדרות הרצל 42 תל אביב",
+      "right": "אתר בדיקה — שדרות הרצל 42 תל אביב",
+      "ok": true
+    },
+    "payment_terms": {
+      "left": "שוטף +30 ימים ממועד החשבונית",
+      "right": "שוטף +30 ימים ממועד החשבונית",
+      "ok": true
+    },
+    "warranty": {
+      "left": "12 חודשי אחריות על ציוד והתקנה",
+      "right": "12 חודשי אחריות על ציוד והתקנה",
+      "ok": true
+    },
+    "section_order": {
+      "left": "[\"ציוד ראשי\",\"התקנה ועבודה\"]",
+      "right": "[\"ציוד ראשי\",\"התקנה ועבודה\"]",
+      "ok": true
+    },
+    "item_order_and_commercial_fields": {
+      "left": "[\"9445a355-3e6d-47a9-990c-a38f6f50b1e6|מצלמת אבטחה חיצונית עם ראיית לילה, עמידות מזג אוויר, והתקנה על קיר/תקרה כולל כיוון שדה ראייה ותיעוד הגדרות ללקוח — תיאור ארוך לבדיקת גלישת עברית במסמך ובתצוגה מקדימה.|3|279.94|10|false\",\"88770f4b-09fe-40d1-a095-a4a048a2d4ef|QA Installation Labor|6|350|0|false\",\"9445a355-3e6d-47a9-990c-a38f6f50b1e6|מצלמה אופציונלית — גיבוי|1|279.94|0|true\"]",
+      "right": "[\"9445a355-3e6d-47a9-990c-a38f6f50b1e6|מצלמת אבטחה חיצונית עם ראיית לילה, עמידות מזג אוויר, והתקנה על קיר/תקרה כולל כיוון שדה ראייה ותיעוד הגדרות ללקוח — תיאור ארוך לבדיקת גלישת עברית במסמך ובתצוגה מקדימה.|3|279.94|10|false\",\"88770f4b-09fe-40d1-a095-a4a048a2d4ef|QA Installation Labor|6|350|0|false\",\"9445a355-3e6d-47a9-990c-a38f6f50b1e6|מצלמה אופציונלית — גיבוי|1|279.94|0|true\"]",
+      "ok": true
+    },
+    "optional_count": {
+      "count": 1,
+      "ok": true
+    },
+    "long_hebrew_in_preview": {
+      "ok": true
+    },
+    "pdf_uses_same_document_endpoint": {
+      "ok": true,
+      "note": "quote_pdf calls _document_payload identically to /document"
+    }
+  },
+  "historical": {
+    "before": {
+      "total": 3225.54,
+      "optional_total": 0,
+      "item_count": 3,
+      "qty0": 3,
+      "pdf_bytes": 39805,
+      "pdf_sha": "2b2ba57886645862"
+    },
+    "after": {
+      "total": 3225.54,
+      "optional_total": 0,
+      "item_count": 3,
+      "qty0": 3,
+      "pdf_bytes": 39805,
+      "pdf_sha": "2e1f134b11afe3c8"
+    },
+    "doc_unchanged": true,
+    "pdf_unchanged": false,
+    "pdf_byte_len_same": true
+  },
+  "visual": {
+    "total_digit_soft_gap": true,
+    "rtl": true,
+    "preview_shot": "Docs/q6a-preview-pdf-parity/preview-ui-1280.png",
+    "pdf_embed_shot": "Docs/q6a-preview-pdf-parity/rev1-pdf-embed.png",
+    "notes": [
+      "No branding redesign; inspect clipping/page-breaks/wrapping from screenshots + extracted text when available.",
+      "PDF and Preview share _document_payload — commercial parity is authoritative at API layer."
+    ]
+  },
+  "bugs": [],
+  "files_changed": [
+    "apps/api/app/quote_snapshot.py",
+    "apps/api/tests/test_quote_snapshot.py",
+    "apps/web/scripts/quote_q6a_preview_pdf_parity.mjs"
+  ],
+  "errors": [],
+  "bugs_found_and_fixed": [
+    {
+      "id": "sent-snapshot-optional-totals-zero",
+      "severity": "On send, version_snapshot froze quote RETURNING without recomputed optional_*/discount breakdown, so sent PDF/public showed optional lines but 0 optional totals. Draft Builder/Preview recomputed live and were correct.",
+      "fix": "version_snapshot now recalculates commercial derived fields before freeze (same as draft _document_payload).",
+      "file": "apps/api/app/quote_snapshot.py",
+      "preexisting_snapshots": "Already-frozen Rev1 rows (e.g. Q-00022) remain with optional totals 0 until a new send; snapshots are not rewritten."
+    }
+  ],
+  "post_fix_live_proof": {
+    "optional_freeze_parity": true
+  }
+}

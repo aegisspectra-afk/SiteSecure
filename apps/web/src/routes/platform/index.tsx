@@ -2,7 +2,9 @@ import { ApiClientError } from "@site-secure/api-client";
 import { Button } from "@site-secure/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, LayoutGrid, QrCode, Shield, Truck } from "lucide-react";
+import { ArrowLeft, CalendarDays, LayoutGrid, QrCode, Shield, Truck } from "lucide-react";
+import { workforceAppUrlWithSession } from "../../lib/workforce-app-url";
+import { supabase } from "../../lib/supabase";
 import { useState, type ComponentType } from "react";
 import { he } from "../../i18n/he";
 import { displayWorkspaceName } from "../../lib/quotes";
@@ -16,11 +18,13 @@ const PRODUCT_ICONS: Record<string, ComponentType<{ className?: string; "aria-hi
   site_secure: Shield,
   ssp: QrCode,
   fleet: Truck,
+  workforce: CalendarDays,
 };
 
 function productKey(product: { id: string; entry_path: string }): string {
   if (product.id === "ssp" || product.entry_path.startsWith("/app/ssp")) return "ssp";
   if (product.id === "fleet" || product.entry_path.startsWith("/app/fleet")) return "fleet";
+  if (product.id === "workforce" || product.entry_path.startsWith("/app/workforce")) return "workforce";
   return "site_secure";
 }
 
@@ -69,16 +73,27 @@ function PlatformHomePage() {
     }
   }
 
-  function openProduct(entryPath: string) {
-    if (entryPath === "/app/today") {
+  async function openProduct(product: { id: string; entry_path: string }) {
+    if (product.id === "workforce" || product.entry_path.startsWith("/app/workforce")) {
+      const { data } = await supabase.auth.getSession();
+      const target = workforceAppUrlWithSession(product.entry_path, "", {
+        access_token: data.session?.access_token,
+        refresh_token: data.session?.refresh_token,
+        expires_at: data.session?.expires_at,
+      });
+      if (!target) return;
+      window.location.assign(target);
+      return;
+    }
+    if (product.entry_path === "/app/today") {
       void navigate({ to: "/app/today" });
       return;
     }
-    if (entryPath === "/app/ssp") {
+    if (product.entry_path === "/app/ssp") {
       void navigate({ to: "/app/ssp" });
       return;
     }
-    if (entryPath === "/app/fleet") {
+    if (product.entry_path === "/app/fleet") {
       void navigate({ to: "/app/fleet" });
       return;
     }
@@ -183,7 +198,7 @@ function PlatformHomePage() {
                     type="button"
                     className="platform-product"
                     data-product={key}
-                    onClick={() => openProduct(product.entry_path)}
+                    onClick={() => void openProduct(product)}
                   >
                     <span className="platform-product-icon">
                       <Icon className="size-5" aria-hidden />

@@ -187,12 +187,15 @@ export function CustomerProfile({
   const [siteAddress, setSiteAddress] = useState<StructuredAddress>(EMPTY_ADDRESS);
 
   const [contactSheet, setContactSheet] = useState(false);
+  const [editingContact, setEditingContact] = useState<CustomerContact | null>(null);
   const [contactName, setContactName] = useState("");
+  const [contactRole, setContactRole] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPrimary, setContactPrimary] = useState(false);
   const [contactFormError, setContactFormError] = useState<string | null>(null);
-  const [contactToast, setContactToast] = useState(false);
+  const [contactToast, setContactToast] = useState<string | null>(null);
+  const [confirmContactDelete, setConfirmContactDelete] = useState<CustomerContact | null>(null);
   const addContactTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [serviceSheet, setServiceSheet] = useState(false);
@@ -324,33 +327,62 @@ export function CustomerProfile({
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.customersError),
   });
 
-  const addContact = useMutation({
-    mutationFn: () =>
-      api.createCustomerContact(workspaceId, customerId, {
+  const saveContact = useMutation({
+    mutationFn: () => {
+      const body = {
         full_name: contactName.trim(),
+        role_title: contactRole.trim() || null,
+        phone: contactPhone.trim() || null,
+        email: contactEmail.trim() || null,
+        is_primary: contactPrimary,
+      };
+      if (editingContact) {
+        return api.patchCustomerContact(workspaceId, customerId, editingContact.id, body);
+      }
+      return api.createCustomerContact(workspaceId, customerId, {
+        full_name: body.full_name,
+        role_title: contactRole.trim() || undefined,
         phone: contactPhone.trim() || undefined,
         email: contactEmail.trim() || undefined,
         is_primary: contactPrimary,
-      }),
-    onSuccess: async (created) => {
+      });
+    },
+    onSuccess: async (saved) => {
       setContactFormError(null);
       queryClient.setQueryData<CustomerContact[]>(["customer-contacts", workspaceId, customerId], (prev) => {
         const list = prev ?? [];
-        if (list.some((row) => row.id === created.id)) return list;
-        return [...list, created];
+        if (editingContact) return list.map((row) => (row.id === saved.id ? saved : row));
+        if (list.some((row) => row.id === saved.id)) return list;
+        return [...list, saved];
       });
       await queryClient.invalidateQueries({ queryKey: ["customer-contacts", workspaceId, customerId] });
       setContactSheet(false);
+      setEditingContact(null);
       setContactName("");
+      setContactRole("");
       setContactPhone("");
       setContactEmail("");
       setContactPrimary(false);
-      setContactToast(true);
-      window.setTimeout(() => setContactToast(false), 2500);
+      setContactToast(editingContact ? he.customer360ContactUpdated : he.customer360ContactAdded);
+      window.setTimeout(() => setContactToast(null), 2500);
     },
     onError: (err) => {
       setContactFormError(err instanceof ApiClientError ? err.message : he.customersError);
     },
+  });
+
+  const removeContact = useMutation({
+    mutationFn: (row: CustomerContact) => api.deleteCustomerContact(workspaceId, customerId, row.id),
+    onSuccess: async (_ok, row) => {
+      queryClient.setQueryData<CustomerContact[]>(["customer-contacts", workspaceId, customerId], (prev) =>
+        (prev ?? []).filter((item) => item.id !== row.id),
+      );
+      await queryClient.invalidateQueries({ queryKey: ["customer-contacts", workspaceId, customerId] });
+      setConfirmContactDelete(null);
+      setContactToast(he.customer360ContactDeleted);
+      window.setTimeout(() => setContactToast(null), 2500);
+    },
+    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.customersError),
   });
 
   const addSite = useMutation({
@@ -474,10 +506,23 @@ export function CustomerProfile({
   }
 
   function openContactSheet() {
+    setEditingContact(null);
     setContactName("");
+    setContactRole("");
     setContactPhone("");
     setContactEmail("");
     setContactPrimary(false);
+    setContactFormError(null);
+    setContactSheet(true);
+  }
+
+  function openEditContact(row: CustomerContact) {
+    setEditingContact(row);
+    setContactName(row.full_name);
+    setContactRole(row.role_title ?? "");
+    setContactPhone(row.phone ?? "");
+    setContactEmail(row.email ?? "");
+    setContactPrimary(Boolean(row.is_primary));
     setContactFormError(null);
     setContactSheet(true);
   }
@@ -711,9 +756,12 @@ export function CustomerProfile({
             onCancel={cancelEdit}
             onSave={() => save.mutate()}
             onAddContact={openContactSheet}
+            onEditContact={openEditContact}
+            onDeleteContact={setConfirmContactDelete}
             onAddSite={openSiteSheet}
             canCreateSite={canCreateSite}
             canCreateContact={canEdit}
+            canDeleteContact={canDelete}
             addContactRef={addContactTriggerRef}
             contactToast={contactToast}
           />
@@ -796,6 +844,30 @@ export function CustomerProfile({
         </div>
       </Modal>
 
+      <Modal
+        open={Boolean(confirmContactDelete)}
+        onClose={() => setConfirmContactDelete(null)}
+        title={he.customer360DeleteContact}
+      >
+        <p className="text-sm text-fg-muted">
+          {he.customer360DeleteContactBody(confirmContactDelete?.full_name ?? "")}
+        </p>
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setConfirmContactDelete(null)}>
+            {he.cancel}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            data-testid="contact-delete-confirm"
+            loading={removeContact.isPending}
+            onClick={() => confirmContactDelete && removeContact.mutate(confirmContactDelete)}
+          >
+            {he.customer360DeleteContact}
+          </Button>
+        </div>
+      </Modal>
+
       <Modal open={confirmArchive} onClose={() => setConfirmArchive(false)} title={he.customer360ArchiveTitle}>
         <p className="text-sm text-fg-muted">{he.customer360ArchiveBody(customer.display_name)}</p>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
@@ -863,12 +935,13 @@ export function CustomerProfile({
       <QuoteFlowSheet
         open={contactSheet}
         onClose={() => {
-          if (addContact.isPending) return;
+          if (saveContact.isPending) return;
           setContactSheet(false);
+          setEditingContact(null);
           setContactFormError(null);
         }}
-        title={he.customer360CreateContactTitle}
-        subtitle={he.customer360CreateContactLead}
+        title={editingContact ? he.customer360EditContact : he.customer360CreateContactTitle}
+        subtitle={editingContact ? he.customer360EditContactLead : he.customer360CreateContactLead}
         variant="sheet"
         returnFocusRef={addContactTriggerRef}
         footer={
@@ -876,9 +949,10 @@ export function CustomerProfile({
             <Button
               type="button"
               variant="secondary"
-              disabled={addContact.isPending}
+              disabled={saveContact.isPending}
               onClick={() => {
                 setContactSheet(false);
+                setEditingContact(null);
                 setContactFormError(null);
               }}
             >
@@ -886,11 +960,16 @@ export function CustomerProfile({
             </Button>
             <Button
               type="button"
-              disabled={!contactName.trim() || addContact.isPending}
-              loading={addContact.isPending}
-              onClick={() => addContact.mutate()}
+              data-testid="contact-save"
+              disabled={!contactName.trim() || saveContact.isPending}
+              loading={saveContact.isPending}
+              onClick={() => saveContact.mutate()}
             >
-              {addContact.isPending ? he.customer360AddingContact : he.customersAddContact}
+              {saveContact.isPending
+                ? he.saving
+                : editingContact
+                  ? he.save
+                  : he.customersAddContact}
             </Button>
           </div>
         }
@@ -903,6 +982,12 @@ export function CustomerProfile({
             onChange={(ev) => setContactName(ev.target.value)}
             data-autofocus
             autoComplete="name"
+          />
+          <Input
+            id="contact-role"
+            label={he.customer360ContactRole}
+            value={contactRole}
+            onChange={(ev) => setContactRole(ev.target.value)}
           />
           <Input
             id="contact-phone"
@@ -925,7 +1010,7 @@ export function CustomerProfile({
             label={he.customer360PrimaryContact}
             checked={contactPrimary}
             onCheckedChange={setContactPrimary}
-            disabled={addContact.isPending}
+            disabled={saveContact.isPending}
           />
           {contactFormError ? <p className="text-sm text-danger">{contactFormError}</p> : null}
         </div>
@@ -1082,9 +1167,12 @@ function OverviewPanel({
   onCancel,
   onSave,
   onAddContact,
+  onEditContact,
+  onDeleteContact,
   onAddSite,
   canCreateSite,
   canCreateContact,
+  canDeleteContact,
   addContactRef,
   contactToast,
 }: {
@@ -1116,11 +1204,14 @@ function OverviewPanel({
   onCancel: () => void;
   onSave: () => void;
   onAddContact: () => void;
+  onEditContact: (row: CustomerContact) => void;
+  onDeleteContact: (row: CustomerContact) => void;
   onAddSite: () => void;
   canCreateSite: boolean;
   canCreateContact: boolean;
+  canDeleteContact: boolean;
   addContactRef: RefObject<HTMLButtonElement | null>;
-  contactToast: boolean;
+  contactToast: string | null;
 }) {
   const siteById = new Map(sites.map((site) => [site.id, site]));
   const showKpis = kpi.sites + kpi.quotes + kpi.projects + kpi.service + kpi.leads > 0;
@@ -1251,7 +1342,7 @@ function OverviewPanel({
             ) : null
           }
         />
-        {contactToast ? <p className="mb-3 text-sm text-success">{he.customer360ContactAdded}</p> : null}
+        {contactToast ? <p className="mb-3 text-sm text-success">{contactToast}</p> : null}
         {contacts.length === 0 ? (
           <div className="customer-360-empty">
             <p className="customer-360-empty-title">{he.customersContactsEmpty}</p>
@@ -1265,7 +1356,14 @@ function OverviewPanel({
         ) : (
           <div className="customer-360-contact-grid">
             {contacts.map((contact) => (
-              <ContactCard key={contact.id} contact={contact} />
+              <ContactCard
+                key={contact.id}
+                contact={contact}
+                canEdit={canCreateContact}
+                canDelete={canDeleteContact}
+                onEdit={onEditContact}
+                onDelete={onDeleteContact}
+              />
             ))}
           </div>
         )}
@@ -1412,10 +1510,22 @@ function DetailRow({
   );
 }
 
-function ContactCard({ contact }: { contact: CustomerContact }) {
+function ContactCard({
+  contact,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+}: {
+  contact: CustomerContact;
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: (row: CustomerContact) => void;
+  onDelete: (row: CustomerContact) => void;
+}) {
   const role = contact.role_title?.trim() || null;
   return (
-    <article className="customer-360-contact-card">
+    <article className="customer-360-contact-card" data-testid={`contact-card-${contact.id}`}>
       <div className="customer-360-contact-icon" aria-hidden>
         <User className="size-4" strokeWidth={1.75} />
       </div>
@@ -1432,6 +1542,30 @@ function ContactCard({ contact }: { contact: CustomerContact }) {
           <p className="customer-360-contact-meta" dir="ltr">
             {contact.email}
           </p>
+        ) : null}
+        {canEdit || canDelete ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid={`contact-edit-${contact.id}`}
+                onClick={() => onEdit(contact)}
+              >
+                {he.customer360EditContact}
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid={`contact-delete-${contact.id}`}
+                onClick={() => onDelete(contact)}
+              >
+                {he.customer360DeleteContact}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </article>

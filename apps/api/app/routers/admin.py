@@ -1742,31 +1742,27 @@ def _workspace_plan_key(service: ServiceClient, workspace_id: str) -> tuple[dict
     return row, plan_key
 
 
-def _effective_features_from_overrides(
-    plan_eligible: frozenset[str],
-    overrides: dict[str, bool],
-) -> frozenset[str]:
-    from ..product_entitlements import effective_enabled
-
-    keys = set(plan_eligible) | set(overrides)
-    return frozenset(
-        k
-        for k in keys
-        if effective_enabled(
-            feature_key=k,
-            plan_eligible=plan_eligible,
-            override=overrides[k] if k in overrides else None,
-        )
-    )
+def _subscription_status(row: dict[str, Any]) -> str:
+    sub = _nested(row.get("subscriptions"))
+    return str((sub or {}).get("status") or "active")
 
 
-def _admin_products_payload(service: ServiceClient, workspace_id: str, plan_key: str) -> dict[str, Any]:
-    from ..product_entitlements import product_rows
+def _admin_products_payload(
+    service: ServiceClient,
+    workspace_id: str,
+    plan_key: str,
+    subscription_status: str = "active",
+) -> dict[str, Any]:
+    from ..product_entitlements import effective_feature_set, product_rows
     from .workspace_products import fetch_plan_feature_keys, _load_overrides
 
     plan_eligible = fetch_plan_feature_keys(service, plan_key)
     overrides = _load_overrides(service, workspace_id)
-    effective = _effective_features_from_overrides(plan_eligible, overrides)
+    effective = effective_feature_set(
+        plan_eligible=plan_eligible,
+        overrides=overrides,
+        subscription_status=subscription_status,
+    )
     rows = product_rows(
         plan_key=plan_key,
         plan_eligible=plan_eligible,
@@ -1788,8 +1784,8 @@ def admin_list_workspace_products(
 ):
     require_platform_admin(service, user["id"])
     ws = str(workspace_id)
-    _row, plan_key = _workspace_plan_key(service, ws)
-    return _admin_products_payload(service, ws, plan_key)
+    row, plan_key = _workspace_plan_key(service, ws)
+    return _admin_products_payload(service, ws, plan_key, _subscription_status(row))
 
 
 @router.put("/workspaces/{workspace_id}/products/overrides")
@@ -1805,7 +1801,7 @@ def admin_put_workspace_product_override(
     from .workspace_products import fetch_plan_feature_keys, _upsert_override_merge
 
     ws = str(workspace_id)
-    _row, plan_key = _workspace_plan_key(service, ws)
+    row, plan_key = _workspace_plan_key(service, ws)
     feature_key = body.feature_key.strip()
     plan_eligible = fetch_plan_feature_keys(service, plan_key)
     err = validate_override_request(
@@ -1840,4 +1836,4 @@ def admin_put_workspace_product_override(
         },
         strict=True,
     )
-    return _admin_products_payload(service, ws, plan_key)
+    return _admin_products_payload(service, ws, plan_key, _subscription_status(row))

@@ -6,11 +6,13 @@ export function DashboardZone({
   label,
   children,
   className = "",
+  action,
 }: {
   id: string;
   label: string;
   children: ReactNode;
   className?: string;
+  action?: ReactNode;
 }) {
   return (
     <section
@@ -18,7 +20,10 @@ export function DashboardZone({
       data-zone={id}
       aria-label={label}
     >
-      <p className="ops-zone-label">{label}</p>
+      <div className={`ops-zone-head${action ? " has-action" : ""}`}>
+        <p className="ops-zone-label">{label}</p>
+        {action}
+      </div>
       <div className="ops-zone-body">{children}</div>
     </section>
   );

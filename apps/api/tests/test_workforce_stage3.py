@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.authz.catalog import load_catalog
 from app.authz.types import AuthzContext
-from app.deps import current_user, user_client
+from app.deps import current_user, service_client, user_client
 from app.errors import ApiError
 from app.main import app
 from app.workforce.directory import create_site, delete_region, list_positions, list_regions
@@ -149,6 +149,7 @@ def _bind(monkeypatch, store: StageStore, ctx: AuthzContext):
     monkeypatch.setattr("app.routers.workforce.load_authz_context", load)
     app.dependency_overrides[current_user] = lambda: {"id": USER, "email": "mgr@example.com"}
     app.dependency_overrides[user_client] = lambda: store
+    app.dependency_overrides[service_client] = lambda: store
     return TestClient(app)
 
 
@@ -488,6 +489,9 @@ def test_openapi_includes_stage3_paths():
     assert f"{base}/sites" in paths
     assert f"{base}/positions" in paths
     assert f"{base}/shifts" in paths
+    assert f"{base}/me/shifts" in paths
+    assert "get" in paths[f"{base}/me/shifts"]
+    assert "post" not in paths[f"{base}/me/shifts"]
     assert "get" in paths[f"{base}/positions"]
     assert "post" not in paths[f"{base}/positions"]
     assert "/register" not in paths

@@ -1,0 +1,2 @@
+pages 2
+rev1_pages 2

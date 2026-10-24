@@ -66,45 +66,29 @@ class FakeClient:
         if table == "customers":
             return _ok([{"id": CUSTOMER, "display_name": "לקוח בדיקה"}])
         if table == "warranties":
-            if params.get("id") == f"eq.{WARRANTY}":
-                return _ok(
-                    [
-                        {
-                            "id": WARRANTY,
-                            "workspace_id": str(WS),
-                            "number": "W-00001",
-                            "type": "installation",
-                            "status": "active",
-                            "customer_id": CUSTOMER,
-                            "site_id": SITE,
-                            "installed_equipment_id": EQUIPMENT,
-                            "starts_on": "2026-01-01",
-                            "ends_on": "2027-01-01",
-                            "document_id": None,
-                            "created_at": "2026-09-27T00:00:00+00:00",
-                            "updated_at": "2026-09-27T00:00:00+00:00",
-                        }
-                    ]
-                )
-            return _ok(
-                [
-                    {
-                        "id": WARRANTY,
-                        "workspace_id": str(WS),
-                        "number": "W-00001",
-                        "type": "installation",
-                        "status": "active",
-                        "customer_id": CUSTOMER,
-                        "site_id": SITE,
-                        "installed_equipment_id": EQUIPMENT,
-                        "starts_on": "2026-01-01",
-                        "ends_on": "2027-01-01",
-                        "document_id": None,
-                        "created_at": "2026-09-27T00:00:00+00:00",
-                        "updated_at": "2026-09-27T00:00:00+00:00",
-                    }
-                ]
-            )
+            ws = params.get("workspace_id")
+            if ws and ws != f"eq.{WS}":
+                return _ok([])
+            row = {
+                "id": WARRANTY,
+                "workspace_id": str(WS),
+                "number": "W-00001",
+                "title": None,
+                "type": "installation",
+                "status": "active",
+                "customer_id": CUSTOMER,
+                "site_id": SITE,
+                "installed_equipment_id": EQUIPMENT,
+                "starts_on": "2026-01-01",
+                "ends_on": "2027-01-01",
+                "policy": {},
+                "document_id": None,
+                "created_at": "2026-09-27T00:00:00+00:00",
+                "updated_at": "2026-09-27T00:00:00+00:00",
+            }
+            if "id" in params:
+                return _ok([row] if params.get("id") == f"eq.{WARRANTY}" else [])
+            return _ok([row])
         return _ok([])
 
     def post(self, table: str, payload: dict):
@@ -208,6 +192,8 @@ def test_create_rejects_equipment_on_other_site(monkeypatch):
 
     def get(table: str, params: dict | None = None):
         params = params or {}
+        if table == "customers":
+            return _ok([{"id": CUSTOMER}])
         if table == "sites":
             return _ok([{"id": SITE}])
         if table == "equipment":
@@ -269,4 +255,63 @@ def test_patch_warranty_status(monkeypatch):
     assert client.patches[0][0] == "warranties"
     assert client.patches[0][1]["status"] == "expired"
     assert client.patches[0][1]["ends_on"] == "2026-06-01"
+    assert "starts_on" not in client.patches[0][1]
     assert row["status"] == "expired"
+
+
+def test_get_warranty_not_found(monkeypatch):
+    client = FakeClient()
+    _patch_auth(monkeypatch)
+    with pytest.raises(ApiError) as err:
+        get_warranty(WS, UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"), client, {"id": ACTOR})
+    assert err.value.status_code == 404
+
+
+def test_get_warranty_wrong_workspace_is_404(monkeypatch):
+    client = FakeClient()
+    _patch_auth(monkeypatch)
+    other = UUID("00000000-0000-0000-0000-0000000000bb")
+    with pytest.raises(ApiError) as err:
+        get_warranty(other, UUID(WARRANTY), client, {"id": ACTOR})
+    assert err.value.status_code == 404
+
+
+def test_get_warranty_forbidden_without_view(monkeypatch):
+    client = FakeClient()
+    monkeypatch.setattr(ops, "_ctx", lambda *a, **k: _ctx("workforce_member"))
+    with pytest.raises(ApiError) as err:
+        get_warranty(WS, UUID(WARRANTY), client, {"id": ACTOR})
+    assert err.value.status_code == 403
+
+
+def test_get_warranty_allowed_for_viewer(monkeypatch):
+    client = FakeClient()
+    monkeypatch.setattr(ops, "_ctx", lambda *a, **k: _ctx("viewer"))
+    detail = get_warranty(WS, UUID(WARRANTY), client, {"id": ACTOR})
+    assert detail["id"] == WARRANTY
+    assert detail["equipment_name"] == "מצלמה כניסה"
+
+
+def test_patch_warranty_forbidden_for_viewer(monkeypatch):
+    client = FakeClient()
+    monkeypatch.setattr(ops, "_ctx", lambda *a, **k: _ctx("viewer"))
+    with pytest.raises(ApiError) as err:
+        patch_warranty(WS, UUID(WARRANTY), WarrantyPatch(status="cancelled"), client, {"id": ACTOR})
+    assert err.value.status_code == 403
+    assert client.patches == []
+
+
+def test_patch_warranty_empty_rejected(monkeypatch):
+    client = FakeClient()
+    _patch_auth(monkeypatch)
+    with pytest.raises(ApiError) as err:
+        patch_warranty(WS, UUID(WARRANTY), WarrantyPatch(), client, {"id": ACTOR})
+    assert err.value.status_code == 400
+
+
+def test_patch_warranty_invalid_status(monkeypatch):
+    client = FakeClient()
+    _patch_auth(monkeypatch)
+    with pytest.raises(ApiError) as err:
+        patch_warranty(WS, UUID(WARRANTY), WarrantyPatch(status="nope"), client, {"id": ACTOR})
+    assert err.value.status_code == 400

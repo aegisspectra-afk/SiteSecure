@@ -834,6 +834,8 @@ def list_submissions(
     status: str | None = Query(default=None),
     from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
+    site_id: str | None = Query(default=None),
+    submitted_by: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     from ..ssp.product_authz import feature_gate, load_ssp_membership, product_grants
@@ -868,6 +870,8 @@ def list_submissions(
             params["submitted_at"] = f"lte.{to_date}"
     if role == "patrol_officer":
         params["submitted_by"] = f"eq.{ctx.user_id}"
+    elif submitted_by:
+        params["submitted_by"] = f"eq.{submitted_by}"
     submissions_res = client.get("ssp_form_submissions", params=params)
     if schema_missing(submissions_res):
         return {"items": [], "data_mode": "unavailable"}
@@ -875,11 +879,62 @@ def list_submissions(
     if not _sees_all_submissions(ctx, membership):
         visible = _visible_site_assignment_ids(client, workspace_id, ctx, membership)
         items = [i for i in items if str(i.get("site_assignment_id") or "") in visible]
+    if site_id:
+        assign_ids = [str(i.get("site_assignment_id") or "") for i in items if i.get("site_assignment_id")]
+        allowed: set[str] = set()
+        if assign_ids:
+            for row in as_list(
+                client.get(
+                    "ssp_form_site_assignments",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "id": f"in.({','.join(assign_ids[:80])})",
+                        "site_pk": f"eq.{site_id}",
+                        "select": "id",
+                    },
+                )
+            ):
+                if row.get("id"):
+                    allowed.add(str(row["id"]))
+        items = [i for i in items if str(i.get("site_assignment_id") or "") in allowed]
+    form_ids = list({str(i.get("form_id")) for i in items if i.get("form_id")})
+    forms_by_id: dict[str, dict] = {}
+    if form_ids:
+        forms_by_id = {
+            str(f["id"]): f
+            for f in as_list(
+                client.get(
+                    "ssp_forms",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "id": f"in.({','.join(form_ids[:80])})",
+                        "select": "id,title,category",
+                    },
+                )
+            )
+            if f.get("id")
+        }
+    submitter_ids = [str(i.get("submitted_by")) for i in items if i.get("submitted_by")]
+    names: dict[str, str] = {}
+    if submitter_ids:
+        for profile in as_list(
+            client.get(
+                "profiles",
+                params={
+                    "id": f"in.({','.join(list(dict.fromkeys(submitter_ids))[:80])})",
+                    "select": "id,full_name,email",
+                },
+            )
+        ):
+            pid = str(profile.get("id") or "")
+            if pid:
+                names[pid] = str(profile.get("full_name") or profile.get("email") or pid[:8])
     # Strip full answers from list for less PII in list payloads
     summary = [
         {
             "id": i["id"],
             "form_id": i["form_id"],
+            "form_title": (forms_by_id.get(str(i.get("form_id"))) or {}).get("title"),
             "form_version_id": i["form_version_id"],
             "assignment_id": i.get("assignment_id"),
             "site_assignment_id": i.get("site_assignment_id"),
@@ -887,6 +942,7 @@ def list_submissions(
             "submitted_at": i["submitted_at"],
             "has_consent": bool(i.get("consent")),
             "submitted_by": i.get("submitted_by"),
+            "submitted_by_name": names.get(str(i.get("submitted_by") or "")),
         }
         for i in items
     ]
@@ -934,7 +990,72 @@ def get_submission(
         entity_id=str(submission_id),
         metadata={},  # do not log answers
     )
-    return row
+    out = dict(row)
+    form_rows = as_list(
+        client.get(
+            "ssp_forms",
+            params={
+                "id": f"eq.{row['form_id']}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,title,category",
+                "limit": "1",
+            },
+        )
+    )
+    if form_rows:
+        out["form_title"] = form_rows[0].get("title")
+    if row.get("form_version_id"):
+        versions = as_list(
+            client.get(
+                "ssp_form_versions",
+                params={
+                    "id": f"eq.{row['form_version_id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": "id,version",
+                    "limit": "1",
+                },
+            )
+        )
+        if versions:
+            out["form_version"] = versions[0].get("version")
+    if row.get("site_assignment_id"):
+        assigns = as_list(
+            client.get(
+                "ssp_form_site_assignments",
+                params={
+                    "id": f"eq.{row['site_assignment_id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "select": "id,site_pk,form_version_id",
+                    "limit": "1",
+                },
+            )
+        )
+        site_pk = assigns[0].get("site_pk") if assigns else None
+        if site_pk:
+            sites = as_list(
+                client.get(
+                    "ssp_sites",
+                    params={
+                        "id": f"eq.{site_pk}",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "id,name",
+                        "limit": "1",
+                    },
+                )
+            )
+            if sites:
+                out["site_name"] = sites[0].get("name")
+    submitted_by = str(row.get("submitted_by") or "")
+    if submitted_by:
+        profiles = as_list(
+            client.get(
+                "profiles",
+                params={"id": f"eq.{submitted_by}", "select": "id,full_name,email", "limit": "1"},
+            )
+        )
+        if profiles:
+            out["submitted_by_name"] = profiles[0].get("full_name") or profiles[0].get("email")
+    return out
 
 
 class OfficerSubmitIn(BaseModel):

@@ -12,7 +12,7 @@ export function FormSiteAssignPanel({ formId, published }: { formId: string; pub
   const [startsAt, setStartsAt] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [fillerMode, setFillerMode] = useState<"site" | "users" | "group">("site");
-  const [userIds, setUserIds] = useState("");
+  const [userIds, setUserIds] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -20,6 +20,12 @@ export function FormSiteAssignPanel({ formId, published }: { formId: string; pub
     queryKey: ["ssp-sites", workspaceId],
     enabled: Boolean(workspaceId),
     queryFn: () => api.listSspSites(workspaceId!, { is_active: true, kind: "office,ops_center" }),
+    retry: false,
+  });
+  const people = useQuery({
+    queryKey: ["ssp-people", workspaceId, "active"],
+    enabled: Boolean(workspaceId) && fillerMode === "users",
+    queryFn: () => api.listSspUsers(workspaceId!, { status: "active" }),
     retry: false,
   });
   const departments = useQuery({
@@ -43,7 +49,7 @@ export function FormSiteAssignPanel({ formId, published }: { formId: string; pub
         starts_at: startsAt ? new Date(startsAt).toISOString() : undefined,
         due_at: dueAt ? new Date(dueAt).toISOString() : undefined,
         filler_mode: fillerMode,
-        user_ids: fillerMode === "users" ? userIds.split(/[\s,]+/).filter(Boolean) : undefined,
+        user_ids: fillerMode === "users" ? userIds : undefined,
         department_id: fillerMode === "group" ? departmentId || undefined : undefined,
       }),
     onSuccess: async () => {
@@ -135,13 +141,28 @@ export function FormSiteAssignPanel({ formId, published }: { formId: string; pub
             </select>
           </label>
           {fillerMode === "users" ? (
-            <Input
-              id="assign-users"
-              label={he.sspFillerUsers}
-              value={userIds}
-              onChange={(e) => setUserIds(e.target.value)}
-            />
-          ) : null}
+            <ul className="max-h-48 overflow-auto rounded-md border border-border">
+              {(people.data?.items ?? []).map((person) => (
+                <li key={person.user_id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={userIds.includes(person.user_id)}
+                    onChange={() =>
+                      setUserIds((prev) =>
+                        prev.includes(person.user_id)
+                          ? prev.filter((id) => id !== person.user_id)
+                          : [...prev, person.user_id],
+                      )
+                    }
+                    aria-label={person.full_name || person.email || person.user_id}
+                  />
+                  {person.full_name || person.email || person.user_id.slice(0, 8)}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-fg-muted">{he.sspFillerSiteSnapshot}</p>
+          )}
           {fillerMode === "group" ? (
             <label className="flex flex-col gap-1 text-sm">
               <span>{he.sspFillerGroup}</span>
@@ -175,8 +196,11 @@ export function FormSiteAssignPanel({ formId, published }: { formId: string; pub
                 {sites.data?.items.find((s) => s.id === a.site_pk)?.name || a.site_pk.slice(0, 8)}
               </Link>
               {" · "}
-              {a.status} · {a.filler_mode}
+              {a.status} · {a.filler_mode === "users" ? he.sspAssignPersonal : he.sspAssignOfficeWide}
               {a.due_at ? ` · ${a.due_at.slice(0, 10)}` : ""}
+              {a.target_count != null ? ` · ${he.sspTargetsCount} ${a.target_count}` : ""}
+              {a.submission_count != null ? ` · ${he.sspSubmissionsCount} ${a.submission_count}` : ""}
+              {a.target_names?.length ? ` · ${a.target_names.join(", ")}` : ""}
             </div>
             <div className="flex gap-2">
               {a.status === "active" ? (

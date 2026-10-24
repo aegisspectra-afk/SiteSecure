@@ -1,0 +1,25 @@
+{
+  "checkpoint": "Q8-A",
+  "title": "Quote → Project version pin",
+  "date": "2026-09-28",
+  "model": "projects.source_quote_version (integer, nullable)",
+  "migration": "20260928093515_projects_source_quote_version.sql",
+  "applied_remote": "rhxqqudlngimhplvndmz",
+  "backfill": false,
+  "bom_transfer": false,
+  "live_proof": {
+    "number": "Q-00027",
+    "project_id": "577a5164-3fa7-4c2f-87cf-01b0c07f4f9b",
+    "pin_v": 1,
+    "after_revise_and_rev2_approve_pin": 1,
+    "duplicate": 409,
+    "intact": true
+  },
+  "tests": {
+    "api_project_from_quote_revision_authorize": "45 passed",
+    "web_project_workspace": "12 passed",
+    "web_lifecycle_revision": "passed (prior run)",
+    "typecheck": "pass",
+    "build": "pass"
+  }
+}

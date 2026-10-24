@@ -1,0 +1,58 @@
+{
+  "overview": {
+    "networks": 3,
+    "vlans": 3,
+    "ips": 3,
+    "assigned": 2,
+    "available": 1,
+    "reserved": 0
+  },
+  "vlans": 3,
+  "networks": 3,
+  "assignments": [
+    [
+      "10.10.20.10",
+      null
+    ],
+    [
+      "10.10.20.101",
+      "6b2aef84-f0cf-42c5-8f1b-68bb9ad67aa1"
+    ],
+    [
+      "10.10.20.102",
+      "3ba1e909-71d4-4c30-a938-bf85a6dc9ded"
+    ]
+  ],
+  "dup_status": 409,
+  "dup_body": "{\"error\":{\"code\":\"CONFLICT\",\"message\":\"כתובת IP כבר קיימת באתר\",\"details\":{}}}",
+  "outside_status": 400,
+  "outside_body": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"כתובת ה-IP אינה בתוך הרשת שנבחרה\",\"details\":{\"ip\":\"10.10.99.1\",\"cidr\":\"10.10.20.0/24\"}}}",
+  "cam001_ips": {
+    "items": [
+      {
+        "id": "344ffb9f-cd36-4164-8af7-d30ad00701df",
+        "workspace_id": "50339413-11c7-4903-820c-7541fbd2a476",
+        "site_id": "0e854579-7656-45bc-8c91-08bd2e46489d",
+        "network_id": "f90d2d1a-bc69-47ea-9570-a87e454ec980",
+        "vlan_id": "3f933dc3-f61d-4c8c-bea3-d0d133caf717",
+        "equipment_id": "6b2aef84-f0cf-42c5-8f1b-68bb9ad67aa1",
+        "ip_address": "10.10.20.101",
+        "hostname": "cam-001",
+        "mac_address": null,
+        "assignment_type": "static",
+        "status": "assigned",
+        "notes": null,
+        "created_at": "2026-09-28T10:36:14.690133+00:00",
+        "updated_at": "2026-09-28T10:36:14.690133+00:00",
+        "equipment_name": "Camera (1/4)",
+        "equipment_asset_code": "CAM-001",
+        "network_name": "CCTV",
+        "network_cidr": "10.10.20.0/24",
+        "vlan_number": 20,
+        "vlan_name": "CCTV"
+      }
+    ],
+    "legacy_ip": null,
+    "legacy_mac": null
+  }
+}

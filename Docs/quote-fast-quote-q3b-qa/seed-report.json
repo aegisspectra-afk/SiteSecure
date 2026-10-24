@@ -1,0 +1,66 @@
+{
+  "measuredAt": "2026-09-27T19:52:23.773Z",
+  "workspaceId": "50339413-11c7-4903-820c-7541fbd2a476",
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "api": "http://localhost:8000",
+  "products": [
+    {
+      "sku": "QA-CAM-4MP",
+      "id": "92380413-2f79-47d0-985a-d785f9e12cf9",
+      "name": "QA Camera 4MP",
+      "kind": "product",
+      "list_price": 450,
+      "reused": false
+    },
+    {
+      "sku": "QA-NVR-8CH",
+      "id": "e486dcab-ba87-4e93-bcd6-38cd6d8f0eaa",
+      "name": "QA NVR 8CH",
+      "kind": "product",
+      "list_price": 1200,
+      "reused": false
+    },
+    {
+      "sku": "QA-HDD-4TB",
+      "id": "3092f4d9-09cc-492d-803b-604543eccd40",
+      "name": "QA HDD 4TB",
+      "kind": "product",
+      "list_price": 380,
+      "reused": false
+    },
+    {
+      "sku": "QA-POE-8",
+      "id": "2a3e048d-01b6-4c31-82e0-821c2d4239d4",
+      "name": "QA PoE Switch 8",
+      "kind": "product",
+      "list_price": 520,
+      "reused": false
+    },
+    {
+      "sku": "QA-LABOR-INSTALL",
+      "id": "2378ad76-009e-49c5-bb2c-0e510e416c10",
+      "name": "QA Installation Labor",
+      "kind": "service",
+      "list_price": 350,
+      "reused": false
+    }
+  ],
+  "package": {
+    "id": "2ed3105d-923a-41e5-8c7c-807b46d46546",
+    "name": "QA CCTV 4 Camera Package",
+    "reused": false
+  },
+  "template": {
+    "id": "893ea6e7-9f13-4f01-952e-1d5e611af90a",
+    "name_he": "QA CCTV Quote Template",
+    "reused": false,
+    "seedQuoteId": "fd814c75-2ec4-4cbb-b767-8f785e37b293"
+  },
+  "context": {
+    "customer_id": "c42a0a74-9bbb-4132-b111-40f4b53b95d6",
+    "site_id": "0e854579-7656-45bc-8c91-08bd2e46489d",
+    "customer_name": "לקוח בדיקה ארוך לשם עיצוב",
+    "site_name": "אתר בדיקה — שדרות הרצל 42 תל אביב",
+    "source": "known_quote"
+  }
+}

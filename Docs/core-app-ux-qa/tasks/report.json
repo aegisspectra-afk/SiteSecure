@@ -1,0 +1,138 @@
+{
+  "shots": [
+    "owner-1440-dark-tasks.png",
+    "owner-390-dark-tasks.png",
+    "owner-360-dark-tasks.png",
+    "owner-1440-light-tasks.png",
+    "tech-390-dark-create-complete.png",
+    "tech-1440-dark-tasks.png"
+  ],
+  "checks": {
+    "ownerDesktop1440": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 5,
+      "dir": "rtl",
+      "overflow": false,
+      "url": "http://127.0.0.1:5173/app/tasks"
+    },
+    "ownerMobile390": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 16,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "ownerMobile360": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 16,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "ownerLight1440": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 5,
+      "dir": "rtl",
+      "overflow": false
+    },
+    "technician390": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 8,
+      "dir": "rtl",
+      "overflow": false,
+      "createdTitle": "C-QA-muivvncu",
+      "rowGoneAfterComplete": true
+    },
+    "technicianDesktop": {
+      "hasPage": true,
+      "title": "משימות",
+      "lead": "רשימת משימות קלות לצוות — יצירה, יעד וסגירה.",
+      "filters": [
+        "פתוחות",
+        "הכל"
+      ],
+      "createCount": 2,
+      "completeCount": 0,
+      "rowCount": 0,
+      "empty": true,
+      "hasSearch": false,
+      "calendarWord": false,
+      "minTouchHeight": 44,
+      "focusableDead": 5,
+      "dir": "rtl",
+      "overflow": false,
+      "focused": {
+        "tag": "A",
+        "className": "ops-sidebar-link",
+        "text": "היום",
+        "outline": "solid"
+      }
+    }
+  },
+  "started": "2026-09-26T21:09:54.981Z",
+  "finished": "2026-09-26T21:10:31.006Z",
+  "pass": true
+}

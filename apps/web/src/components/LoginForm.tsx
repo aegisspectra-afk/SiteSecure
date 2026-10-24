@@ -13,18 +13,22 @@ const schema = z.object({
 
 export function LoginForm({
   onSubmit,
+  onSubmitUnit,
   error,
   loading,
 }: {
   onSubmit: (email: string, password: string) => Promise<void>;
+  onSubmitUnit?: (code: string) => Promise<void>;
   error?: string | null;
   loading?: boolean;
 }) {
   const { setPasswordScan } = useAuthExperience();
+  const [mode, setMode] = useState<"password" | "unit">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [unitCode, setUnitCode] = useState("");
   const [remember, setRemember] = useState(() => getRememberDevice());
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string; code?: string }>({});
   const busy = Boolean(loading);
 
   useEffect(() => {
@@ -35,6 +39,16 @@ export function LoginForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (mode === "unit") {
+      const code = unitCode.replace(/[\s_-]/g, "").trim();
+      if (code.length < 8) {
+        setFieldErrors({ code: he.required });
+        return;
+      }
+      setFieldErrors({});
+      await onSubmitUnit?.(code);
+      return;
+    }
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) {
       const next: { email?: string; password?: string } = {};
@@ -55,12 +69,48 @@ export function LoginForm({
       onSubmit={handleSubmit}
       aria-busy={busy || undefined}
       className={
-        error || fieldErrors.email || fieldErrors.password
+        error || fieldErrors.email || fieldErrors.password || fieldErrors.code
           ? "auth-login-form ss-auth-shake gap-5"
           : "auth-login-form gap-5"
       }
     >
       <div className="flex flex-col gap-4">
+        {onSubmitUnit ? (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={mode === "password" ? "pill" : "secondary"}
+              disabled={busy}
+              onClick={() => setMode("password")}
+            >
+              {he.loginPrimary}
+            </Button>
+            <Button
+              type="button"
+              variant={mode === "unit" ? "pill" : "secondary"}
+              disabled={busy}
+              onClick={() => setMode("unit")}
+            >
+              {he.sspUnitLoginToggle}
+            </Button>
+          </div>
+        ) : null}
+        {mode === "unit" && onSubmitUnit ? (
+          <AuthField
+            id="unit-code"
+            name="unit-code"
+            label={he.sspUnitCodeLabel}
+            autoComplete="one-time-code"
+            appearance="comfortable"
+            ltr
+            value={unitCode}
+            onChange={(ev) => setUnitCode(ev.target.value)}
+            error={fieldErrors.code}
+            disabled={busy}
+            hint={he.sspUnitLoginHint}
+          />
+        ) : (
+          <>
         <AuthField
           id="email"
           name="email"
@@ -100,6 +150,8 @@ export function LoginForm({
           disabled={busy}
           className="accent-action"
         />
+          </>
+        )}
       </div>
 
       {error ? <AuthAlert>{error}</AuthAlert> : null}
@@ -112,7 +164,7 @@ export function LoginForm({
         disabled={busy}
         className="auth-cta w-full"
       >
-        {he.loginPrimary}
+        {mode === "unit" ? he.sspUnitLoginSubmit : he.loginPrimary}
       </Button>
     </AuthForm>
   );

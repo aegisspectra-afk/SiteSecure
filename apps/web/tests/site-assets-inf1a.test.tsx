@@ -202,6 +202,9 @@ describe("AssetDetail", () => {
     expect(await screen.findByText("התקנת חניון")).toBeTruthy();
     expect(screen.getByTestId("asset-warranty")).toBeTruthy();
     expect(screen.getByText("WR-1")).toBeTruthy();
+    expect(api.listEquipmentIpAddresses).not.toHaveBeenCalled();
+    expect(api.listEquipmentAssetConnections).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("asset-section-connections")).toBeNull();
   });
 
   it("hides edit for read-only role", async () => {

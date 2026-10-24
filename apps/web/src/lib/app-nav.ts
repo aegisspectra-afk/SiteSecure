@@ -19,7 +19,13 @@ export type AppNavTo =
   | "/app/ssp"
   | "/app/ssp/alerts"
   | "/app/ssp/sites"
+  | "/app/ssp/offices"
   | "/app/ssp/users"
+  | "/app/ssp/assignments"
+  | "/app/ssp/my-forms"
+  | "/app/ssp/my-submissions"
+  | "/app/ssp/reports"
+  | "/app/ssp/profile"
   | "/app/ssp/messages"
   | "/app/ssp/mobility"
   | "/app/ssp/templates"
@@ -34,11 +40,7 @@ export type AppNavTo =
   | "/app/ssp/patrols"
   | "/app/ssp/organization"
   | "/app/ssp/devices"
-  | "/app/workforce"
-  | "/app/workforce/employees"
-  | "/app/workforce/sites"
-  | "/app/workforce/positions"
-  | "/app/workforce/schedules"
+  | "/app/ssp/unit-codes"
   | "/app/warranties"
   | "/app/knowledge"
   | "/app/settings"
@@ -116,7 +118,6 @@ export const TARGET_IA = [
       { id: "service", status: "live" as const, routeHint: "/app/service" },
       { id: "fleet", status: "live" as const, routeHint: "/app/fleet" },
       { id: "ssp", status: "live" as const, routeHint: "/app/ssp" },
-      { id: "workforce", status: "live" as const, routeHint: "/app/workforce" },
       { id: "warranties", status: "live" as const, routeHint: "/app/warranties" },
       { id: "knowledge", status: "live" as const, routeHint: "/app/knowledge" },
     ],
@@ -157,9 +158,6 @@ export function isNavSelected(to: AppNavTo, pathname: string): boolean {
   }
   if (to === "/app/ssp") {
     return pathname === "/app/ssp" || pathname === "/app/ssp/";
-  }
-  if (to === "/app/workforce") {
-    return pathname === "/app/workforce" || pathname === "/app/workforce/";
   }
   return pathname === to || pathname.startsWith(`${to}/`);
 }

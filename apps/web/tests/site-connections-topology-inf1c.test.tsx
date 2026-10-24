@@ -115,62 +115,17 @@ describe("INF-1C Asset connections", () => {
     });
   });
 
-  it("lists connections on Asset detail", async () => {
-    api.listEquipmentAssetConnections.mockResolvedValue({
-      items: [
-        {
-          id: "c1",
-          workspace_id: "ws1",
-          site_id: "s1",
-          source_equipment_id: "eq1",
-          target_equipment_id: "sw1",
-          connection_type: "poe",
-          source_port: "eth0",
-          target_port: "1",
-          notes: null,
-          target_name: "CCTV Switch",
-          target_asset_code: "SW-CCTV-01",
-          target_category: "switch",
-          target_ip: "10.10.20.2",
-          created_at: "",
-          updated_at: "",
-        },
-      ],
-    });
+  it("hides connections on the live asset page until the API is mounted", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
         <AssetDetail siteId="s1" assetId="eq1" />
       </QueryClientProvider>,
     );
-    expect(await screen.findByTestId("asset-connections-list")).toBeTruthy();
-    expect(screen.getByText("CCTV Switch")).toBeTruthy();
-    expect(screen.getByText(/PoE/)).toBeTruthy();
-  });
-
-  it("shows empty connections state", async () => {
-    api.listEquipmentAssetConnections.mockResolvedValue({ items: [] });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <AssetDetail siteId="s1" assetId="eq1" />
-      </QueryClientProvider>,
-    );
-    expect(await screen.findByTestId("asset-connections-empty")).toBeTruthy();
-    expect(screen.getByText(he.connectionEmpty)).toBeTruthy();
-  });
-
-  it("opens create connection form", async () => {
-    api.listEquipmentAssetConnections.mockResolvedValue({ items: [] });
-    const user = userEvent.setup();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <AssetDetail siteId="s1" assetId="eq1" />
-      </QueryClientProvider>,
-    );
-    await user.click(await screen.findByTestId("connection-add-open"));
-    expect(await screen.findByTestId("connection-form")).toBeTruthy();
+    expect(await screen.findByTestId("asset-detail")).toBeTruthy();
+    expect(screen.queryByTestId("asset-section-connections")).toBeNull();
+    expect(screen.queryByTestId("asset-connections")).toBeNull();
+    expect(api.listEquipmentAssetConnections).not.toHaveBeenCalled();
   });
 });
 

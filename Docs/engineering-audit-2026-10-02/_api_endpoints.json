@@ -1,0 +1,1634 @@
+[
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/summary",
+    "line": 137
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/organizations",
+    "line": 441
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/admin/organizations/{workspace_id}",
+    "line": 475
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/users",
+    "line": 518
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/users/{user_id}/archive",
+    "line": 614
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/users/{user_id}/restore",
+    "line": 632
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/admin/users/{user_id}/badges",
+    "line": 648
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/beta/participants",
+    "line": 704
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/admin/users/{user_id}/beta",
+    "line": 771
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/audit",
+    "line": 875
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/feedback",
+    "line": 957
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/admin/feedback/{report_id}",
+    "line": 977
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/feature-flags",
+    "line": 998
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/admin/feature-flags/{flag_id}",
+    "line": 1012
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/organizations",
+    "line": 1094
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/memberships",
+    "line": 1157
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/invitations",
+    "line": 1192
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/invitations",
+    "line": 1219
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/invitations/{invitation_id}/revoke",
+    "line": 1325
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/invitations/{invitation_id}/reissue",
+    "line": 1367
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/archive",
+    "line": 1410
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/admin/archive/profiles/{profile_id}",
+    "line": 1525
+  },
+  {
+    "file": "apps/api/app/routers/admin.py",
+    "module": "admin",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/admin/archive/profiles/{profile_id}/restore",
+    "line": 1567
+  },
+  {
+    "file": "apps/api/app/routers/auth.py",
+    "module": "auth",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/auth/session",
+    "line": 57
+  },
+  {
+    "file": "apps/api/app/routers/auth.py",
+    "module": "auth",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/me",
+    "line": 157
+  },
+  {
+    "file": "apps/api/app/routers/auth.py",
+    "module": "auth",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/authz/catalog",
+    "line": 180
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/categories",
+    "line": 226
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/products",
+    "line": 253
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/products/{product_id}",
+    "line": 313
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/products",
+    "line": 336
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/products/{product_id}",
+    "line": 384
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/ensure-defaults",
+    "line": 459
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/products/bulk-pricing",
+    "line": 478
+  },
+  {
+    "file": "apps/api/app/routers/catalog.py",
+    "module": "catalog",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/templates",
+    "line": 561
+  },
+  {
+    "file": "apps/api/app/routers/catalog_import.py",
+    "module": "catalog_import",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/import/targets",
+    "line": 170
+  },
+  {
+    "file": "apps/api/app/routers/catalog_import.py",
+    "module": "catalog_import",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/import/template",
+    "line": 188
+  },
+  {
+    "file": "apps/api/app/routers/catalog_import.py",
+    "module": "catalog_import",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/import/parse",
+    "line": 206
+  },
+  {
+    "file": "apps/api/app/routers/catalog_import.py",
+    "module": "catalog_import",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/import/preview",
+    "line": 249
+  },
+  {
+    "file": "apps/api/app/routers/catalog_import.py",
+    "module": "catalog_import",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/import/commit",
+    "line": 292
+  },
+  {
+    "file": "apps/api/app/routers/cctv.py",
+    "module": "cctv",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/cctv/recommend",
+    "line": 118
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/asset-connections",
+    "line": 149
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/equipment/{equipment_id}/asset-connections",
+    "line": 179
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/topology",
+    "line": 220
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/asset-connections",
+    "line": 292
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/asset-connections/{connection_id}",
+    "line": 349
+  },
+  {
+    "file": "apps/api/app/routers/connections.py",
+    "module": "connections",
+    "wired_in_main": "NO",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/asset-connections/{connection_id}",
+    "line": 401
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/portal",
+    "line": 209
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/portal",
+    "line": 234
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/portal/{access_id}/link",
+    "line": 290
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/portal/{access_id}/resend",
+    "line": 312
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/portal/{access_id}/revoke",
+    "line": 367
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/portal/invites/peek",
+    "line": 410
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/portal/invites/accept",
+    "line": 446
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/portal/session",
+    "line": 461
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/portal/access/{access_id}",
+    "line": 492
+  },
+  {
+    "file": "apps/api/app/routers/customer_portal.py",
+    "module": "customer_portal",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/portal/access/{access_id}/documents/{document_id}/url",
+    "line": 504
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/customers",
+    "line": 113
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers",
+    "line": 153
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}",
+    "line": 179
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}",
+    "line": 202
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}",
+    "line": 227
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/contacts",
+    "line": 254
+  },
+  {
+    "file": "apps/api/app/routers/customers.py",
+    "module": "customers",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/customers/{customer_id}/contacts",
+    "line": 283
+  },
+  {
+    "file": "apps/api/app/routers/dashboard.py",
+    "module": "dashboard",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/dashboard",
+    "line": 150
+  },
+  {
+    "file": "apps/api/app/routers/documents.py",
+    "module": "documents",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/documents",
+    "line": 92
+  },
+  {
+    "file": "apps/api/app/routers/documents.py",
+    "module": "documents",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/documents/uploads",
+    "line": 127
+  },
+  {
+    "file": "apps/api/app/routers/documents.py",
+    "module": "documents",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/documents/{document_id}/complete",
+    "line": 179
+  },
+  {
+    "file": "apps/api/app/routers/documents.py",
+    "module": "documents",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/documents/{document_id}/url",
+    "line": 283
+  },
+  {
+    "file": "apps/api/app/routers/feedback.py",
+    "module": "feedback",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/feedback",
+    "line": 60
+  },
+  {
+    "file": "apps/api/app/routers/feedback.py",
+    "module": "feedback",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/feedback",
+    "line": 79
+  },
+  {
+    "file": "apps/api/app/routers/feedback.py",
+    "module": "feedback",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/feature-flags",
+    "line": 118
+  },
+  {
+    "file": "apps/api/app/routers/health.py",
+    "module": "health",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/health",
+    "line": 6
+  },
+  {
+    "file": "apps/api/app/routers/health.py",
+    "module": "health",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/health",
+    "line": 11
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/network-overview",
+    "line": 203
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/vlans",
+    "line": 265
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/vlans",
+    "line": 290
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/vlans/{vlan_id}",
+    "line": 313
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/networks",
+    "line": 343
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/networks",
+    "line": 393
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/networks/{network_id}",
+    "line": 431
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}/ip-addresses",
+    "line": 542
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/equipment/{equipment_id}/ip-addresses",
+    "line": 591
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/ip-addresses",
+    "line": 631
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/ip-addresses/{ip_id}",
+    "line": 675
+  },
+  {
+    "file": "apps/api/app/routers/ipam.py",
+    "module": "ipam",
+    "wired_in_main": "NO",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/ip-addresses/{ip_id}",
+    "line": 740
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs",
+    "line": 249
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs",
+    "line": 314
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}",
+    "line": 383
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}",
+    "line": 397
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/en-route",
+    "line": 420
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/arrived",
+    "line": 444
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/start",
+    "line": 474
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/complete",
+    "line": 503
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/assign",
+    "line": 573
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/checklist",
+    "line": 673
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/checklist",
+    "line": 696
+  },
+  {
+    "file": "apps/api/app/routers/jobs.py",
+    "module": "jobs",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/jobs/{job_id}/checklist/{item_id}",
+    "line": 720
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/leads",
+    "line": 104
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/leads",
+    "line": 151
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/leads/{lead_id}",
+    "line": 169
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/leads/{lead_id}",
+    "line": 186
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/projects",
+    "line": 330
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/projects",
+    "line": 371
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/projects/from-quote",
+    "line": 412
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/projects/{project_id}",
+    "line": 475
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/projects/{project_id}",
+    "line": 496
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/service-calls",
+    "line": 589
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/service-calls",
+    "line": 624
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/service-calls/{call_id}",
+    "line": 652
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/service-calls/{call_id}",
+    "line": 688
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/service-calls/{call_id}/create-job",
+    "line": 735
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/warranties",
+    "line": 843
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/warranties",
+    "line": 877
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/tasks",
+    "line": 935
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/tasks",
+    "line": 969
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/tasks/{task_id}",
+    "line": 986
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/knowledge",
+    "line": 1030
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/knowledge",
+    "line": 1061
+  },
+  {
+    "file": "apps/api/app/routers/ops_modules.py",
+    "module": "ops_modules",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/knowledge/{article_id}",
+    "line": 1074
+  },
+  {
+    "file": "apps/api/app/routers/public_quotes.py",
+    "module": "public_quotes",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/public/quotes/{token}",
+    "line": 226
+  },
+  {
+    "file": "apps/api/app/routers/public_quotes.py",
+    "module": "public_quotes",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/public/quotes/{token}/pdf",
+    "line": 234
+  },
+  {
+    "file": "apps/api/app/routers/public_quotes.py",
+    "module": "public_quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/public/quotes/{token}/approve",
+    "line": 256
+  },
+  {
+    "file": "apps/api/app/routers/public_quotes.py",
+    "module": "public_quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/public/quotes/{token}/reject",
+    "line": 348
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/sections",
+    "line": 162
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/sections",
+    "line": 175
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/sections/{section_id}",
+    "line": 208
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/sections/{section_id}",
+    "line": 241
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/sections/{section_id}/duplicate",
+    "line": 278
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/packages",
+    "line": 350
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/catalog/packages",
+    "line": 372
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/apply-package",
+    "line": 416
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/save-as-package",
+    "line": 492
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/save-as-template",
+    "line": 530
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/margin-override",
+    "line": 607
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/versions",
+    "line": 652
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/versions/compare",
+    "line": 676
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/events",
+    "line": 757
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/events",
+    "line": 793
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/document",
+    "line": 819
+  },
+  {
+    "file": "apps/api/app/routers/quote_cpq.py",
+    "module": "quote_cpq",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/pdf",
+    "line": 834
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes",
+    "line": 1031
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes",
+    "line": 1146
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}",
+    "line": 1197
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}",
+    "line": 1212
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/items",
+    "line": 1247
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/apply-template",
+    "line": 1273
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/items/{item_id}",
+    "line": 1366
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/items/{item_id}",
+    "line": 1451
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/recalculate",
+    "line": 1482
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/send",
+    "line": 1497
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/revise",
+    "line": 1590
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/share",
+    "line": 1657
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/revoke-link",
+    "line": 1731
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}",
+    "line": 1763
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/duplicate",
+    "line": 1809
+  },
+  {
+    "file": "apps/api/app/routers/quotes.py",
+    "module": "quotes",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/preview",
+    "line": 1892
+  },
+  {
+    "file": "apps/api/app/routers/search.py",
+    "module": "search",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/search",
+    "line": 52
+  },
+  {
+    "file": "apps/api/app/routers/sites.py",
+    "module": "sites",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites",
+    "line": 82
+  },
+  {
+    "file": "apps/api/app/routers/sites.py",
+    "module": "sites",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/sites",
+    "line": 125
+  },
+  {
+    "file": "apps/api/app/routers/sites.py",
+    "module": "sites",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}",
+    "line": 160
+  },
+  {
+    "file": "apps/api/app/routers/sites.py",
+    "module": "sites",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}",
+    "line": 179
+  },
+  {
+    "file": "apps/api/app/routers/sites.py",
+    "module": "sites",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/sites/{site_id}",
+    "line": 219
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/system-designs",
+    "line": 298
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/quotes/{quote_id}/system-designs",
+    "line": 327
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/system-designs/{design_id}",
+    "line": 369
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/system-designs/{design_id}",
+    "line": 384
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspace_id}/system-designs/{design_id}",
+    "line": 477
+  },
+  {
+    "file": "apps/api/app/routers/system_designs.py",
+    "module": "system_designs",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/system-designs/{design_id}/apply",
+    "line": 503
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/systems",
+    "line": 145
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/systems",
+    "line": 170
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/systems/{system_id}",
+    "line": 197
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/equipment",
+    "line": 230
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/equipment",
+    "line": 255
+  },
+  {
+    "file": "apps/api/app/routers/systems.py",
+    "module": "systems",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/equipment/{equipment_id}",
+    "line": 282
+  },
+  {
+    "file": "apps/api/app/routers/team.py",
+    "module": "team",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/members",
+    "line": 120
+  },
+  {
+    "file": "apps/api/app/routers/team.py",
+    "module": "team",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/usage",
+    "line": 165
+  },
+  {
+    "file": "apps/api/app/routers/team.py",
+    "module": "team",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/members/{member_id}",
+    "line": 217
+  },
+  {
+    "file": "apps/api/app/routers/team.py",
+    "module": "team",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/audit",
+    "line": 324
+  },
+  {
+    "file": "apps/api/app/routers/team.py",
+    "module": "team",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/security",
+    "line": 357
+  },
+  {
+    "file": "apps/api/app/routers/telemetry.py",
+    "module": "telemetry",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/telemetry/client-error",
+    "line": 27
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/settings",
+    "line": 82
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/settings",
+    "line": 102
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/company-profile",
+    "line": 208
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/company-profile/logo-upload",
+    "line": 238
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/company-profile/logo-complete",
+    "line": 279
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/company-profile/document-preview",
+    "line": 333
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/roles",
+    "line": 470
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/roles",
+    "line": 487
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/roles/{role_id}",
+    "line": 534
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/pdf-templates",
+    "line": 628
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/pdf-templates",
+    "line": 646
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}/pdf-templates/{template_id}",
+    "line": 679
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/pdf-templates/{template_id}/duplicate",
+    "line": 731
+  },
+  {
+    "file": "apps/api/app/routers/workspace_settings.py",
+    "module": "workspace_settings",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/pdf-templates/{template_id}/preview",
+    "line": 771
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces",
+    "line": 160
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}",
+    "line": 205
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspace_id}",
+    "line": 219
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/invitations",
+    "line": 244
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspace_id}/invitations",
+    "line": 329
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/invitations/{invitation_id}/revoke",
+    "line": 350
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspace_id}/invitations/{invitation_id}/reissue",
+    "line": 399
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/invitations/public-peek",
+    "line": 468
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "GET",
+    "path": "/api/v1/invitations/peek",
+    "line": 496
+  },
+  {
+    "file": "apps/api/app/routers/workspaces.py",
+    "module": "workspaces",
+    "wired_in_main": "yes",
+    "method": "POST",
+    "path": "/api/v1/invitations/accept",
+    "line": 538
+  }
+]

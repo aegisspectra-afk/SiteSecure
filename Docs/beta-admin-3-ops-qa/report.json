@@ -1,0 +1,59 @@
+{
+  "checkpoint": "BETA-ADMIN-3",
+  "date": "2026-09-28",
+  "verified_live": true,
+  "origin": "http://localhost:5173/admin",
+  "rtl": true,
+  "viewports": {
+    "1440": {
+      "sidebar": "flex",
+      "mobileNav": "none",
+      "metricCols": 6,
+      "overflowX": false,
+      "result": "PASS"
+    },
+    "1032": {
+      "sidebar": "flex",
+      "mobileNav": "none",
+      "metricCols": 6,
+      "overflowX": false,
+      "result": "PASS"
+    },
+    "768": {
+      "sidebar": "none",
+      "mobileNav": "flex",
+      "metricCols": 3,
+      "overflowX": false,
+      "result": "PASS"
+    },
+    "390": {
+      "sidebar": "none",
+      "mobileNav": "flex",
+      "metricCols": 2,
+      "overflowX": false,
+      "note": "mobile nav scrolls internally",
+      "result": "PASS"
+    },
+    "360": {
+      "sidebar": "none",
+      "mobileNav": "flex",
+      "metricCols": 2,
+      "overflowX": false,
+      "result": "PASS"
+    }
+  },
+  "live_signals": {
+    "heading": "Founding Beta Operations",
+    "cta": "צרף Founding Technician",
+    "nav_primary": ["לוח תפעול", "סביבות עבודה", "הזמנות", "משתמשים", "פידבק", "Audit"],
+    "nav_advanced": ["תוכנית בטא", "Badges", "דגלי יכולת"],
+    "metrics_observed": {
+      "beta_workspaces_active": 2,
+      "founding_technicians": 11,
+      "invites_pending": 53,
+      "invites_expired_revoked": 188,
+      "feedback_open": 7,
+      "joined_7d": 287
+    }
+  }
+}

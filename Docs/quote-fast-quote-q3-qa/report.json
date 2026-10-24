@@ -1,0 +1,103 @@
+{
+  "measuredAt": "2026-09-27T19:00:31.093Z",
+  "web": "http://localhost:5173",
+  "email": "phase1b.owner.1790012816@sitesecure.test",
+  "targetMinutes": 5,
+  "quoteIdSeed": "c79b9091-6200-454e-b0f9-c7dee78007f6",
+  "environmentNotes": [
+    "QA workspace has customer+site on seeded quote",
+    "Catalog search returned zero hits for מצלמה/NVR/HDD/התקנה/camera/labor",
+    "No quote packages available in workspace",
+    "No proposal templates available in workspace",
+    "Accelerated path therefore cannot complete package/template apply; CCTV remains available via Fast Start"
+  ],
+  "paths": [
+    {
+      "path": "A-manual-catalog",
+      "clicks": 6,
+      "overlaysOpened": 1,
+      "searches": 4,
+      "repeatedDataEntry": 0,
+      "failures": [
+        "catalog miss: מצלמה",
+        "catalog miss: NVR",
+        "catalog miss: HDD",
+        "catalog miss: התקנה"
+      ],
+      "notes": [
+        "fast-start already present",
+        "QuickAdd browse opened and stayed open for multi-search (1 overlay)",
+        "Could not complete add of 4 cameras/NVR/HDD/labor because catalog had no matching products"
+      ],
+      "elapsedMs": 9567,
+      "elapsedSec": 9.6,
+      "completedScenario": false
+    },
+    {
+      "path": "A-manual-catalog-cdp-retry",
+      "clicks": 6,
+      "overlaysOpened": 1,
+      "searches": 6,
+      "repeatedDataEntry": 0,
+      "failures": [
+        "miss:מצלמה",
+        "miss:camera",
+        "miss:NVR",
+        "miss:HDD",
+        "miss:התקנה",
+        "miss:labor"
+      ],
+      "elapsedMs": 6127,
+      "elapsedSec": 6.1,
+      "completedScenario": false
+    },
+    {
+      "path": "B-accelerated-package",
+      "clicks": 2,
+      "overlaysOpened": 1,
+      "searches": 0,
+      "repeatedDataEntry": 0,
+      "failures": [
+        "Package picker opened; workspace has zero packages — apply button never available"
+      ],
+      "notes": [
+        "fast-start already present",
+        "Package vs template copy visible in empty picker"
+      ],
+      "elapsedMs": 36165,
+      "elapsedSec": 36.2,
+      "completedScenario": false
+    }
+  ],
+  "clickCountBeforeAfter": {
+    "beforeEstimateReference": "Pre-Q3 typical: open add menu + catalog mode reopen per product ≈ 2–3 overlays and ≥2 clicks/product (~12–16 clicks for 4 products) plus separate labor/discount/preview",
+    "afterMeasuredPathA": {
+      "overlays": 1,
+      "clicks": 6,
+      "searches": 4,
+      "note": "Multi-add keeps one overlay; searches did not yield products in this workspace"
+    }
+  },
+  "overlayCountBeforeAfter": {
+    "before": "Typically reopen QuickAdd per catalog pick",
+    "after": "1 overlay for multi-add session (measured)"
+  },
+  "duplicateEntry": {
+    "customerSite": "Preserved on seeded quote; Fast Start requires both before showing",
+    "result": "No re-entry of customer/site during add flow"
+  },
+  "mobile": {
+    "widths": [
+      { "width": 390, "fastStart": true, "dockBottom": 828 },
+      { "width": 360, "fastStart": true, "dockBottom": 828 }
+    ],
+    "notes": "Fast Start visible; bottom dock present; QuickAdd CSS reserves dock clearance"
+  },
+  "underFiveMinutes": {
+    "pathA_wallClockSec": 9.6,
+    "pathB_wallClockSec": 36.2,
+    "pathA_completed": false,
+    "pathB_completed": false,
+    "blocker": "Empty catalog + empty packages/templates in Phase1B QA workspace"
+  }
+}

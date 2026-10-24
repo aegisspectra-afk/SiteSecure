@@ -39,6 +39,22 @@ function SspTemplatesHubPage() {
               </Link>
             </li>
           ) : null}
+          {sspCan("ssp.sites.view") || sspCan("ssp.forms.view") ? (
+            <li>
+              <Link to="/app/ssp/offices" className="block px-4 py-3 hover:bg-bg-subtle">
+                <p className="font-medium text-fg">{he.sspNavOffices}</p>
+                <p className="text-xs text-fg-muted">{he.sspOfficesLead}</p>
+              </Link>
+            </li>
+          ) : null}
+          {sspCan("ssp.members.view") || sspCan("ssp.officers.view") ? (
+            <li>
+              <Link to="/app/ssp/users" className="block px-4 py-3 hover:bg-bg-subtle">
+                <p className="font-medium text-fg">{he.sspNavPeople}</p>
+                <p className="text-xs text-fg-muted">{he.sspPeopleLead}</p>
+              </Link>
+            </li>
+          ) : null}
         </ul>
         <p className="text-sm text-fg-muted">{he.sspReportsDeferred}</p>
       </ModuleScaffold>

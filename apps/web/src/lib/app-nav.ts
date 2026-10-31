@@ -8,6 +8,8 @@ export type AppNavTo =
   | "/app/dashboard"
   | "/app/today"
   | "/app/tasks"
+  | "/app/jobs"
+  | "/app/analytics"
   | "/app/customers"
   | "/app/leads"
   | "/app/quotes"
@@ -53,6 +55,8 @@ export type NavIconKey =
   | "overview"
   | "today"
   | "calendar"
+  | "jobs"
+  | "analytics"
   | "customers"
   | "leads"
   | "quotes"
@@ -97,6 +101,7 @@ export const TARGET_IA = [
       { id: "dashboard", status: "live" as const, routeHint: "/app/dashboard" },
       { id: "today", status: "live" as const, routeHint: "/app/today" },
       { id: "calendar", status: "live" as const, routeHint: "/app/tasks" },
+      { id: "analytics", status: "live" as const, routeHint: "/app/analytics" },
     ],
   },
   {
@@ -114,10 +119,10 @@ export const TARGET_IA = [
     label: () => he.navGroupOps,
     items: [
       { id: "projects", status: "live" as const, routeHint: "/app/projects" },
+      { id: "jobs", status: "live" as const, routeHint: "/app/jobs" },
       { id: "site-files", status: "live" as const, routeHint: "/app/sites" },
       { id: "service", status: "live" as const, routeHint: "/app/service" },
       { id: "fleet", status: "live" as const, routeHint: "/app/fleet" },
-      { id: "ssp", status: "live" as const, routeHint: "/app/ssp" },
       { id: "warranties", status: "live" as const, routeHint: "/app/warranties" },
       { id: "knowledge", status: "live" as const, routeHint: "/app/knowledge" },
     ],
@@ -187,6 +192,12 @@ export function appNav(
           icon: "calendar",
           visible: allow("calendar.view"),
         },
+        {
+          to: "/app/analytics",
+          label: he.navAnalytics,
+          icon: "analytics",
+          visible: allow("dashboard.view") && !fieldHome,
+        },
       ],
     },
     {
@@ -228,6 +239,12 @@ export function appNav(
           label: he.navProjects,
           icon: "projects",
           visible: allow("projects.view") && hasFeature(features, "projects"),
+        },
+        {
+          to: "/app/jobs",
+          label: he.navJobs,
+          icon: "jobs",
+          visible: allow("jobs.view"),
         },
         {
           to: "/app/sites",
@@ -331,6 +348,12 @@ export function mobileWorkNav(
       visible: allow("projects.view") && hasFeature(features, "projects"),
     },
     {
+      to: "/app/jobs",
+      label: he.navJobs,
+      icon: "jobs",
+      visible: allow("jobs.view"),
+    },
+    {
       to: "/app/service",
       label: he.navServiceShort,
       icon: "service",
@@ -427,6 +450,12 @@ export function mobileCommandSections(
       label: he.navKnowledge,
       icon: "knowledge",
       visible: allow("knowledge.view"),
+    },
+    {
+      to: "/app/analytics",
+      label: he.navAnalytics,
+      icon: "analytics",
+      visible: allow("dashboard.view") && homeVariant(roleKey) !== "today",
     },
   ];
 

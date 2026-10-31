@@ -91,6 +91,11 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./tests/setup.ts"],
+      env: {
+        VITE_API_URL: env.VITE_API_URL || "http://127.0.0.1:8001",
+        VITE_SUPABASE_URL: env.VITE_SUPABASE_URL || "http://127.0.0.1:54321",
+        VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY || "test-anon-key-local-only",
+      },
     },
   };
 });

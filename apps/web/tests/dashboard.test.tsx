@@ -142,7 +142,7 @@ describe("OpsDashboard", () => {
     expect(screen.getByText(he.activationCompactLead)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: he.nextActionTitle })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: he.todayTitle })).toBeInTheDocument();
-    expect(screen.getByText(he.todaySectionEmptyCompact)).toBeInTheDocument();
+    expect(screen.getByText(he.todayRestDay)).toBeInTheDocument();
     expect(screen.getByLabelText(he.dashQuickActionsAria)).toBeInTheDocument();
     // Phase 1B.4.1: no isolated +יצירה — create lives in Quick Actions only.
     expect(screen.queryByRole("button", { name: he.dashCreate })).not.toBeInTheDocument();
@@ -994,7 +994,7 @@ describe("workspaceSetup", () => {
       "/app/settings/roles",
       "/app/settings/security",
     ]);
-    expect(liveAdminActions("technician", ["core"])).toEqual([]);
+    expect(liveAdminActions("technician", ["core"]).map((item) => item.href)).toEqual(["/app/settings"]);
   });
 });
 

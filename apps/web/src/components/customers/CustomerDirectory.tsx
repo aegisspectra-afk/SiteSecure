@@ -39,7 +39,9 @@ export function CustomerDirectoryHeader({
         <h1 className="customer-dir-title">{he.customersTitle}</h1>
         <p className="customer-dir-lead">{he.customersLead}</p>
         {summary ? (
-          <p className="customer-dir-count">{he.customerDirectoryCount(summary.total)}</p>
+          <p className="customer-dir-count" data-testid="customers-count">
+            {he.customerDirectoryCount(summary.total)}
+          </p>
         ) : null}
       </div>
     </header>
@@ -87,7 +89,12 @@ export function CustomerDirectoryToolbar({
       <CustomerDirectorySearch value={query} onChange={onQueryChange} onClear={onClearSearch} />
       <CustomerDirectoryFilters filter={filter} onChange={onFilterChange} />
       {canCreate ? (
-        <Button type="button" variant={creating ? "secondary" : "primary"} onClick={onToggleCreate}>
+        <Button
+          type="button"
+          variant={creating ? "secondary" : "primary"}
+          data-testid="customers-create-toggle"
+          onClick={onToggleCreate}
+        >
           {creating ? (
             he.cancel
           ) : (
@@ -116,6 +123,7 @@ export function CustomerDirectorySearch({
       <Search className="customer-dir-search-icon" aria-hidden />
       <input
         id="customer-directory-search"
+        data-testid="customers-search"
         className="customer-dir-search-input"
         value={value}
         onChange={(ev) => onChange(ev.target.value)}
@@ -261,7 +269,12 @@ function customerContactLine(customer: CustomerDirectoryRow): ReactNode {
 export function CustomerRow({ customer }: { customer: CustomerDirectoryRow }) {
   const meta = formatCustomerMeta(customer.counts);
   return (
-    <Link to="/app/customers/$customerId" params={{ customerId: customer.id }} className="customer-dir-row">
+    <Link
+      to="/app/customers/$customerId"
+      params={{ customerId: customer.id }}
+      className="customer-dir-row"
+      data-testid="customer-open"
+    >
       <CustomerAvatar name={customer.display_name} />
       <div className="customer-dir-row-main">
         <div className="customer-dir-row-top">
@@ -288,9 +301,30 @@ export function CustomerRow({ customer }: { customer: CustomerDirectoryRow }) {
   );
 }
 
+export function CustomerMobileCard({ customer }: { customer: CustomerOut }) {
+  return (
+    <article className="customer-dir-mobile-card">
+      <CustomerAvatar name={customer.display_name} />
+      <p>{customer.display_name}</p>
+      {customer.phone ? (
+        <p className="ltr-meta" dir="ltr">
+          {customer.phone}
+        </p>
+      ) : null}
+      <Link
+        to="/app/customers/$customerId"
+        params={{ customerId: customer.id }}
+        data-testid="customer-open"
+      >
+        {he.customerDirectoryOpen}
+      </Link>
+    </article>
+  );
+}
+
 export function CustomerDirectoryDesktopTable({ rows }: { rows: CustomerDirectoryRow[] }) {
   return (
-    <div className="customer-dir-desktop-table">
+    <div className="customer-dir-desktop-table" data-testid="customers-desktop-table">
       <Table>
         <THead>
           <TR>
@@ -309,6 +343,7 @@ export function CustomerDirectoryDesktopTable({ rows }: { rows: CustomerDirector
                   to="/app/customers/$customerId"
                   params={{ customerId: customer.id }}
                   className="font-medium text-fg hover:underline"
+                  data-testid="customer-open"
                 >
                   {customer.display_name}
                 </Link>
@@ -348,7 +383,7 @@ export function CustomerDirectoryDesktopTable({ rows }: { rows: CustomerDirector
 
 export function CustomerDirectorySkeleton() {
   return (
-    <div className="customer-dir-list" aria-busy="true" aria-label={he.loading}>
+    <div className="customer-dir-list" aria-busy="true" aria-label={he.loading} data-testid="customers-loading">
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="customer-dir-skeleton-row">
           <span className="customer-dir-skeleton-avatar" />
@@ -371,11 +406,11 @@ export function CustomerDirectoryEmpty({
   onCreate: () => void;
 }) {
   return (
-    <div className="customer-dir-empty">
+    <div className="customer-dir-empty" data-testid="customers-empty">
       <p className="customer-dir-empty-title">{he.customerDirectoryEmptyTitle}</p>
       <p className="customer-dir-empty-body">{he.customerDirectoryEmptyBody}</p>
       {canCreate ? (
-        <Button type="button" className="mt-4" onClick={onCreate}>
+        <Button type="button" className="mt-4" data-testid="customers-empty-create" onClick={onCreate}>
           <Plus aria-hidden />
           {he.customersCreate}
         </Button>
@@ -386,11 +421,11 @@ export function CustomerDirectoryEmpty({
 
 export function CustomerDirectorySearchEmpty({ onClear }: { onClear: () => void }) {
   return (
-    <div className="customer-dir-empty">
+    <div className="customer-dir-empty" data-testid="customers-filtered-empty">
       <p className="customer-dir-empty-title">{he.customerDirectorySearchEmptyTitle}</p>
       <p className="customer-dir-empty-body">{he.customerDirectorySearchEmptyBody}</p>
       <Button type="button" variant="secondary" className="mt-4" onClick={onClear}>
-        {he.customerDirectoryClearSearch}
+        {he.customerDirectoryClearSearchAndFilters}
       </Button>
     </div>
   );
@@ -421,7 +456,7 @@ export function CustomerCreateForm({
 }) {
   if (!open) return null;
   return (
-    <form className="customer-dir-create ops-card p-4" onSubmit={onSubmit}>
+    <form className="customer-dir-create ops-card p-4" data-testid="customers-create-form" onSubmit={onSubmit}>
       <div className="grid gap-3 sm:grid-cols-3">
         <Input id="customer-name" label={he.name} value={name} onChange={(ev) => onName(ev.target.value)} required data-autofocus />
         <Input id="customer-email" label={he.email} value={email} onChange={(ev) => onEmail(ev.target.value)} />
@@ -461,7 +496,7 @@ export function CustomerDirectoryList({
   if (!rows.length) return <CustomerDirectoryEmpty canCreate={canCreate} onCreate={onCreate} />;
   return (
     <div className="customer-dir-results">
-      <div className="customer-dir-list">
+      <div className="customer-dir-list" data-testid="customers-mobile-list">
         {rows.map((customer) => (
           <CustomerRow key={customer.id} customer={customer} />
         ))}

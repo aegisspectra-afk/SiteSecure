@@ -79,11 +79,10 @@ import { Route as AppPlatformPathReviewRouteImport } from "./routes/app/platform
 import { Route as AppProjectsIndexRouteImport } from "./routes/app/projects/index"
 import { Route as AppProjectsProjectIdRouteImport } from "./routes/app/projects/$projectId"
 import { Route as AppQuotesIndexRouteImport } from "./routes/app/quotes/index"
-import { Route as AppQuotesQuoteIdRouteImport } from "./routes/app/quotes/$quoteId"
+import { Route as AppQuotesQuoteIdRouteRouteImport } from "./routes/app/quotes/$quoteId/route"
 import { Route as AppQuotesNewRouteImport } from "./routes/app/quotes/new"
 import { Route as AppServiceIndexRouteImport } from "./routes/app/service/index"
 import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
-import { Route as AppSettingsAppearanceRouteImport } from "./routes/app/settings/appearance"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
 import { Route as AppSettingsCompanyRouteImport } from "./routes/app/settings/company"
 import { Route as AppSettingsGeneralRouteImport } from "./routes/app/settings/general"
@@ -132,7 +131,8 @@ import { Route as AppWorkforceSitesRouteImport } from "./routes/app/workforce/si
 import { Route as PortalInviteTokenRouteImport } from "./routes/portal/invite/$token"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
 import { Route as AppFleetVehiclesVehicleIdRouteImport } from "./routes/app/fleet/vehicles.$vehicleId"
-import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId.preview"
+import { Route as AppQuotesQuoteIdIndexRouteImport } from "./routes/app/quotes/$quoteId/index"
+import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId/preview"
 import { Route as AppSspEventsIndexRouteImport } from "./routes/app/ssp/events.index"
 import { Route as AppSspEventsEventIdRouteImport } from "./routes/app/ssp/events.$eventId"
 import { Route as AppSspFormsIndexRouteImport } from "./routes/app/ssp/forms.index"
@@ -495,7 +495,7 @@ const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
   path: "/quotes/",
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppQuotesQuoteIdRoute = AppQuotesQuoteIdRouteImport.update({
+const AppQuotesQuoteIdRouteRoute = AppQuotesQuoteIdRouteRouteImport.update({
   id: "/quotes/$quoteId",
   path: "/quotes/$quoteId",
   getParentRoute: () => AppRouteRoute,
@@ -513,11 +513,6 @@ const AppServiceIndexRoute = AppServiceIndexRouteImport.update({
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
-  id: "/appearance",
-  path: "/appearance",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
@@ -762,10 +757,15 @@ const AppFleetVehiclesVehicleIdRoute =
     path: "/$vehicleId",
     getParentRoute: () => AppFleetVehiclesRoute,
   } as any)
+const AppQuotesQuoteIdIndexRoute = AppQuotesQuoteIdIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AppQuotesQuoteIdRouteRoute,
+} as any)
 const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
   id: "/preview",
   path: "/preview",
-  getParentRoute: () => AppQuotesQuoteIdRoute,
+  getParentRoute: () => AppQuotesQuoteIdRouteRoute,
 } as any)
 const AppSspEventsIndexRoute = AppSspEventsIndexRouteImport.update({
   id: "/events/",
@@ -869,6 +869,7 @@ export interface FileRoutesByFullPath {
   "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
   "/unit/": typeof UnitIndexRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteRouteWithChildren
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/fleet/access": typeof AppFleetAccessRoute
   "/app/fleet/assignments": typeof AppFleetAssignmentsRoute
@@ -888,9 +889,7 @@ export interface FileRoutesByFullPath {
   "/app/platform-path/products": typeof AppPlatformPathProductsRoute
   "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
-  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
@@ -955,6 +954,7 @@ export interface FileRoutesByFullPath {
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
   "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
   "/app/ssp/users/$userId": typeof AppSspUsersUserIdRoute
+  "/app/quotes/$quoteId/": typeof AppQuotesQuoteIdIndexRoute
   "/app/ssp/events/": typeof AppSspEventsIndexRoute
   "/app/ssp/forms/": typeof AppSspFormsIndexRoute
   "/app/ssp/sites/": typeof AppSspSitesIndexRoute
@@ -1015,9 +1015,7 @@ export interface FileRoutesByTo {
   "/app/platform-path/products": typeof AppPlatformPathProductsRoute
   "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
-  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
@@ -1082,6 +1080,7 @@ export interface FileRoutesByTo {
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
   "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
   "/app/ssp/users/$userId": typeof AppSspUsersUserIdRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdIndexRoute
   "/app/ssp/events": typeof AppSspEventsIndexRoute
   "/app/ssp/forms": typeof AppSspFormsIndexRoute
   "/app/ssp/sites": typeof AppSspSitesIndexRoute
@@ -1134,6 +1133,7 @@ export interface FileRoutesById {
   "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
   "/unit/": typeof UnitIndexRoute
+  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteRouteWithChildren
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/fleet/access": typeof AppFleetAccessRoute
   "/app/fleet/assignments": typeof AppFleetAssignmentsRoute
@@ -1153,9 +1153,7 @@ export interface FileRoutesById {
   "/app/platform-path/products": typeof AppPlatformPathProductsRoute
   "/app/platform-path/review": typeof AppPlatformPathReviewRoute
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
-  "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteWithChildren
   "/app/quotes/new": typeof AppQuotesNewRoute
-  "/app/settings/appearance": typeof AppSettingsAppearanceRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
@@ -1220,6 +1218,7 @@ export interface FileRoutesById {
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
   "/app/ssp/submissions/$submissionId": typeof AppSspSubmissionsSubmissionIdRoute
   "/app/ssp/users/$userId": typeof AppSspUsersUserIdRoute
+  "/app/quotes/$quoteId/": typeof AppQuotesQuoteIdIndexRoute
   "/app/ssp/events/": typeof AppSspEventsIndexRoute
   "/app/ssp/forms/": typeof AppSspFormsIndexRoute
   "/app/ssp/sites/": typeof AppSspSitesIndexRoute
@@ -1273,6 +1272,7 @@ export interface FileRouteTypes {
     | "/platform/"
     | "/portal/"
     | "/unit/"
+    | "/app/quotes/$quoteId"
     | "/app/customers/$customerId"
     | "/app/fleet/access"
     | "/app/fleet/assignments"
@@ -1292,9 +1292,7 @@ export interface FileRouteTypes {
     | "/app/platform-path/products"
     | "/app/platform-path/review"
     | "/app/projects/$projectId"
-    | "/app/quotes/$quoteId"
     | "/app/quotes/new"
-    | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
     | "/app/settings/general"
@@ -1359,6 +1357,7 @@ export interface FileRouteTypes {
     | "/app/ssp/sites/$siteId"
     | "/app/ssp/submissions/$submissionId"
     | "/app/ssp/users/$userId"
+    | "/app/quotes/$quoteId/"
     | "/app/ssp/events/"
     | "/app/ssp/forms/"
     | "/app/ssp/sites/"
@@ -1419,9 +1418,7 @@ export interface FileRouteTypes {
     | "/app/platform-path/products"
     | "/app/platform-path/review"
     | "/app/projects/$projectId"
-    | "/app/quotes/$quoteId"
     | "/app/quotes/new"
-    | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
     | "/app/settings/general"
@@ -1486,6 +1483,7 @@ export interface FileRouteTypes {
     | "/app/ssp/sites/$siteId"
     | "/app/ssp/submissions/$submissionId"
     | "/app/ssp/users/$userId"
+    | "/app/quotes/$quoteId"
     | "/app/ssp/events"
     | "/app/ssp/forms"
     | "/app/ssp/sites"
@@ -1537,6 +1535,7 @@ export interface FileRouteTypes {
     | "/platform/"
     | "/portal/"
     | "/unit/"
+    | "/app/quotes/$quoteId"
     | "/app/customers/$customerId"
     | "/app/fleet/access"
     | "/app/fleet/assignments"
@@ -1556,9 +1555,7 @@ export interface FileRouteTypes {
     | "/app/platform-path/products"
     | "/app/platform-path/review"
     | "/app/projects/$projectId"
-    | "/app/quotes/$quoteId"
     | "/app/quotes/new"
-    | "/app/settings/appearance"
     | "/app/settings/audit"
     | "/app/settings/company"
     | "/app/settings/general"
@@ -1623,6 +1620,7 @@ export interface FileRouteTypes {
     | "/app/ssp/sites/$siteId"
     | "/app/ssp/submissions/$submissionId"
     | "/app/ssp/users/$userId"
+    | "/app/quotes/$quoteId/"
     | "/app/ssp/events/"
     | "/app/ssp/forms/"
     | "/app/ssp/sites/"
@@ -2150,7 +2148,7 @@ declare module "@tanstack/react-router" {
       id: "/app/quotes/$quoteId"
       path: "/quotes/$quoteId"
       fullPath: "/app/quotes/$quoteId"
-      preLoaderRoute: typeof AppQuotesQuoteIdRouteImport
+      preLoaderRoute: typeof AppQuotesQuoteIdRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/quotes/new": {
@@ -2172,13 +2170,6 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/app/settings/"
       preLoaderRoute: typeof AppSettingsIndexRouteImport
-      parentRoute: typeof AppSettingsRouteRoute
-    }
-    "/app/settings/appearance": {
-      id: "/app/settings/appearance"
-      path: "/appearance"
-      fullPath: "/app/settings/appearance"
-      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
     "/app/settings/audit": {
@@ -2517,12 +2508,19 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppFleetVehiclesVehicleIdRouteImport
       parentRoute: typeof AppFleetVehiclesRoute
     }
+    "/app/quotes/$quoteId/": {
+      id: "/app/quotes/$quoteId/"
+      path: "/"
+      fullPath: "/app/quotes/$quoteId/"
+      preLoaderRoute: typeof AppQuotesQuoteIdIndexRouteImport
+      parentRoute: typeof AppQuotesQuoteIdRouteRoute
+    }
     "/app/quotes/$quoteId/preview": {
       id: "/app/quotes/$quoteId/preview"
       path: "/preview"
       fullPath: "/app/quotes/$quoteId/preview"
       preLoaderRoute: typeof AppQuotesQuoteIdPreviewRouteImport
-      parentRoute: typeof AppQuotesQuoteIdRoute
+      parentRoute: typeof AppQuotesQuoteIdRouteRoute
     }
     "/app/ssp/events/": {
       id: "/app/ssp/events/"
@@ -2699,7 +2697,6 @@ const AppPlatformPathRouteRouteWithChildren =
   AppPlatformPathRouteRoute._addFileChildren(AppPlatformPathRouteRouteChildren)
 
 interface AppSettingsRouteRouteChildren {
-  AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsGeneralRoute: typeof AppSettingsGeneralRoute
@@ -2718,7 +2715,6 @@ interface AppSettingsRouteRouteChildren {
 }
 
 const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
-  AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsGeneralRoute: AppSettingsGeneralRoute,
@@ -2830,16 +2826,20 @@ const AppWorkforceRouteRouteChildren: AppWorkforceRouteRouteChildren = {
 const AppWorkforceRouteRouteWithChildren =
   AppWorkforceRouteRoute._addFileChildren(AppWorkforceRouteRouteChildren)
 
-interface AppQuotesQuoteIdRouteChildren {
+interface AppQuotesQuoteIdRouteRouteChildren {
   AppQuotesQuoteIdPreviewRoute: typeof AppQuotesQuoteIdPreviewRoute
+  AppQuotesQuoteIdIndexRoute: typeof AppQuotesQuoteIdIndexRoute
 }
 
-const AppQuotesQuoteIdRouteChildren: AppQuotesQuoteIdRouteChildren = {
+const AppQuotesQuoteIdRouteRouteChildren: AppQuotesQuoteIdRouteRouteChildren = {
   AppQuotesQuoteIdPreviewRoute: AppQuotesQuoteIdPreviewRoute,
+  AppQuotesQuoteIdIndexRoute: AppQuotesQuoteIdIndexRoute,
 }
 
-const AppQuotesQuoteIdRouteWithChildren =
-  AppQuotesQuoteIdRoute._addFileChildren(AppQuotesQuoteIdRouteChildren)
+const AppQuotesQuoteIdRouteRouteWithChildren =
+  AppQuotesQuoteIdRouteRoute._addFileChildren(
+    AppQuotesQuoteIdRouteRouteChildren,
+  )
 
 interface AppRouteRouteChildren {
   AppFleetRouteRoute: typeof AppFleetRouteRouteWithChildren
@@ -2852,11 +2852,11 @@ interface AppRouteRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppQuotesQuoteIdRouteRoute: typeof AppQuotesQuoteIdRouteRouteWithChildren
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppJobsJobIdRoute: typeof AppJobsJobIdRoute
   AppLeadsLeadIdRoute: typeof AppLeadsLeadIdRoute
   AppProjectsProjectIdRoute: typeof AppProjectsProjectIdRoute
-  AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRouteWithChildren
   AppQuotesNewRoute: typeof AppQuotesNewRoute
   AppSitesSiteIdRoute: typeof AppSitesSiteIdRoute
   AppWarrantiesWarrantyIdRoute: typeof AppWarrantiesWarrantyIdRoute
@@ -2884,11 +2884,11 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
+  AppQuotesQuoteIdRouteRoute: AppQuotesQuoteIdRouteRouteWithChildren,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppJobsJobIdRoute: AppJobsJobIdRoute,
   AppLeadsLeadIdRoute: AppLeadsLeadIdRoute,
   AppProjectsProjectIdRoute: AppProjectsProjectIdRoute,
-  AppQuotesQuoteIdRoute: AppQuotesQuoteIdRouteWithChildren,
   AppQuotesNewRoute: AppQuotesNewRoute,
   AppSitesSiteIdRoute: AppSitesSiteIdRoute,
   AppWarrantiesWarrantyIdRoute: AppWarrantiesWarrantyIdRoute,

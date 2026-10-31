@@ -28,7 +28,6 @@ export const RBAC_ACTIONS = [
   "edit",
   "delete",
   "approve_send",
-  "export",
 ] as const;
 
 export type RbacAction = (typeof RBAC_ACTIONS)[number];
@@ -52,7 +51,6 @@ export const RBAC_PERMISSION_MAP: Record<RbacModule, Partial<Record<RbacAction, 
     create: "crm.create",
     edit: "crm.edit",
     delete: "crm.delete",
-    export: "crm.export",
   },
   leads: {
     view: "leads.view",
@@ -66,7 +64,6 @@ export const RBAC_PERMISSION_MAP: Record<RbacModule, Partial<Record<RbacAction, 
     edit: "quotes.edit",
     delete: "quotes.delete",
     approve_send: ["quotes.send"],
-    export: "quotes.export",
   },
   catalog: {
     view: "catalog.view",
@@ -105,7 +102,6 @@ export const RBAC_PERMISSION_MAP: Record<RbacModule, Partial<Record<RbacAction, 
   },
   analytics: {
     view: "reports.view",
-    export: "reports.export",
   },
 };
 

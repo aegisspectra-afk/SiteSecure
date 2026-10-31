@@ -1,29 +1,25 @@
 import { ApiClientError } from "@site-secure/api-client";
-import { Button } from "@site-secure/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { Button, ErrorState, Input } from "@site-secure/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import {
-  CreatePanel,
-  EmptyRows,
-  ErrorState,
-  Input,
-  ModuleScaffold,
-  SearchCreateBar,
-  SimpleEntityTable,
-  useMutation,
-  useQuery,
-} from "../../../components/modules/ModuleKit";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
 import { useSession } from "../../../lib/session";
+import {
+  formatTaskDue,
+  sortTasksForDisplay,
+  taskStatusLabel,
+  taskTypeLabel,
+  type TasksStatusFilter,
+} from "../../../lib/tasks";
 
 export const Route = createFileRoute("/app/tasks/")({
   component: TasksPage,
 });
 
-function TasksPage() {
+export function TasksPage() {
   return (
     <RequirePermission permission="calendar.view">
       <TasksBody />
@@ -38,15 +34,17 @@ function TasksBody() {
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
   const canEdit = can(membership?.role_key, "calendar.edit", features);
+  const [filter, setFilter] = useState<TasksStatusFilter>("open");
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   const listQuery = useQuery({
-    queryKey: ["tasks", workspaceId],
+    queryKey: ["tasks", workspaceId, filter],
     enabled: Boolean(workspaceId),
-    queryFn: () => api.listTasks(workspaceId!, { limit: 100 }),
+    queryFn: () =>
+      api.listTasks(workspaceId!, filter === "open" ? { status: "open", limit: 100 } : { limit: 100 }),
   });
 
   const create = useMutation({
@@ -59,6 +57,7 @@ function TasksBody() {
       setCreating(false);
       setTitle("");
       setDueAt("");
+      setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
     },
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.tasksError),
@@ -70,59 +69,125 @@ function TasksBody() {
   });
 
   if (!workspaceId) return <ErrorState title={he.tasksError} />;
-  if (listQuery.isError) return <ErrorState title={he.tasksError} />;
+  if (listQuery.isError) {
+    return (
+      <ErrorState
+        title={he.tasksError}
+        action={
+          <Button type="button" variant="secondary" onClick={() => void listQuery.refetch()}>
+            {he.tasksRetry}
+          </Button>
+        }
+      />
+    );
+  }
+
+  const items = sortTasksForDisplay(listQuery.data?.items ?? []);
 
   return (
-    <ModuleScaffold title={he.tasksTitle} lead={he.tasksLead}>
-      <SearchCreateBar
-        query=""
-        onQuery={() => undefined}
-        canCreate={canEdit}
-        creating={creating}
-        onToggleCreate={() => setCreating((v) => !v)}
-        createLabel={he.tasksCreate}
-      />
-      <CreatePanel
-        open={creating}
-        pending={create.isPending}
-        error={formError}
-        onSubmit={(ev: FormEvent) => {
-          ev.preventDefault();
-          if (!title.trim()) return;
-          create.mutate();
-        }}
-      >
-        <Input id="task-title" label={he.titleField} value={title} onChange={(ev) => setTitle(ev.target.value)} required />
-        <Input id="task-due" label={he.dueAt} type="datetime-local" value={dueAt} onChange={(ev) => setDueAt(ev.target.value)} />
-      </CreatePanel>
-      {listQuery.isLoading ? (
-        <EmptyRows message={he.loading} />
-      ) : (listQuery.data?.items ?? []).length === 0 ? (
-        <EmptyRows message={he.tasksEmpty} />
-      ) : (
-        <div className="space-y-3">
-          <SimpleEntityTable
-            empty={he.tasksEmpty}
-            rows={(listQuery.data?.items ?? []).map((row) => ({
-              id: row.id,
-              title: row.title,
-              meta: row.due_at ? new Date(row.due_at).toLocaleString("he-IL") : undefined,
-              status: row.status,
-            }))}
+    <div className="ss-tasks space-y-4">
+      <header>
+        <h1 className="text-2xl font-semibold text-fg">{he.tasksTitle}</h1>
+        <p className="text-sm text-fg-muted">{he.tasksLead}</p>
+      </header>
+
+      <div role="tablist" className="flex flex-wrap gap-2" aria-label={he.tasksTitle}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "open"}
+          className="ss-tasks-tab"
+          onClick={() => setFilter("open")}
+        >
+          {he.tasksFilterOpen}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "all"}
+          className="ss-tasks-tab"
+          onClick={() => setFilter("all")}
+        >
+          {he.tasksFilterAll}
+        </button>
+      </div>
+
+      {canEdit ? (
+        <Button type="button" onClick={() => setCreating((v) => !v)}>
+          {creating ? he.cancel : he.tasksCreate}
+        </Button>
+      ) : null}
+
+      {creating ? (
+        <form
+          className="ops-card space-y-3 p-4"
+          onSubmit={(ev: FormEvent) => {
+            ev.preventDefault();
+            if (!title.trim()) return;
+            create.mutate();
+          }}
+        >
+          <Input
+            id="task-title"
+            label={he.titleField}
+            value={title}
+            onChange={(ev) => setTitle(ev.target.value)}
+            required
           />
+          <Input
+            id="task-due"
+            label={he.dueAt}
+            type="datetime-local"
+            value={dueAt}
+            onChange={(ev) => setDueAt(ev.target.value)}
+          />
+          {formError ? <p className="text-sm text-danger">{formError}</p> : null}
+          <Button type="submit" loading={create.isPending} disabled={!title.trim() || create.isPending}>
+            {he.save}
+          </Button>
+        </form>
+      ) : null}
+
+      {listQuery.isLoading ? (
+        <p>{he.loading}</p>
+      ) : items.length === 0 ? (
+        <div data-testid="tasks-empty" className="ss-tasks-empty">
+          <p>{filter === "open" ? he.tasksEmptyOpen : he.tasksEmpty}</p>
           {canEdit ? (
-            <div className="flex flex-wrap gap-2">
-              {(listQuery.data?.items ?? [])
-                .filter((row) => row.status === "open")
-                .map((row) => (
-                  <Button key={row.id} type="button" variant="secondary" onClick={() => complete.mutate(row.id)}>
-                    {he.tasksMarkDone}: {row.title}
-                  </Button>
-                ))}
-            </div>
+            <Button type="button" className="mt-3" onClick={() => setCreating(true)}>
+              {he.tasksCreate}
+            </Button>
           ) : null}
         </div>
+      ) : (
+        <ul data-testid="tasks-list" className="ss-tasks-list space-y-2">
+          {items.map((row) => (
+            <li key={row.id} data-testid="tasks-row" className="ss-tasks-row ops-card flex flex-wrap items-center gap-3 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-fg">{row.title}</p>
+                <p className="text-xs text-fg-muted">
+                  <span>{taskStatusLabel(row.status)}</span>
+                  {" · "}
+                  <span>{taskTypeLabel(row.type)}</span>
+                  {" · "}
+                  <span>{formatTaskDue(row.due_at)}</span>
+                </p>
+              </div>
+              {canEdit && row.status === "open" ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="ss-tasks-complete"
+                  aria-label={`${he.tasksCompleteAria} ${row.title}`}
+                  onClick={() => complete.mutate(row.id)}
+                >
+                  {he.tasksMarkDone}
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       )}
-    </ModuleScaffold>
+    </div>
   );
 }

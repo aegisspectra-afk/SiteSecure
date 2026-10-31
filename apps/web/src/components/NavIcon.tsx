@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   BookOpen,
   Briefcase,
   Building2,
@@ -29,6 +30,8 @@ const icons: Record<NavIconKey, LucideIcon> = {
   overview: LayoutDashboard,
   today: ListChecks,
   calendar: CalendarDays,
+  jobs: Briefcase,
+  analytics: BarChart3,
   customers: Building2,
   leads: UserPlus,
   quotes: FileText,

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/app/dashboard")({
   component: DashboardPage,
 });
 
-function DashboardPage() {
+export function DashboardPage() {
   const { session, api } = useSession();
   const membership = activeMembership(session);
   const variant = homeVariant(membership?.role_key);

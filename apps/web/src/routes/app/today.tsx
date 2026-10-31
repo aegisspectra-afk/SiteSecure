@@ -1,23 +1,21 @@
 import { Button, ErrorState } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardSkeleton } from "../../components/dashboard/DashboardSkeleton";
 import { TodayHome } from "../../components/dashboard/TodayHome";
 import { he } from "../../i18n/he";
 import { can } from "../../lib/can";
-import { homeVariant } from "../../lib/home";
 import { useSession } from "../../lib/session";
 
 export const Route = createFileRoute("/app/today")({
   component: TodayPage,
 });
 
-function TodayPage() {
+export function TodayPage() {
   const { session, api } = useSession();
   const navigate = useNavigate();
   const membership = session?.memberships[0];
-  const variant = homeVariant(membership?.role_key);
   const workspaceId = membership?.workspace_id;
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -25,7 +23,7 @@ function TodayPage() {
 
   const query = useQuery({
     queryKey: ["dashboard", workspaceId],
-    enabled: Boolean(workspaceId) && variant === "today" && allowed,
+    enabled: Boolean(workspaceId) && allowed,
     queryFn: () => api.getDashboard(workspaceId!),
   });
 
@@ -46,7 +44,6 @@ function TodayPage() {
     },
   });
 
-  if (variant !== "today") return <Navigate to="/app/dashboard" />;
   if (!allowed) return <ErrorState title={he.noDashboardPermission} />;
   if (!workspaceId) return <ErrorState title={he.dashboardError} />;
   if (query.isLoading) return <DashboardSkeleton />;

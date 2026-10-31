@@ -13,10 +13,10 @@ import {
 } from "../src/components/customers/CustomerDirectory";
 import { he } from "../src/i18n/he";
 import {
+  buildCustomerDirectoryRows,
   customerInitials,
   customerMatchesDirectoryQuery,
   filterDirectoryRows,
-  secondaryIdentityLine,
 } from "../src/lib/customer-directory";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -118,6 +118,15 @@ const sampleCustomers = [
   },
 ];
 
+const sampleRows = buildCustomerDirectoryRows({
+  customers: sampleCustomers,
+  sites: [],
+  quotes: [],
+  projects: [],
+  serviceCalls: [],
+  leads: [],
+});
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -134,28 +143,22 @@ describe("customer directory helpers", () => {
   });
 
   it("matches search on name phone email address only", () => {
-    const row = sampleCustomers[0];
-    expect(customerMatchesDirectoryQuery(row, "שנידי")).toBe(true);
-    expect(customerMatchesDirectoryQuery(row, "0585")).toBe(true);
-    expect(customerMatchesDirectoryQuery(row, "shnidi")).toBe(true);
-    expect(customerMatchesDirectoryQuery(row, "תל אביב")).toBe(true);
-    expect(customerMatchesDirectoryQuery(row, "לא קיים")).toBe(false);
+    const row = sampleRows[0];
+    expect(customerMatchesDirectoryQuery(row, "שנידי", [])).toBe(true);
+    expect(customerMatchesDirectoryQuery(row, "0585", [])).toBe(true);
+    expect(customerMatchesDirectoryQuery(row, "shnidi", [])).toBe(true);
+    expect(customerMatchesDirectoryQuery(row, "תל אביב", [])).toBe(true);
+    expect(customerMatchesDirectoryQuery(row, "לא קיים", [])).toBe(false);
   });
 
   it("filters by status and type without invented counts", () => {
-    expect(filterDirectoryRows(sampleCustomers, { type: "business" })).toHaveLength(1);
-    expect(filterDirectoryRows(sampleCustomers, { status: "archived" })).toHaveLength(0);
+    expect(filterDirectoryRows(sampleRows, { type: "business" })).toHaveLength(1);
+    expect(filterDirectoryRows(sampleRows, { status: "archived" })).toHaveLength(0);
   });
 
-  it("shows legal_name only when distinct from display_name", () => {
-    expect(secondaryIdentityLine(sampleCustomers[0])).toBeNull();
-    expect(
-      secondaryIdentityLine({
-        ...sampleCustomers[1],
-        display_name: "אבטחה",
-        legal_name: "חברת אבטחה בע״מ",
-      }),
-    ).toBe("חברת אבטחה בע״מ");
+  it("keeps legal_name on the row without a separate identity helper", () => {
+    expect(sampleCustomers[0].legal_name).toBeNull();
+    expect(sampleCustomers[1].legal_name).toBe("חברת אבטחה בע״מ");
   });
 });
 
@@ -211,7 +214,7 @@ describe("CustomerDirectory presentation states", () => {
 
     rerender(
       <CustomerDirectoryList
-        rows={sampleCustomers}
+        rows={sampleRows}
         loading={false}
         query=""
         filter={{}}
@@ -295,12 +298,11 @@ describe("Customers page", () => {
     expect(screen.getByText(he.customerDirectoryEmptyTitle)).toBeTruthy();
   });
 
-  it("renders filtered empty after server search miss", async () => {
-    api.listCustomers.mockResolvedValue({ items: [], next_cursor: null });
+  it("renders filtered empty after client-side search miss", async () => {
+    api.listCustomers.mockResolvedValue({ items: sampleCustomers, next_cursor: null });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("customers-search")).toBeTruthy());
     await userEvent.type(screen.getByTestId("customers-search"), "איןתוצאה");
-    await waitFor(() => expect(api.listCustomers).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("customers-filtered-empty")).toBeTruthy());
   });
 
@@ -313,16 +315,16 @@ describe("Customers page", () => {
     expect(screen.getByTestId("customers-retry")).toBeTruthy();
   });
 
-  it("passes search query to listCustomers", async () => {
+  it("filters the loaded directory client-side without a second list fetch", async () => {
     api.listCustomers.mockResolvedValue({ items: sampleCustomers, next_cursor: null });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("customers-search")).toBeTruthy());
+    const callsBefore = api.listCustomers.mock.calls.length;
     await userEvent.type(screen.getByTestId("customers-search"), "שנידי");
-    await waitFor(() =>
-      expect(api.listCustomers).toHaveBeenCalledWith(
-        "ws1",
-        expect.objectContaining({ q: "שנידי" }),
-      ),
-    );
+    await waitFor(() => {
+      expect(screen.getAllByText("שנידי הלר").length).toBeGreaterThan(0);
+      expect(screen.queryByText("חברת אבטחה בע״מ")).toBeNull();
+    });
+    expect(api.listCustomers.mock.calls.length).toBe(callsBefore);
   });
 });

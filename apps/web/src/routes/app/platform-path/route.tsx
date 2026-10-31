@@ -1,9 +1,9 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/platform-path")({
   component: PlatformPathLayout,
 });
 
 function PlatformPathLayout() {
-  return <Outlet />;
+  return <Navigate to="/app/dashboard" />;
 }

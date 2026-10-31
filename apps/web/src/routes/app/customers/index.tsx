@@ -24,7 +24,7 @@ export const Route = createFileRoute("/app/customers/")({
   component: CustomersPage,
 });
 
-function CustomersPage() {
+export function CustomersPage() {
   return (
     <RequirePermission permission="crm.view">
       <CustomersBody />
@@ -159,7 +159,12 @@ function CustomersBody() {
       <ErrorState
         title={he.customersError}
         action={
-          <Button type="button" variant="secondary" onClick={() => void listQuery.refetch()}>
+          <Button
+            type="button"
+            variant="secondary"
+            data-testid="customers-retry"
+            onClick={() => void listQuery.refetch()}
+          >
             {he.retry}
           </Button>
         }

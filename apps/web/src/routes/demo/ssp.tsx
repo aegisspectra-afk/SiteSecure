@@ -166,10 +166,6 @@ function DemoSspWalkthrough() {
         <Link to="/app" className="text-action hover:underline">
           {he.platformPathSkipToApp}
         </Link>
-        {" · "}
-        <Link to="/app/platform-path" className="text-action hover:underline">
-          {he.platformPathTitle}
-        </Link>
       </p>
     </div>
   );

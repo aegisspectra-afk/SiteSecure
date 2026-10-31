@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
+import { auditActionLabel, auditResultLabel } from "../../../lib/audit-action-he";
 import { useSession } from "../../../lib/session";
 
 export const Route = createFileRoute("/app/settings/audit")({
@@ -69,8 +70,8 @@ function AuditBody() {
         <TBody>
           {query.data.map((row) => (
             <TR key={row.id}>
-              <TD className="ltr-meta">{row.action}</TD>
-              <TD>{typeof row.metadata.result === "string" ? String(row.metadata.result) : "—"}</TD>
+              <TD>{auditActionLabel(row.action)}</TD>
+              <TD>{auditResultLabel(row.metadata.result)}</TD>
               <TD className="ltr-meta">{row.created_at}</TD>
             </TR>
           ))}

@@ -3,31 +3,26 @@ import { ApiClientError, type QuoteGap } from "@site-secure/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { QuoteDocument } from "../../../components/quotes/document/QuoteDocument";
-import { QuoteShareDialog } from "../../../components/quotes/QuoteShareDialog";
-import { SendQuoteConfirm } from "../../../components/quotes/SendQuoteConfirm";
-import { RequirePermission } from "../../../components/settings/RequirePermission";
-import { he } from "../../../i18n/he";
-import { can } from "../../../lib/can";
-import { downloadAndOpenPdf, downloadBlob } from "../../../lib/download-blob";
-import { resolveQuoteRecipientPhone } from "../../../lib/quote-recipient-phone";
+import { QuoteDocument } from "../../../../components/quotes/document/QuoteDocument";
+import { QuoteShareDialog } from "../../../../components/quotes/QuoteShareDialog";
+import { SendQuoteConfirm } from "../../../../components/quotes/SendQuoteConfirm";
+import { he } from "../../../../i18n/he";
+import { can } from "../../../../lib/can";
+import { downloadAndOpenPdf, downloadBlob } from "../../../../lib/download-blob";
+import { resolveQuoteRecipientPhone } from "../../../../lib/quote-recipient-phone";
 import {
   closeSharePlaceholder,
   openSharePlaceholderTab,
   resolveWhatsAppOpen,
-} from "../../../lib/quote-whatsapp-share";
-import { useSession } from "../../../lib/session";
+} from "../../../../lib/quote-whatsapp-share";
+import { useSession } from "../../../../lib/session";
 
 export const Route = createFileRoute("/app/quotes/$quoteId/preview")({
   component: QuotePreviewPage,
 });
 
 function QuotePreviewPage() {
-  return (
-    <RequirePermission permission="quotes.view">
-      <QuotePreviewBody />
-    </RequirePermission>
-  );
+  return <QuotePreviewBody />;
 }
 
 function QuotePreviewBody() {

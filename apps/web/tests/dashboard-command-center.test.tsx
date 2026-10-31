@@ -76,8 +76,8 @@ describe("dashboard premium command center", () => {
   it("renders a compact today empty state with schedule CTA", () => {
     render(<ActiveWork items={[]} compactEmpty />);
     expect(screen.getByText(he.todayTitle)).toBeInTheDocument();
-    expect(screen.getByText(he.todaySectionEmptyCompact)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: he.todayScheduleCta })).toBeInTheDocument();
+    expect(screen.getByText(he.todayRestDay)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: he.dashViewToday })).toBeInTheDocument();
     expect(document.querySelector(".ops-today-card.is-empty")).toBeTruthy();
   });
 

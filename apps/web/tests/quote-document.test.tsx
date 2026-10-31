@@ -108,4 +108,56 @@ describe("QuoteDocument", () => {
     expect(screen.getByText("כולל אחריות יצרן")).toBeTruthy();
     expect(screen.getByText(/1,180/)).toBeTruthy();
   });
+
+  it("does not expose cost, margin, or internal notes even if leaked on the payload", () => {
+    const { container } = render(
+      <QuoteDocument
+        quote={{
+          id: "q1",
+          number: "Q-00012",
+          version: 1,
+          status: "sent",
+          superseded: false,
+          title: "מערכת מצלמות",
+          currency: "ILS",
+          vat_percent: 18,
+          subtotal_net: 1000,
+          vat_amount: 180,
+          total_gross: 1180,
+          customer_notes: "הערה ללקוח",
+          company: { name: "אגיס מערכות", brand_name: "אגיס מערכות" },
+          customer: { display_name: "לקוח" },
+          site: { name: "אתר", address: {} },
+          sections: [],
+          items: [
+            {
+              id: "i1",
+              quote_id: "q1",
+              description: "מצלמה",
+              qty: 1,
+              unit_price: 1000,
+              line_net: 1000,
+              item_type: "catalog",
+              cost: 421,
+              internal_notes: "INTERNAL_ONLY_NOTE_XYZ",
+            } as never,
+          ],
+          cost_total: 421,
+          margin_amount: 579,
+          margin_percent: 57.9,
+          internal_notes: "TEAM_INTERNAL_MEMO_XYZ",
+        } as never}
+      />,
+    );
+
+    const text = container.textContent || "";
+    expect(text).not.toContain("INTERNAL_ONLY_NOTE_XYZ");
+    expect(text).not.toContain("TEAM_INTERNAL_MEMO_XYZ");
+    expect(text).not.toContain(he.quoteInternalNotes);
+    expect(text).not.toContain(he.quoteCost);
+    expect(text).not.toContain(he.quoteMargin);
+    expect(text).not.toMatch(/57\.9\s*%/);
+    expect(screen.getByText("הערה ללקוח")).toBeTruthy();
+    expect(screen.getByText(/1,180/)).toBeTruthy();
+  });
 });

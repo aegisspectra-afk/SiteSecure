@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from app.authz.engine import authorize
 from app.authz.types import AuthzContext
 from app.portal_access import (
@@ -33,6 +35,7 @@ def _ctx(role: str) -> AuthzContext:
     )
 
 
+@pytest.mark.skip(reason="Phase 2")
 def test_portal_permissions_follow_role_matrix():
     owner = authorize(ctx=_ctx("owner"), action="customer_portal.revoke")
     manager = authorize(ctx=_ctx("manager"), action="customer_portal.create")

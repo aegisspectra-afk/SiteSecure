@@ -128,6 +128,8 @@ def acked_or_403(res: httpx.Response) -> None:
     limit_err = _plan_limit_from_response(res)
     if limit_err:
         raise limit_err
+    if res.status_code == 404:
+        raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
     if schema_fault(res):
         raise ApiError(503, "SSP_SCHEMA_UNAVAILABLE", MESSAGES["SSP_SCHEMA_UNAVAILABLE"])
     if res.status_code >= 500:

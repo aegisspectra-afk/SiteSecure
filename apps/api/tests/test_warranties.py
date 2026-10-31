@@ -11,6 +11,7 @@ from app.authz.types import AuthzContext
 from app.errors import ApiError
 from app.routers import ops_modules as ops
 from app.routers.ops_modules import (
+    WARRANTY_SELECT,
     WarrantyCreate,
     WarrantyPatch,
     create_warranty,
@@ -167,6 +168,9 @@ def test_create_warranty_maps_equipment_id(monkeypatch):
     assert row["equipment_id"] == EQUIPMENT
     assert row["equipment_serial"] == "SN-100"
     assert row["customer_name"] == "לקוח בדיקה"
+    assert "public_token" not in row
+    assert "public_token" not in payload
+    assert "public_token" not in WARRANTY_SELECT
 
 
 def test_create_warranty_without_equipment_still_works(monkeypatch):

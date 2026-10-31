@@ -58,6 +58,30 @@ def test_enterprise_zero_means_unlimited():
     assert d.allowed is True
 
 
+def test_invite_enforcement_matches_catalog_caps():
+    """Single source of truth: catalog.json seats_* — invite path uses evaluate_seat_limit + 409."""
+    from app.authz.catalog import load_catalog
+    from app.authz.limits import raise_plan_limit
+    from app.errors import ApiError
+
+    load_catalog.cache_clear()
+    catalog = load_catalog()
+    solo = next(plan for plan in catalog["plans"] if plan["key"] == "solo")
+    field_cap = int(solo["limits"]["seats_field"])
+    occupied = ["owner"] + ["technician"] * field_cap
+    denied = evaluate_seat_limit(plan_key="solo", invite_role="technician", occupied_roles=occupied)
+    assert denied.allowed is False
+    assert denied.details["limit_key"] == "seats_field"
+    assert denied.details["limit"] == field_cap
+    try:
+        raise_plan_limit(denied)
+    except ApiError as exc:
+        assert exc.status_code == 409
+        assert exc.code == "PLAN_LIMIT_REACHED"
+        return
+    raise AssertionError("expected PLAN_LIMIT_REACHED on invite over cap")
+
+
 def test_seat_meters_read_catalog_not_hardcoded_fives():
     from app.authz.catalog import load_catalog
     from app.authz.usage import seat_meters, storage_meter, workspace_meters

@@ -78,8 +78,10 @@ def _ctx(role: str, plan: str = "business") -> AuthzContext:
 
 
 def test_authz_team_invite_roles():
+    # catalog.json: only owner (* via permissions) and administrator have users.invite.
     assert authorize(ctx=_ctx("owner"), action="users.invite").allowed
-    assert authorize(ctx=_ctx("manager"), action="users.invite").allowed
+    assert authorize(ctx=_ctx("administrator"), action="users.invite").allowed
+    assert not authorize(ctx=_ctx("manager"), action="users.invite").allowed
     assert not authorize(ctx=_ctx("sales"), action="users.invite").allowed
     assert not authorize(ctx=_ctx("technician"), action="users.invite").allowed
     assert not authorize(ctx=_ctx("viewer"), action="users.invite").allowed
@@ -172,8 +174,8 @@ def test_owner_can_invite_technician_and_revoke_reissue(settings):
     assert dup.json()["error"]["code"] == "INVITE_USER_EXISTS"
 
 
-def test_manager_can_invite_technician(settings):
-    """Promote OTHER to manager in owner's workspace, then invite."""
+def test_manager_cannot_invite_technician(settings):
+    """Catalog: manager has users.view only — invite is administrator/owner."""
     api = TestClient(app)
     owner = _password_grant(settings, *OWNER)
     manager_tok = _password_grant(settings, *OTHER)
@@ -225,9 +227,8 @@ def test_manager_can_invite_technician(settings):
         headers=_auth(manager_tok),
         json={"email": tech_email, "role_key": "technician"},
     )
-    assert invite.status_code == 200, invite.text
-    assert invite.json()["role_key"] == "technician"
-    assert invite.json()["token"]
+    assert invite.status_code == 403, invite.text
+    assert invite.json()["error"]["code"] == "PERMISSION_DENIED"
 
 
 def test_technician_cannot_invite(settings):

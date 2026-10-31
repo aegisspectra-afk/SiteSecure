@@ -13,6 +13,11 @@ from ..authz.types import ResourceRef
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..errors import ApiError
 from ..identity import actor_id
+from ..installed_assets_from_planned import (
+    build_create_plan,
+    count_assets_by_planned_item,
+    create_installed_assets_from_plan,
+)
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..project_from_quote import plan_project_from_quote
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
@@ -493,6 +498,141 @@ def get_project(
     )
 
 
+PLANNED_ITEM_SELECT = (
+    "id,workspace_id,project_id,source_quote_id,source_quote_version,source_quote_item_id,"
+    "section_id,section_name,item_type,scope_kind,product_id,sku,name,description,qty,unit,"
+    "manufacturer,model,is_optional,sort_order"
+)
+
+
+def _load_project_planned_items(client: UserClient, workspace_id: UUID, project_id: UUID) -> list[dict]:
+    return as_list(
+        client.get(
+            "project_planned_items",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "project_id": f"eq.{project_id}",
+                "select": PLANNED_ITEM_SELECT,
+                "order": "sort_order.asc",
+            },
+        )
+    )
+
+
+@router.get("/projects/{project_id}/planned-items")
+def list_project_planned_items(
+    workspace_id: UUID,
+    project_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "projects.view")
+    one_or_404(
+        client.get(
+            "projects",
+            params={
+                "id": f"eq.{project_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id",
+            },
+        )
+    )
+    return {"items": _load_project_planned_items(client, workspace_id, project_id)}
+
+
+@router.get("/projects/{project_id}/create-installed-assets/preview")
+def preview_create_installed_assets(
+    workspace_id: UUID,
+    project_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "projects.view")
+    project = one_or_404(
+        client.get(
+            "projects",
+            params={
+                "id": f"eq.{project_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": PROJECT_SELECT,
+            },
+        )
+    )
+    site_id = str(project.get("site_id") or "")
+    planned = _load_project_planned_items(client, workspace_id, project_id)
+    counts = count_assets_by_planned_item(client, str(workspace_id), str(project_id))
+    lines = build_create_plan(planned, counts)
+    total = sum(int(line["remaining"]) for line in lines)
+    return {
+        "site_id": site_id or None,
+        "eligible": total > 0 and bool(site_id),
+        "fully_materialized": total == 0,
+        "total_to_create": total,
+        "lines": [
+            {
+                "planned_item_id": line["planned_item_id"],
+                "label": line["label"],
+                "qty": line["qty"],
+                "existing": line["existing"],
+                "remaining": line["remaining"],
+                "category": line["category"],
+            }
+            for line in lines
+        ],
+        "message": "הציוד כבר נוצר" if total == 0 else f"ייווצרו {total} פריטי ציוד",
+    }
+
+
+@router.post("/projects/{project_id}/create-installed-assets")
+def create_installed_assets(
+    workspace_id: UUID,
+    project_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "projects.view")
+    project = one_or_404(
+        client.get(
+            "projects",
+            params={
+                "id": f"eq.{project_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": PROJECT_SELECT,
+            },
+        )
+    )
+    site_id = str(project.get("site_id") or "")
+    if not site_id:
+        raise ApiError(400, "VALIDATION_ERROR", "לפרויקט אין אתר — לא ניתן ליצור ציוד מותקן")
+    one_or_404(
+        client.get(
+            "sites",
+            params={"id": f"eq.{site_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+        )
+    )
+    require(ctx, "systems.edit", resource=ResourceRef(type="site", site_id=site_id))
+    planned = _load_project_planned_items(client, workspace_id, project_id)
+    result = create_installed_assets_from_plan(
+        client,
+        workspace_id=str(workspace_id),
+        site_id=site_id,
+        project_id=str(project_id),
+        planned_items=planned,
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "equipment.create_from_plan",
+        entity_type="project",
+        entity_id=str(project_id),
+        metadata={"created": result.get("created"), "site_id": site_id},
+    )
+    return result
+
+
 @router.patch("/projects/{project_id}")
 def patch_project(
     workspace_id: UUID,
@@ -531,6 +671,7 @@ class ServiceCallCreate(BaseModel):
     site_id: str
     priority: str = "normal"
     description: str | None = None
+    equipment_id: str | None = None
 
 
 class ServiceCallPatch(BaseModel):
@@ -539,12 +680,30 @@ class ServiceCallPatch(BaseModel):
     status: str | None = None
     priority: str | None = None
     description: str | None = None
+    equipment_id: str | None = None
 
 
 SERVICE_SELECT = (
-    "id,workspace_id,number,status,priority,customer_id,site_id,system_id,"
+    "id,workspace_id,number,status,priority,customer_id,site_id,system_id,equipment_id,"
     "title,description,created_by,created_at,updated_at"
 )
+
+
+def _assert_service_equipment(
+    client: UserClient, workspace_id: UUID, equipment_id: str, site_id: str
+) -> None:
+    row = one_or_404(
+        client.get(
+            "equipment",
+            params={
+                "id": f"eq.{equipment_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,site_id",
+            },
+        )
+    )
+    if str(row.get("site_id") or "") != str(site_id):
+        raise ApiError(400, "VALIDATION_ERROR", "הציוד אינו שייך לאתר של קריאת השירות")
 
 
 def _enrich_service_rows(client: UserClient, workspace_id: UUID, rows: list[dict]) -> list[dict]:
@@ -595,6 +754,7 @@ def list_service_calls(
     cursor: str | None = Query(default=None),
     q: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    equipment_id: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "service.view")
@@ -610,6 +770,8 @@ def list_service_calls(
     }
     if status:
         params["status"] = f"eq.{status}"
+    if equipment_id:
+        params["equipment_id"] = f"eq.{equipment_id}"
     if q:
         params["title"] = f"ilike.*{q}*"
     before = decode_cursor(cursor)
@@ -641,6 +803,8 @@ def create_service_call(
             },
         )
     )
+    if body.equipment_id:
+        _assert_service_equipment(client, workspace_id, body.equipment_id, body.site_id)
     payload = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),
@@ -676,6 +840,10 @@ def patch_service_call(
     patch = body.model_dump(exclude_none=True)
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    if patch.get("equipment_id"):
+        _assert_service_equipment(
+            client, workspace_id, str(patch["equipment_id"]), str(existing.get("site_id") or "")
+        )
     return patched_or_403(
         client.patch(
             "service_calls",
@@ -1211,11 +1379,14 @@ def create_task(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "calendar.edit")
+    actor = actor_id(user)
     payload = {
         "workspace_id": str(workspace_id),
-        "created_by": actor_id(user),
+        "created_by": actor,
         **body.model_dump(exclude_none=True),
     }
+    if not payload.get("assignee_id"):
+        payload["assignee_id"] = actor
     return created_or_403(client.post("tasks", payload))
 
 

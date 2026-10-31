@@ -240,3 +240,39 @@ class ServiceClient:
             except (TypeError, ValueError):
                 return None
         return None
+
+    def storage_sign_upload(self, bucket: str, path: str) -> dict:
+        """Signed upload URL using the service role (bypasses Storage RLS)."""
+        response = supabase_request(
+            "POST",
+            f"{self.storage}/object/upload/sign/{bucket}/{path}",
+            headers=self._headers,
+            json={},
+        )
+        if response.status_code not in {200, 201}:
+            raise ApiError(403, "PERMISSION_DENIED", "לא ניתן ליצור כתובת העלאה")
+        data = response.json()
+        token = data.get("token")
+        relative = data.get("url") or f"/object/upload/sign/{bucket}/{path}"
+        if token and "token=" not in relative:
+            relative = f"{relative}{'&' if '?' in relative else '?'}token={token}"
+        upload_url = relative if relative.startswith("http") else f"{self.storage}{relative}"
+        return {"upload_url": upload_url, "token": token, "path": data.get("path") or path}
+
+    def storage_sign_download(self, bucket: str, path: str, expires_in: int = 60) -> str:
+        """Signed download URL using the service role. Default TTL is 60 seconds."""
+        response = supabase_request(
+            "POST",
+            f"{self.storage}/object/sign/{bucket}/{path}",
+            headers=self._headers,
+            json={"expiresIn": expires_in},
+        )
+        if response.status_code != 200:
+            raise ApiError(404, "NOT_FOUND", "לא נמצא")
+        data = response.json()
+        signed = data.get("signedURL") or data.get("signedUrl") or data.get("url")
+        if not signed:
+            raise ApiError(404, "NOT_FOUND", "לא נמצא")
+        if signed.startswith("http"):
+            return signed
+        return f"{self.storage}{signed}"

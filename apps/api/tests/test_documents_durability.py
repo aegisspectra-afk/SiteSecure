@@ -105,7 +105,7 @@ def test_document_url_denies_incomplete_reservation(monkeypatch):
         lambda *_: {
             "id": str(DOC),
             "storage_bucket": "documents",
-            "storage_path": "ws/path",
+            "storage_path": f"{WS}/site/s1/{DOC}/file.txt",
             "entity_type": "site",
             "entity_id": "s1",
             "byte_size": None,
@@ -127,7 +127,7 @@ def test_document_url_denies_completed_but_missing_object(monkeypatch):
         lambda *_: {
             "id": str(DOC),
             "storage_bucket": "documents",
-            "storage_path": "ws/path",
+            "storage_path": f"{WS}/site/s1/{DOC}/file.txt",
             "entity_type": "site",
             "entity_id": "s1",
             "byte_size": 68,
@@ -142,14 +142,15 @@ def test_document_url_signs_when_completed(monkeypatch):
     client = MagicMock()
     svc = MagicMock()
     svc.storage_object_size.return_value = 12
-    client.storage_sign_download.return_value = "https://example.test/signed"
+    svc.storage_sign_download.return_value = "https://example.test/signed"
+    path = f"{WS}/site/s1/{DOC}/file.txt"
     monkeypatch.setattr(
         documents_router,
         "one_or_404",
         lambda *_: {
             "id": str(DOC),
             "storage_bucket": "documents",
-            "storage_path": "ws/path",
+            "storage_path": path,
             "entity_type": "site",
             "entity_id": "s1",
             "byte_size": 12,
@@ -157,4 +158,6 @@ def test_document_url_signs_when_completed(monkeypatch):
     )
     out = documents_router.document_url(WS, DOC, client, {"id": "u1"}, svc)
     assert out["url"] == "https://example.test/signed"
-    client.storage_sign_download.assert_called_once_with("documents", "ws/path", expires_in=60)
+    assert out["expires_in"] == 60
+    svc.storage_sign_download.assert_called_once_with("documents", path, expires_in=60)
+    client.storage_sign_download.assert_not_called()

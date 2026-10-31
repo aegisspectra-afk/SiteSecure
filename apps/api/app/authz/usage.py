@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from ..http_supabase import supabase_request
 from ..supabase_user import UserClient
-from .limits import is_technician_role, is_unlimited, plan_limit_value
+from .limits import is_unlimited, plan_limit_value, seat_limit_key
 
 METER_LABELS = {
     "max_members": "חברי צוות",
@@ -211,27 +211,27 @@ def seat_meters(
     occupied_roles: Iterable[str] | None = None,
     occupants: Iterable[SeatOccupant] | None = None,
 ) -> list[dict[str, Any]]:
-    """Authoritative Free/Pro meters: max_members + max_technicians (pending invites included)."""
+    """Source of truth: catalog.json seat_buckets + plans[].limits.seats_*."""
+    from .catalog import load_catalog
+
     occupant_rows = list(occupants or [])
     roles = [row.role_key for row in occupant_rows] if occupant_rows else list(occupied_roles or [])
-    member_occupants = occupant_rows
-    tech_occupants = [row for row in occupant_rows if is_technician_role(row.role_key)]
-    members = len(member_occupants) if occupant_rows else len(roles)
-    technicians = (
-        len(tech_occupants) if occupant_rows else sum(1 for role in roles if is_technician_role(role))
-    )
+    buckets = load_catalog().get("seat_buckets") or {}
 
     meters: list[dict[str, Any]] = []
-    for limit_key, current, bucket_occupants in (
-        ("max_members", members, member_occupants),
-        ("max_technicians", technicians, tech_occupants),
-    ):
-        limit = plan_limit_value(plan_key, limit_key)
+    for limit_key in buckets:
+        if occupant_rows:
+            bucket_occupants = [row for row in occupant_rows if seat_limit_key(row.role_key) == limit_key]
+            current = len(bucket_occupants)
+        else:
+            bucket_occupants = []
+            current = sum(1 for role in roles if seat_limit_key(role) == limit_key)
+        limit = plan_limit_value(plan_key, str(limit_key))
         unlimited = is_unlimited(limit)
         meters.append(
             {
-                "key": limit_key,
-                "label_he": METER_LABELS[limit_key],
+                "key": str(limit_key),
+                "label_he": METER_LABELS.get(str(limit_key), str(limit_key)),
                 "current": current,
                 "limit": limit,
                 "unlimited": unlimited,
@@ -244,11 +244,12 @@ def seat_meters(
 
 
 def meter_for_invite_role(meters: list[dict[str, Any]], invite_role: str) -> dict[str, Any] | None:
-    if is_technician_role(invite_role):
-        tech = next((row for row in meters if row["key"] == "max_technicians"), None)
-        if tech and tech.get("at_limit"):
-            return tech
-    return next((row for row in meters if row["key"] == "max_members"), None)
+    bucket = seat_limit_key(invite_role)
+    if bucket:
+        hit = next((row for row in meters if row["key"] == bucket), None)
+        if hit and hit.get("at_limit"):
+            return hit
+    return next((row for row in meters if row["key"] == "seats_operator"), None)
 
 
 def fetch_storage_used_bytes(client: UserClient, workspace_id: str) -> int:

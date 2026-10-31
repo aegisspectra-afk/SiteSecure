@@ -70,15 +70,16 @@ def _load_access(svc: ServiceClient, token: str) -> dict:
     if access.get("revoked_at"):
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
     expires = access.get("expires_at")
-    if expires:
-        try:
-            exp = datetime.fromisoformat(str(expires).replace("Z", "+00:00"))
-            if exp < datetime.now(UTC):
-                raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
-        except ApiError:
-            raise
-        except Exception:
-            pass
+    if not expires:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    try:
+        exp = datetime.fromisoformat(str(expires).replace("Z", "+00:00"))
+    except ValueError:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"]) from None
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=UTC)
+    if exp < datetime.now(UTC):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
     return access
 
 

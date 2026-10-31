@@ -4,8 +4,9 @@ from app.routers.workspaces import _invite_rpc_error
 
 
 def test_invite_rpc_error_maps_seat_limit():
+    # Quota is a conflict (409), not a missing permission (403). Matches raise_plan_limit.
     err = _invite_rpc_error('ERROR: PLAN_LIMIT_REACHED')
-    assert err.status_code == 403
+    assert err.status_code == 409
     assert err.code == "PLAN_LIMIT_REACHED"
 
 

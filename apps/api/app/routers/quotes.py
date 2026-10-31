@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -725,16 +725,20 @@ def _related(client: UserClient, workspace_id: UUID, quote: dict) -> tuple[dict,
     return workspace, customer, site
 
 
-def _access_expires_at(quote: dict) -> str | None:
-    """Optional mint TTL = valid_until end-of-day UTC when present."""
+QUOTE_PUBLIC_LINK_TTL = timedelta(days=30)
+
+
+def _access_expires_at(quote: dict, *, now: datetime | None = None) -> str:
+    """Mint TTL: valid_until end-of-day UTC, otherwise now + 30 days. Never null."""
+    clock = now or datetime.now(UTC)
     raw = str(quote.get("valid_until") or "").strip()
-    if not raw:
-        return None
-    try:
-        until = date.fromisoformat(raw[:10])
-    except ValueError:
-        return None
-    return datetime.combine(until, time(23, 59, 59), tzinfo=UTC).isoformat()
+    if raw:
+        try:
+            until = date.fromisoformat(raw[:10])
+            return datetime.combine(until, time(23, 59, 59), tzinfo=UTC).isoformat()
+        except ValueError:
+            pass
+    return (clock + QUOTE_PUBLIC_LINK_TTL).isoformat()
 
 
 def _mint_access(svc: ServiceClient, quote: dict, token: str) -> None:

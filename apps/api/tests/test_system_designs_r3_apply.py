@@ -546,6 +546,8 @@ def test_initial_apply_calls_rpc_and_persist(mock_ctx, mock_require):
         "model": None,
         "attributes": {},
     }
+    svc = MagicMock()
+    svc.get.return_value = _resp(200, [product])
 
     with (
         patch.object(sd, "_load_design_row", return_value=design),
@@ -561,6 +563,7 @@ def test_initial_apply_calls_rpc_and_persist(mock_ctx, mock_require):
             return_value={"id": "sec1", "name": "מערכת CCTV", "sort_order": 10},
         ),
         patch("app.identity.actor_id", return_value="u1"),
+        patch("app.routers.quotes._service", return_value=svc),
     ):
         client.get.side_effect = [_resp(200, [product])]
         client.rpc.return_value = _resp(
@@ -705,6 +708,8 @@ def test_pricing_failure_after_rpc_surfaces_recoverable_error(mock_ctx, mock_req
         "model": None,
         "attributes": {},
     }
+    svc = MagicMock()
+    svc.get.return_value = _resp(200, [product])
 
     with (
         patch.object(sd, "_load_design_row", return_value=design),
@@ -719,6 +724,7 @@ def test_pricing_failure_after_rpc_surfaces_recoverable_error(mock_ctx, mock_req
         patch("app.routers.quotes._with_validation", return_value={**quote, "items": []}),
         patch("app.routers.quotes._can_view_cost", return_value=False),
         patch("app.identity.actor_id", return_value="u1"),
+        patch("app.routers.quotes._service", return_value=svc),
     ):
         client.get.return_value = _resp(200, [product])
         client.rpc.return_value = _resp(200, {"ok": True, "apply_id": "a1", "revision": 3})

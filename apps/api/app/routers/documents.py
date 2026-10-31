@@ -14,7 +14,7 @@ from ..authz.scope import apply_assigned_document_list_filter, empty_assigned_pa
 from ..authz.types import ResourceRef
 from ..authz.usage import fetch_storage_used_bytes
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
-from ..errors import ApiError
+from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
@@ -59,6 +59,19 @@ def _filename(name: str | None) -> str:
     raw = (name or "file").split("/")[-1][:80]
     cleaned = SAFE_NAME.sub("_", raw).strip("._") or "file"
     return cleaned
+
+
+def assert_workspace_storage_path(workspace_id: UUID, path: str) -> str:
+    """Path must be owned by the authenticated workspace. Never trust a client path."""
+    raw = (path or "").replace("\\", "/").strip()
+    if not raw or raw.startswith(("/", "./")):
+        raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
+    parts = [part for part in raw.split("/") if part]
+    if not parts or ".." in parts or "." in parts:
+        raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
+    if parts[0] != str(workspace_id):
+        raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
+    return "/".join(parts)
 
 
 def _entity_resource(entity_type: str, entity_id: str) -> ResourceRef:
@@ -130,6 +143,7 @@ def create_upload(
     body: UploadIntent,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "documents.upload", resource=_entity_resource(body.entity_type, body.entity_id))
@@ -146,7 +160,10 @@ def create_upload(
     )
     document_id = str(uuid.uuid4())
     filename = _filename(body.original_filename)
-    storage_path = f"{workspace_id}/{body.entity_type}/{body.entity_id}/{document_id}/{filename}"
+    storage_path = assert_workspace_storage_path(
+        workspace_id,
+        f"{workspace_id}/{body.entity_type}/{body.entity_id}/{document_id}/{filename}",
+    )
     row = created_or_403(
         client.post(
             "documents",
@@ -165,7 +182,7 @@ def create_upload(
             },
         )
     )
-    signed = client.storage_sign_upload(bucket, storage_path)
+    signed = svc.storage_sign_upload(bucket, storage_path)
     return {
         "document_id": row["id"],
         "storage_path": storage_path,
@@ -204,7 +221,7 @@ def complete_upload(
     reserved = max(0, int(existing.get("reserved_bytes") or 0))
     reported = body.byte_size
     bucket = str(existing["storage_bucket"])
-    path = str(existing["storage_path"])
+    path = assert_workspace_storage_path(workspace_id, str(existing["storage_path"]))
     storage_size = None
     try:
         storage_size = svc.storage_object_size(bucket, path)
@@ -305,12 +322,12 @@ def document_url(
     if row.get("byte_size") is None:
         raise ApiError(409, "STORAGE_OBJECT_MISSING", "הקובץ עדיין לא הושלם או חסר באחסון")
     bucket = str(row["storage_bucket"])
-    path = str(row["storage_path"])
+    path = assert_workspace_storage_path(workspace_id, str(row["storage_path"]))
     try:
         size = svc.storage_object_size(bucket, path)
     except Exception:
         size = None
     if size is None:
         raise ApiError(409, "STORAGE_OBJECT_MISSING", "הקובץ לא נמצא באחסון")
-    url = client.storage_sign_download(bucket, path, expires_in=60)
+    url = svc.storage_sign_download(bucket, path, expires_in=60)
     return {"url": url, "expires_in": 60}

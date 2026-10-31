@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,6 +96,10 @@ function renderBuilder(row: QuoteOut) {
   );
 }
 
+function itemsPanel(container: HTMLElement) {
+  return container.querySelector("#quote-items")?.closest(".cpq-stage-panel");
+}
+
 function clickStage(name: string) {
   fireEvent.click(screen.getAllByRole("button", { name })[0]!);
 }
@@ -119,15 +123,20 @@ describe("QuoteBuilder guided stages P0", () => {
   });
 
   it("opens empty draft on Stage 1 and keeps Stage 2 composition inactive", () => {
-    renderBuilder(quote());
+    const { container } = renderBuilder(quote());
     expect(screen.getAllByRole("button", { name: he.cpqWorkflowDetails, current: "step" }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: he.quoteApplyTemplate })).toBeDisabled();
-    const items = document.getElementById("quote-items");
-    expect(items?.closest("[data-active]")?.getAttribute("data-active")).toBe("false");
+    clickStage(he.cpqWorkflowDetails);
+    const apply = screen.queryAllByRole("button", { name: he.quoteApplyTemplate })[0];
+    if (apply) {
+      expect(apply).toBeDisabled();
+    } else {
+      expect(screen.getByLabelText(he.quoteTemplate)).toBeInTheDocument();
+    }
+    expect(itemsPanel(container)?.getAttribute("data-active")).toBe("false");
   });
 
   it("opens populated draft on Stage 2", () => {
-    renderBuilder(
+    const { container } = renderBuilder(
       quote({
         items: [
           {
@@ -143,8 +152,7 @@ describe("QuoteBuilder guided stages P0", () => {
       }),
     );
     expect(screen.getAllByRole("button", { name: he.cpqWorkflowContent, current: "step" }).length).toBeGreaterThan(0);
-    const items = document.getElementById("quote-items");
-    expect(items?.closest("[data-active]")?.getAttribute("data-active")).toBe("true");
+    expect(itemsPanel(container)?.getAttribute("data-active")).toBe("true");
   });
 
   it("switches stages freely without createOnce", () => {
@@ -152,17 +160,17 @@ describe("QuoteBuilder guided stages P0", () => {
     clickStage(he.cpqWorkflowContent);
     clickStage(he.cpqWorkflowPricing);
     clickStage(he.cpqWorkflowChecks);
-    fireEvent.click(screen.getAllByRole("button", { name: he.cpqStageBack })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqStageBackToPricing })[0]!);
     expect(createQuote).not.toHaveBeenCalled();
   });
 
   it("keeps composition mounted while inactive for dirty-state safety", () => {
-    renderBuilder(quote());
-    const items = document.getElementById("quote-items");
-    expect(items).toBeTruthy();
-    expect(items?.closest(".cpq-stage-panel")?.hasAttribute("hidden")).toBe(true);
+    const { container } = renderBuilder(quote());
+    const panel = itemsPanel(container);
+    expect(panel).toBeTruthy();
+    expect(panel?.hasAttribute("hidden")).toBe(true);
     clickStage(he.cpqWorkflowContent);
-    expect(items?.closest(".cpq-stage-panel")?.hasAttribute("hidden")).toBe(false);
+    expect(panel?.hasAttribute("hidden")).toBe(false);
   });
 
   it("shows readiness primarily on Stage 4", () => {

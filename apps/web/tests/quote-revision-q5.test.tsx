@@ -142,33 +142,40 @@ describe("Q5 revision UX", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(window, "confirm").mockReturnValue(true);
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: String(query).includes("min-width: 1024px"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
-  it("shows revision badge and confirms before revise", async () => {
+  it("shows revision badge and revises from the primary CTA", async () => {
     renderBuilder(quote({ status: "rejected", version: 1 }));
-    expect(screen.getAllByText(he.quotesVersion(1)).length).toBeGreaterThan(0);
-    const reviseButtons = screen.getAllByRole("button", { name: he.quoteRevise });
-    fireEvent.click(reviseButtons[0]!);
-    expect(window.confirm).toHaveBeenCalledWith(he.quoteReviseConfirm);
+    expect(screen.getAllByText("v1").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("button", { name: he.quoteRevise })[0]!);
     await waitFor(() => expect(reviseQuote).toHaveBeenCalled());
   });
 
-  it("cancels revise when confirmation is declined", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("opens version history from overflow into the sidebar", async () => {
     renderBuilder(quote({ status: "rejected", version: 1 }));
-    fireEvent.click(screen.getAllByRole("button", { name: he.quoteRevise })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqMoreActionsAria })[0]!);
+    fireEvent.click(screen.getByRole("menuitem", { name: he.cpqVersionHistory }));
+    expect(await screen.findByText(he.quotesVersion(1))).toBeTruthy();
     expect(reviseQuote).not.toHaveBeenCalled();
   });
 
-  it("loads revision timeline and historical document from snapshots", async () => {
+  it("loads revision compare from the history sidebar tab", async () => {
     renderBuilder(quote({ status: "draft", version: 2 }));
     fireEvent.click(screen.getAllByRole("button", { name: he.cpqMoreActionsAria })[0]!);
     fireEvent.click(screen.getByRole("menuitem", { name: he.cpqVersionHistory }));
-    await waitFor(() => expect(api.listQuoteVersions).toHaveBeenCalled());
-    expect(await screen.findByText(he.cpqVersionTimeline)).toBeTruthy();
-    expect(screen.getByText(he.cpqRevisionHistorical)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: he.cpqViewHistorical }));
-    await waitFor(() => expect(api.getQuoteVersionDocument).toHaveBeenCalledWith("ws", "q1", 1));
-    expect(await screen.findByText(he.cpqHistoricalReadOnly)).toBeTruthy();
+    expect(await screen.findByText(he.cpqRevisionCompare)).toBeTruthy();
+    await waitFor(() => expect(api.compareQuoteVersions).toHaveBeenCalled());
   });
 });

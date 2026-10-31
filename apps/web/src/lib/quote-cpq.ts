@@ -234,6 +234,8 @@ export function quoteScopeBreakdown(items: QuoteItemOut[]): {
   let labor = 0;
   for (const item of items) {
     if (item.item_type === "note") continue;
+    // Same rule as pricing.recalculate: optional never enters base equipment/labor.
+    if (item.is_optional) continue;
     const net = Number(item.line_net);
     const fallback = Number(item.qty) * Number(item.unit_price);
     const amount = Number.isFinite(net) ? net : Number.isFinite(fallback) ? fallback : 0;

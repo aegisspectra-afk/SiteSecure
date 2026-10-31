@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -137,7 +138,7 @@ describe("Q3 catalog fast add", () => {
     );
   });
 
-  it("autofocuses search, shows dense catalog fields, keeps overlay for multi-add", async () => {
+  it("autofocuses search, shows dense catalog fields, and picks a product", async () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
     render(
@@ -150,33 +151,27 @@ describe("Q3 catalog fast add", () => {
             id: "p1",
             name: "Camera Pro",
             sku: "CAM-4",
-            model: "IPC-4MP",
             manufacturer: "Hikvision",
             selling_price: 450,
-            cost: 220,
           },
         ]}
         onCatalogQuery={() => undefined}
         onPickCatalog={onPick}
         canCatalog
-        browseCatalog
-        canViewCost
-        currency="ILS"
       />,
     );
-    const input = screen.getByPlaceholderText(he.cpqQuickAddPlaceholderCatalog);
+    const input = screen.getByPlaceholderText(he.cpqQuickAddPlaceholder);
     await waitFor(() => expect(document.activeElement).toBe(input));
+    fireEvent.change(input, { target: { value: "CAM" } });
     expect(screen.getByText(/CAM-4 · Camera Pro/)).toBeInTheDocument();
     expect(screen.getByText(/Hikvision/)).toBeInTheDocument();
-    expect(screen.getByText(/IPC-4MP/)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(he.cpqQuickAddCost))).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("option"));
+    expect(screen.queryByText(new RegExp(he.cpqQuickAddCost))).not.toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole("option")[0]!);
     expect(onPick).toHaveBeenCalledWith("p1");
-    expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it("hides cost when role cannot view cost", () => {
+  it("does not surface catalog cost in quick-add rows", () => {
     render(
       <QuoteQuickAdd
         open
@@ -188,26 +183,23 @@ describe("Q3 catalog fast add", () => {
             name: "Camera Pro",
             sku: "CAM-4",
             selling_price: 450,
-            cost: 220,
           },
         ]}
         onCatalogQuery={() => undefined}
         onPickCatalog={() => undefined}
         canCatalog
-        browseCatalog
-        canViewCost={false}
       />,
     );
+    fireEvent.change(screen.getAllByPlaceholderText(he.cpqQuickAddPlaceholder)[0]!, { target: { value: "CAM" } });
+    expect(screen.getByText(/CAM-4 · Camera Pro/)).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(he.cpqQuickAddCost))).not.toBeInTheDocument();
   });
 
-  it("fast-start catalog opens browse quick-add without stacking", async () => {
+  it("empty scoped quote opens catalog quick-add from the items step without stacking", async () => {
     renderBuilder(quote());
-    fireEvent.click(within(await screen.findByTestId("quote-fast-start")).getByRole("button", {
-      name: new RegExp(he.cpqFastStartCatalog),
-    }));
-    await waitFor(() => expect(listCatalogProducts).toHaveBeenCalled());
-    expect(screen.getByPlaceholderText(he.cpqQuickAddPlaceholderCatalog)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: he.quoteAddItem })[0]!);
+    expect(screen.getAllByPlaceholderText(he.cpqQuickAddPlaceholder).length).toBeGreaterThan(0);
     expect(screen.queryByRole("dialog", { name: he.cpqAddSystemTitle })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: he.cpqApplyProposalTemplateTitle })).not.toBeInTheDocument();
   });
@@ -224,20 +216,19 @@ describe("Q3 template apply", () => {
         onApply={onApply}
       />,
     );
-    expect(screen.getByText(he.cpqTemplateVsPackageHint)).toBeInTheDocument();
-    expect(screen.getByText(he.cpqTemplateStructureHint)).toBeInTheDocument();
+    expect(screen.getAllByText(he.cpqApplyProposalTemplateBody).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: he.quoteApplyTemplate }));
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply).toHaveBeenCalledWith("t1");
   });
 
-  it("fast-start template opens apply modal once", async () => {
+  it("items quick-add template opens apply modal once", async () => {
     renderBuilder(quote());
-    fireEvent.click(within(await screen.findByTestId("quote-fast-start")).getByRole("button", {
-      name: new RegExp(he.cpqFastStartTemplate),
-    }));
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: he.quoteAddItem })[0]!);
+    await userEvent.click(screen.getAllByRole("option", { name: new RegExp(he.cpqQuickAddTemplate) })[0]!);
     const dialog = await screen.findByRole("dialog", { name: he.cpqApplyProposalTemplateTitle });
-    expect(within(dialog).getByText(he.cpqTemplateVsPackageHint)).toBeInTheDocument();
+    expect(within(dialog).getByText(he.cpqApplyProposalTemplateBody)).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: he.cpqAddSystemTitle })).not.toBeInTheDocument();
   });
 });
@@ -256,14 +247,14 @@ describe("Q3 package apply from fast-start", () => {
     });
   });
 
-  it("opens package picker from fast-start", async () => {
+  it("opens package picker from items quick-add", async () => {
     renderBuilder(quote());
-    fireEvent.click(within(await screen.findByTestId("quote-fast-start")).getByRole("button", {
-      name: new RegExp(he.cpqFastStartPackage),
-    }));
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: he.quoteAddItem })[0]!);
+    await userEvent.click(screen.getAllByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) })[0]!);
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
     const dialog = await screen.findByRole("dialog", { name: he.cpqAddSystemTitle });
     expect(within(dialog).getAllByText(/Camera/).length).toBeGreaterThan(0);
-    expect(screen.queryByPlaceholderText(he.cpqQuickAddPlaceholderCatalog)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(he.cpqQuickAddPlaceholder)).not.toBeInTheDocument();
   });
 });

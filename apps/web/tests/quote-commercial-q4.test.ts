@@ -80,5 +80,43 @@ describe("Q4 commercial pricing mirror", () => {
       },
     ]);
     expect(scope.equipment).toBe(100);
+    expect(scope.labor).toBe(0);
+  });
+
+  it("scope breakdown ignores optional labor and keeps required labor", () => {
+    const scope = quoteScopeBreakdown([
+      {
+        id: "l1",
+        quote_id: "q",
+        description: "install",
+        qty: 1,
+        unit_price: 400,
+        line_net: 400,
+        item_type: "labor",
+        is_optional: false,
+      },
+      {
+        id: "l2",
+        quote_id: "q",
+        description: "extra night",
+        qty: 1,
+        unit_price: 200,
+        line_net: 200,
+        item_type: "labor",
+        is_optional: true,
+      },
+      {
+        id: "c1",
+        quote_id: "q",
+        description: "cam",
+        qty: 1,
+        unit_price: 100,
+        line_net: 100,
+        item_type: "catalog",
+        is_optional: false,
+      },
+    ]);
+    expect(scope.labor).toBe(400);
+    expect(scope.equipment).toBe(100);
   });
 });

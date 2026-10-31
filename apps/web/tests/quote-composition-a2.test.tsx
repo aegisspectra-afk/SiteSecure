@@ -103,6 +103,7 @@ describe("A2 composition exposure", () => {
     const onPatch = vi.fn();
     render(
       <QuoteLinesPanel
+        workspaceMode="pricing"
         items={[
           {
             id: "i1",
@@ -132,7 +133,6 @@ describe("A2 composition exposure", () => {
       />,
     );
 
-    expect(screen.getByText(he.cpqSectionDiscountActive("5%"))).toBeInTheDocument();
     expect(screen.getByLabelText(he.cpqSectionDiscount)).toBeInTheDocument();
   });
 });

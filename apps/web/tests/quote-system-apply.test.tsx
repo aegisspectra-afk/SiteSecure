@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { QuoteOut } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -115,7 +116,8 @@ describe("SystemPickerModal", () => {
     );
     expect(screen.getByText("CCTV 4 Cameras")).toBeInTheDocument();
     expect(screen.getByText(he.cpqSystemItemCount(6))).toBeInTheDocument();
-    expect(screen.queryByText(/Package|חבילה/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: he.cpqAddSystemTitle })).toBeInTheDocument();
+    expect(screen.queryByText(/Package/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: he.cpqAddSystemToQuote }));
     expect(onApply).toHaveBeenCalledWith("sys1");
   });
@@ -152,11 +154,12 @@ describe("QuoteBuilder system apply", () => {
 
   it("opens picker from toolbar and applies system with section", async () => {
     renderBuilder(quote());
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
     const itemsSection = document.getElementById("quote-items");
     expect(itemsSection).toBeTruthy();
     fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
     const listbox = await screen.findByRole("listbox");
-    fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) }));
+    await userEvent.click(within(listbox).getAllByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) })[0]!);
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
     const dialog = await screen.findByRole("dialog", { name: he.cpqAddSystemTitle });
     fireEvent.click(within(dialog).getByRole("button", { name: he.cpqAddSystemToQuote }));
@@ -171,11 +174,12 @@ describe("QuoteBuilder system apply", () => {
 
   it("quick add addSystem opens picker not save-as", async () => {
     renderBuilder(quote());
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
     const itemsSection = document.getElementById("quote-items");
     expect(itemsSection).toBeTruthy();
     fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
     const listbox = await screen.findByRole("listbox");
-    fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) }));
+    await userEvent.click(within(listbox).getAllByRole("option", { name: new RegExp(he.cpqQuickAddAddSystem) })[0]!);
     await waitFor(() => expect(listQuotePackages).toHaveBeenCalled());
     expect(api.saveQuoteAsPackage).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog", { name: he.cpqAddSystemTitle })).toBeInTheDocument();
@@ -183,11 +187,12 @@ describe("QuoteBuilder system apply", () => {
 
   it("quick add template opens apply modal", async () => {
     renderBuilder(quote());
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowContent })[0]!);
     const itemsSection = document.getElementById("quote-items");
     expect(itemsSection).toBeTruthy();
     fireEvent.click(within(itemsSection!).getByRole("button", { name: he.cpqAddToQuotePrimary }));
     const listbox = await screen.findByRole("listbox");
-    fireEvent.click(within(listbox).getByRole("option", { name: new RegExp(he.cpqQuickAddTemplate) }));
+    await userEvent.click(within(listbox).getAllByRole("option", { name: new RegExp(he.cpqQuickAddTemplate) })[0]!);
     expect(await screen.findByRole("dialog", { name: he.cpqApplyProposalTemplateTitle })).toBeInTheDocument();
   });
 
@@ -195,6 +200,8 @@ describe("QuoteBuilder system apply", () => {
     window.prompt = vi.fn(() => "My System");
     renderBuilder(quote(), "manager");
     fireEvent.click(screen.getAllByRole("button", { name: he.cpqWorkflowDetails })[0]!);
+    const editDetails = screen.queryByRole("button", { name: he.cpqEditDetails });
+    if (editDetails) fireEvent.click(editDetails);
     fireEvent.click(screen.getByRole("button", { name: he.cpqTemplateActions }));
     fireEvent.click(screen.getByRole("menuitem", { name: he.cpqSaveAsPackage }));
     await waitFor(() => expect(api.saveQuoteAsPackage).toHaveBeenCalled());

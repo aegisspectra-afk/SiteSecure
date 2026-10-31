@@ -7,6 +7,7 @@ describe("QuoteLinesPanel", () => {
   it("shows SKU column with editable מק״ט field", () => {
     render(
       <QuoteLinesPanel
+        workspaceMode="pricing"
         items={[
           {
             id: "i1",

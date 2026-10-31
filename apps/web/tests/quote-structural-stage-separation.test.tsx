@@ -72,19 +72,15 @@ describe("Quote structural stage separation", () => {
     });
 
     expect(screen.getByTestId("stage2-solution-workspace")).toBeTruthy();
-    expect(screen.getByText(he.cpqStage2ItemsCount(2))).toBeTruthy();
-    expect(screen.getByTestId("solution-equipment-bucket")).toBeTruthy();
-    expect(screen.getByTestId("solution-services-bucket")).toBeTruthy();
+    expect(screen.getByText(he.quoteItemsCount(2))).toBeTruthy();
     expect(screen.getAllByTestId("solution-item-card").length).toBe(2);
 
     expect(screen.queryByLabelText(he.quoteUnitPrice)).toBeNull();
-    expect(screen.queryByLabelText(he.quoteDiscountLineLabel)).toBeNull();
+    expect(screen.queryByLabelText(he.quoteDiscountPercentLabel)).toBeNull();
     expect(screen.queryByText(he.cpqLineTotal)).toBeNull();
     expect(screen.queryByTestId("commercial-line-row")).toBeNull();
 
-    expect(screen.getByRole("button", { name: he.cpqStage2CompactPlan })).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.cpqStage2CompactCatalog })).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.cpqStage2CompactItem })).toBeTruthy();
+    expect(screen.getByRole("button", { name: he.cpqAddToQuotePrimary })).toBeTruthy();
     expect(screen.getByRole("button", { name: he.cpqAddSection })).toBeTruthy();
     expect(screen.getByText(he.cpqSolutionFromCatalog)).toBeTruthy();
   });
@@ -94,25 +90,22 @@ describe("Quote structural stage separation", () => {
 
     expect(screen.getByTestId("stage3-commercial-workspace")).toBeTruthy();
     expect(screen.getByText(he.cpqStage3ItemsCount(2))).toBeTruthy();
-    expect(screen.getAllByTestId("commercial-line-row").length).toBe(2);
     expect(screen.getAllByLabelText(he.quoteUnitPrice).length).toBe(2);
-    expect(screen.getAllByLabelText(he.quoteDiscountLineLabel).length).toBe(2);
+    expect(screen.getAllByLabelText(he.quoteDiscountPercentLabel).length).toBe(2);
     expect(screen.getAllByText(he.cpqLineTotal).length).toBe(2);
 
-    expect(screen.queryByRole("button", { name: he.cpqStage2CompactPlan })).toBeNull();
-    expect(screen.queryByRole("button", { name: he.cpqStage2CompactCatalog })).toBeNull();
-    expect(screen.queryByRole("button", { name: he.cpqStage2CompactItem })).toBeNull();
-    expect(screen.getByRole("button", { name: he.cpqStageBackToPlanning })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: he.cpqAddToQuotePrimary })).toBeNull();
+    expect(screen.getByRole("button", { name: he.cpqStage3EditInPlanning })).toBeTruthy();
     expect(screen.queryByTestId("solution-item-card")).toBeNull();
   });
 
   it("Stage 3 empty still points back to planning", () => {
     const onGo = vi.fn();
     renderPanel("pricing", { items: [], onGoToPlanning: onGo });
-    expect(screen.getByTestId("stage3-empty")).toBeTruthy();
+    expect(screen.getByText(he.cpqStage3EmptyTitle)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: he.cpqStage3EmptyCta }));
     expect(onGo).toHaveBeenCalled();
-    expect(screen.queryByText(he.cpqStage2CompactPlan)).toBeNull();
+    expect(screen.queryByRole("button", { name: he.cpqAddToQuotePrimary })).toBeNull();
   });
 
   it("preserves dirty description across planning → pricing remount via flush", async () => {

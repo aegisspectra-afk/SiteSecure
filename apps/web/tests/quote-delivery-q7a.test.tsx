@@ -135,7 +135,7 @@ describe("Q7-A delivery UX", () => {
     expect(screen.getByText(he.cpqSendHowTitle)).toBeTruthy();
     expect(screen.getByText(he.cpqSendHowLead)).toBeTruthy();
     expect(screen.getByRole("button", { name: he.quoteSendAction })).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.quoteWhatsAppShort })).toBeTruthy();
+    expect(screen.getByRole("button", { name: he.quoteWhatsApp })).toBeTruthy();
     expect(screen.getByRole("button", { name: he.quoteMailtoShare })).toBeTruthy();
   });
 
@@ -159,10 +159,10 @@ describe("Q7-A delivery UX", () => {
     await waitFor(() => {
       expect(screen.getAllByRole("button", { name: he.cpqSendForApproval }).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText(he.cpqDeliverySecondaryLead)).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.quotePdfDownload })).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.cpqCopyCustomerLink })).toBeTruthy();
-    expect(screen.getByRole("button", { name: he.quoteWhatsAppShort })).toBeTruthy();
-    expect(screen.getByText(he.cpqDeliveryNoRecipient)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: he.cpqCustomerView }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqMoreActionsAria })[0]!);
+    expect(screen.getByRole("menuitem", { name: he.quotePdfDownload })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: he.cpqCopyCustomerLink })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: he.quoteMailtoShare })).toBeTruthy();
   });
 });

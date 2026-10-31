@@ -128,11 +128,15 @@ function renderBuilder(row: QuoteOut, roleKey = "owner") {
 }
 
 function mobileToolbar() {
-  return screen.getByRole("toolbar", { name: he.cpqMobileActionsBarAria });
+  return screen.getAllByRole("toolbar", { name: he.cpqMobileActionsBarAria })[0]!;
 }
 
 function openMobileOverflow() {
   fireEvent.click(within(mobileToolbar()).getByRole("button", { name: he.cpqMoreActionsAria }));
+}
+
+function goToReview() {
+  fireEvent.click(screen.getAllByRole("button", { name: he.cpqStepReview })[0]!);
 }
 
 describe("Quote mobile actions", () => {
@@ -150,6 +154,10 @@ describe("Quote mobile actions", () => {
 
   it("keeps send on the compact dock; preview and add live in overflow", () => {
     renderBuilder(quote({ validation: { can_send: false, gaps: [{ field: "title", code: "title", message: "x" }] } }));
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqStageNextToPricingShort })).toBeInTheDocument();
+    fireEvent.click(within(mobileToolbar()).getByRole("button", { name: he.cpqStageNextToPricingShort }));
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqStageNextToReviewShort })).toBeInTheDocument();
+    goToReview();
     const toolbar = mobileToolbar();
     expect(within(toolbar).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeInTheDocument();
     expect(within(toolbar).queryByRole("button", { name: he.cpqCustomerView })).not.toBeInTheDocument();
@@ -161,11 +169,15 @@ describe("Quote mobile actions", () => {
 
   it("disables send when quote is not ready", () => {
     renderBuilder(quote({ validation: { can_send: false, gaps: [{ field: "title", code: "title", message: "x" }] } }));
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqStageNextToPricingShort })).toBeEnabled();
+    goToReview();
     expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeDisabled();
   });
 
   it("enables send when quote is ready", () => {
     renderBuilder(quote());
+    expect(within(mobileToolbar()).getByRole("button", { name: he.cpqStageNextToPricingShort })).toBeInTheDocument();
+    goToReview();
     expect(within(mobileToolbar()).getByRole("button", { name: he.cpqSendForApprovalShort })).toBeEnabled();
   });
 
@@ -247,7 +259,7 @@ describe("Quote mobile actions", () => {
   it("keeps desktop header actions without mobile toolbar", () => {
     mockViewport(true);
     renderBuilder(quote());
-    expect(screen.queryByRole("toolbar", { name: he.cpqMobileActionsBarAria })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("toolbar", { name: he.cpqMobileActionsBarAria })).toHaveLength(0);
     expect(screen.getByRole("button", { name: he.cpqMoreActionsAria })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.cpqSendForApproval }).length).toBeGreaterThanOrEqual(1);
   });

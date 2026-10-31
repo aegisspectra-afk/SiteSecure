@@ -195,7 +195,7 @@ describe("QuoteBuilder lifecycle continuity", () => {
     await waitFor(() =>
       expect(screen.getAllByRole("button", { name: he.workflowOpenProject }).length).toBeGreaterThan(0),
     );
-    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: he.workflowCreateProject })).toHaveLength(0);
   });
 
   it("shows rejected banner with reason and revise action", () => {
@@ -220,13 +220,16 @@ describe("QuoteBuilder lifecycle continuity", () => {
   it("approved create project reachable on mobile toolbar", async () => {
     mockMobileViewport();
     renderBuilder(quote({ status: "approved", site_id: "s1" }));
-    const toolbar = screen.getByRole("toolbar", { name: he.cpqMobileActionsBarAria });
+    const dock = () => screen.getAllByRole("toolbar", { name: he.cpqMobileActionsBarAria })[0]!;
+    expect(within(dock()).getByRole("button", { name: he.cpqStageNextToPricingShort })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqStepReview })[0]!);
+    const toolbar = dock();
     expect(within(toolbar).getByRole("button", { name: he.workflowCreateProject })).toBeInTheDocument();
   });
 
   it("does not show create project for sales role without projects.create", () => {
     renderBuilder(quote({ status: "approved", site_id: "s1" }), "sales");
-    expect(screen.queryByRole("button", { name: he.workflowCreateProject })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: he.workflowCreateProject })).toHaveLength(0);
     expect(screen.getAllByRole("button", { name: he.cpqApprovedCta }).length).toBeGreaterThan(0);
   });
 });

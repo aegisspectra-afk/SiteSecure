@@ -65,7 +65,7 @@ export const RBAC_PERMISSION_MAP: Record<RbacModule, Partial<Record<RbacAction, 
     create: "quotes.create",
     edit: "quotes.edit",
     delete: "quotes.delete",
-    approve_send: ["quotes.send", "quotes.approve"],
+    approve_send: ["quotes.send"],
     export: "quotes.export",
   },
   catalog: {

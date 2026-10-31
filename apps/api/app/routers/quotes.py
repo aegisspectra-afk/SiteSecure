@@ -26,6 +26,7 @@ from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
 from ..quote_workspace_defaults import apply_quote_create_defaults, merge_quote_pdf_template_defaults
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..search_query import sanitize_search_q
 from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["quotes"])
@@ -34,7 +35,7 @@ SHAREABLE_STATES = frozenset({"sent", "viewed", "approved"})
 # Draft may mint a secure link without marking the quote as sent.
 
 QUOTE_SELECT = (
-    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,"
+    "id,workspace_id,number,status,customer_id,contact_id,site_id,lead_id,owner_user_id,"
     "currency,vat_percent,discount_type,discount_value,subtotal_net,vat_amount,"
     "total_gross,cost_total,margin_amount,margin_percent,valid_until,payment_terms,"
     "customer_notes,internal_notes,title,project_name,project_address,summary,"
@@ -45,7 +46,7 @@ QUOTE_SELECT = (
 )
 # Authenticated RETURNING/select must omit cost columns (Q4-S column lockdown).
 QUOTE_SELECT_SAFE = (
-    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,"
+    "id,workspace_id,number,status,customer_id,contact_id,site_id,lead_id,owner_user_id,"
     "currency,vat_percent,discount_type,discount_value,subtotal_net,vat_amount,"
     "total_gross,valid_until,payment_terms,"
     "customer_notes,internal_notes,title,project_name,project_address,summary,"
@@ -55,7 +56,7 @@ QUOTE_SELECT_SAFE = (
     "created_at,updated_at,customers(display_name),sites(name)"
 )
 QUOTE_LIST_SELECT = (
-    "id,workspace_id,number,status,customer_id,site_id,lead_id,owner_user_id,currency,"
+    "id,workspace_id,number,status,customer_id,contact_id,site_id,lead_id,owner_user_id,currency,"
     "total_gross,valid_until,title,"
     "project_name,version,created_at,updated_at,"
     "customers(display_name),sites(name)"
@@ -94,6 +95,7 @@ ITEM_TYPES = frozenset({"catalog", "free", "labor", "note"})
 class QuoteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     customer_id: str | None = None
+    contact_id: str | None = None
     site_id: str | None = None
     lead_id: str | None = None
     title: str | None = None
@@ -116,6 +118,7 @@ class QuoteCreate(BaseModel):
 class QuotePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     customer_id: str | None = None
+    contact_id: str | None = None
     site_id: str | None = None
     lead_id: str | None = None
     title: str | None = None
@@ -192,6 +195,69 @@ def _ref(row: dict) -> ResourceRef:
 
 def _can_view_cost(ctx) -> bool:
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
+
+
+def _assert_contact_belongs_to_customer(
+    client: UserClient,
+    workspace_id: UUID,
+    *,
+    customer_id: str | None,
+    contact_id: str | None,
+) -> None:
+    if not contact_id:
+        return
+    if not customer_id:
+        raise ApiError(400, "VALIDATION_ERROR", "לא ניתן לשייך איש קשר בלי לקוח")
+    rows = as_list(
+        client.get(
+            "customer_contacts",
+            params={
+                "id": f"eq.{contact_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "customer_id": f"eq.{customer_id}",
+                "select": "id,workspace_id,customer_id",
+            },
+        )
+    )
+    row = rows[0] if rows else None
+    if not row or str(row.get("workspace_id") or "") != str(workspace_id):
+        raise ApiError(400, "VALIDATION_ERROR", "איש הקשר אינו שייך ללקוח של ההצעה")
+
+
+def _customer_ids_matching_name(client: UserClient, workspace_id: UUID, safe: str) -> list[str]:
+    rows = as_list(
+        client.get(
+            "customers",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "display_name": f"ilike.*{safe}*",
+                "select": "id",
+                "limit": "50",
+            },
+        )
+    )
+    return [str(row["id"]) for row in rows if row.get("id")]
+
+
+def _assert_margin_allows_send(ctx, quote: dict, settings: dict | None) -> None:
+    quotes_cfg = settings.get("quotes") if isinstance(settings, dict) and isinstance(settings.get("quotes"), dict) else {}
+    target = quotes_cfg.get("margin_target", 30)
+    minimum = quotes_cfg.get("margin_minimum", 15)
+    pct = quote.get("margin_percent")
+    if pct is None:
+        return
+    if pricing.margin_status(pct, target=target, minimum=minimum) != "critical":
+        return
+    if str(quote.get("margin_override_reason") or "").strip() and quote.get("margin_override_at"):
+        return
+    if authorize(ctx=ctx, action="quotes.override_price").allowed:
+        return
+    raise ApiError(
+        403,
+        "MARGIN_BELOW_MINIMUM",
+        MESSAGES["MARGIN_BELOW_MINIMUM"],
+        {"margin_percent": pct, "minimum": minimum},
+    )
 
 
 def _service() -> ServiceClient:
@@ -400,6 +466,13 @@ def _persist_totals(
         "margin_amount": computed["margin_amount"],
         "margin_percent": computed["margin_percent"],
     }
+    optional_totals = {
+        "optional_subtotal": computed.get("optional_subtotal"),
+        "optional_vat_amount": computed.get("optional_vat_amount"),
+        "optional_total_gross": computed.get("optional_total_gross"),
+        "total_with_options_gross": computed.get("total_with_options_gross"),
+        "optional_cost_total": computed.get("optional_cost_total"),
+    }
     # UPDATE cost_* via authenticated (UPDATE granted); RETURNING must omit locked columns.
     patched = patched_or_403(
         client.patch(
@@ -412,7 +485,7 @@ def _persist_totals(
             },
         )
     )
-    return {**patched, **totals}, items
+    return {**patched, **totals, **optional_totals}, items
 
 
 TEMPLATE_ITEM_SELECT = (
@@ -1084,13 +1157,19 @@ def list_quotes(
 
     search_or = None
     if q:
-        safe = q.replace(",", " ").replace("*", " ").replace("(", " ").replace(")", " ").strip()
+        safe = sanitize_search_q(q)
         if safe:
-            # Do not filter nested `customers.display_name` inside `or(...)` — PostgREST
-            # rejects that parse (PGRST100). Number/title/project cover the search box.
-            search_or = (
-                f"(number.ilike.*{safe}*,title.ilike.*{safe}*,project_name.ilike.*{safe}*)"
-            )
+            # Nested customers.display_name inside or() is PGRST100. One customer
+            # name query + customer_id=in.(...) keeps this at two queries, not N+1.
+            clauses = [
+                f"number.ilike.*{safe}*",
+                f"title.ilike.*{safe}*",
+                f"project_name.ilike.*{safe}*",
+            ]
+            customer_ids = _customer_ids_matching_name(client, workspace_id, safe)
+            if customer_ids:
+                clauses.append(f"customer_id.in.({','.join(customer_ids)})")
+            search_or = f"({','.join(clauses)})"
 
     # Prefer top-level status + or (supported). Fall back to `and=` only when needed.
     if status_filter and search_or:
@@ -1170,6 +1249,12 @@ def create_quote(
         vat = float(ws.get("vat_percent") or 18)
     else:
         ws = _load_workspace(client, workspace_id)
+    _assert_contact_belongs_to_customer(
+        client,
+        workspace_id,
+        customer_id=body.customer_id,
+        contact_id=body.contact_id,
+    )
     settings = _load_quote_settings(client, workspace_id)
     quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
     payload = {
@@ -1224,12 +1309,21 @@ def patch_quote(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(existing))
-    # Allow explicit nulls for FK clears (customer/site/lead replacement).
-    clearable = {"customer_id", "site_id", "lead_id", "template_id"}
+    # Allow explicit nulls for FK clears (customer/site/lead/contact replacement).
+    clearable = {"customer_id", "contact_id", "site_id", "lead_id", "template_id"}
     raw = body.model_dump(exclude_unset=True)
     patch = {k: v for k, v in raw.items() if v is not None or k in clearable}
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    if "contact_id" in patch or "customer_id" in patch:
+        next_customer = patch["customer_id"] if "customer_id" in patch else existing.get("customer_id")
+        next_contact = patch["contact_id"] if "contact_id" in patch else existing.get("contact_id")
+        _assert_contact_belongs_to_customer(
+            client,
+            workspace_id,
+            customer_id=next_customer,
+            contact_id=next_contact,
+        )
     if any(k in patch for k in ("total_gross", "subtotal_net", "vat_amount", "cost_total")):
         raise ApiError(400, "VALIDATION_ERROR", "סה״כ מחושב בשרת בלבד")
     row = patched_or_403(
@@ -1509,7 +1603,7 @@ def send_quote(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.send", resource=_ref(existing))
-    row, items, token = _transition_to_sent(client, svc, user, workspace_id, existing)
+    row, items, token = _transition_to_sent(client, svc, user, workspace_id, existing, ctx=ctx)
     out = _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
     out["public_url"] = _public_url(token)
     out["public_token"] = token
@@ -1522,6 +1616,7 @@ def _transition_to_sent(
     user: dict,
     workspace_id: UUID,
     existing: dict,
+    ctx=None,
 ) -> tuple[dict, list[dict], str]:
     """Validate, mark sent (conditional), snapshot, mint public token. Caller must authorize quotes.send.
 
@@ -1533,6 +1628,8 @@ def _transition_to_sent(
     existing, items = _persist_totals(client, workspace_id, existing, items)
     workspace, _customer, _site = _related(client, workspace_id, existing)
     settings = _load_quote_settings(client, workspace_id)
+    if ctx is not None:
+        _assert_margin_allows_send(ctx, existing, settings)
     gaps = validate_for_send(existing, items, workspace, settings)
     if gaps:
         raise ApiError(400, "QUOTE_INCOMPLETE", MESSAGES["QUOTE_INCOMPLETE"], {"gaps": gaps})

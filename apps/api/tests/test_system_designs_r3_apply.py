@@ -532,6 +532,7 @@ def test_initial_apply_calls_rpc_and_persist(mock_ctx, mock_require):
     quote = _quote()
     product = {
         "id": str(PID),
+        "workspace_id": str(WS),
         "sku": "CAM",
         "name": "Cam",
         "description": "d",
@@ -694,6 +695,7 @@ def test_pricing_failure_after_rpc_surfaces_recoverable_error(mock_ctx, mock_req
     quote = _quote()
     product = {
         "id": str(PID),
+        "workspace_id": str(WS),
         "sku": "CAM",
         "name": "Cam",
         "description": "d",
@@ -768,3 +770,60 @@ def test_proposed_hash_matches_component_product_qty():
         {"component_id": "c1", "product_id": "p1", "qty": 4.0},
     ]
     assert proposed_hash(lines) == "c1:p1|4|c2:p2|1"
+
+
+@patch("app.routers.system_designs.require")
+@patch("app.routers.system_designs.load_authz_context")
+def test_apply_drops_cross_workspace_product(mock_ctx, mock_require):
+    """Service client bypasses RLS — apply must still reject another workspace's product."""
+    mock_ctx.return_value = MagicMock()
+    mock_require.return_value = MagicMock(allowed=True)
+    client = MagicMock()
+    user = {"id": "u1", "sub": "u1"}
+    foreign_ws = uuid4()
+    product = {
+        "id": str(PID),
+        "workspace_id": str(foreign_ws),
+        "sku": "CAM",
+        "name": "Cam",
+        "description": "d",
+        "unit": "ea",
+        "list_price": 100,
+        "cost": 40,
+        "is_active": True,
+        "kind": "product",
+        "vat_eligible": True,
+        "is_labor": False,
+        "manufacturer": None,
+        "model": None,
+        "attributes": {},
+    }
+    svc = MagicMock()
+    svc.get.return_value = _resp(200, [product])
+
+    with (
+        patch.object(sd, "_load_design_row", return_value=_design_row()),
+        patch.object(sd, "_load_components", return_value=[_comp()]),
+        patch("app.routers.quotes._load_quote", return_value=_quote()),
+        patch("app.routers.quotes._load_items", return_value=[]),
+        patch(
+            "app.routers.quotes._load_sections",
+            return_value=[{"id": "sec1", "name": "מערכת CCTV", "sort_order": 10}],
+        ),
+        patch("app.identity.actor_id", return_value="u1"),
+        patch("app.routers.quotes._service", return_value=svc),
+        pytest.raises(ApiError) as err,
+    ):
+        sd.apply_system_design(
+            WS,
+            DID,
+            sd.SystemDesignApplyIn(revision=2),
+            client,
+            user,
+        )
+
+    assert err.value.status_code == 404
+    params = svc.get.call_args.kwargs["params"]
+    assert params["workspace_id"] == f"eq.{WS}"
+    assert params["id"] == f"in.({PID})"
+    client.rpc.assert_not_called()

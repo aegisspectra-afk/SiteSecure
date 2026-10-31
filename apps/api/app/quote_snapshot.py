@@ -18,6 +18,14 @@ PUBLIC_ITEM_KEYS = (
     "section_id",
     "package_instance_id",
     "package_name",
+    "is_optional",
+)
+
+OPTIONAL_PUBLIC_TOTAL_KEYS = (
+    "optional_subtotal",
+    "optional_vat_amount",
+    "optional_total_gross",
+    "total_with_options_gross",
 )
 
 # Approval UX today; future: SignaturePad → signed_at + immutable version bound to N.
@@ -69,6 +77,7 @@ def public_items(items: list[dict]) -> list[dict]:
         row["unit_price"] = _num(item.get("unit_price"))
         row["discount"] = _num(item.get("discount"))
         row["line_net"] = _num(item.get("line_net"))
+        row["is_optional"] = bool(item.get("is_optional"))
         rows.append(row)
     return rows
 
@@ -195,6 +204,9 @@ def public_payload(
         "template_version": tpl_ver,
         "document_type": DocumentType.QUOTE.value,
     }
+    for key in OPTIONAL_PUBLIC_TOTAL_KEYS:
+        if key in quote and quote[key] is not None:
+            payload[key] = _num(quote[key])
     if snap:
         payload["company_snapshot"] = snap
     if pdf_template and isinstance(pdf_template, dict):

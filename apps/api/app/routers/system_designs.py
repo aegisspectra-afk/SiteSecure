@@ -602,7 +602,11 @@ def apply_system_design(
             },
         )
     )
-    products_by_id = {str(p["id"]): p for p in products}
+    products_by_id = {
+        str(p["id"]): p
+        for p in products
+        if str(p.get("workspace_id") or "") == str(workspace_id)
+    }
 
     sections = quotes_mod._load_sections(client, workspace_id, quote_id)
     section_name = (body.section_name or CCTV_SECTION_NAME).strip() or CCTV_SECTION_NAME

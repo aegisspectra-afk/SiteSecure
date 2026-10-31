@@ -186,7 +186,7 @@ describe("SETTINGS-3B integrity honesty copy", () => {
 
 describe("RBAC matrix mapping", () => {
   it("maps modules×actions to catalog permission keys", () => {
-    expect(RBAC_PERMISSION_MAP.quotes.approve_send).toEqual(["quotes.send", "quotes.approve"]);
+    expect(RBAC_PERMISSION_MAP.quotes.approve_send).toEqual(["quotes.send"]);
     expect(RBAC_MODULES.length).toBeGreaterThan(5);
     expect(RBAC_ACTIONS).toContain("view");
   });

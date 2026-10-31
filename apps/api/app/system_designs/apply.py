@@ -24,7 +24,7 @@ PRODUCT_SELECT = (
     "manufacturer,model,attributes"
 )
 PRODUCT_SELECT_WITH_COST = (
-    "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
+    "id,workspace_id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"
     "manufacturer,model,attributes"
 )
 

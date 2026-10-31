@@ -48,6 +48,10 @@ describe("T2-3 quote send honesty", () => {
     assertNoEmailSentLie(document.body.textContent ?? "");
   });
 
+  it("margin below threshold is explained in Hebrew", () => {
+    expect(he.quoteMarginBlocksSend).toBe("מרווח מתחת לסף. נדרשת הרשאת דריסת מחיר כדי לשלוח.");
+  });
+
   it("post-send copy says copy the link, not that email was sent", () => {
     expect(he.quoteSentNoEmail).toContain("לא נשלח מייל");
     expect(he.quoteSentNoEmail).toContain("הקישור");

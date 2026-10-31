@@ -66,6 +66,7 @@ MESSAGES = {
     "ROLE_NOT_ALLOWED": "התפקיד בהזמנה אינו מותר בתוכנית הנוכחית",
     "VALIDATION_ERROR": "נתונים לא תקינים",
     "QUOTE_INCOMPLETE": "לא ניתן לשלוח את ההצעה",
+    "MARGIN_BELOW_MINIMUM": "מרווח מתחת לסף. נדרשת הרשאת דריסת מחיר כדי לשלוח.",
     "TEMPLATE_EMPTY": "לתבנית אין שורות להחלה",
     "API_UNAVAILABLE": "השירות אינו זמין",
     "SSP_SCHEMA_UNAVAILABLE": (

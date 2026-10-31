@@ -57,7 +57,6 @@ TECHNICIAN_COMMERCIAL_DENY = frozenset(
         "quotes.edit",
         "quotes.delete",
         "quotes.send",
-        "quotes.approve",
         "quotes.export",
         "quotes.view_cost",
         "quotes.override_price",

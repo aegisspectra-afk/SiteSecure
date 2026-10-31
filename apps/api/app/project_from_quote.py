@@ -14,6 +14,7 @@ class ProjectFromQuotePlan:
     customer_id: str
     site_id: str | None
     source_quote_id: str
+    source_quote_version: int = 1
     status: str = "planned"
 
 
@@ -85,10 +86,17 @@ def plan_project_from_quote(
             "להצעת המחיר אין אתר משויך, ולכן לא ניתן ליצור פרויקט התקנה.",
         )
 
+    try:
+        pinned_version = int(quote.get("version") or 1)
+    except (TypeError, ValueError):
+        pinned_version = 1
+    pinned_version = max(pinned_version, 1)
+
     return ProjectFromQuotePlan(
         name=project_name_from_quote(quote),
         customer_id=str(customer_id),
         site_id=str(site_id),
         source_quote_id=str(quote["id"]),
+        source_quote_version=pinned_version,
         status="planned",
     )

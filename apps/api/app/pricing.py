@@ -137,10 +137,13 @@ def recalculate(
     section_map = {str(s.get("id")): s for s in (sections or []) if s.get("id")}
     section_subtotals: dict[str | None, Decimal] = {}
     cost_total = Decimal("0.00")
+    optional_subtotal = Decimal("0.00")
+    optional_cost_total = Decimal("0.00")
     computed_items: list[dict] = []
 
     for item in items:
         item_type = item.get("item_type") or "catalog"
+        optional = bool(item.get("is_optional")) and item_type != "note"
         net = line_net(
             qty=item.get("qty"),
             unit_price=item.get("unit_price"),
@@ -148,11 +151,6 @@ def recalculate(
             item_type=item_type,
             discount_type=item.get("discount_type") or "amount",
         )
-        if item_type != "note":
-            cost_total += _money(item.get("qty")) * _money(item.get("cost"))
-        section_id = item.get("section_id")
-        key: str | None = str(section_id) if section_id else None
-        section_subtotals[key] = section_subtotals.get(key, Decimal("0.00")) + net
         profit = line_profitability(
             qty=item.get("qty"),
             unit_price=item.get("unit_price"),
@@ -161,6 +159,16 @@ def recalculate(
             item_type=item_type,
             discount_type=item.get("discount_type") or "amount",
         )
+        if optional:
+            optional_subtotal += net
+            if item_type != "note":
+                optional_cost_total += _money(item.get("qty")) * _money(item.get("cost"))
+        else:
+            if item_type != "note":
+                cost_total += _money(item.get("qty")) * _money(item.get("cost"))
+            section_id = item.get("section_id")
+            key: str | None = str(section_id) if section_id else None
+            section_subtotals[key] = section_subtotals.get(key, Decimal("0.00")) + net
         computed_items.append({**item, **profit})
 
     lines_subtotal = Decimal("0.00")
@@ -200,6 +208,16 @@ def recalculate(
             TWOPLACES, rounding=ROUND_HALF_UP
         )
 
+    optional_subtotal = optional_subtotal.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    optional_vat = (optional_subtotal * _money(vat_percent) / Decimal("100")).quantize(
+        TWOPLACES, rounding=ROUND_HALF_UP
+    )
+    optional_total_gross = (optional_subtotal + optional_vat).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    optional_cost_total = optional_cost_total.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    total_with_options_gross = (total_gross + optional_total_gross).quantize(
+        TWOPLACES, rounding=ROUND_HALF_UP
+    )
+
     return {
         "items": computed_items,
         "lines_subtotal": float(lines_subtotal),
@@ -212,4 +230,9 @@ def recalculate(
         "margin_amount": float(margin_amount),
         "margin_percent": float(margin_percent),
         "revenue": float(after_discount),
+        "optional_subtotal": float(optional_subtotal),
+        "optional_vat_amount": float(optional_vat),
+        "optional_total_gross": float(optional_total_gross),
+        "optional_cost_total": float(optional_cost_total),
+        "total_with_options_gross": float(total_with_options_gross),
     }

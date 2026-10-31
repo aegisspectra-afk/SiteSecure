@@ -3403,6 +3403,7 @@ export const he = {
   quoteSaveError: "השמירה נכשלה",
   quoteLocked: "ההצעה נשלחה. כדי לשנות, צרו גרסה חדשה.",
   quoteSendBlocked: "לא ניתן לשלוח עדיין",
+  quoteMarginBlocksSend: "מרווח מתחת לסף. נדרשת הרשאת דריסת מחיר כדי לשלוח.",
   quoteGoToField: "עבור לשדה",
   quoteUndo: "בטל",
   quoteRedo: "בצע שוב",
@@ -3472,7 +3473,7 @@ export const he = {
   quoteShareFailed: "לא הצלחנו ליצור את קישור השיתוף",
   quoteShareDialogTitle: "שיתוף לצפייה",
   quoteShareDialogLead:
-    "קישור מאובטח לצפייה בלבד — לא מסמן כנשלחה ולא מאפשר אישור/דחייה עד שליחה רשמית",
+    "קישור מאובטח לצפייה בלבד — ללא אישור או דחייה. שליחה לאישור הלקוח היא פעולה נפרדת.",
   quoteShareSecureLink: "קישור מאובטח",
   quoteShareCopied: "הקישור הועתק",
   quoteShareClipboardFallback: "העתקה אוטומטית לא זמינה בדפדפן — בחרו את הקישור והעתיקו ידנית.",

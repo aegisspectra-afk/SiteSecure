@@ -673,6 +673,48 @@ def list_versions(
     return {"items": rows, "current_version": existing.get("version") or 1}
 
 
+def _load_version_row(client: UserClient, workspace_id: UUID, quote_id: UUID, version: int) -> dict | None:
+    """Load a frozen version only when it belongs to this quote and workspace."""
+    rows = as_list(
+        client.get(
+            "quote_versions",
+            params={
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "version": f"eq.{version}",
+                "select": "id,version,snapshot,created_at",
+            },
+        )
+    )
+    return rows[0] if rows else None
+
+
+def _public_from_version_row(row: dict | None) -> dict | None:
+    if not row:
+        return None
+    public = (row.get("snapshot") or {}).get("public")
+    return public if isinstance(public, dict) else None
+
+
+@router.get("/quotes/{quote_id}/versions/{version}/document")
+def quote_version_document(
+    workspace_id: UUID,
+    quote_id: UUID,
+    version: int,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """Historical customer document from a frozen snapshot — never live rows."""
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.view", resource=_ref(existing))
+    row = _load_version_row(client, workspace_id, quote_id, version)
+    public = _public_from_version_row(row)
+    if not row or not public:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    return {**public, "version": row.get("version"), "historical": True}
+
+
 @router.get("/quotes/{quote_id}/versions/compare")
 def compare_versions(
     workspace_id: UUID,
@@ -687,22 +729,8 @@ def compare_versions(
     require(ctx, "quotes.view", resource=_ref(existing))
     to_ver = to_version or int(existing.get("version") or 1)
 
-    def _snap(version: int) -> dict | None:
-        rows = as_list(
-            client.get(
-                "quote_versions",
-                params={
-                    "quote_id": f"eq.{quote_id}",
-                    "workspace_id": f"eq.{workspace_id}",
-                    "version": f"eq.{version}",
-                    "select": "version,snapshot",
-                },
-            )
-        )
-        return rows[0] if rows else None
-
-    left = _snap(from_version)
-    right = _snap(to_ver)
+    left = _load_version_row(client, workspace_id, quote_id, from_version)
+    right = _load_version_row(client, workspace_id, quote_id, to_ver)
     if to_ver == int(existing.get("version") or 1) and right is None:
         # Live draft vs last issued — synthesize right from live public shape
         items = _load_items(client, workspace_id, quote_id)
@@ -721,6 +749,14 @@ def compare_versions(
             out[key] = item
         return out
 
+    def _sections(public: dict) -> dict[str, dict]:
+        out: dict[str, dict] = {}
+        for section in public.get("sections") or []:
+            sid = str(section.get("id") or "")
+            if sid:
+                out[sid] = section
+        return out
+
     a = _lines(left)
     b = _lines(right)
     keys = sorted(set(a) | set(b))
@@ -734,17 +770,57 @@ def compare_versions(
         elif la and lb:
             qty_a, qty_b = float(la.get("qty") or 0), float(lb.get("qty") or 0)
             price_a, price_b = float(la.get("unit_price") or 0), float(lb.get("unit_price") or 0)
-            if qty_a != qty_b or price_a != price_b or (la.get("description") != lb.get("description")):
+            disc_a, disc_b = float(la.get("discount") or 0), float(lb.get("discount") or 0)
+            opt_a, opt_b = bool(la.get("is_optional")), bool(lb.get("is_optional"))
+            if (
+                qty_a != qty_b
+                or price_a != price_b
+                or la.get("description") != lb.get("description")
+                or disc_a != disc_b
+                or opt_a != opt_b
+            ):
                 changes.append(
                     {
                         "key": key,
                         "change": "modified",
-                        "from": {"qty": qty_a, "unit_price": price_a, "description": la.get("description")},
-                        "to": {"qty": qty_b, "unit_price": price_b, "description": lb.get("description")},
+                        "from": {
+                            "qty": qty_a,
+                            "unit_price": price_a,
+                            "description": la.get("description"),
+                            "discount": disc_a,
+                            "is_optional": opt_a,
+                        },
+                        "to": {
+                            "qty": qty_b,
+                            "unit_price": price_b,
+                            "description": lb.get("description"),
+                            "discount": disc_b,
+                            "is_optional": opt_b,
+                        },
                     }
                 )
     pub_a = (left.get("snapshot") or {}).get("public") or {}
     pub_b = (right.get("snapshot") or {}).get("public") or {}
+    sa, sb = _sections(pub_a), _sections(pub_b)
+    for sid in sorted(set(sa) | set(sb)):
+        sec_a, sec_b = sa.get(sid), sb.get(sid)
+        if sec_a and not sec_b:
+            changes.append(
+                {"key": f"section:{sid}", "change": "removed", "from": {"name": sec_a.get("name")}, "to": None}
+            )
+        elif sec_b and not sec_a:
+            changes.append(
+                {"key": f"section:{sid}", "change": "added", "from": None, "to": {"name": sec_b.get("name")}}
+            )
+        elif (sec_a or {}).get("name") != (sec_b or {}).get("name"):
+            changes.append(
+                {
+                    "key": f"section:{sid}",
+                    "change": "modified",
+                    "from": {"name": (sec_a or {}).get("name")},
+                    "to": {"name": (sec_b or {}).get("name")},
+                }
+            )
     return {
         "from_version": from_version,
         "to_version": to_ver,

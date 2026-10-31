@@ -717,6 +717,10 @@ export function QuoteBuilder({
         setFormError(he.quoteSendBlocked);
         return;
       }
+      if (err instanceof ApiClientError && err.code === "MARGIN_BELOW_MINIMUM") {
+        setFormError(he.quoteMarginBlocksSend);
+        return;
+      }
       setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
     },
   });

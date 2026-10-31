@@ -21,6 +21,7 @@ from ..installed_assets_from_planned import (
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..project_from_quote import plan_project_from_quote
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..search_query import sanitize_search_q
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["ops"])
 
@@ -452,6 +453,7 @@ def create_project_from_quote(
         "customer_id": plan.customer_id,
         "site_id": plan.site_id,
         "source_quote_id": plan.source_quote_id,
+        "source_quote_version": plan.source_quote_version,
         "status": plan.status,
     }
     payload = {k: v for k, v in payload.items() if v is not None}
@@ -472,7 +474,11 @@ def create_project_from_quote(
         "projects.create_from_quote",
         entity_type="project",
         entity_id=str(project.get("id") or ""),
-        metadata={"source_quote_id": plan.source_quote_id, "lead_id": lead_id},
+        metadata={
+            "source_quote_id": plan.source_quote_id,
+            "source_quote_version": plan.source_quote_version,
+            "lead_id": lead_id,
+        },
     )
     return project
 
@@ -1346,6 +1352,7 @@ def list_tasks(
     status: str | None = Query(default=None),
     type: str | None = Query(default=None),
     lead_id: str | None = Query(default=None),
+    q: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "calendar.view")
@@ -1362,6 +1369,9 @@ def list_tasks(
         params["type"] = f"eq.{type}"
     if lead_id:
         params["lead_id"] = f"eq.{lead_id}"
+    safe_q = sanitize_search_q(q)
+    if safe_q:
+        params["title"] = f"ilike.*{safe_q}*"
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"

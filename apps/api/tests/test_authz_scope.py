@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.authz.scope import (
     apply_assigned_column_filter,
     apply_assigned_job_list_filter,
+    apply_assigned_task_list_filter,
     empty_assigned_page,
     is_assigned_scope,
 )
@@ -46,4 +47,19 @@ def test_apply_assigned_filters():
 
     owner_params: dict[str, str] = {"workspace_id": "eq.w1"}
     apply_assigned_job_list_filter(_ctx("owner", assigned=("j1",)), owner_params)
+    assert owner_params == {"workspace_id": "eq.w1"}
+
+
+def test_assigned_task_filter_is_assignee_only_even_with_site_customer():
+    params: dict[str, str] = {"workspace_id": "eq.w1"}
+    apply_assigned_task_list_filter(
+        _ctx("technician", assigned=("site-1", "cust-1")),
+        params,
+    )
+    assert "assignee_id.eq.u1" in params["and"]
+    assert "site_id.in." not in params["and"]
+    assert "customer_id.in." not in params["and"]
+
+    owner_params: dict[str, str] = {"workspace_id": "eq.w1"}
+    apply_assigned_task_list_filter(_ctx("owner", assigned=("site-1",)), owner_params)
     assert owner_params == {"workspace_id": "eq.w1"}

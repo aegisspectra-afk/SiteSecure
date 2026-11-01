@@ -429,3 +429,29 @@ def test_tasks_export_technician_scope_hides_foreign_and_customer_columns(monkey
     assert "משימה של אחר" not in text
     assert "'@SUM(A1)" in text
     assert any("assignee_id.eq." + ACTOR in str(params) for _, params in client.gets)
+
+
+def test_tasks_export_technician_assigned_site_does_not_include_other_tech_tasks(monkeypatch):
+    """Assigned site/customer must not expand export to other technicians' tasks."""
+    site_id = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    other_on_assigned_site = {
+        "id": "99999999-9999-9999-9999-999999999999",
+        "workspace_id": str(WS),
+        "title": "משימה של טכנאי אחר באתר משויך",
+        "status": "open",
+        "type": "other",
+        "assignee_id": "55555555-5555-5555-5555-555555555555",
+        "due_at": "2026-10-16T10:00:00+00:00",
+        "created_at": "2026-10-02T00:00:00+00:00",
+        "customer_id": CID,
+        "site_id": site_id,
+    }
+    client = FakeTasks([*FakeTasks().rows, other_on_assigned_site])
+    monkeypatch.setattr(ops, "_ctx", lambda *a, **k: _ctx("technician", assigned=(site_id, CID)))
+    res = _export_tasks(WS, client, {"sub": ACTOR})
+    text = _csv_text(res)
+    assert "משימה של טכנאי אחר באתר משויך" not in text
+    blobs = [str(params) for _, params in client.gets]
+    assert any(f"assignee_id.eq.{ACTOR}" in blob for blob in blobs)
+    assert not any("site_id.in." in blob for blob in blobs)
+    assert not any("customer_id.in." in blob for blob in blobs)

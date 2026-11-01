@@ -148,16 +148,13 @@ def apply_assigned_project_list_filter(ctx: AuthzContext, params: dict[str, str]
 
 
 def apply_assigned_task_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
-    """Tasks: own assignee rows, plus tasks on assigned site/customer ids."""
+    """Tasks: assigned-scope actors see only rows they are assigned to.
+
+    Assigned site/customer ids must not leak other technicians' tasks.
+    """
     if not is_assigned_scope(ctx):
         return params
-    clauses = [f"assignee_id.eq.{ctx.user_id}"]
-    ids = sorted({str(i) for i in ctx.assigned_resource_ids if i})
-    if ids:
-        csv = ",".join(ids)
-        clauses.append(f"site_id.in.({csv})")
-        clauses.append(f"customer_id.in.({csv})")
-    _and_clause(params, f"or({','.join(clauses)})")
+    _and_clause(params, f"assignee_id.eq.{ctx.user_id}")
     return params
 
 

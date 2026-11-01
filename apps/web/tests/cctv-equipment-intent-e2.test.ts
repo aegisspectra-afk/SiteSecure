@@ -32,6 +32,22 @@ import {
   canAddRecommendationToQuote,
   initialReviewSelection,
 } from "../src/lib/cctv-recommend-projection";
+import { semanticRoleOf } from "../src/lib/cctv-component-keys";
+
+/**
+ * SYSTEM-DESIGNER-1A stores Design role_key as stable component_key
+ * (camera_ip_main), not the semantic role (camera). Lookups below use
+ * semanticRoleOf so the e2 contract stays role-oriented.
+ */
+function findBySemanticRole<T extends { role_key?: string | null; role?: string | null }>(
+  rows: T[],
+  semantic: string,
+): T | undefined {
+  return rows.find((row) => {
+    const raw = row.role_key ?? row.role ?? "";
+    return raw === semantic || semanticRoleOf(raw) === semantic;
+  });
+}
 
 function baseComponent(
   partial: Partial<CctvRecommendationComponent> & Pick<CctvRecommendationComponent, "role">,
@@ -149,7 +165,7 @@ describe("E2 Equipment Intent shape", () => {
     const comps = componentsFromRecommendation(rec, selection, new Set(), {
       camera: { manufacturer: "Hikvision" },
     });
-    const camera = comps.find((c) => c.role_key === "camera")!;
+    const camera = findBySemanticRole(comps, "camera")!;
     expect(camera.user_selected_product_id).toBeNull();
     expect(camera.equipment_intent?.manufacturer).toBe("Hikvision");
     expect((camera.equipment_intent as { product_id?: string } | null)?.product_id).toBeUndefined();
@@ -263,9 +279,11 @@ describe("E2 hydration / transitions / recalc", () => {
     const hydrated = intentFromDesign(design);
     expect(hydrated.camera).toEqual({ manufacturer: "Hikvision", model_reference: "DS-XXXX" });
     const rebuilt = recommendationFromDesign(design);
-    expect(rebuilt?.components.find((c) => c.role === "camera")?.technical_requirements).toEqual(
-      rec.components.find((c) => c.role === "camera")?.technical_requirements,
-    );
+    const rebuiltCam = rebuilt?.components.find((c) => c.role === "camera")?.technical_requirements;
+    const originalCam = rec.components.find((c) => c.role === "camera")?.technical_requirements;
+    expect(rebuiltCam).toMatchObject(originalCam ?? {});
+    expect(rebuiltCam?.component_key).toBe("camera_ip_main");
+    expect(rebuiltCam?.semantic_role).toBe("camera");
   });
 
   it("K — recalculate preserves still-valid intent", () => {
@@ -312,7 +330,7 @@ describe("E2 hydration / transitions / recalc", () => {
     const comps = componentsFromRecommendation(rec, selection, new Set(), {
       camera: { manufacturer: "Hikvision", model_reference: "old-intent" },
     });
-    const row = comps.find((c) => c.role_key === "camera")!;
+    const row = findBySemanticRole(comps, "camera")!;
     expect(row.user_selected_product_id).toBe("p1");
     expect(row.equipment_intent).toBeNull();
   });
@@ -323,7 +341,7 @@ describe("E2 hydration / transitions / recalc", () => {
     const comps = componentsFromRecommendation(rec, selection, new Set(), {
       camera: { manufacturer: "Dahua" },
     });
-    const row = comps.find((c) => c.role_key === "camera")!;
+    const row = findBySemanticRole(comps, "camera")!;
     expect(row.user_selected_product_id).toBeNull();
     expect(row.equipment_intent?.manufacturer).toBe("Dahua");
     const design = designWithComponents(rec, selection, { camera: { manufacturer: "Dahua" } });
@@ -351,7 +369,7 @@ describe("E2 hydration / transitions / recalc", () => {
     const design = designWithComponents(rec, selection, {
       camera: { manufacturer: "Hikvision", model_reference: undefined },
     });
-    const cameraRow = design.components.find((c) => c.role_key === "camera")!;
+    const cameraRow = findBySemanticRole(design.components, "camera")!;
     expect(cameraRow.equipment_intent?.manufacturer).toBe("Hikvision");
     expect(cameraRow.user_selected_product_id).toBeNull();
     expect(equipmentResolutionForComponent(rec.components[0]!, selection, {

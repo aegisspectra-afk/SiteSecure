@@ -9,6 +9,7 @@
 import type {
   CctvRecommendationCandidate,
   CctvRecommendationComponent,
+  EquipmentIntent,
   SystemDesign,
   SystemDesignComponent,
   SystemDesignComponentIn,
@@ -28,6 +29,10 @@ import {
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
 import { classifyPriorSelection } from "./cctv-designer-review";
+import {
+  normalizeEquipmentIntent,
+  technicalRequirementsFingerprint,
+} from "./cctv-equipment-intent-e2";
 
 export type CctvDesignRequirementsDoc = {
   form: CctvBuildRequirements;
@@ -89,6 +94,7 @@ export function componentsFromRecommendation(
   rec: SystemRecommendation,
   selection: ReviewSelectionState,
   needsReviewKeys: Set<string> = new Set(),
+  intentByRole: Record<string, EquipmentIntent | null> = {},
 ): SystemDesignComponentIn[] {
   return rec.components.map((c) => {
     const componentKey = componentKeyOf(c);
@@ -96,6 +102,9 @@ export function componentsFromRecommendation(
     const enginePreferred = c.selected_product?.id ?? null;
     const removed = selection.removedComponentIds.has(componentKey);
     const userSelected = removed ? null : selection.selectedByComponentId[componentKey] ?? null;
+    const rawIntent =
+      intentByRole[componentKey] ?? intentByRole[semanticRole] ?? intentByRole[c.role] ?? null;
+    const equipmentIntent = userSelected ? null : normalizeEquipmentIntent(rawIntent);
     const tech = {
       ...(c.technical_requirements ?? {}),
       component_key: componentKey,
@@ -123,9 +132,78 @@ export function componentsFromRecommendation(
       user_selected_product_id: userSelected,
       selection_origin: selectionOriginForComponent(componentKey, selection, enginePreferred),
       reason_codes: c.reason_codes ?? [],
-      needs_review: needsReviewKeys.has(componentKey),
+      needs_review:
+        needsReviewKeys.has(componentKey) ||
+        needsReviewKeys.has(semanticRole) ||
+        needsReviewKeys.has(c.role),
+      equipment_intent: equipmentIntent,
     };
   });
+}
+
+/** Hydrate Equipment Intent from a persisted design, keyed by semantic role (and component_key). */
+export function intentFromDesign(design: SystemDesign): Record<string, EquipmentIntent> {
+  const out: Record<string, EquipmentIntent> = {};
+  for (const row of design.components ?? []) {
+    const intent = normalizeEquipmentIntent(row.equipment_intent);
+    if (!intent) continue;
+    const key = componentKeyOf({
+      role: row.role_key,
+      technical_requirements: row.technical_requirements as Record<string, unknown> | null,
+    });
+    const semantic = semanticRoleOf(key);
+    out[semantic] = intent;
+    out[key] = intent;
+  }
+  return out;
+}
+
+/** Snapshot recommendation tech so recalculate can detect stale Equipment Intent. */
+export function techByRoleFromRecommendation(
+  rec: SystemRecommendation,
+): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const component of rec.components) {
+    const key = componentKeyOf(component);
+    const semantic = semanticRoleOf(key);
+    const tech = (component.technical_requirements ?? {}) as Record<string, unknown>;
+    out[semantic] = tech;
+    out[key] = tech;
+  }
+  return out;
+}
+
+/**
+ * After recalculate: keep saved Equipment Intent, but flag roles whose
+ * engineering fingerprint changed so the operator re-confirms the product.
+ */
+export function mergeIntentAfterRecalculate(
+  rec: SystemRecommendation,
+  priorIntent: Record<string, EquipmentIntent | null | undefined>,
+  priorTech: Record<string, Record<string, unknown>>,
+): {
+  intentByRole: Record<string, EquipmentIntent>;
+  needsReviewRoles: Set<string>;
+} {
+  const intentByRole: Record<string, EquipmentIntent> = {};
+  const needsReviewRoles = new Set<string>();
+  for (const component of rec.components) {
+    const key = componentKeyOf(component);
+    const semantic = semanticRoleOf(key);
+    const prior =
+      priorIntent[semantic] ?? priorIntent[key] ?? priorIntent[component.role] ?? null;
+    const intent = normalizeEquipmentIntent(prior);
+    if (!intent) continue;
+    intentByRole[semantic] = intent;
+    intentByRole[key] = intent;
+    const oldTech = priorTech[semantic] ?? priorTech[key] ?? priorTech[component.role] ?? {};
+    const newTech = (component.technical_requirements ?? {}) as Record<string, unknown>;
+    if (technicalRequirementsFingerprint(oldTech) !== technicalRequirementsFingerprint(newTech)) {
+      needsReviewRoles.add(semantic);
+      needsReviewRoles.add(key);
+    }
+  }
+  return { intentByRole, needsReviewRoles };
 }
 
 export function recommendationMetaFromRec(rec: SystemRecommendation): Record<string, unknown> {

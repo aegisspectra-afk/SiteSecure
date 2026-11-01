@@ -12,7 +12,7 @@ import type {
   SystemRecommendation,
 } from "@site-secure/api-client";
 import { groupIdForRole } from "./cctv-recommend-copy";
-import { componentKeyOf } from "./cctv-component-keys";
+import { componentKeyOf, semanticRoleOf } from "./cctv-component-keys";
 import {
   resolveComponentProduct,
   type ReviewSelectionState,
@@ -158,6 +158,15 @@ export function deriveEngineeringStatus(rec: SystemRecommendation): EngineeringS
   return "ENGINEERING_INCOMPLETE";
 }
 
+function roleSetHas(
+  set: Set<string> | undefined,
+  component: CctvRecommendationComponent,
+): boolean {
+  if (!set || set.size === 0) return false;
+  const key = componentKeyOf(component);
+  return set.has(key) || set.has(semanticRoleOf(key)) || set.has(component.role);
+}
+
 export function equipmentResolutionForComponent(
   component: CctvRecommendationComponent,
   selection: ReviewSelectionState,
@@ -166,7 +175,7 @@ export function equipmentResolutionForComponent(
     equipmentIntent?: EquipmentIntent | null;
   },
 ): EquipmentResolutionStatus {
-  if (opts?.needsReviewRoles?.has(componentKeyOf(component)) || (component as { needs_review?: boolean }).needs_review) {
+  if (roleSetHas(opts?.needsReviewRoles, component) || (component as { needs_review?: boolean }).needs_review) {
     return "NEEDS_REVIEW";
   }
 
@@ -202,7 +211,10 @@ export function countPendingEquipment(
     if (c.optional && !c.blocking) continue;
     const status = equipmentResolutionForComponent(c, selection, {
       needsReviewRoles: opts?.needsReviewRoles,
-      equipmentIntent: opts?.intentByRole?.[c.role],
+      equipmentIntent:
+        opts?.intentByRole?.[c.role] ??
+        opts?.intentByRole?.[componentKeyOf(c)] ??
+        opts?.intentByRole?.[semanticRoleOf(componentKeyOf(c))],
     });
     // Apply still requires catalog product — intent-only counts as pending for Apply.
     if (

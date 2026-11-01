@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
+import { downloadCsv } from "../../../lib/download-blob";
 import { useSession } from "../../../lib/session";
 import {
   formatTaskDue,
@@ -33,12 +34,15 @@ function TasksBody() {
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
-  const canEdit = can(membership?.role_key, "calendar.edit", features);
+  const grants = membership?.permissions ?? null;
+  const canEdit = can(membership?.role_key, "calendar.edit", features, grants);
+  const canExport = can(membership?.role_key, "calendar.export", features, grants);
   const [filter, setFilter] = useState<TasksStatusFilter>("open");
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["tasks", workspaceId, filter],
@@ -66,6 +70,18 @@ function TasksBody() {
   const complete = useMutation({
     mutationFn: (taskId: string) => api.patchTask(workspaceId!, taskId, { status: "done" }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] }),
+  });
+
+  const exportCsv = useMutation({
+    mutationFn: async () => {
+      if (!workspaceId) return;
+      const { blob, filename } = await api.exportTasksCsv(workspaceId, {
+        status: filter === "open" ? "open" : undefined,
+      });
+      downloadCsv(blob, filename);
+    },
+    onError: () => setExportError(he.exportCsvError),
+    onSuccess: () => setExportError(null),
   });
 
   if (!workspaceId) return <ErrorState title={he.tasksError} />;
@@ -112,11 +128,27 @@ function TasksBody() {
         </button>
       </div>
 
-      {canEdit ? (
-        <Button type="button" onClick={() => setCreating((v) => !v)}>
-          {creating ? he.cancel : he.tasksCreate}
-        </Button>
-      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {canExport ? (
+          <Button
+            type="button"
+            variant="secondary"
+            data-testid="tasks-export"
+            aria-label={he.exportCsvTasks}
+            loading={exportCsv.isPending}
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
+            {he.exportCsv}
+          </Button>
+        ) : null}
+        {canEdit ? (
+          <Button type="button" onClick={() => setCreating((v) => !v)}>
+            {creating ? he.cancel : he.tasksCreate}
+          </Button>
+        ) : null}
+      </div>
+      {exportError ? <p className="text-sm text-danger">{exportError}</p> : null}
 
       {creating ? (
         <form

@@ -86,6 +86,8 @@ function Harness({
   onOpenQuote = vi.fn(),
   onDelete,
   onDuplicate,
+  canExport = false,
+  onExport,
 }: {
   quotes: QuoteOut[];
   canCreate?: boolean;
@@ -94,6 +96,8 @@ function Harness({
   onOpenQuote?: (id: string) => void;
   onDelete?: (ids: string[]) => Promise<void>;
   onDuplicate?: (ids: string[]) => Promise<void>;
+  canExport?: boolean;
+  onExport?: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<QuoteTab>("all");
   const [search, setSearch] = useState("");
@@ -110,6 +114,8 @@ function Harness({
       onOpenQuote={onOpenQuote}
       onDelete={onDelete}
       onDuplicate={onDuplicate}
+      canExport={canExport}
+      onExport={onExport}
     />,
   );
 }
@@ -302,6 +308,20 @@ describe("Quotes workspace", () => {
     );
     expect(screen.queryByText(he.quotesSelectRow("Q-0001"))).not.toBeInTheDocument();
     expect(screen.getByLabelText(he.quotesSelectRow("Q-0001"))).toBeInTheDocument();
+  });
+
+  it("shows CSV export only when quotes.export is granted", async () => {
+    const onExport = vi.fn(async () => undefined);
+    render(<Harness quotes={[]} canExport onExport={onExport} />);
+    const btn = screen.getByTestId("quotes-export");
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    await waitFor(() => expect(onExport).toHaveBeenCalled());
+  });
+
+  it("hides CSV export without permission", () => {
+    render(<Harness quotes={[]} />);
+    expect(screen.queryByTestId("quotes-export")).toBeNull();
   });
 
   it("marks an empty draft so it can be cleaned up", () => {

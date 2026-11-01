@@ -26,6 +26,13 @@ from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
 from ..quote_workspace_defaults import apply_quote_create_defaults, merge_quote_pdf_template_defaults
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..csv_export import (
+    EXPORT_MAX,
+    EXPORT_PAGE,
+    QUOTE_STATUS_HE,
+    build_csv,
+    csv_response,
+)
 from ..search_query import sanitize_search_q
 from ..supabase_service import ServiceClient
 
@@ -1105,29 +1112,22 @@ def _document_payload(
     )
 
 
-@router.get("/quotes")
-def list_quotes(
+def _quote_list_filter_params(
+    *,
     workspace_id: UUID,
-    client: Annotated[UserClient, Depends(user_client)],
-    user: Annotated[dict, Depends(current_user)],
-    limit: int | None = Query(default=50),
-    cursor: str | None = Query(default=None),
-    q: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-    exclude_status: str | None = Query(default=None),
-    customer_id: str | None = Query(default=None),
-    lead_id: str | None = Query(default=None),
-    site_id: str | None = Query(default=None),
-):
-    ctx = _ctx(client, user, workspace_id)
-    require(ctx, "quotes.view")
-    page_size = parse_limit(limit)
+    client: UserClient,
+    q: str | None,
+    status: str | None,
+    exclude_status: str | None,
+    customer_id: str | None,
+    lead_id: str | None,
+    site_id: str | None,
+) -> dict[str, str]:
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
         "deleted_at": "is.null",
         "select": QUOTE_LIST_SELECT,
         "order": "created_at.desc",
-        "limit": str(page_size + 1),
     }
     if exclude_status:
         excluded = [part.strip() for part in exclude_status.split(",") if part.strip()]
@@ -1159,8 +1159,6 @@ def list_quotes(
     if q:
         safe = sanitize_search_q(q)
         if safe:
-            # Nested customers.display_name inside or() is PGRST100. One customer
-            # name query + customer_id=in.(...) keeps this at two queries, not N+1.
             clauses = [
                 f"number.ilike.*{safe}*",
                 f"title.ilike.*{safe}*",
@@ -1171,7 +1169,6 @@ def list_quotes(
                 clauses.append(f"customer_id.in.({','.join(customer_ids)})")
             search_or = f"({','.join(clauses)})"
 
-    # Prefer top-level status + or (supported). Fall back to `and=` only when needed.
     if status_filter and search_or:
         _col, _sep, op_value = status_filter.partition(".")
         params["status"] = op_value
@@ -1181,7 +1178,37 @@ def list_quotes(
         params["status"] = op_value
     elif search_or:
         params["or"] = search_or
+    return params
 
+
+@router.get("/quotes")
+def list_quotes(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    limit: int | None = Query(default=50),
+    cursor: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    exclude_status: str | None = Query(default=None),
+    customer_id: str | None = Query(default=None),
+    lead_id: str | None = Query(default=None),
+    site_id: str | None = Query(default=None),
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "quotes.view")
+    page_size = parse_limit(limit)
+    params = _quote_list_filter_params(
+        workspace_id=workspace_id,
+        client=client,
+        q=q,
+        status=status,
+        exclude_status=exclude_status,
+        customer_id=customer_id,
+        lead_id=lead_id,
+        site_id=site_id,
+    )
+    params["limit"] = str(page_size + 1)
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
@@ -1224,6 +1251,105 @@ def list_quotes(
         "next_cursor": page.next_cursor,
         "counts": _quote_list_counts(count_rows),
     }
+
+
+@router.get("/quotes/export")
+def export_quotes_csv(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    exclude_status: str | None = Query(default=None),
+    customer_id: str | None = Query(default=None),
+    lead_id: str | None = Query(default=None),
+    site_id: str | None = Query(default=None),
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "quotes.export")
+    show_cost = _can_view_cost(ctx)
+    params = _quote_list_filter_params(
+        workspace_id=workspace_id,
+        client=client,
+        q=q,
+        status=status,
+        exclude_status=exclude_status,
+        customer_id=customer_id,
+        lead_id=lead_id,
+        site_id=site_id,
+    )
+    collected: list[dict] = []
+    cursor: str | None = None
+    truncated = False
+    while len(collected) < EXPORT_MAX:
+        page_params = dict(params)
+        page_params["limit"] = str(EXPORT_PAGE + 1)
+        if cursor:
+            page_params["created_at"] = f"lt.{cursor}"
+        rows = as_list(client.get("quotes", params=page_params))
+        page = page_from_rows(rows, EXPORT_PAGE)
+        collected.extend(page.items)
+        if not page.next_cursor:
+            break
+        if len(collected) >= EXPORT_MAX:
+            truncated = True
+            break
+        cursor = page.next_cursor
+    if show_cost and collected:
+        ids = [str(row["id"]) for row in collected if row.get("id")]
+        cost_by_id: dict[str, dict] = {}
+        for i in range(0, len(ids), 100):
+            chunk = ids[i : i + 100]
+            cost_rows = as_list(
+                _service().get(
+                    "quotes",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "id": f"in.({','.join(chunk)})",
+                        "select": QUOTE_LIST_COST_SELECT,
+                    },
+                )
+            )
+            cost_by_id.update({str(r["id"]): r for r in cost_rows})
+        for row in collected:
+            extra = cost_by_id.get(str(row["id"]))
+            if extra:
+                row["cost_total"] = extra.get("cost_total")
+                row["margin_amount"] = extra.get("margin_amount")
+                row["margin_percent"] = extra.get("margin_percent")
+    items = [_strip_cost(_flatten_quote(row), [], show_cost=show_cost) for row in collected]
+    headers = ["מספר", "סטטוס", "לקוח", "אתר", "כותרת", "סכום", "מטבע", "נוצר", "בתוקף עד"]
+    if show_cost:
+        headers.extend(["עלות", "מרווח", "אחוז מרווח"])
+    csv_rows: list[list[object]] = []
+    for item in items:
+        row = [
+            item.get("number"),
+            QUOTE_STATUS_HE.get(str(item.get("status") or ""), item.get("status")),
+            item.get("customer_name"),
+            item.get("site_name"),
+            item.get("title") or item.get("project_name"),
+            item.get("total_gross"),
+            item.get("currency"),
+            item.get("created_at"),
+            item.get("valid_until"),
+        ]
+        if show_cost:
+            row.extend([item.get("cost_total"), item.get("margin_amount"), item.get("margin_percent")])
+        csv_rows.append(row)
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.export",
+        entity_type="quote",
+        metadata={"row_count": len(csv_rows), "truncated": truncated, "max_rows": EXPORT_MAX},
+    )
+    return csv_response(
+        build_csv(headers, csv_rows),
+        "הצעות-מחיר.csv",
+        row_count=len(csv_rows),
+        truncated=truncated,
+    )
 
 
 @router.post("/quotes")

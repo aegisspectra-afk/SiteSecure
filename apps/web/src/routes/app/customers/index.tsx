@@ -17,6 +17,7 @@ import { NextActionDialog } from "../../../components/workflow/NextActionDialog"
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
 import { buildCustomerDirectoryRows, type CustomerDirectoryFilter } from "../../../lib/customer-directory";
+import { downloadCsv } from "../../../lib/download-blob";
 import { planQuotaMessage } from "../../../lib/plan-quota";
 import { useSession } from "../../../lib/session";
 
@@ -39,7 +40,9 @@ function CustomersBody() {
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
-  const canCreate = can(membership?.role_key, "crm.create", features);
+  const grants = membership?.permissions ?? null;
+  const canCreate = can(membership?.role_key, "crm.create", features, grants);
+  const canExport = can(membership?.role_key, "crm.export", features, grants);
   const canCreateQuote = can(membership?.role_key, "quotes.create", features);
   const canViewLeads = can(membership?.role_key, "leads.view", features);
   const canViewQuotes = can(membership?.role_key, "quotes.view", features);
@@ -55,6 +58,7 @@ function CustomersBody() {
   const [phone, setPhone] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["customers", workspaceId],
@@ -153,6 +157,19 @@ function CustomersBody() {
     },
   });
 
+  const exportCsv = useMutation({
+    mutationFn: async () => {
+      if (!workspaceId) return;
+      const { blob, filename } = await api.exportCustomersCsv(workspaceId, {
+        q: debouncedQuery,
+        status: filter.status,
+      });
+      downloadCsv(blob, filename);
+    },
+    onError: () => setExportError(he.exportCsvError),
+    onSuccess: () => setExportError(null),
+  });
+
   if (!workspaceId) return <ErrorState title={he.customersError} />;
   if (listQuery.isError) {
     return (
@@ -193,7 +210,11 @@ function CustomersBody() {
           setCreating((v) => !v);
           setFormError(null);
         }}
+        canExport={canExport}
+        exportBusy={exportCsv.isPending}
+        onExport={canExport ? () => exportCsv.mutate() : undefined}
       />
+      {exportError ? <p className="text-sm text-danger">{exportError}</p> : null}
 
       <CustomerCreateForm
         open={creating}

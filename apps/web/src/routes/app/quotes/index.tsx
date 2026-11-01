@@ -7,6 +7,7 @@ import { QuotesWorkspace } from "../../../components/quotes/QuotesWorkspace";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
 import { can } from "../../../lib/can";
+import { downloadCsv } from "../../../lib/download-blob";
 import { listQuotesFilter, type QuoteTab } from "../../../lib/quote-workspace";
 import { useSession } from "../../../lib/session";
 
@@ -43,9 +44,11 @@ function QuotesBody() {
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const features = membership?.features ?? [];
-  const canCreate = can(membership?.role_key, "quotes.create", features);
-  const canDelete = can(membership?.role_key, "quotes.delete", features);
-  const canViewCost = can(membership?.role_key, "quotes.view_cost", features);
+  const grants = membership?.permissions ?? null;
+  const canCreate = can(membership?.role_key, "quotes.create", features, grants);
+  const canDelete = can(membership?.role_key, "quotes.delete", features, grants);
+  const canViewCost = can(membership?.role_key, "quotes.view_cost", features, grants);
+  const canExport = can(membership?.role_key, "quotes.export", features, grants);
   const routeSearch = Route.useSearch();
   const [tab, setTab] = useState<QuoteTab>(routeSearch.tab ?? "all");
   const [query, setQuery] = useState("");
@@ -188,6 +191,19 @@ function QuotesBody() {
       onLoadMore={() => void quotesQuery.fetchNextPage()}
       onDelete={canDelete ? (ids) => remove.mutateAsync(ids).then(() => undefined) : undefined}
       onDuplicate={canCreate ? (ids) => duplicate.mutateAsync(ids).then(() => undefined) : undefined}
+      canExport={canExport}
+      onExport={
+        canExport
+          ? async () => {
+              const { blob, filename } = await api.exportQuotesCsv(workspaceId, {
+                q: debouncedSearch,
+                status: listFilter.status,
+                exclude_status: listFilter.exclude_status,
+              });
+              downloadCsv(blob, filename);
+            }
+          : undefined
+      }
     />
   );
 }

@@ -74,6 +74,9 @@ export function CustomerDirectoryToolbar({
   canCreate,
   creating,
   onToggleCreate,
+  canExport = false,
+  exportBusy = false,
+  onExport,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
@@ -83,11 +86,27 @@ export function CustomerDirectoryToolbar({
   canCreate: boolean;
   creating: boolean;
   onToggleCreate: () => void;
+  canExport?: boolean;
+  exportBusy?: boolean;
+  onExport?: () => void;
 }) {
   return (
     <div className="customer-dir-toolbar">
       <CustomerDirectorySearch value={query} onChange={onQueryChange} onClear={onClearSearch} />
       <CustomerDirectoryFilters filter={filter} onChange={onFilterChange} />
+      {canExport && onExport ? (
+        <Button
+          type="button"
+          variant="secondary"
+          data-testid="customers-export"
+          aria-label={he.exportCsvCustomers}
+          disabled={exportBusy}
+          loading={exportBusy}
+          onClick={onExport}
+        >
+          {he.exportCsv}
+        </Button>
+      ) : null}
       {canCreate ? (
         <Button
           type="button"

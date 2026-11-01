@@ -63,6 +63,8 @@ export function QuotesWorkspace({
   onLoadMore,
   onDelete,
   onDuplicate,
+  canExport = false,
+  onExport,
 }: {
   quotes: QuoteOut[];
   counts?: QuoteListCounts | null;
@@ -81,6 +83,8 @@ export function QuotesWorkspace({
   onLoadMore?: () => void;
   onDelete?: (quoteIds: string[]) => Promise<void>;
   onDuplicate?: (quoteIds: string[]) => Promise<void>;
+  canExport?: boolean;
+  onExport?: () => Promise<void>;
 }) {
   const kpis = quotesWorkspaceKpis(counts, quotes);
   const visible = filterQuotes(quotes, tab, search);
@@ -90,6 +94,7 @@ export function QuotesWorkspace({
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState(false);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const selectedRows = visible.filter((row) => selectedSet.has(row.id));
   const deleteIds = pendingDelete ?? selectedRows.filter((row) => quoteIsDeletable(row.status)).map((row) => row.id);
@@ -155,7 +160,30 @@ export function QuotesWorkspace({
             <p className="text-sm text-fg">{he.quotesMeta(kpis.total || quotes.length, kpis.awaiting, kpis.approved)}</p>
           ) : null}
         </div>
-        {createCta ? <div className="shrink-0">{createCta}</div> : null}
+        {(canExport && onExport) || createCta ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {canExport && onExport ? (
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid="quotes-export"
+                aria-label={he.exportCsvQuotes}
+                disabled={busy || exportBusy}
+                loading={exportBusy}
+                onClick={() => {
+                  setActionError(null);
+                  setExportBusy(true);
+                  void onExport()
+                    .catch(() => setActionError(he.exportCsvError))
+                    .finally(() => setExportBusy(false));
+                }}
+              >
+                {he.exportCsv}
+              </Button>
+            ) : null}
+            {createCta}
+          </div>
+        ) : null}
       </div>
 
       {loading ? <p className="text-sm text-fg-muted">{he.loading}</p> : null}

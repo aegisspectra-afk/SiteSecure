@@ -59,6 +59,7 @@ TECHNICIAN_COMMERCIAL_DENY = frozenset(
         "quotes.send",
         "quotes.view_cost",
         "quotes.override_price",
+        "quotes.export",
         "catalog.view",
         "catalog.edit",
     }
@@ -191,6 +192,8 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
                 catalog = load_catalog()
                 return frozenset(catalog["_grants"].get("owner") or ())
             if grants:
+                if row.get("is_system"):
+                    grants = sorted(set(grants) | set(catalog_grant_list(str(base_role_key or effective_key))))
                 return clamp_workforce_member_grants(
                     strip_technician_commercial_grants(
                         grants,
@@ -214,6 +217,8 @@ def resolve_role_grants(client: UserClient, workspace_id: str, workspace_role_ke
             catalog = load_catalog()
             return frozenset(catalog["_grants"].get("owner") or ())
         if grants:
+            if match.get("is_system"):
+                grants = sorted(set(grants) | set(catalog_grant_list(str(base_role_key or effective_key))))
             return clamp_workforce_member_grants(
                 strip_technician_commercial_grants(
                     grants,

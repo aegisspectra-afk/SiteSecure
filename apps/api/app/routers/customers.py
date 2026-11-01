@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..audit import write_audit
 from ..authz.guard import require
 from ..authz.limits import evaluate_count_limit, raise_plan_limit
 from ..authz.scope import apply_assigned_column_filter, empty_assigned_page
@@ -15,8 +16,10 @@ from ..authz.usage import fetch_customers_count
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
+from ..csv_export import CUSTOMER_STATUS_HE, EXPORT_MAX, EXPORT_PAGE, build_csv, csv_response
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..search_query import sanitize_search_q
 from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["customers"])
@@ -182,21 +185,8 @@ def list_customers(
     if empty is not None:
         return empty
     page_size = parse_limit(limit)
-    params: dict[str, str] = {
-        "workspace_id": f"eq.{workspace_id}",
-        "select": CUSTOMER_SELECT,
-        "order": "created_at.desc",
-        "limit": str(page_size + 1),
-    }
-    if status:
-        params["status"] = f"eq.{status}"
-    if q:
-        needle = q.strip()
-        params["or"] = (
-            f"(display_name.ilike.*{needle}*,phone.ilike.*{needle}*,email.ilike.*{needle}*,"
-            f"billing_address->>line.ilike.*{needle}*,billing_address->>street.ilike.*{needle}*,"
-            f"billing_address->>city.ilike.*{needle}*,billing_address->>formatted.ilike.*{needle}*)"
-        )
+    params = _customer_list_filter_params(workspace_id=workspace_id, q=q, status=status)
+    params["limit"] = str(page_size + 1)
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
@@ -204,6 +194,85 @@ def list_customers(
     rows = as_list(client.get("customers", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": [_out(row).model_dump() for row in page.items], "next_cursor": page.next_cursor}
+
+
+def _customer_list_filter_params(*, workspace_id: UUID, q: str | None, status: str | None) -> dict[str, str]:
+    params: dict[str, str] = {
+        "workspace_id": f"eq.{workspace_id}",
+        "select": CUSTOMER_SELECT,
+        "order": "created_at.desc",
+    }
+    if status:
+        params["status"] = f"eq.{status}"
+    needle = sanitize_search_q(q)
+    if needle:
+        params["or"] = (
+            f"(display_name.ilike.*{needle}*,phone.ilike.*{needle}*,email.ilike.*{needle}*,"
+            f"billing_address->>line.ilike.*{needle}*,billing_address->>street.ilike.*{needle}*,"
+            f"billing_address->>city.ilike.*{needle}*,billing_address->>formatted.ilike.*{needle}*)"
+        )
+    return params
+
+
+@router.get("/customers/export")
+def export_customers_csv(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "crm.export")
+    empty = empty_assigned_page(ctx)
+    params = _customer_list_filter_params(workspace_id=workspace_id, q=q, status=status)
+    apply_assigned_column_filter(ctx, params, column="id")
+    collected: list[dict] = []
+    truncated = False
+    if empty is None:
+        cursor: str | None = None
+        while len(collected) < EXPORT_MAX:
+            page_params = dict(params)
+            page_params["limit"] = str(EXPORT_PAGE + 1)
+            if cursor:
+                page_params["created_at"] = f"lt.{cursor}"
+            rows = as_list(client.get("customers", params=page_params))
+            page = page_from_rows(rows, EXPORT_PAGE)
+            collected.extend(page.items)
+            if not page.next_cursor:
+                break
+            if len(collected) >= EXPORT_MAX:
+                truncated = True
+                break
+            cursor = page.next_cursor
+    headers = ["שם", "סוג", "סטטוס", "טלפון", "דוא״ל", "עיר", "נוצר"]
+    csv_rows: list[list[object]] = []
+    for row in collected:
+        address = row.get("billing_address") if isinstance(row.get("billing_address"), dict) else {}
+        csv_rows.append(
+            [
+                row.get("display_name"),
+                row.get("type"),
+                CUSTOMER_STATUS_HE.get(str(row.get("status") or ""), row.get("status")),
+                row.get("phone"),
+                row.get("email"),
+                (address or {}).get("city") or (address or {}).get("formatted"),
+                row.get("created_at"),
+            ]
+        )
+    write_audit(
+        client,
+        str(workspace_id),
+        "customers.export",
+        entity_type="customer",
+        metadata={"row_count": len(csv_rows), "truncated": truncated, "max_rows": EXPORT_MAX},
+    )
+    return csv_response(
+        build_csv(headers, csv_rows),
+        "לקוחות.csv",
+        row_count=len(csv_rows),
+        truncated=truncated,
+    )
 
 
 @router.post("/customers", response_model=CustomerOut)

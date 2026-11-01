@@ -25,10 +25,19 @@ vi.mock("../src/lib/can", () => ({
   can: (...args: unknown[]) => canMock(...(args as [string | undefined, string])),
 }));
 
+vi.mock("../src/lib/download-blob", () => ({
+  downloadCsv: vi.fn(),
+  downloadBlob: vi.fn(),
+  downloadAndOpenPdf: vi.fn(),
+  openPdfBlob: vi.fn(),
+  asPdfBlob: vi.fn(),
+}));
+
 const api = {
   listTasks: vi.fn(),
   createTask: vi.fn(),
   patchTask: vi.fn(),
+  exportTasksCsv: vi.fn(),
 };
 
 const sessionState = {
@@ -180,6 +189,21 @@ describe("TasksPage", () => {
     await screen.findByTestId("tasks-list");
     expect(screen.queryByRole("button", { name: he.tasksCreate })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: new RegExp(he.tasksCompleteAria) })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tasks-export")).not.toBeInTheDocument();
+  });
+
+  it("shows CSV export when calendar.export is granted", async () => {
+    canMock.mockImplementation((_role, permission) =>
+      ["calendar.view", "calendar.edit", "calendar.export"].includes(permission),
+    );
+    api.exportTasksCsv.mockResolvedValue({
+      blob: new Blob(["\ufeffכותרת\r\n"], { type: "text/csv" }),
+      filename: "משימות.csv",
+    });
+    renderTasks();
+    await screen.findByTestId("tasks-list");
+    await userEvent.click(screen.getByTestId("tasks-export"));
+    await waitFor(() => expect(api.exportTasksCsv).toHaveBeenCalledWith("ws1", { status: "open" }));
   });
 
   it("creates a task without assignee_id (API defaults assignee)", async () => {

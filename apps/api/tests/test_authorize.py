@@ -67,9 +67,10 @@ def test_technician_cannot_admin():
 def test_strip_technician_commercial_grants_helper():
     from app.workspace_rbac import strip_technician_commercial_grants
 
-    dirty = ["jobs.view", "quotes.view", "catalog.view", "documents.upload"]
+    dirty = ["jobs.view", "quotes.view", "quotes.export", "catalog.view", "documents.upload"]
     cleaned = strip_technician_commercial_grants(dirty, role_key="technician")
     assert "quotes.view" not in cleaned
+    assert "quotes.export" not in cleaned
     assert "catalog.view" not in cleaned
     assert "jobs.view" in cleaned
     assert "documents.upload" in cleaned
@@ -77,6 +78,34 @@ def test_strip_technician_commercial_grants_helper():
     sales = strip_technician_commercial_grants(["quotes.view", "catalog.view"], role_key="sales")
     assert "quotes.view" in sales
     assert "catalog.view" in sales
+
+
+def test_system_role_grants_union_new_catalog_perms():
+    """Stale workspace_roles.grants still receive new catalog baseline keys."""
+    from app.workspace_rbac import resolve_role_grants
+
+    class Fake:
+        def get(self, table, params=None):
+            import httpx
+
+            assert table == "workspace_roles"
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "key": "sales",
+                        "grants": ["quotes.view", "quotes.create", "quotes.edit", "quotes.send", "crm.view"],
+                        "base_role_key": "sales",
+                        "is_system": True,
+                    }
+                ],
+            )
+
+    grants = resolve_role_grants(Fake(), "ws-1", "sales", "sales")
+    assert "quotes.export" in grants
+    assert "crm.export" in grants
+    assert "calendar.export" in grants
+    assert "quotes.create" in grants
 
 
 def test_founding_technician_is_not_an_authz_role():
@@ -422,4 +451,21 @@ def test_quotes_entitlement_comes_from_catalog_not_plan_name():
     d = authorize(ctx=ctx, action="quotes.create")
     assert d.allowed is False
     assert d.code == "FEATURE_NOT_INCLUDED"
+
+
+EXPORT_MATRIX = {
+    "owner": {"quotes.export": True, "crm.export": True, "calendar.export": True},
+    "administrator": {"quotes.export": True, "crm.export": True, "calendar.export": True},
+    "manager": {"quotes.export": True, "crm.export": True, "calendar.export": True},
+    "sales": {"quotes.export": True, "crm.export": True, "calendar.export": True},
+    "technician": {"quotes.export": False, "crm.export": False, "calendar.export": True},
+    "viewer": {"quotes.export": False, "crm.export": False, "calendar.export": False},
+}
+
+
+def test_export_role_matrix():
+    for role, expected in EXPORT_MATRIX.items():
+        for action, allowed in expected.items():
+            decision = authorize(ctx=_ctx(role), action=action)
+            assert decision.allowed is allowed, f"{role} {action} expected {allowed} got {decision.code}"
 

@@ -7,6 +7,25 @@ export function asPdfBlob(data: Blob | ArrayBuffer): Blob {
   return new Blob([data], { type: "application/pdf" });
 }
 
+/** Trigger a browser download for a CSV Blob (do not reuse downloadBlob — it forces PDF). */
+export function downloadCsv(blob: Blob, filename: string) {
+  const csv =
+    blob.type.includes("csv") || blob.type.startsWith("text/")
+      ? blob
+      : new Blob([blob], { type: "text/csv;charset=utf-8" });
+  const safeName = filename.toLowerCase().endsWith(".csv") ? filename : `${filename}.csv`;
+  const url = URL.createObjectURL(csv);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = safeName;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
 /** Trigger a browser download for a PDF Blob. */
 export function downloadBlob(blob: Blob, filename: string) {
   const pdf = asPdfBlob(blob);

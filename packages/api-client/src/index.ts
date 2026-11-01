@@ -2161,6 +2161,52 @@ export function createApiClient(opts: {
     return { blob, filename: filename.toLowerCase().endsWith(".pdf") ? filename : `${filename}.pdf` };
   }
 
+  async function requestCsv(path: string, init: RequestInit = {}): Promise<{ blob: Blob; filename: string }> {
+    if (!baseUrl && !sameOriginProxy) {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+    }
+    const token = await opts.getAccessToken();
+    const headers = new Headers(init.headers);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const url = sameOriginProxy ? path : `${baseUrl}${path}`;
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, headers });
+    } catch {
+      throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
+    }
+    if (!res.ok) {
+      let mapped = apiErrorFromBody(res.status, null);
+      try {
+        mapped = apiErrorFromBody(res.status, await res.json());
+      } catch {
+        if (res.status === 404 || res.status === 405) {
+          mapped = { code: "API_UNAVAILABLE", message: API_UNAVAILABLE_HE, details: {} };
+        }
+      }
+      throw new ApiClientError(res.status, mapped.code, mapped.message, mapped.details);
+    }
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const star = /filename\*=(?:UTF-8'')?([^;\s]+)/i.exec(disposition);
+    const plain = /(?:^|;)\s*filename=(?!\*)"?([^";]+)"?/i.exec(disposition);
+    const rawName = (star?.[1] || plain?.[1] || "export.csv").replace(/"/g, "").trim();
+    let filename = rawName;
+    try {
+      filename = decodeURIComponent(rawName);
+    } catch {
+      filename = rawName;
+    }
+    const buffer = await res.arrayBuffer();
+    const head = new Uint8Array(buffer.slice(0, 3));
+    const hasBom = head.length >= 3 && head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf;
+    const ctype = (res.headers.get("Content-Type") || "").toLowerCase();
+    if (!hasBom && !ctype.includes("csv") && !ctype.includes("text/plain")) {
+      throw new ApiClientError(500, "CSV_INVALID", "קובץ ה-CSV שהתקבל אינו תקין");
+    }
+    const blob = new Blob([buffer], { type: "text/csv;charset=utf-8" });
+    return { blob, filename: filename.toLowerCase().endsWith(".csv") ? filename : `${filename}.csv` };
+  }
+
   return {
     getSession: () => request<SessionResponse>("/api/v1/auth/session"),
     platformHome: () => request<PlatformHomeResponse>("/api/v1/platform/home"),
@@ -2216,6 +2262,27 @@ export function createApiClient(opts: {
       if (opts.site_id) params.set("site_id", opts.site_id);
       if (opts.cursor) params.set("cursor", opts.cursor);
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
+    },
+    exportQuotesCsv: (
+      workspaceId: string,
+      opts: {
+        q?: string;
+        status?: string;
+        exclude_status?: string;
+        customer_id?: string;
+        lead_id?: string;
+        site_id?: string;
+      } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status?.trim()) params.set("status", opts.status.trim());
+      if (opts.exclude_status?.trim()) params.set("exclude_status", opts.exclude_status.trim());
+      if (opts.customer_id) params.set("customer_id", opts.customer_id);
+      if (opts.lead_id) params.set("lead_id", opts.lead_id);
+      if (opts.site_id) params.set("site_id", opts.site_id);
+      const qs = params.toString();
+      return requestCsv(`/api/v1/workspaces/${workspaceId}/quotes/export${qs ? `?${qs}` : ""}`);
     },
     createQuote: (workspaceId: string, body: QuotePatchBody = {}) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes`, {
@@ -2402,6 +2469,13 @@ export function createApiClient(opts: {
       return request<{ items: CustomerOut[]; next_cursor?: string | null }>(
         `/api/v1/workspaces/${workspaceId}/customers?${params}`,
       );
+    },
+    exportCustomersCsv: (workspaceId: string, opts: { q?: string; status?: string } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.status) params.set("status", opts.status);
+      const qs = params.toString();
+      return requestCsv(`/api/v1/workspaces/${workspaceId}/customers/export${qs ? `?${qs}` : ""}`);
     },
     getCustomer: (workspaceId: string, customerId: string) =>
       request<CustomerOut>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}`),
@@ -3110,6 +3184,18 @@ export function createApiClient(opts: {
       if (opts.type) params.set("type", opts.type);
       if (opts.lead_id) params.set("lead_id", opts.lead_id);
       return request<{ items: TaskOut[] }>(`/api/v1/workspaces/${workspaceId}/tasks?${params}`);
+    },
+    exportTasksCsv: (
+      workspaceId: string,
+      opts: { status?: string; type?: string; lead_id?: string; q?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.type) params.set("type", opts.type);
+      if (opts.lead_id) params.set("lead_id", opts.lead_id);
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      const qs = params.toString();
+      return requestCsv(`/api/v1/workspaces/${workspaceId}/tasks/export${qs ? `?${qs}` : ""}`);
     },
     createTask: (workspaceId: string, body: Partial<TaskOut> & { title: string }) =>
       request<TaskOut>(`/api/v1/workspaces/${workspaceId}/tasks`, {

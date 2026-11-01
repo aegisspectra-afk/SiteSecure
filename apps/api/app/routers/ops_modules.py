@@ -18,6 +18,7 @@ from ..installed_assets_from_planned import (
     count_assets_by_planned_item,
     create_installed_assets_from_plan,
 )
+from ..csv_export import EXPORT_MAX, EXPORT_PAGE, TASK_STATUS_HE, build_csv, csv_response
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..project_from_quote import plan_project_from_quote
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
@@ -1378,6 +1379,76 @@ def list_tasks(
     rows = as_list(client.get("tasks", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": page.items, "next_cursor": page.next_cursor}
+
+
+@router.get("/tasks/export")
+def export_tasks_csv(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    status: str | None = Query(default=None),
+    type: str | None = Query(default=None),
+    lead_id: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+):
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "calendar.export")
+    params: dict[str, str] = {
+        "workspace_id": f"eq.{workspace_id}",
+        "select": TASK_SELECT,
+        "order": "created_at.desc",
+    }
+    if status:
+        params["status"] = f"eq.{status}"
+    if type:
+        params["type"] = f"eq.{type}"
+    if lead_id:
+        params["lead_id"] = f"eq.{lead_id}"
+    safe_q = sanitize_search_q(q)
+    if safe_q:
+        params["title"] = f"ilike.*{safe_q}*"
+    collected: list[dict] = []
+    cursor: str | None = None
+    truncated = False
+    while len(collected) < EXPORT_MAX:
+        page_params = dict(params)
+        page_params["limit"] = str(EXPORT_PAGE + 1)
+        if cursor:
+            page_params["created_at"] = f"lt.{cursor}"
+        rows = as_list(client.get("tasks", params=page_params))
+        page = page_from_rows(rows, EXPORT_PAGE)
+        collected.extend(page.items)
+        if not page.next_cursor:
+            break
+        if len(collected) >= EXPORT_MAX:
+            truncated = True
+            break
+        cursor = page.next_cursor
+    headers = ["כותרת", "סטטוס", "סוג", "אחראי", "יעד", "נוצר"]
+    csv_rows = [
+        [
+            row.get("title"),
+            TASK_STATUS_HE.get(str(row.get("status") or ""), row.get("status")),
+            row.get("type"),
+            row.get("assignee_id"),
+            row.get("due_at"),
+            row.get("created_at"),
+        ]
+        for row in collected
+    ]
+    write_audit(
+        client,
+        str(workspace_id),
+        "tasks.export",
+        entity_type="task",
+        metadata={"row_count": len(csv_rows), "truncated": truncated, "max_rows": EXPORT_MAX},
+    )
+    return csv_response(
+        build_csv(headers, csv_rows),
+        "משימות.csv",
+        row_count=len(csv_rows),
+        truncated=truncated,
+    )
 
 
 @router.post("/tasks")

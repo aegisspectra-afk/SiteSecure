@@ -63,9 +63,18 @@ vi.mock("../src/lib/can", () => ({
   can: (...args: unknown[]) => canMock(...(args as [string | undefined, string])),
 }));
 
+vi.mock("../src/lib/download-blob", () => ({
+  downloadCsv: vi.fn(),
+  downloadBlob: vi.fn(),
+  downloadAndOpenPdf: vi.fn(),
+  openPdfBlob: vi.fn(),
+  asPdfBlob: vi.fn(),
+}));
+
 const api = {
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),
+  exportCustomersCsv: vi.fn(),
 };
 
 vi.mock("../src/lib/session", () => ({
@@ -259,6 +268,7 @@ describe("Customers page", () => {
   beforeEach(() => {
     api.listCustomers.mockReset();
     api.createCustomer.mockReset();
+    api.exportCustomersCsv.mockReset();
     canMock.mockImplementation((_role: string | undefined, permission: string) =>
       ["crm.view", "crm.create", "quotes.create"].includes(permission),
     );
@@ -289,6 +299,22 @@ describe("Customers page", () => {
     renderPage();
     await waitFor(() => expect(screen.getAllByText("שנידי הלר").length).toBeGreaterThan(0));
     expect(screen.queryByTestId("customers-create-toggle")).toBeNull();
+    expect(screen.queryByTestId("customers-export")).toBeNull();
+  });
+
+  it("shows CSV export when crm.export is granted", async () => {
+    canMock.mockImplementation((_role, permission) =>
+      ["crm.view", "crm.create", "crm.export"].includes(permission),
+    );
+    api.listCustomers.mockResolvedValue({ items: sampleCustomers, next_cursor: null });
+    api.exportCustomersCsv.mockResolvedValue({
+      blob: new Blob(["\ufeffשם\r\n"], { type: "text/csv" }),
+      filename: "לקוחות.csv",
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("customers-export")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("customers-export"));
+    await waitFor(() => expect(api.exportCustomersCsv).toHaveBeenCalled());
   });
 
   it("renders empty workspace state", async () => {

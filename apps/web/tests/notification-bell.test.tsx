@@ -1,3 +1,4 @@
+import { createApiClient } from "@site-secure/api-client";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -62,6 +63,16 @@ function withClient(ui: ReactNode) {
 }
 
 describe("NotificationBell", () => {
+  it("exposes listNotifications on the live api client", () => {
+    const api = createApiClient({
+      baseUrl: "http://127.0.0.1:8001",
+      getAccessToken: async () => null,
+    });
+    expect(typeof api.listNotifications).toBe("function");
+    expect(typeof api.markNotificationRead).toBe("function");
+    expect(typeof api.getNotificationPreferences).toBe("function");
+  });
+
   it("shows unread count and Hebrew empty-state copy keys", async () => {
     render(withClient(<NotificationBell />));
     const trigger = await screen.findByTestId("notifications-bell");

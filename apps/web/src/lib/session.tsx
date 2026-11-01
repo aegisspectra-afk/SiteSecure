@@ -68,7 +68,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           return data.session?.access_token ?? null;
         },
       }),
-    [],
+    // Recreate when the workspace client gains methods (Vite HMR / new package).
+    [createApiClient],
   );
 
   const hydrate = useCallback(

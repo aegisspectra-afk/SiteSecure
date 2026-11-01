@@ -68,6 +68,10 @@ export default defineConfig(({ mode }) => {
         "react-dom": reactDomPkg,
       },
     },
+    optimizeDeps: {
+      // Workspace TS package grows new methods; prebundling it freezes a stale client.
+      exclude: ["@site-secure/api-client"],
+    },
     server: {
       port: 5173,
       proxy: {

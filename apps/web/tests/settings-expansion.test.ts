@@ -63,6 +63,9 @@ describe("settings production nav", () => {
     expect(he.accountAvatarStyleB).toBeTruthy();
     expect(he.settingsQuotesApplyHint).toBeTruthy();
     expect(he.settingsNumberingExampleHint).toBeTruthy();
+    expect(he.settingsNavPlan).toBe("תוכנית ומכסות");
+    expect(he.settingsPlanLead).toContain("אין תשלום");
+    expect(he.settingsPlanNoPay).toContain("אין כפתורי תשלום");
   });
 });
 

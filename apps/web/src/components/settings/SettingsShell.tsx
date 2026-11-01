@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   FileStack,
   FileText,
+  Gauge,
   Hash,
   KeyRound,
   MapPin,
@@ -39,6 +40,7 @@ export type SettingsNavId =
   | "pdf"
   | "sites"
   | "notifications"
+  | "plan"
   | "roles"
   | "users"
   | "system"
@@ -183,6 +185,14 @@ export function useSettingsNavItems(): NavItem[] {
       group: "operations",
       icon: Bell,
       visible: true,
+    },
+    {
+      id: "plan",
+      to: "/app/settings/plan",
+      label: he.settingsNavPlan,
+      group: "workspace",
+      icon: Gauge,
+      visible: allowAny(["settings.view", "users.view", "workspace.billing", "workspace.edit"]),
     },
     {
       id: "users",

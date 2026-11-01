@@ -89,6 +89,7 @@ import { Route as AppSettingsGeneralRouteImport } from "./routes/app/settings/ge
 import { Route as AppSettingsNotificationsRouteImport } from "./routes/app/settings/notifications"
 import { Route as AppSettingsNumberingRouteImport } from "./routes/app/settings/numbering"
 import { Route as AppSettingsPdfTemplatesRouteImport } from "./routes/app/settings/pdf-templates"
+import { Route as AppSettingsPlanRouteImport } from "./routes/app/settings/plan"
 import { Route as AppSettingsProductsRouteImport } from "./routes/app/settings/products"
 import { Route as AppSettingsProfileRouteImport } from "./routes/app/settings/profile"
 import { Route as AppSettingsQuotesRouteImport } from "./routes/app/settings/quotes"
@@ -546,6 +547,11 @@ const AppSettingsPdfTemplatesRoute = AppSettingsPdfTemplatesRouteImport.update({
   path: "/pdf-templates",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsPlanRoute = AppSettingsPlanRouteImport.update({
+  id: "/plan",
+  path: "/plan",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsProductsRoute = AppSettingsProductsRouteImport.update({
   id: "/products",
   path: "/products",
@@ -896,6 +902,7 @@ export interface FileRoutesByFullPath {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/plan": typeof AppSettingsPlanRoute
   "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
@@ -1022,6 +1029,7 @@ export interface FileRoutesByTo {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/plan": typeof AppSettingsPlanRoute
   "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
@@ -1160,6 +1168,7 @@ export interface FileRoutesById {
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
   "/app/settings/numbering": typeof AppSettingsNumberingRoute
   "/app/settings/pdf-templates": typeof AppSettingsPdfTemplatesRoute
+  "/app/settings/plan": typeof AppSettingsPlanRoute
   "/app/settings/products": typeof AppSettingsProductsRoute
   "/app/settings/profile": typeof AppSettingsProfileRoute
   "/app/settings/quotes": typeof AppSettingsQuotesRoute
@@ -1299,6 +1308,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/plan"
     | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
@@ -1425,6 +1435,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/plan"
     | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
@@ -1562,6 +1573,7 @@ export interface FileRouteTypes {
     | "/app/settings/notifications"
     | "/app/settings/numbering"
     | "/app/settings/pdf-templates"
+    | "/app/settings/plan"
     | "/app/settings/products"
     | "/app/settings/profile"
     | "/app/settings/quotes"
@@ -2214,6 +2226,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsPdfTemplatesRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    "/app/settings/plan": {
+      id: "/app/settings/plan"
+      path: "/plan"
+      fullPath: "/app/settings/plan"
+      preLoaderRoute: typeof AppSettingsPlanRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     "/app/settings/products": {
       id: "/app/settings/products"
       path: "/products"
@@ -2703,6 +2722,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsNumberingRoute: typeof AppSettingsNumberingRoute
   AppSettingsPdfTemplatesRoute: typeof AppSettingsPdfTemplatesRoute
+  AppSettingsPlanRoute: typeof AppSettingsPlanRoute
   AppSettingsProductsRoute: typeof AppSettingsProductsRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsQuotesRoute: typeof AppSettingsQuotesRoute
@@ -2721,6 +2741,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsNumberingRoute: AppSettingsNumberingRoute,
   AppSettingsPdfTemplatesRoute: AppSettingsPdfTemplatesRoute,
+  AppSettingsPlanRoute: AppSettingsPlanRoute,
   AppSettingsProductsRoute: AppSettingsProductsRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsQuotesRoute: AppSettingsQuotesRoute,

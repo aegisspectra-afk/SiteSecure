@@ -92,7 +92,9 @@ export function OnboardingForm({
               <p className="text-base font-semibold text-fg">{workspaceName}</p>
               <p className="public-mono mt-1 text-[10px] tracking-[0.16em] text-fg-muted">{he.brand}</p>
               {ownerConfirmed ? (
-                <p className="mt-3 text-sm text-fg-muted">{he.onboardingOwnerRoleConfirmed}</p>
+                <p className="mt-3 text-sm text-fg-muted">
+                  {he.onboardingOwnerRoleConfirmed} {he.onboardingSoloLead}
+                </p>
               ) : (
                 <p className="mt-3 text-sm text-danger">{he.onboardingOwnerRoleMissing}</p>
               )}

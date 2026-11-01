@@ -170,9 +170,10 @@ def workspace_usage(
 ) -> WorkspaceUsageOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
     view = authorize(ctx=ctx, action="users.view")
+    settings = authorize(ctx=ctx, action="settings.view")
     billing = authorize(ctx=ctx, action="workspace.billing")
-    if not view.allowed and not billing.allowed:
-        _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
+    if not view.allowed and not settings.allowed and not billing.allowed:
+        _raise_decision(settings, client=client, workspace_id=str(workspace_id), action="settings.view")
     workspace_key = str(workspace_id)
 
     from concurrent.futures import ThreadPoolExecutor

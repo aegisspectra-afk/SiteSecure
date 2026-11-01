@@ -29,3 +29,8 @@ export function afterAuthPath(hasWorkspace: boolean, next?: string | null): stri
   if (safe) return safe;
   return hasWorkspace ? "/platform" : "/onboarding";
 }
+
+/** After the 4-step solo setup, enter Site Secure ops — not the product picker. */
+export function onboardingEnterPath(): "/app/dashboard" {
+  return "/app/dashboard";
+}

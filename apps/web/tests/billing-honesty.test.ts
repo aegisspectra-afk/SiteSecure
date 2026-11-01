@@ -47,6 +47,9 @@ describe("billing honesty", () => {
       he.upgradeToIncreaseSeats,
       he.storageQuotaReached,
       he.planLimitHint,
+      he.settingsPlanLead,
+      he.settingsPlanNoPay,
+      he.settingsPlanUnlimited,
       billingHonestyNote(),
     ];
     for (const text of surfaces) {

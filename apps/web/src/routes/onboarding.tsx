@@ -1,13 +1,15 @@
 import { ApiClientError } from "@site-secure/api-client";
 import { Button, ErrorState } from "@site-secure/ui";
 import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthLayout } from "../components/AuthLayout";
 import { AuthFooter, AuthLaunchScreen, onboardingSteps } from "../components/auth";
 import { OnboardingForm } from "../components/OnboardingForm";
+import { OnboardingSoloSetup } from "../components/OnboardingSoloSetup";
 import { he } from "../i18n/he";
 import { authLaunchSequence } from "../lib/auth-launch";
-import { afterAuthPath, guestEntryPath } from "../lib/auth-routes";
+import { afterAuthPath, guestEntryPath, onboardingEnterPath } from "../lib/auth-routes";
+import { markSoloOnboarding, readSoloOnboarding } from "../lib/onboarding-solo";
 import { useSession } from "../lib/session";
 
 export const Route = createFileRoute("/onboarding")({
@@ -25,7 +27,20 @@ function OnboardingPage() {
   const [ownerConfirmed, setOwnerConfirmed] = useState(false);
   const [entering, setEntering] = useState(false);
   const [launchReady, setLaunchReady] = useState(false);
+  const [createdWorkspaceId, setCreatedWorkspaceId] = useState<string | null>(null);
   const email = user?.email ?? session?.email ?? null;
+
+  useEffect(() => {
+    const workspaceId = session?.memberships[0]?.workspace_id;
+    if (!workspaceId || created) return;
+    const stored = readSoloOnboarding(workspaceId);
+    if (!stored) return;
+    setCreatedWorkspaceId(stored);
+    setCreatedName(session?.memberships[0]?.workspace_name ?? null);
+    setOwnerConfirmed(true);
+    setCreated(true);
+  }, [session, created]);
+
   const accountFooter = (
     <AuthFooter
       prompt={he.onboardingWrongAccount}
@@ -76,7 +91,7 @@ function OnboardingPage() {
   }
 
   // Existing workspace: Site Secure home — never public product/plan path.
-  if (session?.has_workspace && !created && !entering) {
+  if (session?.has_workspace && !created && !entering && !readSoloOnboarding(session.memberships[0]?.workspace_id)) {
     return <Navigate to={afterAuthPath(true)} />;
   }
 
@@ -92,11 +107,14 @@ function OnboardingPage() {
 
   const profileDone = Boolean(session?.profile?.full_name);
   const stepKey = created ? "ready" : profileDone ? "workspace" : "profile";
-  const heading = created
-    ? he.onboardingReadyTitle
-    : profileDone
-      ? he.onboardingWorkspaceHeading
-      : he.onboardingProfileHeading;
+  const heading = created && ownerConfirmed
+    ? he.onboardingStepBusinessVat
+    : created
+      ? he.onboardingReadyTitle
+      : profileDone
+        ? he.onboardingWorkspaceHeading
+        : he.onboardingProfileHeading;
+  const setupWorkspaceId = createdWorkspaceId ?? session?.memberships[0]?.workspace_id ?? null;
 
   async function enterSiteSecure() {
     setEntering(true);
@@ -105,7 +123,7 @@ function OnboardingPage() {
       onWorkspace: () => setLaunchReady(false),
       onReady: () => setLaunchReady(true),
     });
-    await navigate({ to: "/platform" });
+    await navigate({ to: onboardingEnterPath() });
   }
 
   return (
@@ -114,12 +132,28 @@ function OnboardingPage() {
       kicker={he.onboardingKicker}
       heading={heading}
       description={
-        created ? he.onboardingReadyBody : profileDone ? he.onboardingWorkspaceLead : undefined
+        created && ownerConfirmed
+          ? he.onboardingSetupLead
+          : created
+            ? he.onboardingReadyBody
+            : profileDone
+              ? he.onboardingWorkspaceLead
+              : undefined
       }
       steps={onboardingSteps(stepKey)}
       footer={accountFooter}
       showTrust={false}
     >
+      {created && ownerConfirmed && setupWorkspaceId ? (
+        <OnboardingSoloSetup
+          api={api}
+          workspaceId={setupWorkspaceId}
+          workspaceName={createdName}
+          onComplete={() => {
+            void enterSiteSecure();
+          }}
+        />
+      ) : (
       <OnboardingForm
         email={email}
         profileDone={profileDone}
@@ -147,6 +181,8 @@ function OnboardingPage() {
           try {
             const ws = await api.createWorkspace({ name, business_type: businessType });
             setCreatedName(ws.name ?? name);
+            setCreatedWorkspaceId(ws.id);
+            markSoloOnboarding(ws.id);
             setCreatedIsBeta(Boolean(ws.is_beta));
             try {
               await api.patchWorkspace(ws.id, {
@@ -168,7 +204,6 @@ function OnboardingPage() {
             setOwnerConfirmed(true);
             setCreated(true);
             setSubmitting(false);
-            await enterSiteSecure();
             return;
           } catch (err) {
             // Workspace may already exist if defaults seed failed after RPC commit.
@@ -176,6 +211,8 @@ function OnboardingPage() {
             const m = hydrated?.memberships[0];
             if (hydrated?.has_workspace && m?.role_key === "owner") {
               setCreatedName(m.workspace_name || name);
+              setCreatedWorkspaceId(m.workspace_id);
+              markSoloOnboarding(m.workspace_id);
               setCreatedIsBeta(Boolean(m.is_beta));
               setOwnerConfirmed(true);
               setCreated(true);
@@ -199,6 +236,7 @@ function OnboardingPage() {
           void enterSiteSecure();
         }}
       />
+      )}
     </AuthLayout>
   );
 }

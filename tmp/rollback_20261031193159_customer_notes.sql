@@ -1,5 +1,7 @@
 -- Rollback 20261031193159_drop_unused_customer_notes_activities.sql
 -- LOCAL ONLY. Recreates unused CRM tables from 0010_customers.sql.
+-- Restores STRUCTURE only — not row data. Before any cloud apply of the
+-- drop migration: COUNT(*) on customer_notes and customer_activities, then backup.
 
 DO $$
 BEGIN

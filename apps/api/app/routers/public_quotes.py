@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..deps import service_client
+from ..notify import notify_quote_event, try_notify
 from ..errors import ApiError, MESSAGES
 from ..quote_signature import freeze_approval_on_version, store_quote_signature_document
 from ..quote_tokens import hash_public_token
@@ -16,7 +17,7 @@ from ..supabase_service import ServiceClient
 router = APIRouter(prefix="/api/v1/public/quotes", tags=["public-quotes"])
 
 QUOTE_SELECT = (
-    "id,workspace_id,number,status,version,valid_until,sent_at,viewed_at,"
+    "id,workspace_id,owner_user_id,number,status,version,valid_until,sent_at,viewed_at,"
     "approved_at,rejected_at,approved_name,rejection_reason,deleted_at"
 )
 DECISION_STATES = frozenset({"sent", "viewed"})
@@ -143,6 +144,7 @@ def _maybe_expire(svc: ServiceClient, quote: dict) -> dict:
         return quote
     patched = rows[0]
     _event(svc, patched, "expired", {})
+    try_notify(notify_quote_event, svc, patched, "quote.expired")
     return patched
 
 
@@ -205,6 +207,7 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
                 quote = rows[0]
                 _event(svc, quote, "viewed", {"version": access_version})
                 _audit(svc, quote, "quotes.view_public", {"version": access_version, "source": "public"})
+                try_notify(notify_quote_event, svc, quote, "quote.viewed")
             else:
                 quote = _load_quote(svc, access)
     can_decide = (not superseded) and quote.get("status") in DECISION_STATES
@@ -323,6 +326,7 @@ def approve_public_quote(
     }
     _event(svc, quote, "signed", {**event_meta, "signature_bytes": captured.get("byte_size")})
     _event(svc, quote, "approved", event_meta)
+    try_notify(notify_quote_event, svc, quote, "quote.approved")
     _audit(
         svc,
         quote,
@@ -378,6 +382,7 @@ def reject_public_quote(
     event_meta = {"version": access["version"], "reason": reason, **_client_meta(request, body)}
     _event(svc, quote, "rejected", event_meta)
     _audit(svc, quote, "quotes.reject", {"version": access["version"], "source": "public", **_client_meta(request, body)})
+    try_notify(notify_quote_event, svc, quote, "quote.rejected")
     public = _public_from_version(_load_version(svc, access))
     public["status"] = "rejected"
     public["superseded"] = False

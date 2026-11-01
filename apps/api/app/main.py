@@ -27,6 +27,7 @@ from .routers import (
     fleet_reports,
     health,
     jobs,
+    notifications,
     ops_modules,
     platform_home,
     public_quotes,
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(jobs.router)
     app.include_router(ops_modules.router)
+    app.include_router(notifications.router)
     app.include_router(quotes.router)
     app.include_router(quote_cpq.router)
     app.include_router(system_designs.router)

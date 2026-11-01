@@ -161,9 +161,11 @@ describe("workspace prefs ↔ settings JSON", () => {
 });
 
 describe("SETTINGS-3B integrity honesty copy", () => {
-  it("marks notifications as future / unavailable", () => {
-    expect(he.settingsNotificationsFutureTitle).toContain("עתידיות");
-    expect(he.settingsNotificationsFutureBody).toContain("אין כרגע");
+  it("describes in-app notifications and keeps email/push unavailable", () => {
+    expect(he.settingsNotificationsLead).toContain("בתוך האפליקציה");
+    expect(he.settingsNotificationsFutureBody).toContain("מייל");
+    expect(he.settingsNotificationsEmailOff).toContain("לא זמין");
+    expect(he.settingsNotificationsPushOff).toContain("לא זמינה");
   });
 
   it("does not present unused numbering prefixes as active", () => {

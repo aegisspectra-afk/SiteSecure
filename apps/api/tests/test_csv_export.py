@@ -136,9 +136,23 @@ class FakeCustomers:
 
 
 class FakeTasks:
-    def __init__(self) -> None:
+    def __init__(self, rows: list[dict] | None = None) -> None:
         self.gets: list[tuple[str, dict]] = []
         self.rpcs: list[tuple[str, dict]] = []
+        self.rows = rows or [
+            {
+                "id": TID,
+                "workspace_id": str(WS),
+                "title": "@SUM(A1)",
+                "status": "open",
+                "type": "other",
+                "assignee_id": ACTOR,
+                "due_at": "2026-10-15T10:00:00+00:00",
+                "created_at": "2026-10-01T00:00:00+00:00",
+                "customer_id": CID,
+                "site_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            }
+        ]
 
     def get(self, table: str, params: dict | None = None):
         params = params or {}
@@ -147,20 +161,15 @@ class FakeTasks:
         if ws and str(WS) not in ws:
             return _ok([])
         if table == "tasks":
-            return _ok(
-                [
-                    {
-                        "id": TID,
-                        "workspace_id": str(WS),
-                        "title": "@SUM(A1)",
-                        "status": "open",
-                        "type": "other",
-                        "assignee_id": ACTOR,
-                        "due_at": "2026-10-15T10:00:00+00:00",
-                        "created_at": "2026-10-01T00:00:00+00:00",
-                    }
-                ]
-            )
+            items = list(self.rows)
+            blob = str(params)
+            items = [
+                row
+                for row in items
+                if f"assignee_id.eq.{row.get('assignee_id')}" in blob
+                or "assignee_id.eq." not in blob
+            ]
+            return _ok(items)
         return _ok([])
 
     def rpc(self, name: str, payload: dict | None = None):
@@ -392,3 +401,31 @@ def test_quotes_export_truncates_at_max(monkeypatch):
     assert res.headers["x-export-truncated"] == "true"
     assert res.headers["x-export-row-count"] == "1"
     assert client.rpcs[0][1]["p_metadata"]["truncated"] is True
+
+
+def test_tasks_export_technician_scope_hides_foreign_and_customer_columns(monkeypatch):
+    other_task = {
+        "id": "99999999-9999-9999-9999-999999999999",
+        "workspace_id": str(WS),
+        "title": "משימה של אחר",
+        "status": "open",
+        "type": "other",
+        "assignee_id": "55555555-5555-5555-5555-555555555555",
+        "due_at": "2026-10-16T10:00:00+00:00",
+        "created_at": "2026-10-02T00:00:00+00:00",
+        "customer_id": CID,
+        "site_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    }
+    client = FakeTasks([*FakeTasks().rows, other_task])
+    monkeypatch.setattr(ops, "_ctx", lambda *a, **k: _ctx("technician", assigned=()))
+    res = _export_tasks(WS, client, {"sub": ACTOR})
+    text = _csv_text(res)
+    header = text.splitlines()[0]
+    assert "לקוח" not in header
+    assert "אתר" not in header
+    assert "customer" not in header.casefold()
+    assert "site" not in header.casefold()
+    assert CID not in text
+    assert "משימה של אחר" not in text
+    assert "'@SUM(A1)" in text
+    assert any("assignee_id.eq." + ACTOR in str(params) for _, params in client.gets)

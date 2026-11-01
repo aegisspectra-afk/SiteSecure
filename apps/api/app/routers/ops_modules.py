@@ -8,9 +8,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..audit import write_audit
 from ..authz.guard import require
-from ..authz.scope import apply_assigned_job_list_filter, apply_assigned_project_list_filter, empty_assigned_page
+from ..authz.scope import (
+    apply_assigned_job_list_filter,
+    apply_assigned_project_list_filter,
+    apply_assigned_task_list_filter,
+    empty_assigned_page,
+)
 from ..authz.types import ResourceRef
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
+from ..notify import notify_task_assigned, try_notify
 from ..errors import ApiError
 from ..identity import actor_id
 from ..installed_assets_from_planned import (
@@ -23,6 +29,7 @@ from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..project_from_quote import plan_project_from_quote
 from ..rest import as_list, created_or_403, one_or_404, patched_or_403
 from ..search_query import sanitize_search_q
+from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["ops"])
 
@@ -1376,6 +1383,7 @@ def list_tasks(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
+    apply_assigned_task_list_filter(ctx, params)
     rows = as_list(client.get("tasks", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": page.items, "next_cursor": page.next_cursor}
@@ -1395,7 +1403,9 @@ def export_tasks_csv(
     require(ctx, "calendar.export")
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
-        "select": TASK_SELECT,
+        # Export never includes customer/site columns — assigned technicians
+        # must not receive names or ids they cannot see on the list page.
+        "select": "id,workspace_id,type,status,title,due_at,assignee_id,created_at",
         "order": "created_at.desc",
     }
     if status:
@@ -1407,6 +1417,7 @@ def export_tasks_csv(
     safe_q = sanitize_search_q(q)
     if safe_q:
         params["title"] = f"ilike.*{safe_q}*"
+    apply_assigned_task_list_filter(ctx, params)
     collected: list[dict] = []
     cursor: str | None = None
     truncated = False
@@ -1457,6 +1468,7 @@ def create_task(
     body: TaskCreate,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient | None, Depends(service_client)] = None,
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "calendar.edit")
@@ -1468,7 +1480,10 @@ def create_task(
     }
     if not payload.get("assignee_id"):
         payload["assignee_id"] = actor
-    return created_or_403(client.post("tasks", payload))
+    row = created_or_403(client.post("tasks", payload))
+    if svc is not None:
+        try_notify(notify_task_assigned, svc, row, workspace_id=str(workspace_id), actor_user_id=actor)
+    return row
 
 
 @router.patch("/tasks/{task_id}")
@@ -1478,21 +1493,33 @@ def patch_task(
     body: TaskPatch,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient | None, Depends(service_client)] = None,
 ):
     ctx = _ctx(client, user, workspace_id)
-    one_or_404(
+    existing = one_or_404(
         client.get(
             "tasks",
-            params={"id": f"eq.{task_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+            params={"id": f"eq.{task_id}", "workspace_id": f"eq.{workspace_id}", "select": TASK_SELECT},
         )
     )
     require(ctx, "calendar.edit")
     patch = body.model_dump(exclude_none=True)
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
-    return patched_or_403(
-        client.patch("tasks", patch, params={"id": f"eq.{task_id}", "workspace_id": f"eq.{workspace_id}"})
+    row = patched_or_403(
+        client.patch(
+            "tasks",
+            patch,
+            params={"id": f"eq.{task_id}", "workspace_id": f"eq.{workspace_id}", "select": TASK_SELECT},
+        )
     )
+    new_assignee = str(row.get("assignee_id") or "")
+    old_assignee = str(existing.get("assignee_id") or "")
+    if svc is not None and new_assignee and new_assignee != old_assignee:
+        try_notify(
+            notify_task_assigned, svc, row, workspace_id=str(workspace_id), actor_user_id=actor_id(user)
+        )
+    return row
 
 
 # ── Knowledge ─────────────────────────────────────────────────────────────────

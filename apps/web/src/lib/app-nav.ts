@@ -154,6 +154,7 @@ export function roleLabelEn(roleKey: string | undefined): string {
 }
 
 export function planLabel(planKey: string | undefined): string {
+  if (planKey === "solo") return he.planSolo;
   return catalogPlanLabel(planKey);
 }
 

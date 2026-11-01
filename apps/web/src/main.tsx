@@ -3,12 +3,13 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { AppNotFound } from "./components/AppNotFound";
 import { queryClient } from "./lib/query-client";
 import { SessionProvider } from "./lib/session";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, defaultNotFoundComponent: AppNotFound });
 
 declare module "@tanstack/react-router" {
   interface Register {

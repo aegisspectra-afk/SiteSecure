@@ -17,6 +17,7 @@ from ..authz.types import ResourceRef
 from ..authz.usage import fetch_quotes_count
 from ..config import get_settings
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
+from ..notify import notify_quote_event, try_notify
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
@@ -1811,6 +1812,7 @@ def _transition_to_sent(
         entity_id=str(quote_id),
         metadata={"version": version},
     )
+    try_notify(notify_quote_event, svc, row, "quote.sent", actor_user_id=actor_id(user))
     return row, items, token
 
 

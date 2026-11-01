@@ -147,6 +147,20 @@ def apply_assigned_project_list_filter(ctx: AuthzContext, params: dict[str, str]
     return params
 
 
+def apply_assigned_task_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
+    """Tasks: own assignee rows, plus tasks on assigned site/customer ids."""
+    if not is_assigned_scope(ctx):
+        return params
+    clauses = [f"assignee_id.eq.{ctx.user_id}"]
+    ids = sorted({str(i) for i in ctx.assigned_resource_ids if i})
+    if ids:
+        csv = ",".join(ids)
+        clauses.append(f"site_id.in.({csv})")
+        clauses.append(f"customer_id.in.({csv})")
+    _and_clause(params, f"or({','.join(clauses)})")
+    return params
+
+
 def apply_assigned_document_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
     """Documents: entity_id must be an assigned resource (site/job/customer/…)."""
     if not is_assigned_scope(ctx):

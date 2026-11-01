@@ -182,7 +182,7 @@ export function useSettingsNavItems(): NavItem[] {
       label: he.settingsNavNotifications,
       group: "operations",
       icon: Bell,
-      visible: allow("workspace.edit"),
+      visible: true,
     },
     {
       id: "users",

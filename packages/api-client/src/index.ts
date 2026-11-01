@@ -485,6 +485,40 @@ export type DashboardResponse = {
   business_chart?: BusinessChart | null;
 };
 
+export type NotificationOut = {
+  id: string;
+  workspace_id: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  payload?: Record<string, unknown>;
+  read_at?: string | null;
+  created_at?: string | null;
+};
+
+export type NotificationPage = {
+  items: NotificationOut[];
+  next_cursor: string | null;
+  unread_count: number;
+};
+
+export type UnreadNotificationCount = {
+  unread_count: number;
+};
+
+export type NotificationPreference = {
+  event_type: string;
+  in_app: boolean;
+  email: boolean;
+  push: boolean;
+};
+
+export type NotificationPreferencesOut = {
+  items: NotificationPreference[];
+};
+
 export type QuoteGap = {
   field: string;
   code: string;
@@ -2240,6 +2274,32 @@ export function createApiClient(opts: {
     getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
     getDashboard: (workspaceId: string) =>
       request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
+    listNotifications: (
+      workspaceId: string,
+      opts: { unread_only?: boolean; limit?: number; cursor?: string | null } = {},
+    ) => {
+      const params = new URLSearchParams({ limit: String(opts.limit ?? 30) });
+      if (opts.unread_only) params.set("unread_only", "true");
+      if (opts.cursor) params.set("cursor", opts.cursor);
+      return request<NotificationPage>(`/api/v1/workspaces/${workspaceId}/notifications?${params.toString()}`);
+    },
+    unreadNotificationCount: (workspaceId: string) =>
+      request<UnreadNotificationCount>(`/api/v1/workspaces/${workspaceId}/notifications/unread-count`),
+    markNotificationRead: (workspaceId: string, notificationId: string) =>
+      request<NotificationOut>(`/api/v1/workspaces/${workspaceId}/notifications/${notificationId}/read`, {
+        method: "POST",
+      }),
+    markAllNotificationsRead: (workspaceId: string) =>
+      request<UnreadNotificationCount>(`/api/v1/workspaces/${workspaceId}/notifications/read-all`, {
+        method: "POST",
+      }),
+    getNotificationPreferences: (workspaceId: string) =>
+      request<NotificationPreferencesOut>(`/api/v1/workspaces/${workspaceId}/notification-preferences`),
+    putNotificationPreferences: (workspaceId: string, items: NotificationPreference[]) =>
+      request<NotificationPreferencesOut>(`/api/v1/workspaces/${workspaceId}/notification-preferences`, {
+        method: "PUT",
+        body: JSON.stringify({ items }),
+      }),
     listQuotes: (
       workspaceId: string,
       opts: {

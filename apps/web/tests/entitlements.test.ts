@@ -11,7 +11,7 @@ import {
 describe("catalog entitlements", () => {
   it("defaults self-serve workspaces to solo (public label Free)", () => {
     expect(defaultPlanKey()).toBe("solo");
-    expect(planLabel("solo")).toBe("Free");
+    expect(planLabel("solo")).toBe("חינם");
     expect(planLabel("business")).toBe("Pro");
     expect(planLabel("enterprise")).toBe("Enterprise");
     expect(planLabelEn("solo")).toBe("Free");

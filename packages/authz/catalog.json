@@ -24,7 +24,7 @@
   "plans": [
     {
       "key": "solo",
-      "label_he": "Free",
+      "label_he": "חינם",
       "label_en": "Free",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "fleet", "ssp", "workforce"],
       "limits": {

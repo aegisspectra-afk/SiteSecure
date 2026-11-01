@@ -22,6 +22,7 @@ import { FeedbackCenter } from "./FeedbackCenter";
 import { MobileMoreSheet } from "./MobileMoreSheet";
 import { MobileWorkSheet } from "./MobileWorkSheet";
 import { SidebarAccount, SidebarBrand, SidebarNav } from "./AppSidebar";
+import { NotificationBell } from "./NotificationBell";
 import { UserAccountMenu } from "./UserAccountMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { WorkspaceSystemStatus } from "./WorkspaceSystemStatus";
@@ -239,6 +240,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Ctrl K
               </kbd>
             </button>
+            <NotificationBell />
             <WorkspaceSystemStatus checks={checks} />
             <div className="lg:hidden">
               <UserAccountMenu {...account} />

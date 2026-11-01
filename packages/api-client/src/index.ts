@@ -2522,14 +2522,43 @@ export function createApiClient(opts: {
       ),
     getQuoteDocument: (workspaceId: string, quoteId: string) =>
       request<PublicQuote>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/document`),
-    listCustomers: (workspaceId: string, opts: { q?: string; limit?: number; status?: string } = {}) => {
+    listCustomers: (
+      workspaceId: string,
+      opts: { q?: string; limit?: number; status?: string; cursor?: string | null } = {},
+    ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.q?.trim()) params.set("q", opts.q.trim());
       if (opts.status) params.set("status", opts.status);
+      if (opts.cursor) params.set("cursor", opts.cursor);
       return request<{ items: CustomerOut[]; next_cursor?: string | null }>(
         `/api/v1/workspaces/${workspaceId}/customers?${params}`,
       );
     },
+    previewCustomersCsv: (workspaceId: string, csvText: string) =>
+      request<{
+        rows: {
+          row: number;
+          display_name: string;
+          phone?: string | null;
+          email?: string | null;
+          type: string;
+          status: string;
+          issues: string[];
+          importable: boolean;
+        }[];
+        valid_count: number;
+        error_count: number;
+        errors: string[];
+        too_large: boolean;
+      }>(`/api/v1/workspaces/${workspaceId}/customers/import/preview`, {
+        method: "POST",
+        body: JSON.stringify({ csv_text: csvText }),
+      }),
+    importCustomersCsv: (workspaceId: string, csvText: string) =>
+      request<{ created: number; skipped: number; errors: string[] }>(
+        `/api/v1/workspaces/${workspaceId}/customers/import`,
+        { method: "POST", body: JSON.stringify({ csv_text: csvText }) },
+      ),
     exportCustomersCsv: (workspaceId: string, opts: { q?: string; status?: string } = {}) => {
       const params = new URLSearchParams();
       if (opts.q?.trim()) params.set("q", opts.q.trim());
@@ -3151,6 +3180,10 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    deleteEquipment: (workspaceId: string, equipmentId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/equipment/${equipmentId}`, {
+        method: "DELETE",
+      }),
     listJobs: (
       workspaceId: string,
       opts: {
@@ -3237,13 +3270,17 @@ export function createApiClient(opts: {
       }),
     listTasks: (
       workspaceId: string,
-      opts: { status?: string; type?: string; lead_id?: string; limit?: number } = {},
+      opts: { status?: string; type?: string; lead_id?: string; q?: string; limit?: number; cursor?: string | null } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.status) params.set("status", opts.status);
       if (opts.type) params.set("type", opts.type);
       if (opts.lead_id) params.set("lead_id", opts.lead_id);
-      return request<{ items: TaskOut[] }>(`/api/v1/workspaces/${workspaceId}/tasks?${params}`);
+      if (opts.q?.trim()) params.set("q", opts.q.trim());
+      if (opts.cursor) params.set("cursor", opts.cursor);
+      return request<{ items: TaskOut[]; next_cursor?: string | null }>(
+        `/api/v1/workspaces/${workspaceId}/tasks?${params}`,
+      );
     },
     exportTasksCsv: (
       workspaceId: string,
@@ -3266,6 +3303,10 @@ export function createApiClient(opts: {
       request<TaskOut>(`/api/v1/workspaces/${workspaceId}/tasks/${taskId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
+      }),
+    deleteTask: (workspaceId: string, taskId: string) =>
+      request<{ ok: boolean }>(`/api/v1/workspaces/${workspaceId}/tasks/${taskId}`, {
+        method: "DELETE",
       }),
     listKnowledge: (workspaceId: string, opts: { q?: string; category?: string; limit?: number } = {}) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });

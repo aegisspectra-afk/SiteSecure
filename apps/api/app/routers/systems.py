@@ -9,11 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..audit import write_audit
 from ..authz.guard import require
 from ..authz.types import ResourceRef
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..equipment_asset import validate_equipment_provenance
 from ..errors import ApiError
 from ..identity import actor_id
-from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
+from ..supabase_service import ServiceClient
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["systems"])
 
@@ -472,3 +473,68 @@ def patch_equipment(
         metadata=patch,
     )
     return _equipment_out(row)
+
+
+@router.delete("/equipment/{equipment_id}")
+def delete_equipment(
+    workspace_id: UUID,
+    equipment_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = one_or_404(
+        client.get(
+            "equipment",
+            params={
+                "id": f"eq.{equipment_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,site_id,name",
+            },
+        )
+    )
+    require(ctx, "systems.edit", resource=ResourceRef(type="site", site_id=existing.get("site_id")))
+    linked_calls = as_list(
+        client.get(
+            "service_calls",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "equipment_id": f"eq.{equipment_id}",
+                "select": "id",
+                "limit": "1",
+            },
+        )
+    )
+    linked_warranties = as_list(
+        client.get(
+            "warranties",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "installed_equipment_id": f"eq.{equipment_id}",
+                "select": "id",
+                "limit": "1",
+            },
+        )
+    )
+    if linked_calls or linked_warranties:
+        raise ApiError(
+            409,
+            "RESOURCE_IN_USE",
+            "לא ניתן למחוק ציוד שמקושר לקריאת שירות או לאחריות",
+        )
+    acked_or_403(
+        svc.delete(
+            "equipment",
+            params={"id": f"eq.{equipment_id}", "workspace_id": f"eq.{workspace_id}"},
+        )
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "equipment.deleted",
+        entity_type="equipment",
+        entity_id=str(equipment_id),
+        metadata={"name": existing.get("name"), "site_id": existing.get("site_id")},
+    )
+    return {"ok": True}

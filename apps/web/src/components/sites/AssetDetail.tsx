@@ -6,7 +6,7 @@ import {
 } from "@site-secure/api-client";
 import { Button, ErrorState, Input, Select, Status } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { he } from "../../i18n/he";
@@ -78,6 +78,7 @@ function FieldRow({
 export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: string }) {
   const { session, api } = useSession();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const membership = session?.memberships[0];
   const workspaceId = membership?.workspace_id;
   const roleKey = membership?.role_key;
@@ -203,6 +204,18 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
     },
   });
 
+  const remove = useMutation({
+    mutationFn: () => api.deleteEquipment(workspaceId!, assetId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["equipment", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["site-assets", workspaceId, siteId] });
+      void navigate({ to: "/app/sites/$siteId", params: { siteId } });
+    },
+    onError: (err) => {
+      setError(err instanceof ApiClientError ? err.message : he.assetSaveError);
+    },
+  });
+
   if (!workspaceId) return <ErrorState title={he.assetLoadError} />;
   if (assetQuery.isError) {
     return (
@@ -262,6 +275,20 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
               data-testid="asset-edit-open"
             >
               {he.assetEdit}
+            </Button>
+          ) : null}
+          {canEdit ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11"
+              data-testid="asset-delete"
+              onClick={() => {
+                if (!window.confirm(he.assetDeleteConfirm)) return;
+                remove.mutate();
+              }}
+            >
+              {he.assetDelete}
             </Button>
           ) : null}
         </div>

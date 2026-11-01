@@ -13,6 +13,7 @@ from ..authz.scope import (
     apply_assigned_project_list_filter,
     apply_assigned_task_list_filter,
     empty_assigned_page,
+    is_assigned_scope,
 )
 from ..authz.types import ResourceRef
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
@@ -27,7 +28,7 @@ from ..installed_assets_from_planned import (
 from ..csv_export import EXPORT_MAX, EXPORT_PAGE, TASK_STATUS_HE, build_csv, csv_response
 from ..pagination import decode_cursor, page_from_rows, parse_limit
 from ..project_from_quote import plan_project_from_quote
-from ..rest import as_list, created_or_403, one_or_404, patched_or_403
+from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 from ..search_query import sanitize_search_q
 from ..supabase_service import ServiceClient
 
@@ -1520,6 +1521,45 @@ def patch_task(
             notify_task_assigned, svc, row, workspace_id=str(workspace_id), actor_user_id=actor_id(user)
         )
     return row
+
+
+@router.delete("/tasks/{task_id}")
+def delete_task(
+    workspace_id: UUID,
+    task_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = one_or_404(
+        client.get(
+            "tasks",
+            params={
+                "id": f"eq.{task_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,title,assignee_id",
+            },
+        )
+    )
+    require(ctx, "calendar.edit")
+    if is_assigned_scope(ctx) and str(existing.get("assignee_id") or "") != ctx.user_id:
+        raise ApiError(403, "PERMISSION_DENIED", "טכנאי יכול למחוק רק משימות שמשויכות אליו")
+    acked_or_403(
+        client.delete(
+            "tasks",
+            params={"id": f"eq.{task_id}", "workspace_id": f"eq.{workspace_id}"},
+            prefer="return=minimal",
+        )
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "tasks.deleted",
+        entity_type="task",
+        entity_id=str(task_id),
+        metadata={"title": existing.get("title")},
+    )
+    return {"ok": True}
 
 
 # ── Knowledge ─────────────────────────────────────────────────────────────────

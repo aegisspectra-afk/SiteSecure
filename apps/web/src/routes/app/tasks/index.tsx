@@ -1,5 +1,5 @@
 import { ApiClientError } from "@site-secure/api-client";
-import { Button, ErrorState, Input } from "@site-secure/ui";
+import { Button, ErrorState, Input, Select } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -37,30 +37,47 @@ function TasksBody() {
   const grants = membership?.permissions ?? null;
   const canEdit = can(membership?.role_key, "calendar.edit", features, grants);
   const canExport = can(membership?.role_key, "calendar.export", features, grants);
+  const assignedOnly = membership?.role_key === "technician" || membership?.role_key === "workforce_member";
+  const actorId = session?.user_id;
   const [filter, setFilter] = useState<TasksStatusFilter>("open");
+  const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  const membersQuery = useQuery({
+    queryKey: ["members", workspaceId],
+    enabled: Boolean(workspaceId && canEdit),
+    queryFn: () => api.listMembers(workspaceId!),
+  });
+  const members = membersQuery.data ?? [];
+
   const listQuery = useQuery({
-    queryKey: ["tasks", workspaceId, filter],
+    queryKey: ["tasks", workspaceId, filter, search],
     enabled: Boolean(workspaceId),
-    queryFn: () =>
-      api.listTasks(workspaceId!, filter === "open" ? { status: "open", limit: 100 } : { limit: 100 }),
+    queryFn: () => {
+      const opts: { limit: number; status?: string; q?: string } = { limit: 100 };
+      if (filter === "open") opts.status = "open";
+      if (search.trim()) opts.q = search.trim();
+      return api.listTasks(workspaceId!, opts);
+    },
   });
 
   const create = useMutation({
-    mutationFn: () =>
-      api.createTask(workspaceId!, {
-        title: title.trim(),
-        due_at: dueAt ? new Date(dueAt).toISOString() : undefined,
-      }),
+    mutationFn: () => {
+      const body: { title: string; due_at?: string; assignee_id?: string } = { title: title.trim() };
+      if (dueAt) body.due_at = new Date(dueAt).toISOString();
+      if (assigneeId) body.assignee_id = assigneeId;
+      return api.createTask(workspaceId!, body);
+    },
     onSuccess: () => {
       setCreating(false);
       setTitle("");
       setDueAt("");
+      setAssigneeId("");
       setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
     },
@@ -69,6 +86,15 @@ function TasksBody() {
 
   const complete = useMutation({
     mutationFn: (taskId: string) => api.patchTask(workspaceId!, taskId, { status: "done" }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] }),
+  });
+  const assign = useMutation({
+    mutationFn: ({ taskId, next }: { taskId: string; next: string }) =>
+      api.patchTask(workspaceId!, taskId, { assignee_id: next || null }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] }),
+  });
+  const remove = useMutation({
+    mutationFn: (taskId: string) => api.deleteTask(workspaceId!, taskId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] }),
   });
 
@@ -128,6 +154,13 @@ function TasksBody() {
         </button>
       </div>
 
+      <Input
+        id="task-search"
+        label={he.tasksSearch}
+        value={search}
+        onChange={(ev) => setSearch(ev.target.value)}
+      />
+
       <div className="flex flex-wrap gap-2">
         {canExport ? (
           <Button
@@ -173,6 +206,21 @@ function TasksBody() {
             value={dueAt}
             onChange={(ev) => setDueAt(ev.target.value)}
           />
+          {members.length ? (
+            <Select
+              id="task-assignee"
+              label={he.tasksAssignee}
+              value={assigneeId}
+              onChange={(ev) => setAssigneeId(ev.target.value)}
+            >
+              <option value="">{he.tasksAssigneeMe}</option>
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.full_name || member.email || member.user_id}
+                </option>
+              ))}
+            </Select>
+          ) : null}
           {formError ? <p className="text-sm text-danger">{formError}</p> : null}
           <Button type="submit" loading={create.isPending} disabled={!title.trim() || create.isPending}>
             {he.save}
@@ -205,16 +253,46 @@ function TasksBody() {
                   <span>{formatTaskDue(row.due_at)}</span>
                 </p>
               </div>
-              {canEdit && row.status === "open" ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="ss-tasks-complete"
-                  aria-label={`${he.tasksCompleteAria} ${row.title}`}
-                  onClick={() => complete.mutate(row.id)}
-                >
-                  {he.tasksMarkDone}
-                </Button>
+              {canEdit ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {members.length ? (
+                    <Select
+                      id={`task-assignee-${row.id}`}
+                      label={he.tasksAssignee}
+                      value={row.assignee_id ?? ""}
+                      onChange={(ev) => assign.mutate({ taskId: row.id, next: ev.target.value })}
+                    >
+                      <option value="">{he.tasksUnassigned}</option>
+                      {members.map((member) => (
+                        <option key={member.user_id} value={member.user_id}>
+                          {member.full_name || member.email || member.user_id}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : null}
+                  {row.status === "open" ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="ss-tasks-complete"
+                      aria-label={`${he.tasksCompleteAria} ${row.title}`}
+                      onClick={() => complete.mutate(row.id)}
+                    >
+                      {he.tasksMarkDone}
+                    </Button>
+                  ) : null}
+                  {!assignedOnly || row.assignee_id === actorId ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-testid={`task-delete-${row.id}`}
+                      aria-label={`${he.tasksDeleteAria} ${row.title}`}
+                      onClick={() => remove.mutate(row.id)}
+                    >
+                      {he.tasksDelete}
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </li>
           ))}

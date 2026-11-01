@@ -75,6 +75,8 @@ const api = {
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),
   exportCustomersCsv: vi.fn(),
+  importCustomersCsv: vi.fn(),
+  previewCustomersCsv: vi.fn(),
 };
 
 vi.mock("../src/lib/session", () => ({
@@ -324,7 +326,7 @@ describe("Customers page", () => {
     expect(screen.getByText(he.customerDirectoryEmptyTitle)).toBeTruthy();
   });
 
-  it("renders filtered empty after client-side search miss", async () => {
+  it("renders filtered empty after a search miss", async () => {
     api.listCustomers.mockResolvedValue({ items: sampleCustomers, next_cursor: null });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("customers-search")).toBeTruthy());
@@ -341,16 +343,16 @@ describe("Customers page", () => {
     expect(screen.getByTestId("customers-retry")).toBeTruthy();
   });
 
-  it("filters the loaded directory client-side without a second list fetch", async () => {
+  it("sends the search needle to the server list", async () => {
     api.listCustomers.mockResolvedValue({ items: sampleCustomers, next_cursor: null });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("customers-search")).toBeTruthy());
-    const callsBefore = api.listCustomers.mock.calls.length;
     await userEvent.type(screen.getByTestId("customers-search"), "שנידי");
     await waitFor(() => {
       expect(screen.getAllByText("שנידי הלר").length).toBeGreaterThan(0);
-      expect(screen.queryByText("חברת אבטחה בע״מ")).toBeNull();
+      expect(
+        api.listCustomers.mock.calls.some((call) => call[1]?.q === "שנידי"),
+      ).toBe(true);
     });
-    expect(api.listCustomers.mock.calls.length).toBe(callsBefore);
   });
 });

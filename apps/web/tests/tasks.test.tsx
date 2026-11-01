@@ -37,6 +37,8 @@ const api = {
   listTasks: vi.fn(),
   createTask: vi.fn(),
   patchTask: vi.fn(),
+  deleteTask: vi.fn(),
+  listMembers: vi.fn(),
   exportTasksCsv: vi.fn(),
 };
 
@@ -48,6 +50,7 @@ const sessionState = {
 vi.mock("../src/lib/session", () => ({
   useSession: () => ({
     session: {
+      user_id: "u1",
       memberships: [
         {
           workspace_id: "ws1",
@@ -164,8 +167,10 @@ describe("TasksPage", () => {
       ["calendar.view", "calendar.edit"].includes(permission),
     );
     api.listTasks.mockResolvedValue({ items: sampleTasks.filter((t) => t.status === "open") });
+    api.listMembers.mockResolvedValue([]);
     api.createTask.mockResolvedValue({ ...sampleTasks[0], id: "t-new", title: "חדשה" });
     api.patchTask.mockResolvedValue({ ...sampleTasks[0], status: "done" });
+    api.deleteTask.mockResolvedValue({ ok: true });
   });
 
   it("shows honest Hebrew copy without calendar framing", async () => {
@@ -293,6 +298,7 @@ describe("TasksPage", () => {
     expect(completeBtn).toBeInTheDocument();
     await user.click(completeBtn);
     await waitFor(() => expect(api.patchTask).toHaveBeenCalled());
+    expect(screen.getByTestId("task-delete-t-open")).toBeInTheDocument();
   });
 
   it("uses mobile-friendly complete control class", async () => {

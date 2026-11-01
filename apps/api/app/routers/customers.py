@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
@@ -273,6 +275,269 @@ def export_customers_csv(
         row_count=len(csv_rows),
         truncated=truncated,
     )
+
+
+CUSTOMER_IMPORT_MAX = 200
+CUSTOMER_IMPORT_MAX_CHARS = 200_000
+_CSV_INJECTION_PREFIXES = frozenset("=+-@\t\r")
+_CUSTOMER_IMPORT_KEYS = {
+    "display_name": "display_name",
+    "name": "display_name",
+    "שם": "display_name",
+    "phone": "phone",
+    "טלפון": "phone",
+    "email": "email",
+    "דואל": "email",
+    'דוא"ל': "email",
+    "דוא״ל": "email",
+    "type": "type",
+    "סוג": "type",
+    "status": "status",
+    "סטטוס": "status",
+}
+
+
+def normalize_import_phone(value: str | None) -> str:
+    digits = "".join(ch for ch in (value or "") if ch.isdigit())
+    return digits[-9:] if len(digits) >= 9 else digits
+
+
+def normalize_import_email(value: str | None) -> str:
+    return (value or "").strip().casefold()
+
+
+def is_csv_injection(value: str | None) -> bool:
+    text = (value or "").lstrip()
+    return bool(text) and text[0] in _CSV_INJECTION_PREFIXES
+
+
+def _map_import_header(key: str | None) -> str | None:
+    raw = (key or "").strip()
+    return _CUSTOMER_IMPORT_KEYS.get(raw.casefold()) or _CUSTOMER_IMPORT_KEYS.get(raw)
+
+
+def _existing_customer_keys(client: UserClient, workspace_id: UUID) -> tuple[set[str], set[str]]:
+    rows = as_list(
+        client.get(
+            "customers",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "phone,email",
+                "limit": "1000",
+            },
+        )
+    )
+    phones = {normalize_import_phone(row.get("phone")) for row in rows}
+    phones.discard("")
+    emails = {normalize_import_email(row.get("email")) for row in rows}
+    emails.discard("")
+    return phones, emails
+
+
+class CustomerImportIssue(BaseModel):
+    row: int
+    message: str
+    field: str | None = None
+
+
+class CustomerImportPreviewRow(BaseModel):
+    row: int
+    display_name: str
+    phone: str | None = None
+    email: str | None = None
+    type: str = "private"
+    status: str = "active"
+    issues: list[str] = Field(default_factory=list)
+    importable: bool = True
+
+
+class CustomerImportPreview(BaseModel):
+    rows: list[CustomerImportPreviewRow]
+    valid_count: int
+    error_count: int
+    errors: list[str]
+    too_large: bool = False
+
+
+class CustomerImportIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    csv_text: str = Field(min_length=1, max_length=CUSTOMER_IMPORT_MAX_CHARS)
+
+
+class CustomerImportResult(BaseModel):
+    created: int
+    skipped: int
+    errors: list[str] = Field(default_factory=list)
+
+
+def analyze_customer_import(
+    csv_text: str,
+    *,
+    existing_phones: set[str] | None = None,
+    existing_emails: set[str] | None = None,
+) -> CustomerImportPreview:
+    if len(csv_text or "") > CUSTOMER_IMPORT_MAX_CHARS:
+        raise ApiError(400, "VALIDATION_ERROR", f"קובץ הייבוא חורג מ־{CUSTOMER_IMPORT_MAX_CHARS:,} תווים")
+    text = (csv_text or "").lstrip("\ufeff").strip()
+    if not text:
+        raise ApiError(400, "VALIDATION_ERROR", "קובץ הייבוא ריק")
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        raise ApiError(400, "VALIDATION_ERROR", "חסרה שורת כותרות בייבוא")
+    seen_phones: set[str] = set(existing_phones or ())
+    seen_emails: set[str] = set(existing_emails or ())
+    preview_rows: list[CustomerImportPreviewRow] = []
+    errors: list[str] = []
+    raw_count = 0
+    for index, raw in enumerate(reader, start=2):
+        raw_count += 1
+        if raw_count > CUSTOMER_IMPORT_MAX:
+            errors.append(f"ניתן לייבא עד {CUSTOMER_IMPORT_MAX} לקוחות בבת אחת")
+            break
+        mapped: dict[str, str] = {}
+        injection = False
+        for key, value in raw.items():
+            dest = _map_import_header(key)
+            if not dest or value is None:
+                continue
+            cell = str(value).strip()
+            if not cell:
+                continue
+            if is_csv_injection(cell):
+                injection = True
+            mapped[dest] = cell
+        issues: list[str] = []
+        if injection:
+            issues.append("השורה נחסמה — תוכן שנראה כמו נוסחת CSV")
+        name = mapped.get("display_name") or ""
+        if not name:
+            issues.append("חסר שם להצגה")
+        phone = mapped.get("phone")
+        email = mapped.get("email")
+        phone_key = normalize_import_phone(phone)
+        email_key = normalize_import_email(email)
+        if phone_key and phone_key in seen_phones:
+            issues.append("טלפון כפול")
+        if email_key and email_key in seen_emails:
+            issues.append("דוא״ל כפול")
+        if phone_key and "טלפון כפול" not in issues:
+            seen_phones.add(phone_key)
+        if email_key and "דוא״ל כפול" not in issues:
+            seen_emails.add(email_key)
+        importable = not issues
+        if issues:
+            errors.append(f"שורה {index}: {' · '.join(issues)}")
+        preview_rows.append(
+            CustomerImportPreviewRow(
+                row=index,
+                display_name=name[:200],
+                phone=(phone[:40] if phone else None),
+                email=(email[:200] if email else None),
+                type=mapped.get("type") or "private",
+                status=mapped.get("status") or "active",
+                issues=issues,
+                importable=importable,
+            )
+        )
+    if not preview_rows:
+        raise ApiError(400, "VALIDATION_ERROR", "לא נמצאו לקוחות עם שם להצגה")
+    valid_count = sum(1 for row in preview_rows if row.importable)
+    return CustomerImportPreview(
+        rows=preview_rows,
+        valid_count=valid_count,
+        error_count=len(preview_rows) - valid_count,
+        errors=errors[:50],
+        too_large=raw_count > CUSTOMER_IMPORT_MAX,
+    )
+
+
+def parse_customer_import_rows(csv_text: str) -> list[dict[str, str]]:
+    preview = analyze_customer_import(csv_text)
+    rows = [
+        {
+            "display_name": row.display_name,
+            **({"phone": row.phone} if row.phone else {}),
+            **({"email": row.email} if row.email else {}),
+            **({"type": row.type} if row.type else {}),
+            **({"status": row.status} if row.status else {}),
+        }
+        for row in preview.rows
+        if row.importable
+    ]
+    if not rows:
+        raise ApiError(400, "VALIDATION_ERROR", preview.errors[0] if preview.errors else "לא נמצאו לקוחות עם שם להצגה")
+    return rows
+
+
+@router.post("/customers/import/preview", response_model=CustomerImportPreview)
+def preview_customers_csv(
+    workspace_id: UUID,
+    body: CustomerImportIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> CustomerImportPreview:
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "crm.create", resource=ResourceRef(type="customer"))
+    phones, emails = _existing_customer_keys(client, workspace_id)
+    return analyze_customer_import(body.csv_text, existing_phones=phones, existing_emails=emails)
+
+
+@router.post("/customers/import", response_model=CustomerImportResult)
+def import_customers_csv(
+    workspace_id: UUID,
+    body: CustomerImportIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> CustomerImportResult:
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "crm.create", resource=ResourceRef(type="customer"))
+    phones, emails = _existing_customer_keys(client, workspace_id)
+    preview = analyze_customer_import(body.csv_text, existing_phones=phones, existing_emails=emails)
+    actor = actor_id(user)
+    created = 0
+    skipped = preview.error_count
+    errors = list(preview.errors)
+    current = fetch_customers_count(client, str(workspace_id))
+    for row in preview.rows:
+        if not row.importable:
+            continue
+        decision = evaluate_count_limit(
+            plan_key=ctx.plan_key,
+            limit_key="quota_clients",
+            resource="customers",
+            current=current,
+        )
+        if not decision.allowed:
+            remaining = preview.valid_count - created
+            skipped += remaining
+            errors.append("הגעתם למכסת הלקוחות בתוכנית")
+            break
+        payload = {
+            "workspace_id": str(workspace_id),
+            "created_by": actor,
+            "display_name": row.display_name[:200],
+            "type": row.type or "private",
+            "status": row.status or "active",
+        }
+        if row.phone:
+            payload["phone"] = row.phone[:40]
+        if row.email:
+            payload["email"] = row.email[:200]
+        try:
+            created_or_403(client.post("customers", payload))
+            created += 1
+            current += 1
+        except ApiError as err:
+            skipped += 1
+            errors.append(f"שורה {row.row}: {err.message}")
+    write_audit(
+        client,
+        str(workspace_id),
+        "customers.import",
+        entity_type="customer",
+        metadata={"created": created, "skipped": skipped},
+    )
+    return CustomerImportResult(created=created, skipped=skipped, errors=errors[:50])
 
 
 @router.post("/customers", response_model=CustomerOut)

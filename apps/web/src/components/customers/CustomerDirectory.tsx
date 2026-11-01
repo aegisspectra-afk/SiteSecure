@@ -77,6 +77,9 @@ export function CustomerDirectoryToolbar({
   canExport = false,
   exportBusy = false,
   onExport,
+  canImport = false,
+  importBusy = false,
+  onImportFile,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
@@ -89,6 +92,9 @@ export function CustomerDirectoryToolbar({
   canExport?: boolean;
   exportBusy?: boolean;
   onExport?: () => void;
+  canImport?: boolean;
+  importBusy?: boolean;
+  onImportFile?: (file: File) => void;
 }) {
   return (
     <div className="customer-dir-toolbar">
@@ -106,6 +112,23 @@ export function CustomerDirectoryToolbar({
         >
           {he.exportCsv}
         </Button>
+      ) : null}
+      {canImport && onImportFile ? (
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius-control)] border border-border px-3 text-sm text-fg">
+          {importBusy ? he.loading : he.customersImport}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            data-testid="customers-import"
+            disabled={importBusy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onImportFile(file);
+            }}
+          />
+        </label>
       ) : null}
       {canCreate ? (
         <Button

@@ -56,7 +56,7 @@ import {
   type PartialApplyRecovery,
   type ReviewSelectionState,
 } from "../../../lib/cctv-recommend-projection";
-import type { SystemBuilderType } from "../../../lib/system-builder";
+import { domainLabel, visibleDomains } from "../../../lib/domain-registry";
 
 type Step = "requirements" | "loading" | "review";
 
@@ -120,7 +120,7 @@ export function SystemBuilderDrawer({
   onApplyPlanned,
   onClearRecovery,
 }: Props) {
-  const [systemType, setSystemType] = useState<SystemBuilderType>("cctv");
+  const [systemType, setSystemType] = useState<string>("cctv");
   const [step, setStep] = useState<Step>("requirements");
   const [req, setReq] = useState<CctvBuildRequirements>(() => leadDefaults(lead));
   const [inputError, setInputError] = useState<string | null>(null);
@@ -674,15 +674,13 @@ export function SystemBuilderDrawer({
     ) : (
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onClose}>
-          {he.cancel}
+          {systemType === "free_build" ? he.domainFreeBuildBack : he.cancel}
         </Button>
-        <Button
-          type="button"
-          disabled={systemType !== "cctv" || conflict}
-          onClick={() => void calculate()}
-        >
-          {lastCalcFingerprint ? he.cpqCctvRecalculate : he.cpqCctvCalculate}
-        </Button>
+        {systemType === "cctv" ? (
+          <Button type="button" disabled={conflict} onClick={() => void calculate()}>
+            {lastCalcFingerprint ? he.cpqCctvRecalculate : he.cpqCctvCalculate}
+          </Button>
+        ) : null}
       </div>
     );
 
@@ -700,6 +698,35 @@ export function SystemBuilderDrawer({
       footer={footer}
     >
       <div className="grid gap-4">
+        <div>
+          <p className="mb-2 text-xs font-medium text-fg-muted">{he.domainPickerLabel}</p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label={he.domainPickerLabel}>
+            {visibleDomains().map((domain) => (
+              <button
+                key={domain.key}
+                type="button"
+                role="tab"
+                aria-selected={systemType === domain.key}
+                data-testid={`domain-tab-${domain.key}`}
+                className={`rounded-[var(--radius-control)] border px-3 py-1.5 text-sm ${
+                  systemType === domain.key
+                    ? "border-fg bg-bg-subtle font-medium text-fg"
+                    : "border-border text-fg-muted hover:text-fg"
+                }`}
+                onClick={() => setSystemType(domain.key)}
+              >
+                {domainLabel(domain.key, he)}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-fg-muted">{he.domainMultipleHint}</p>
+        </div>
+        {systemType === "free_build" ? (
+          <div className="rounded-[var(--radius-card)] border border-border p-4" data-testid="domain-free-build-panel">
+            <p className="text-sm font-medium text-fg">{he.domainFreeBuild}</p>
+            <p className="mt-1 text-sm text-fg-muted">{he.domainFreeBuildLead}</p>
+          </div>
+        ) : null}
         {conflict ? (
           <div className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm" role="alert">
             <p className="text-danger">{he.cpqCctvDesignConflict}</p>
@@ -737,7 +764,7 @@ export function SystemBuilderDrawer({
           </div>
         ) : null}
 
-        {step === "requirements" || step === "loading" || hydrating ? (
+        {systemType === "cctv" && (step === "requirements" || step === "loading" || hydrating) ? (
           <>
             {step === "loading" || hydrating ? (
               <CctvBuildProgress label={hydrating ? he.cpqCctvDesignHydrating : undefined} />
@@ -784,7 +811,7 @@ export function SystemBuilderDrawer({
           </>
         ) : null}
 
-        {step === "review" && recommendation && !hydrating ? (
+        {systemType === "cctv" && step === "review" && recommendation && !hydrating ? (
           <CctvReviewPanel
             rec={recommendation}
             selection={selection}

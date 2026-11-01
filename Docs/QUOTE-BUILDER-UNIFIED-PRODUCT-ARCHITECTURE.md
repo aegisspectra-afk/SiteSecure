@@ -325,6 +325,16 @@ System Builder = **engineering contribution engine** into Quote Composition.
 Today: **CCTV only** is a real engine.  
 Alarm / Access / Intercom / Network / Low Voltage / Combined: **not engines** — must not be promoted as such.
 
+### Decision (2026-11-01) — picker domain vs engineering engine
+
+**Decision:** «בנייה חופשית» is shown in the domain picker as a visible domain. It remains an **input method** (manual / catalog / free lines), not an engineering engine: no wizard, no `calculate` / `recommend` / `apply` module, and no invented formulas.
+
+**Decision:** CCTV is the only production engineering engine (`cctv_sizing`, `cctv_recommend`, `role_key`, Equipment Intent, Apply, `pricing.recalculate`).
+
+**Decision:** Domains without a verified module stay hidden. The C3 domain table is not populated until pilot-business data is supplied.
+
+This updates the earlier “Manual is not a picker domain” framing in §§5–6. Registry vs Docs gap: `apps/web/src/lib/domain-docs-gap.ts`.
+
 ---
 
 ## 15. CCTV as reference engine

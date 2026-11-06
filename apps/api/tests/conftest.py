@@ -18,6 +18,18 @@ os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 
 
+def pytest_configure(config):
+    """Fail the whole run before any test can reach a hosted Supabase project."""
+    from app.config import assert_dev_supabase_target
+
+    try:
+        assert_dev_supabase_target(
+            os.environ["SUPABASE_URL"], os.environ.get("APP_ENV", "development")
+        )
+    except ValueError as exc:
+        pytest.exit(f"Supabase target guard: {exc}", returncode=4)
+
+
 @pytest.fixture(autouse=True)
 def _c5_fail_closed_before_client(request):
     """C5 live/local-marked tests must use isolated loopback env. No cloud fallback."""

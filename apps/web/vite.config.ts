@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
+import { requireLocalSupabaseInDev } from "./src/lib/dev-supabase-guard";
 import { requireProductionApiUrl } from "./src/lib/public-api-url";
 
 const srcDir = path.resolve(__dirname, "src");
@@ -44,6 +45,9 @@ export default defineConfig(({ mode }) => {
   if (hosted && /localhost|127\.0\.0\.1/i.test(env.VITE_API_URL ?? "")) {
     env.VITE_API_URL = "";
     process.env.VITE_API_URL = "";
+  }
+  if (mode === "development" && !hosted) {
+    requireLocalSupabaseInDev(env.VITE_SUPABASE_URL, env.VITE_ALLOW_REMOTE_SUPABASE);
   }
   if (mode === "production") {
     requireProductionApiUrl(env.VITE_API_URL, hosted);

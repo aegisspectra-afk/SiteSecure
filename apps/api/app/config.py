@@ -3,8 +3,9 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -30,6 +31,29 @@ def parse_cors_origins(web_public_url: str, extra: str = "", app_env: str = "dev
         add("http://localhost:5175")  # WorkForce
         add("http://localhost:8081")
     return seen
+
+
+DEV_APP_ENVS = frozenset({"development", "dev", "test"})
+ALLOW_REMOTE_SUPABASE_ENV = "SS_ALLOW_REMOTE_SUPABASE"
+_LOCAL_SUPABASE_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+# Offline unit-test default (tests/conftest.py); it does not resolve, so nothing is ever reached.
+_PLACEHOLDER_SUPABASE_HOSTS = frozenset({"example.supabase.co"})
+
+
+def assert_dev_supabase_target(supabase_url: str, app_env: str) -> None:
+    """Dev/test must never talk to a hosted Supabase project unless explicitly allowed."""
+    if (app_env or "").strip().lower() not in DEV_APP_ENVS:
+        return
+    if os.environ.get(ALLOW_REMOTE_SUPABASE_ENV) == "1":
+        return
+    host = (urlparse((supabase_url or "").strip()).hostname or "").lower()
+    if host in _LOCAL_SUPABASE_HOSTS or host.endswith(".local") or host in _PLACEHOLDER_SUPABASE_HOSTS:
+        return
+    raise ValueError(
+        f"Refusing non-local SUPABASE_URL host {host or '<empty>'!r} with APP_ENV={app_env!r}. "
+        f"Point dev/test at local Supabase (127.0.0.1:54321), or set {ALLOW_REMOTE_SUPABASE_ENV}=1 "
+        "to opt in deliberately."
+    )
 
 
 def _jwt_role(token: str) -> str | None:
@@ -65,6 +89,11 @@ class Settings(BaseSettings):
         if url.endswith("/rest/v1"):
             url = url[: -len("/rest/v1")]
         return url
+
+    @model_validator(mode="after")
+    def refuse_remote_supabase_in_dev(self) -> "Settings":
+        assert_dev_supabase_target(self.supabase_url, self.app_env)
+        return self
 
     @field_validator("supabase_service_role_key")
     @classmethod

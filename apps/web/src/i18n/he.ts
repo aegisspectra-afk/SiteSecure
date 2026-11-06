@@ -2252,6 +2252,7 @@ export const he = {
   assetDelete: "מחיקת נכס",
   assetDeleteConfirm:
     "למחוק את הנכס מהאתר? אם יש קריאת שירות או אחריות מקושרות המחיקה תיחסם. הפעולה נרשמת ביומן.",
+  assetDeleteBlocked: "לא ניתן למחוק ציוד שמקושר לקריאת שירות או לאחריות",
   onboardingStepBusinessVat: "פרטי עסק ומע״מ",
   onboardingStepCatalog: "ייבוא קטלוג",
   onboardingStepFirstCustomer: "לקוח ראשון",

@@ -277,8 +277,8 @@ def export_customers_csv(
     )
 
 
-CUSTOMER_IMPORT_MAX = 200
-CUSTOMER_IMPORT_MAX_CHARS = 200_000
+CUSTOMER_IMPORT_MAX = 2_000
+CUSTOMER_IMPORT_MAX_CHARS = 2_000_000
 _CSV_INJECTION_PREFIXES = frozenset("=+-@\t\r")
 _CUSTOMER_IMPORT_KEYS = {
     "display_name": "display_name",
@@ -392,7 +392,7 @@ def analyze_customer_import(
     for index, raw in enumerate(reader, start=2):
         raw_count += 1
         if raw_count > CUSTOMER_IMPORT_MAX:
-            errors.append(f"ניתן לייבא עד {CUSTOMER_IMPORT_MAX} לקוחות בבת אחת")
+            errors.append(f"ניתן לייבא עד {CUSTOMER_IMPORT_MAX:,} לקוחות בבת אחת")
             break
         mapped: dict[str, str] = {}
         injection = False

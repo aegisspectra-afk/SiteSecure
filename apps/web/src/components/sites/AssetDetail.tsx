@@ -200,7 +200,7 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
       void queryClient.invalidateQueries({ queryKey: ["site-equipment", workspaceId, siteId] });
     },
     onError: (err) => {
-      setError(err instanceof ApiClientError ? err.message : he.assetSaveError);
+      setError(err instanceof ApiClientError ? err.message : err instanceof Error ? err.message : he.assetSaveError);
     },
   });
 
@@ -212,7 +212,13 @@ export function AssetDetail({ siteId, assetId }: { siteId: string; assetId: stri
       void navigate({ to: "/app/sites/$siteId", params: { siteId } });
     },
     onError: (err) => {
-      setError(err instanceof ApiClientError ? err.message : he.assetSaveError);
+      const apiMessage =
+        err instanceof ApiClientError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "";
+      setError(apiMessage || he.assetDeleteBlocked);
     },
   });
 

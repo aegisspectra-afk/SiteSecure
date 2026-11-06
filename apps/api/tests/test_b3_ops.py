@@ -231,10 +231,11 @@ def test_analyze_flags_existing_workspace_duplicate():
 
 
 def test_analyze_rejects_oversize_row_count():
-    lines = ["display_name"] + [f"לקוח{i}" for i in range(201)]
+    lines = ["display_name"] + [f"לקוח{i}" for i in range(2_001)]
     preview = analyze_customer_import("\n".join(lines))
     assert preview.too_large is True
-    assert preview.valid_count == 200
+    assert preview.valid_count == 2_000
+    assert any("2,000" in item for item in preview.errors)
 
 
 def test_preview_customers_does_not_create(monkeypatch):

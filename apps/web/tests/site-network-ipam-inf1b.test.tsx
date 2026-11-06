@@ -6,6 +6,7 @@ import { AssetDetail } from "../src/components/sites/AssetDetail";
 import { SiteNetworkPanel } from "../src/components/sites/SiteNetworkPanel";
 
 vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
   Link: ({
     to,
     children,

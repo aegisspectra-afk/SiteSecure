@@ -6,7 +6,8 @@ from .types import AuthzContext, Decision, ResourceRef
 
 QUOTE_EDITABLE = frozenset({"draft"})
 QUOTE_SENDABLE = frozenset({"draft"})
-QUOTE_REVISABLE = frozenset({"sent", "viewed", "approved", "rejected", "expired"})
+# Approved quotes are final: a change after approval is a new quote, not a revision.
+QUOTE_REVISABLE = frozenset({"sent", "viewed", "rejected", "expired"})
 QUOTE_DELETABLE = frozenset({"draft", "sent", "viewed", "rejected", "expired", "cancelled"})
 
 

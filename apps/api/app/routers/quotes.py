@@ -273,6 +273,37 @@ def _service() -> ServiceClient:
     return ServiceClient(get_settings())
 
 
+def _quote_writer() -> ServiceClient:
+    """Writes to quote totals/lifecycle, quote_items and quote_versions.
+
+    INSERT/UPDATE on these is revoked from `authenticated` (S2 migration) so a member JWT
+    cannot bypass pricing.recalculate, cost/override permissions or send/revise rules via
+    PostgREST. Callers load the quote under RLS (`_load_quote`: id + workspace_id) and pass
+    authz first; every write filters on — or inserts — the path workspace_id.
+    """
+    return _service()
+
+
+def _assert_section_on_quote(
+    client: UserClient, workspace_id: UUID, quote_id: UUID, section_id: str | None
+) -> None:
+    if not section_id:
+        return
+    rows = as_list(
+        client.get(
+            "quote_sections",
+            params={
+                "id": f"eq.{section_id}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id",
+            },
+        )
+    )
+    if not rows:
+        raise ApiError(400, "VALIDATION_ERROR", "הסעיף לא שייך להצעה זו")
+
+
 def _nested_name(row: dict, key: str, field: str) -> str | None:
     nested = row.get(key)
     name = None
@@ -447,6 +478,7 @@ def _persist_totals(
     client: UserClient, workspace_id: UUID, quote: dict, items: list[dict]
 ) -> tuple[dict, list[dict]]:
     sections = _load_sections(client, workspace_id, UUID(quote["id"]))
+    writer = _quote_writer()
     computed = pricing.recalculate(
         items,
         vat_percent=quote.get("vat_percent"),
@@ -456,7 +488,7 @@ def _persist_totals(
     )
     for item, computed_item in zip(items, computed["items"], strict=True):
         if float(item.get("line_net") or 0) != computed_item["line_net"]:
-            client.patch(
+            writer.patch(
                 "quote_items",
                 {"line_net": computed_item["line_net"]},
                 params={
@@ -481,9 +513,8 @@ def _persist_totals(
         "total_with_options_gross": computed.get("total_with_options_gross"),
         "optional_cost_total": computed.get("optional_cost_total"),
     }
-    # UPDATE cost_* via authenticated (UPDATE granted); RETURNING must omit locked columns.
     patched = patched_or_403(
-        client.patch(
+        writer.patch(
             "quotes",
             totals,
             params={
@@ -645,6 +676,7 @@ def _insert_line(
         cost = 0
     elif body.cost is not None and not _can_view_cost(ctx):
         raise ApiError(403, "PERMISSION_DENIED", "אין הרשאה לעלות")
+    _assert_section_on_quote(client, workspace_id, quote_id, body.section_id)
     payload = {
         "workspace_id": str(workspace_id),
         "quote_id": str(quote_id),
@@ -677,7 +709,7 @@ def _insert_line(
         ),
     }
     created_or_403(
-        client.post(
+        _quote_writer().post(
             "quote_items",
             payload,
             params={"select": ITEM_SELECT_SAFE},
@@ -889,21 +921,24 @@ def _upsert_version_snapshot(
             },
         )
     )
+    writer = _quote_writer()
     if existing:
-        acked_or_403(
-            client.patch(
+        # return=representation: a silent 0-row update must fail, not publish a stale snapshot.
+        patched_or_403(
+            writer.patch(
                 "quote_versions",
                 {"snapshot": snapshot},
                 params={
                     "id": f"eq.{existing[0]['id']}",
+                    "quote_id": f"eq.{quote_id}",
                     "workspace_id": f"eq.{workspace_id}",
+                    "select": "id",
                 },
-                prefer="return=minimal",
             )
         )
         return
     created_or_403(
-        client.post(
+        writer.post(
             "quote_versions",
             {
                 "workspace_id": str(workspace_id),
@@ -1648,8 +1683,12 @@ def patch_item(
             )
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    if not before:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    if "section_id" in patch:
+        _assert_section_on_quote(client, workspace_id, quote_id, patch["section_id"])
     patched_or_403(
-        client.patch(
+        _quote_writer().patch(
             "quote_items",
             patch,
             params={
@@ -1765,7 +1804,7 @@ def _transition_to_sent(
     now = datetime.now(UTC).isoformat()
     version = int(existing.get("version") or 1)
     # Conditional publication boundary — must precede snapshot/token side effects.
-    res = client.patch(
+    res = _quote_writer().patch(
         "quotes",
         {"status": "sent", "sent_at": now},
         params={
@@ -1826,6 +1865,8 @@ def revise_quote(
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
+    if str(existing.get("status") or "") == "approved":
+        raise ApiError(409, "QUOTE_APPROVED_LOCKED", MESSAGES["QUOTE_APPROVED_LOCKED"])
     require(
         ctx,
         "quotes.create",
@@ -1837,7 +1878,9 @@ def revise_quote(
             state=existing.get("status"),
         ),
     )
-    next_version = int(existing.get("version") or 1) + 1
+    current_status = str(existing.get("status") or "")
+    current_version = int(existing.get("version") or 1)
+    next_version = current_version + 1
     patch = {
         "status": "draft",
         "version": next_version,
@@ -1852,17 +1895,22 @@ def revise_quote(
         "margin_override_at": None,
         "revise_reason": (reason or "").strip() or None,
     }
-    row = patched_or_403(
-        client.patch(
-            "quotes",
-            patch,
-            params={
-                "id": f"eq.{quote_id}",
-                "workspace_id": f"eq.{workspace_id}",
-                "select": QUOTE_SELECT_SAFE,
-            },
-        )
+    # Optimistic lock: only the request that still sees this status+version may reopen it.
+    res = _quote_writer().patch(
+        "quotes",
+        patch,
+        params={
+            "id": f"eq.{quote_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "status": f"eq.{current_status}",
+            "version": f"eq.{current_version}",
+            "select": QUOTE_SELECT_SAFE,
+        },
     )
+    rows = as_list(res) if res.status_code == 200 else []
+    if not rows:
+        raise ApiError(409, "QUOTE_VERSION_CONFLICT", MESSAGES["QUOTE_VERSION_CONFLICT"])
+    row = rows[0]
     items = _load_items(client, workspace_id, quote_id)
     _record_event(
         client,
@@ -2066,10 +2114,39 @@ def duplicate_quote(
     if title:
         payload["title"] = f"{title} (העתק)"
     row = created_or_403(client.post("quotes", payload, params={"select": QUOTE_SELECT_SAFE}))
-    items = _load_items(client, workspace_id, quote_id)
+    new_quote_id = UUID(row["id"])
+    section_map: dict[str, str] = {}
+    for section in _load_sections(client, workspace_id, quote_id):
+        copy = created_or_403(
+            client.post(
+                "quote_sections",
+                {
+                    "workspace_id": str(workspace_id),
+                    "quote_id": str(new_quote_id),
+                    "name": section.get("name"),
+                    "sort_order": section.get("sort_order") or 0,
+                    "discount_type": section.get("discount_type"),
+                    "discount_value": section.get("discount_value") or 0,
+                },
+            )
+        )
+        section_map[str(section["id"])] = str(copy["id"])
+    # Service read keeps cost (SELECT on cost is revoked from authenticated).
+    items = as_list(
+        _service().get(
+            "quote_items",
+            params={
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ITEM_SELECT,
+                "order": "sort_order.asc",
+            },
+        )
+    )
+    writer = _quote_writer()
     for item in items:
         created_or_403(
-            client.post(
+            writer.post(
                 "quote_items",
                 {
                     "workspace_id": str(workspace_id),
@@ -2087,7 +2164,7 @@ def duplicate_quote(
                     "name": item.get("name"),
                     "unit": item.get("unit"),
                     "catalog_snapshot": item.get("catalog_snapshot") or {},
-                    "section_id": item.get("section_id"),
+                    "section_id": section_map.get(str(item.get("section_id"))),
                     "package_instance_id": item.get("package_instance_id"),
                     "package_id": item.get("package_id"),
                     "package_name": item.get("package_name"),

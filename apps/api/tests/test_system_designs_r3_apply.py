@@ -567,7 +567,7 @@ def test_initial_apply_calls_rpc_and_persist(mock_ctx, mock_require):
         patch("app.routers.quotes._service", return_value=svc),
     ):
         client.get.side_effect = [_resp(200, [product])]
-        client.rpc.return_value = _resp(
+        svc.rpc.return_value = _resp(
             200,
             {"ok": True, "apply_id": "a1", "revision": 3, "inserted": 1, "deleted": 0},
         )
@@ -582,8 +582,9 @@ def test_initial_apply_calls_rpc_and_persist(mock_ctx, mock_require):
     assert result["ok"] is True
     assert "quote" in result
     assert "design" in result
-    client.rpc.assert_called_once()
-    rpc_name, payload = client.rpc.call_args[0][0], client.rpc.call_args[0][1]
+    client.rpc.assert_not_called()  # never under the member JWT
+    svc.rpc.assert_called_once()
+    rpc_name, payload = svc.rpc.call_args[0][0], svc.rpc.call_args[0][1]
     assert rpc_name == "system_design_apply_owned"
     assert payload["p_confirmed"] is False
     assert payload["p_expected_revision"] == 2
@@ -729,7 +730,7 @@ def test_pricing_failure_after_rpc_surfaces_recoverable_error(mock_ctx, mock_req
         patch("app.routers.quotes._service", return_value=svc),
     ):
         client.get.return_value = _resp(200, [product])
-        client.rpc.return_value = _resp(200, {"ok": True, "apply_id": "a1", "revision": 3})
+        svc.rpc.return_value = _resp(200, {"ok": True, "apply_id": "a1", "revision": 3})
         with pytest.raises(ApiError) as ei:
             sd.apply_system_design(
                 WS,
@@ -741,7 +742,8 @@ def test_pricing_failure_after_rpc_surfaces_recoverable_error(mock_ctx, mock_req
     assert ei.value.status_code == 503
     assert ei.value.details["apply_committed"] is True
     assert "recalculate_path" in ei.value.details
-    client.rpc.assert_called_once()
+    svc.rpc.assert_called_once()
+    client.rpc.assert_not_called()
 
 
 def test_divergence_hash_stable_ordering():

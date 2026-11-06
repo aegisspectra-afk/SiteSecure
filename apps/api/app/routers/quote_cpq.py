@@ -21,6 +21,7 @@ from ..rest import as_list, created_or_403, one_or_404, patched_or_403
 from ..supabase_service import ServiceClient
 from .quotes import (
     ITEM_SELECT,
+    QUOTE_SELECT_SAFE,
     QuoteItemIn,
     _can_view_cost,
     _ctx,
@@ -29,8 +30,10 @@ from .quotes import (
     _load_items,
     _load_quote,
     _persist_totals,
+    _quote_writer,
     _record_event,
     _ref,
+    _service,
     _with_validation,
 )
 
@@ -200,7 +203,8 @@ def create_section(
     )
     _record_event(client, workspace_id, quote_id, "section_added", actor_id(user), {"section_id": row["id"]})
     items = _load_items(client, workspace_id, quote_id)
-    return _enrich_quote(client, workspace_id, existing, items, show_cost=_can_view_cost(ctx)) | {
+    quote, items = _persist_totals(client, workspace_id, existing, items)
+    return _enrich_quote(client, workspace_id, quote, items, show_cost=_can_view_cost(ctx)) | {
         "section": row
     }
 
@@ -250,7 +254,7 @@ def delete_section(
     existing = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(existing))
     # Detach lines then delete section
-    client.patch(
+    _quote_writer().patch(
         "quote_items",
         {"section_id": None},
         params={
@@ -313,7 +317,19 @@ def duplicate_section(
             },
         )
     )
-    items = _load_items(client, workspace_id, quote_id)
+    # Service read keeps cost (SELECT on cost is revoked from authenticated).
+    items = as_list(
+        _service().get(
+            "quote_items",
+            params={
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ITEM_SELECT,
+                "order": "sort_order.asc",
+            },
+        )
+    )
+    writer = _quote_writer()
     item_sort = max((int(i.get("sort_order") or 0) for i in items), default=0)
     for item in items:
         if str(item.get("section_id") or "") != str(section_id):
@@ -339,9 +355,10 @@ def duplicate_section(
             "package_instance_id": item.get("package_instance_id"),
             "package_id": item.get("package_id"),
             "package_name": item.get("package_name"),
+            "is_optional": bool(item.get("is_optional")),
             "line_net": item.get("line_net") or 0,
         }
-        created_or_403(client.post("quote_items", payload))
+        created_or_403(writer.post("quote_items", payload))
     items = _load_items(client, workspace_id, quote_id)
     row, items = _persist_totals(client, workspace_id, existing, items)
     return _enrich_quote(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
@@ -619,14 +636,19 @@ def margin_override(
     now = datetime.now(UTC).isoformat()
     actor = actor_id(user)
     row = patched_or_403(
-        client.patch(
+        _quote_writer().patch(
             "quotes",
             {
                 "margin_override_reason": body.reason.strip(),
                 "margin_override_by": actor,
                 "margin_override_at": now,
             },
-            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "status": "eq.draft",
+                "select": QUOTE_SELECT_SAFE,
+            },
         )
     )
     _record_event(

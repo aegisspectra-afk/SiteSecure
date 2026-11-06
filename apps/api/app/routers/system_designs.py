@@ -647,7 +647,9 @@ def apply_system_design(
 
     apply_id = new_apply_id()
     actor = actor_id(user)
-    res = client.rpc(
+    # EXECUTE is service_role only (S2): quote + design were loaded under RLS above and
+    # quotes.edit was required; the RPC re-checks the actor's active membership.
+    res = quotes_mod._quote_writer().rpc(
         "system_design_apply_owned",
         {
             "p_workspace_id": str(workspace_id),

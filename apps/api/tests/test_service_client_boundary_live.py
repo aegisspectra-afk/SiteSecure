@@ -12,6 +12,9 @@ quotes.delete_quote               | DELETE .../quotes/{id}                | A   
 quotes.send_quote                 | POST .../quotes/{id}/send             | A     | JWT  | path ws | quotes.send  | _load_quote          | mint quote_public_access
 quotes.share_quote                | POST .../quotes/{id}/share            | A     | JWT  | path ws | quotes.send  | _load_quote          | mint access
 quotes.revoke_quote_link          | POST .../quotes/{id}/revoke-link      | A     | JWT  | path ws | quotes.send  | _load_quote          | revoke access rows
+quotes._quote_writer (S2)         | quote items/totals/send/revise/share, | A     | JWT  | path ws | quotes.edit/ | _load_quote id+ws    | INSERT/UPDATE on quote money,
+                                  | duplicate, sections, margin-override, |       |      |         | send/create/ |                      | lifecycle, items, versions and
+                                  | system-design apply RPC               |       |      |         | override     |                      | apply RPC revoked from members
 documents.complete_upload         | POST .../documents/{id}/complete      | A     | JWT  | path ws | documents.upload | UserClient get id+ws | storage metadata / cleanup
 quote_signature.store_*           | via public approve                    | B     | token| from access | n/a       | access→quote bind    | write signature docs
 public_quotes.get/pdf/approve/rej | /api/v1/public/quotes/{token}*        | B     | token| from access | n/a       | token_hash→quote+ws  | public no user JWT

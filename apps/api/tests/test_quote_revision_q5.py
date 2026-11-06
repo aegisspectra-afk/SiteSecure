@@ -62,54 +62,56 @@ def _snap_public(*, version: int, qty: float, price: float, discount: float = 0,
     }
 
 
+def _revise_patches(existing: dict, writer: MagicMock, items: list[dict]):
+    return (
+        patch.object(quotes_router, "_ctx", return_value=SimpleNamespace(role="owner")),
+        patch.object(quotes_router, "_load_quote", return_value=existing),
+        patch.object(quotes_router, "require", return_value=None),
+        patch.object(quotes_router, "_quote_writer", return_value=writer),
+        patch.object(quotes_router, "_load_items", return_value=items),
+        patch.object(quotes_router, "write_audit"),
+        patch.object(
+            quotes_router,
+            "_with_validation",
+            side_effect=lambda _c, _w, row, its, **k: {**row, "items": its},
+        ),
+        patch.object(quotes_router, "_can_view_cost", return_value=False),
+    )
+
+
 def test_revise_clears_decision_state_bumps_version_retains_valid_until_and_items():
+    # Rejected (not approved): approved quotes are final since S2 — see the 409 test below.
     ws = uuid4()
     qid = uuid4()
     existing = _quote(
-        status="approved",
+        status="rejected",
         version=2,
         id=str(qid),
         workspace_id=str(ws),
-        approved_at="2026-09-02T00:00:00+00:00",
-        approved_name="לקוח",
+        rejected_at="2026-09-02T00:00:00+00:00",
+        rejection_reason="יקר מדי",
     )
     patched = {
         **existing,
         "status": "draft",
         "version": 3,
-        "approved_at": None,
-        "approved_name": None,
+        "rejected_at": None,
+        "rejection_reason": None,
         "sent_at": None,
         "viewed_at": None,
     }
     client = MagicMock()
-    client.patch.return_value = MagicMock(status_code=200)
+    writer = MagicMock()
+    writer.patch.return_value = MagicMock(status_code=200, json=MagicMock(return_value=[patched]))
     items = [{"id": "i1", "qty": 2, "unit_price": 100}]
 
-    with (
-        patch.object(quotes_router, "_ctx", return_value=SimpleNamespace(role="owner")),
-        patch.object(quotes_router, "_load_quote", return_value=existing),
-        patch.object(quotes_router, "require", return_value=None),
-        patch.object(quotes_router, "patched_or_403", return_value=patched),
-        patch.object(quotes_router, "_load_items", return_value=items),
-        patch.object(quotes_router, "_record_event") as event_fn,
-        patch.object(quotes_router, "write_audit"),
-        patch.object(
-            quotes_router,
-            "_with_validation",
-            side_effect=lambda *a, **k: {
-                "status": "draft",
-                "version": 3,
-                "items": items,
-                "valid_until": existing["valid_until"],
-            },
-        ),
-        patch.object(quotes_router, "_can_view_cost", return_value=False),
-    ):
+    p1, p2, p3, p4, p5, p6, p7, p8 = _revise_patches(existing, writer, items)
+    with p1, p2, p3, p4, p5, p6, p7, p8, patch.object(quotes_router, "_record_event") as event_fn:
         out = quotes_router.revise_quote(ws, qid, client, {"id": "u1"}, reason="תיקון מחיר")
 
-    assert client.patch.called
-    body = client.patch.call_args.args[1]
+    assert writer.patch.call_count == 1
+    table, body = writer.patch.call_args.args[:2]
+    assert table == "quotes"
     assert body["status"] == "draft"
     assert body["version"] == 3
     assert body["sent_at"] is None
@@ -117,16 +119,56 @@ def test_revise_clears_decision_state_bumps_version_retains_valid_until_and_item
     assert body["approved_at"] is None
     assert body["approved_name"] is None
     assert body["rejected_at"] is None
+    assert body["rejection_reason"] is None
     assert body["revise_reason"] == "תיקון מחיר"
     assert "valid_until" not in body  # retained on live row
+    params = writer.patch.call_args.kwargs["params"]
+    assert params["workspace_id"] == f"eq.{ws}"
+    assert params["status"] == "eq.rejected"
+    assert params["version"] == "eq.2"
     # Revise must not write quote_versions (no snapshot fork on revise)
+    assert writer.post.call_count == 0
     assert client.post.call_count == 0
-    assert all(
-        (call.args[0] if call.args else None) != "quote_versions" for call in client.patch.call_args_list
-    )
+    assert client.patch.call_count == 0
     event_fn.assert_called_once()
     assert event_fn.call_args.args[3] == "revised"
     assert out["version"] == 3
+
+
+def test_revise_approved_quote_is_locked_without_writes():
+    ws = uuid4()
+    qid = uuid4()
+    existing = _quote(status="approved", version=2, id=str(qid), workspace_id=str(ws))
+    client = MagicMock()
+    writer = MagicMock()
+    p1, p2, p3, p4, p5, p6, p7, p8 = _revise_patches(existing, writer, [])
+    with p1, p2, p3, p4, p5, p6, p7, p8, patch.object(quotes_router, "_record_event") as event_fn:
+        with pytest.raises(ApiError) as exc:
+            quotes_router.revise_quote(ws, qid, client, {"id": "u1"})
+    assert exc.value.status_code == 409
+    assert exc.value.code == "QUOTE_APPROVED_LOCKED"
+    assert writer.patch.call_count == 0
+    event_fn.assert_not_called()
+
+
+def test_revise_lost_race_returns_409_conflict_without_side_effects():
+    ws = uuid4()
+    qid = uuid4()
+    existing = _quote(status="sent", version=4, id=str(qid), workspace_id=str(ws))
+    client = MagicMock()
+    writer = MagicMock()
+    # Another request already reopened it: the conditional PATCH matches no row.
+    writer.patch.return_value = MagicMock(status_code=200, json=MagicMock(return_value=[]))
+    p1, p2, p3, p4, p5, p6, p7, p8 = _revise_patches(existing, writer, [])
+    with p1, p2, p3, p4, p5, p6, p7, p8, patch.object(quotes_router, "_record_event") as event_fn:
+        with pytest.raises(ApiError) as exc:
+            quotes_router.revise_quote(ws, qid, client, {"id": "u1"})
+    assert exc.value.status_code == 409
+    assert exc.value.code == "QUOTE_VERSION_CONFLICT"
+    params = writer.patch.call_args.kwargs["params"]
+    assert params["status"] == "eq.sent"
+    assert params["version"] == "eq.4"
+    event_fn.assert_not_called()
 
 
 def test_prior_snapshot_public_unchanged_when_loading_historical_after_live_edits():

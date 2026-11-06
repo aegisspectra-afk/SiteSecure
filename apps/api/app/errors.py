@@ -67,6 +67,8 @@ MESSAGES = {
     "VALIDATION_ERROR": "נתונים לא תקינים",
     "QUOTE_INCOMPLETE": "לא ניתן לשלוח את ההצעה",
     "MARGIN_BELOW_MINIMUM": "מרווח מתחת לסף. נדרשת הרשאת דריסת מחיר כדי לשלוח.",
+    "QUOTE_APPROVED_LOCKED": "לא ניתן לפתוח מחדש הצעה שאושרה. לשינוי לאחר אישור יש ליצור הצעה חדשה.",
+    "QUOTE_VERSION_CONFLICT": "ההצעה עודכנה בינתיים. רעננו את הדף ונסו שוב.",
     "TEMPLATE_EMPTY": "לתבנית אין שורות להחלה",
     "API_UNAVAILABLE": "השירות אינו זמין",
     "SSP_SCHEMA_UNAVAILABLE": (

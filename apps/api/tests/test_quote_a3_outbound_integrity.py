@@ -204,6 +204,7 @@ def test_send_losing_concurrent_request_does_not_mint_or_snapshot():
     client.patch.return_value = SimpleNamespace(status_code=200, json=lambda: [])
 
     with (
+        patch.object(quotes_router, "_quote_writer", return_value=client),
         patch.object(quotes_router, "_load_items", return_value=items),
         patch.object(quotes_router, "_persist_totals", return_value=(existing, items)),
         patch.object(quotes_router, "_related", return_value=({"name": "W"}, {"display_name": "C"}, None)),
@@ -252,6 +253,7 @@ def test_send_winner_patches_then_snapshots_and_mints():
     client.patch.return_value = SimpleNamespace(status_code=200, json=lambda: [sent_row])
 
     with (
+        patch.object(quotes_router, "_quote_writer", return_value=client),
         patch.object(quotes_router, "_load_items", return_value=items),
         patch.object(quotes_router, "_persist_totals", return_value=(existing, items)),
         patch.object(quotes_router, "_related", return_value=({"name": "W"}, {"display_name": "C"}, None)),

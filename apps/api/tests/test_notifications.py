@@ -356,6 +356,7 @@ def test_send_survives_notify_failure(monkeypatch):
 
     monkeypatch.setattr(quotes_router, "notify_quote_event", _boom)
     with (
+        patch.object(quotes_router, "_quote_writer", return_value=client),
         patch.object(quotes_router, "_load_items", return_value=items),
         patch.object(quotes_router, "_persist_totals", return_value=(existing, items)),
         patch.object(quotes_router, "_related", return_value=({"name": "W"}, {"display_name": "C"}, None)),

@@ -6,6 +6,7 @@ import {
   SOLO_ONBOARDING_STEPS,
   clearSoloOnboarding,
   parseCatalogImportRows,
+  paymentTermsReady,
   type SoloOnboardingStepId,
 } from "../lib/onboarding-solo";
 import { AuthAlert, AuthField, AuthForm } from "./auth";
@@ -24,6 +25,7 @@ export function OnboardingSoloSetup({
   const [step, setStep] = useState<SoloOnboardingStepId>("business_vat");
   const [vat, setVat] = useState("18");
   const [businessName, setBusinessName] = useState(workspaceName ?? "");
+  const [paymentTerms, setPaymentTerms] = useState<string>(he.onboardingPaymentTermsTemplate);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -49,6 +51,24 @@ export function OnboardingSoloSetup({
         vat_percent: vatNumber,
         timezone: "Asia/Jerusalem",
       });
+      setStep("payment_terms");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : he.sessionError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function savePaymentTerms(e: FormEvent) {
+    e.preventDefault();
+    if (!paymentTermsReady(paymentTerms)) {
+      setError(he.onboardingPaymentTermsIncomplete);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await api.patchWorkspaceSettings(workspaceId, { quotes: { payment_terms: paymentTerms.trim() } });
       setStep("catalog");
     } catch (err) {
       setError(err instanceof Error ? err.message : he.sessionError);
@@ -131,6 +151,7 @@ export function OnboardingSoloSetup({
         {SOLO_ONBOARDING_STEPS.map((item, index) => {
           const labels = {
             business_vat: he.onboardingStepBusinessVat,
+            payment_terms: he.onboardingStepPaymentTerms,
             catalog: he.onboardingStepCatalog,
             first_customer: he.onboardingStepFirstCustomer,
             first_quote: he.onboardingStepFirstQuote,
@@ -169,6 +190,22 @@ export function OnboardingSoloSetup({
           />
           <Button type="submit" variant="primary" loading={loading} className="auth-cta h-12 w-full">
             {he.onboardingVatSave}
+          </Button>
+        </AuthForm>
+      ) : null}
+
+      {step === "payment_terms" ? (
+        <AuthForm onSubmit={savePaymentTerms}>
+          <p className="text-sm text-fg-muted">{he.onboardingPaymentTermsLead}</p>
+          <AuthField
+            id="solo-payment-terms"
+            label={he.onboardingPaymentTermsLabel}
+            value={paymentTerms}
+            onChange={(ev) => setPaymentTerms(ev.target.value)}
+            disabled={loading}
+          />
+          <Button type="submit" variant="primary" loading={loading} className="auth-cta h-12 w-full">
+            {he.onboardingPaymentTermsSave}
           </Button>
         </AuthForm>
       ) : null}

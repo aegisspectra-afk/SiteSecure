@@ -544,6 +544,14 @@ export type QuoteOut = {
   status: string;
   customer_id: string | null;
   customer_name?: string | null;
+  /** Read-only minimum about the quote's customer (any role that may open the quote). */
+  customer_summary?: {
+    id: string;
+    display_name: string;
+    type?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  } | null;
   site_id: string | null;
   site_name?: string | null;
   lead_id?: string | null;

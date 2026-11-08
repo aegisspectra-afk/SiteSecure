@@ -232,6 +232,29 @@ def _assert_contact_belongs_to_customer(
         raise ApiError(400, "VALIDATION_ERROR", "איש הקשר אינו שייך ללקוח של ההצעה")
 
 
+_QUOTE_REF_TABLES = (
+    ("customer_id", "customers", "הלקוח"),
+    ("site_id", "sites", "האתר"),
+    ("lead_id", "leads", "הליד"),
+)
+
+
+def _assert_refs_in_workspace(client: UserClient, workspace_id: UUID, values: dict) -> None:
+    """customer/site/lead ids on a quote must be rows of the same workspace the caller can see."""
+    for field, table, label in _QUOTE_REF_TABLES:
+        ref = values.get(field)
+        if not ref:
+            continue
+        rows = as_list(
+            client.get(
+                table,
+                params={"id": f"eq.{ref}", "workspace_id": f"eq.{workspace_id}", "select": "id", "limit": "1"},
+            )
+        )
+        if not rows:
+            raise ApiError(400, "VALIDATION_ERROR", f"{label} לא נמצא בסביבת העבודה")
+
+
 def _customer_ids_matching_name(client: UserClient, workspace_id: UUID, safe: str) -> list[str]:
     rows = as_list(
         client.get(
@@ -770,9 +793,37 @@ def _record_event(client: UserClient, workspace_id: UUID, quote_id: UUID, event_
         return
 
 
+CUSTOMER_SUMMARY_SELECT = "id,display_name,type,phone,email"
+
+
+def _customer_summary(client: UserClient, workspace_id: UUID, customer_id: object) -> dict | None:
+    """Read-only minimum about the quote's customer, for anyone who may open the quote.
+
+    Sales has owned-scope CRM access and customers carry no owner, so GET /customers/{id} is
+    denied even for the customer of a quote they own. Read with the member JWT (RLS applies),
+    in the quote's workspace only; no notes, tax id or billing address.
+    """
+    if not customer_id:
+        return None
+    res = client.get(
+        "customers",
+        params={
+            "id": f"eq.{customer_id}",
+            "workspace_id": f"eq.{workspace_id}",
+            "select": CUSTOMER_SUMMARY_SELECT,
+            "limit": "1",
+        },
+    )
+    if getattr(res, "status_code", None) != 200:
+        return None
+    rows = res.json()
+    return rows[0] if isinstance(rows, list) and rows else None
+
+
 def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items: list[dict], *, show_cost: bool) -> dict:
     workspace = _load_workspace(client, workspace_id)
     settings = _load_quote_settings(client, workspace_id)
+    customer_summary = _customer_summary(client, workspace_id, quote.get("customer_id"))
     critical = validate_for_send(quote, items, workspace, settings)
     soft = advisory_checks(quote, items, workspace, settings)
     gaps = [*critical, *soft]
@@ -801,6 +852,7 @@ def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items:
         out["margin_target"] = float(quotes_cfg.get("margin_target", 30))
         out["margin_minimum"] = float(quotes_cfg.get("margin_minimum", 15))
     out["validation"] = {"can_send": len(critical_gaps_only(gaps)) == 0, "gaps": gaps}
+    out["customer_summary"] = customer_summary
     return out
 
 
@@ -1419,6 +1471,7 @@ def create_quote(
         vat = float(ws.get("vat_percent") or 18)
     else:
         ws = _load_workspace(client, workspace_id)
+    _assert_refs_in_workspace(client, workspace_id, body.model_dump())
     _assert_contact_belongs_to_customer(
         client,
         workspace_id,
@@ -1485,6 +1538,7 @@ def patch_quote(
     patch = {k: v for k, v in raw.items() if v is not None or k in clearable}
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    _assert_refs_in_workspace(client, workspace_id, patch)
     if "contact_id" in patch or "customer_id" in patch:
         next_customer = patch["customer_id"] if "customer_id" in patch else existing.get("customer_id")
         next_contact = patch["contact_id"] if "contact_id" in patch else existing.get("contact_id")

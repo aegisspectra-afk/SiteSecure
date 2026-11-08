@@ -3,6 +3,7 @@ import catalog from "@site-secure/authz/catalog.json";
 type Catalog = {
   grants: Record<string, string[]>;
   permission_feature: Record<string, string>;
+  roles: { key: string; default_scope: string }[];
 };
 
 const data = catalog as Catalog;
@@ -29,6 +30,11 @@ export function can(
   const feature = data.permission_feature[permission];
   if (feature && !features.includes(feature)) return false;
   return true;
+}
+
+/** A role's default record scope from the authz catalog ("all" | "owned" | "assigned" | "team"). */
+export function roleDefaultScope(roleKey: string | undefined): string {
+  return data.roles.find((role) => role.key === roleKey)?.default_scope ?? "all";
 }
 
 export function canAny(

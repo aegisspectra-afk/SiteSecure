@@ -2,12 +2,22 @@ const STORAGE_KEY = "ss-solo-onboarding";
 
 export const SOLO_ONBOARDING_STEPS = [
   { id: "business_vat", label: "onboardingStepBusinessVat" },
+  { id: "payment_terms", label: "onboardingStepPaymentTerms" },
   { id: "catalog", label: "onboardingStepCatalog" },
   { id: "first_customer", label: "onboardingStepFirstCustomer" },
   { id: "first_quote", label: "onboardingStepFirstQuote" },
 ] as const;
 
 export type SoloOnboardingStepId = (typeof SOLO_ONBOARDING_STEPS)[number]["id"];
+
+/**
+ * Payment terms are the owner's own wording (the product does not supply legal text).
+ * The field starts with a bracketed placeholder that must be replaced before saving.
+ */
+export function paymentTermsReady(raw: string): boolean {
+  const text = raw.trim();
+  return text.length > 0 && !/[[\]]/.test(text);
+}
 
 export function markSoloOnboarding(workspaceId: string): void {
   try {

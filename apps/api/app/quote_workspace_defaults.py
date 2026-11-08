@@ -6,6 +6,10 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
+# Unconfigured workspaces: a quote is valid for 30 days, the same as the public link TTL.
+DEFAULT_VALIDITY_DAYS = 30
+
+
 def workspace_local_today(timezone_name: str | None) -> date:
     name = (timezone_name or "Asia/Jerusalem").strip() or "Asia/Jerusalem"
     try:
@@ -32,9 +36,9 @@ def apply_quote_create_defaults(
     if payload.get("valid_until") in (None, ""):
         raw_days = cfg.get("validity_days")
         try:
-            days = int(raw_days) if raw_days is not None else 0
+            days = int(raw_days) if raw_days is not None else DEFAULT_VALIDITY_DAYS
         except (TypeError, ValueError):
-            days = 0
+            days = DEFAULT_VALIDITY_DAYS
         if days > 0:
             payload["valid_until"] = (workspace_local_today(timezone_name) + timedelta(days=days)).isoformat()
 

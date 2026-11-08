@@ -617,3 +617,55 @@ def test_cctv_apply_keeps_optional_component_out_of_total(env):
     assert float(public["total_with_options_gross"]) == 3540.0
     optional_lines = [i for i in public["items"] if i.get("is_optional")]
     assert len(optional_lines) == 1 and float(optional_lines[0]["line_net"]) == 2000.0
+
+
+def test_sales_sees_minimal_customer_of_a_quote_they_can_open(env):
+    """S5: sales (owned CRM scope) opens its own quote for a customer someone else created."""
+    api, ws, s = env["api"], env["ws_a"], env["s"]
+    httpx.patch(
+        f"{s.supabase_url}/rest/v1/customers?id=eq.{env['customer_a']}",
+        headers={**_svc_headers(s), "Prefer": "return=minimal"},
+        json={"phone": "0501234567", "email": "lakoach@example.test", "notes": "פנימי", "tax_id": "515151515"},
+        timeout=30,
+    ).raise_for_status()
+    quote = _draft(env, env["sales_a"])
+    opened = api.get(f"/api/v1/workspaces/{ws}/quotes/{quote['id']}", headers=_auth(env["sales_a"]))
+    assert opened.status_code == 200, opened.text
+    summary = opened.json()["customer_summary"]
+    assert summary == {
+        "id": env["customer_a"],
+        "display_name": "לקוח S2",
+        "type": summary["type"],
+        "phone": "0501234567",
+        "email": "lakoach@example.test",
+    }
+    assert "notes" not in summary and "tax_id" not in summary
+    # The CRM record itself stays owned-scope (unchanged contract).
+    crm = api.get(f"/api/v1/workspaces/{ws}/customers/{env['customer_a']}", headers=_auth(env["sales_a"]))
+    assert crm.status_code == 403, crm.text
+
+
+def test_customer_summary_never_crosses_workspaces(env):
+    api, s = env["api"], env["s"]
+    # A workspace-B quote pointing at a workspace-A customer must not reveal that customer.
+    created = api.post(
+        f"/api/v1/workspaces/{env['ws_b']}/quotes",
+        headers=_auth(env["owner_b"]),
+        json={"customer_id": env["customer_a"], "title": "חוצה סביבות"},
+    )
+    # S5: refs are validated against the caller's workspace (this used to be accepted).
+    assert created.status_code == 400, created.text
+    own = api.post(
+        f"/api/v1/workspaces/{env['ws_b']}/quotes",
+        headers=_auth(env["owner_b"]),
+        json={"title": "בלי לקוח"},
+    )
+    assert own.status_code == 200, own.text
+    assert own.json().get("customer_summary") is None
+    patched = api.patch(
+        f"/api/v1/workspaces/{env['ws_b']}/quotes/{own.json()['id']}",
+        headers=_auth(env["owner_b"]),
+        json={"customer_id": env["customer_a"]},
+    )
+    assert patched.status_code == 400, patched.text
+    assert _db_row(s, "quotes", own.json()["id"], "customer_id")["customer_id"] is None

@@ -5,7 +5,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { he } from "../../i18n/he";
 import { planQuotaMessage } from "../../lib/plan-quota";
-import { can } from "../../lib/can";
+import { can, roleDefaultScope } from "../../lib/can";
 import {
   draftHasContent,
   goToQuoteField,
@@ -157,6 +157,9 @@ export function QuoteBuilder({
   const canViewCost = can(roleKey, "quotes.view_cost", features);
   const canOverridePrice = can(roleKey, "quotes.override_price", features);
   const canCrm = can(roleKey, "crm.view", features);
+  // Owned-scope roles (sales) cannot open CRM records (customers carry no owner); the quote
+  // response carries a read-only customer summary instead, so no 403 request is made.
+  const canOpenCustomerRecord = canCrm && roleDefaultScope(roleKey) !== "owned";
   const canCrmCreate = can(roleKey, "crm.create", features);
   const canLeads = can(roleKey, "leads.view", features);
   const canSites = can(roleKey, "sites.view", features);
@@ -371,16 +374,19 @@ export function QuoteBuilder({
   });
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
-    enabled: canCrm && Boolean(draft.customer_id),
+    enabled: canOpenCustomerRecord && Boolean(draft.customer_id),
     queryFn: () => api.getCustomer(workspaceId, draft.customer_id),
     staleTime: 60_000,
   });
   const customerContactsQuery = useQuery({
     queryKey: ["customer-contacts", workspaceId, draft.customer_id],
-    enabled: canCrm && Boolean(draft.customer_id),
+    enabled: canOpenCustomerRecord && Boolean(draft.customer_id),
     queryFn: () => api.listCustomerContacts(workspaceId, draft.customer_id),
     staleTime: 60_000,
   });
+  const customerData =
+    customerQuery.data ??
+    (live.customer_summary && live.customer_summary.id === draft.customer_id ? live.customer_summary : undefined);
   const sitesQuery = useQuery({
     queryKey: ["cpq-sites", workspaceId, draft.customer_id || live.customer_id],
     enabled: canSites && Boolean(draft.customer_id || live.customer_id),
@@ -415,10 +421,10 @@ export function QuoteBuilder({
   });
 
   useEffect(() => {
-    if (customerQuery.data?.id === draft.customer_id && customerQuery.data.display_name) {
-      setCustomerLabel(customerQuery.data.display_name);
+    if (customerData?.id === draft.customer_id && customerData.display_name) {
+      setCustomerLabel(customerData.display_name);
     }
-  }, [customerQuery.data, draft.customer_id]);
+  }, [customerData, draft.customer_id]);
 
   const contextSeeded = useRef(false);
   useEffect(() => {
@@ -998,12 +1004,12 @@ export function QuoteBuilder({
     [readiness, liveGaps, pricedCount],
   );
   const companyName = workspaceName ?? "";
-  const selectedName = customerLabel || customerQuery.data?.display_name || live.customer_name || "";
+  const selectedName = customerLabel || customerData?.display_name || live.customer_name || "";
   const catalogResults = catalogQuery.data?.items ?? [];
   const selectedSite = sitesQuery.data?.items.find((row) => row.id === draft.site_id);
   const selectedSiteAddress = selectedSite ? addressLine(selectedSite.address) : "";
   const customerKind =
-    customerQuery.data?.type === "person" || customerQuery.data?.type === "individual"
+    customerData?.type === "person" || customerData?.type === "individual"
       ? he.workflowCustomerPrivate
       : draft.customer_id
         ? he.workflowCustomerBusiness
@@ -1013,12 +1019,12 @@ export function QuoteBuilder({
     customerContactsQuery.data?.find((c) => c.phone)?.phone ||
     null;
   const customerPhone = resolveQuoteRecipientPhone({
-    customerPhone: customerQuery.data?.phone,
+    customerPhone: customerData?.phone,
     contactPhone: primaryContactPhone,
     leadPhone: linkedLead?.phone,
   });
   const customerEmail =
-    (customerQuery.data?.email || "").trim() ||
+    (customerData?.email || "").trim() ||
     (customerContactsQuery.data?.find((c) => c.is_primary)?.email || "").trim() ||
     (customerContactsQuery.data?.find((c) => c.email)?.email || "").trim();
   const statusDisplayLabel = quoteLifecycleStatusLabel(live.status, canSendNow);
@@ -1704,7 +1710,7 @@ export function QuoteBuilder({
   const primaryCtaLabel = lifecyclePrimary.label;
   const primaryCtaDisabled = lifecyclePrimary.disabled;
 
-  const customerPhoneDisplay = customerQuery.data?.phone || primaryContactPhone || linkedLead?.phone || "";
+  const customerPhoneDisplay = customerData?.phone || primaryContactPhone || linkedLead?.phone || "";
   const liveDocument = liveQuoteToPublicDocument(
     {
       ...live,

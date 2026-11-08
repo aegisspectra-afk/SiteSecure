@@ -21,11 +21,15 @@ def test_validity_default_applied_when_unset():
     assert payload["valid_until"] == (today + timedelta(days=14)).isoformat()
 
 
-def test_validity_not_applied_when_zero_or_missing():
+def test_validity_defaults_to_30_days_when_not_configured():
+    # Product decision (S5): unconfigured workspaces get 30 days, matching the public link TTL.
+    today = workspace_local_today("Asia/Jerusalem")
     payload = {"title": "x"}
     apply_quote_create_defaults(payload, quotes_cfg={}, timezone_name="Asia/Jerusalem")
-    assert "valid_until" not in payload
+    assert payload["valid_until"] == (today + timedelta(days=30)).isoformat()
 
+
+def test_validity_not_applied_when_explicitly_zero():
     payload2 = {"title": "x"}
     apply_quote_create_defaults(payload2, quotes_cfg={"validity_days": 0}, timezone_name="Asia/Jerusalem")
     assert "valid_until" not in payload2

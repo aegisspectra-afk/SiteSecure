@@ -425,4 +425,27 @@ describe("CPQ builder", () => {
     expect(screen.getAllByText((_, el) => el?.textContent === server).length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, el) => el?.textContent === client)).toHaveLength(0);
   });
+
+  it("sales sees the quote's customer from the summary without calling the CRM record (no 403)", async () => {
+    api.getCustomer.mockClear();
+    api.listCustomerContacts.mockClear();
+    renderBuilder(
+      quote({
+        customer_id: "c9",
+        title: "הצעת מכירות",
+        customer_summary: { id: "c9", display_name: "לקוח של בעלים", type: "company", phone: "0501112222", email: null },
+      }),
+      "sales",
+    );
+    expect((await screen.findAllByText("לקוח של בעלים")).length).toBeGreaterThan(0);
+    expect(api.getCustomer).not.toHaveBeenCalled();
+    expect(api.listCustomerContacts).not.toHaveBeenCalled();
+  });
+
+  it("owner still loads the full customer record", async () => {
+    api.getCustomer.mockClear();
+    renderBuilder(quote({ customer_id: "c1", title: "הצעה" }), "owner");
+    await waitFor(() => expect(api.getCustomer).toHaveBeenCalledWith("ws", "c1"));
+  });
 });
+

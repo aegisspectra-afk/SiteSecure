@@ -8,6 +8,7 @@ import { QuoteShareDialog } from "../../../../components/quotes/QuoteShareDialog
 import { SendQuoteConfirm } from "../../../../components/quotes/SendQuoteConfirm";
 import { he } from "../../../../i18n/he";
 import { can } from "../../../../lib/can";
+import { canSendWithGaps, partitionGaps } from "../../../../lib/quote-cpq";
 import { downloadAndOpenPdf, downloadBlob } from "../../../../lib/download-blob";
 import { resolveQuoteRecipientPhone } from "../../../../lib/quote-recipient-phone";
 import {
@@ -206,7 +207,9 @@ function QuotePreviewBody() {
 
   const quote = quoteQuery.data;
   const gaps = (quote.validation?.gaps ?? []) as QuoteGap[];
-  const canSendNow = canSend && quote.status === "draft" && gaps.length === 0;
+  // Same rule as the builder and the server: only critical gaps block; warnings are advisory.
+  const canSendNow = canSend && quote.status === "draft" && canSendWithGaps(gaps);
+  const hasCriticalGaps = partitionGaps(gaps).critical.length > 0;
   const doc = documentQuery.data;
   const editHref = { to: "/app/quotes/$quoteId" as const, params: { quoteId } };
 
@@ -272,7 +275,9 @@ function QuotePreviewBody() {
       ) : null}
       {gaps.length ? (
         <section className="no-print ops-card flex flex-col gap-1 p-3">
-          <p className="text-sm font-medium text-fg">{he.quoteSendBlocked}</p>
+          <p className="text-sm font-medium text-fg">
+            {hasCriticalGaps ? he.quoteSendBlocked : he.quoteSendAdvisoriesTitle}
+          </p>
           {gaps.map((gap) => (
             <p key={`${gap.field}-${gap.code}`} className="text-sm text-fg-muted">
               {gap.message}

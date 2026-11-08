@@ -13,6 +13,7 @@ export function SignaturePad({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const dirty = useRef(false);
+  const sizedWidth = useRef<number | null>(null);
   const [empty, setEmpty] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,10 @@ export function SignaturePad({
       const parent = canvas.parentElement;
       const width = Math.max(280, parent?.clientWidth || 320);
       const height = 160;
+      // Mobile toolbars (and full-page captures) resize only the window height: keep the signature.
+      if (sizedWidth.current === width) return;
+      const previous = dirty.current ? canvas.toDataURL("image/png") : null;
+      sizedWidth.current = width;
       const ratio = window.devicePixelRatio || 1;
       canvas.width = Math.floor(width * ratio);
       canvas.height = Math.floor(height * ratio);
@@ -36,6 +41,16 @@ export function SignaturePad({
       ctx.lineWidth = 2.2;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      if (previous) {
+        // Width changed (rotation): redraw the existing signature instead of erasing it.
+        const image = new Image();
+        image.onload = () => {
+          ctx.drawImage(image, 0, 0, width, height);
+          onChange(canvas.toDataURL("image/png"));
+        };
+        image.src = previous;
+        return;
+      }
       dirty.current = false;
       setEmpty(true);
       onChange(null);

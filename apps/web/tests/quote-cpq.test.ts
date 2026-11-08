@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { CatalogProduct, LeadOut, QuoteItemOut } from "@site-secure/api-client";
+import type { CatalogProduct, LeadOut, QuoteGap, QuoteItemOut } from "@site-secure/api-client";
 import {
   canSendWithGaps,
+  partitionGaps,
   filterEmptyQuoteMarginGaps,
   groupGapsByDomain,
   isPriceOverride,
@@ -180,5 +181,18 @@ describe("system builder", () => {
   it("legacy keyword matcher remains non-authoritative utility only", () => {
     const plan = buildCctvRecommendation(defaultCctvInputFromLead({ cameraCount: 9 }), []);
     expect(plan.every((line) => !line.configured && line.product == null)).toBe(true);
+  });
+});
+
+describe("send gating with CCTV advisories (S6)", () => {
+  it("lets a quote with only advisory warnings be sent, as the server allows", () => {
+    const advisories: QuoteGap[] = [
+      { field: "items", code: "advisory_storage", message: "נדרשת הקלטה אך לא זוהה אחסון/HDD בקטלוג ההצעה.", severity: "warning" },
+      { field: "items", code: "advisory_infrastructure", message: "מערכת מצלמות ללא שורות תשתית מזוהות.", severity: "warning" },
+    ];
+    expect(canSendWithGaps(advisories)).toBe(true);
+    expect(partitionGaps(advisories).critical).toHaveLength(0);
+    const missingTerms: QuoteGap[] = [...advisories, { field: "payment_terms", code: "payment_terms", message: "הוסיפו תנאי תשלום." }];
+    expect(canSendWithGaps(missingTerms)).toBe(false);
   });
 });

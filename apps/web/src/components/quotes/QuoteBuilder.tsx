@@ -1724,7 +1724,7 @@ export function QuoteBuilder({
       general_terms: draft.general_terms || live.general_terms,
       customer_notes: draft.customer_notes || live.customer_notes,
       valid_until: draft.valid_until || live.valid_until,
-      // Keep live preview money aligned with Planning/Pricing during optimistic line edits.
+      // Server totals (pricing.recalculate), the same figures the builder shows.
       subtotal_net: displayTotals.subtotal_net,
       vat_amount: displayTotals.vat_amount,
       total_gross: displayTotals.total_gross,
@@ -1850,7 +1850,8 @@ export function QuoteBuilder({
               {he.cpqTabProfit}
             </button>
           ) : null}
-          {live.status !== "draft" && live.status !== "cancelled" && canCreate ? (
+          {/* Approved quotes are final (S2): a change is a new quote, not a revision. */}
+          {live.status !== "draft" && live.status !== "cancelled" && live.status !== "approved" && canCreate ? (
             <button
               type="button"
               role="menuitem"
@@ -2158,7 +2159,11 @@ export function QuoteBuilder({
       />
 
       <div className="cpq-workspace-main flex min-w-0 flex-col gap-5">
-        {live.status !== "draft" ? <p className="text-sm text-fg-muted">{he.quoteLocked}</p> : null}
+        {live.status !== "draft" ? (
+          <p className="text-sm text-fg-muted">
+            {live.status === "approved" ? he.quoteLockedApproved : he.quoteLocked}
+          </p>
+        ) : null}
         {formError ? <p className="text-sm text-danger">{formError}</p> : null}
         {busyAction ? (
           <p className="text-sm text-fg-muted" aria-live="polite">

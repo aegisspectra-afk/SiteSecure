@@ -447,5 +447,19 @@ describe("CPQ builder", () => {
     renderBuilder(quote({ customer_id: "c1", title: "הצעה" }), "owner");
     await waitFor(() => expect(api.getCustomer).toHaveBeenCalledWith("ws", "c1"));
   });
+
+  it("an approved quote is final: no revise action, and the banner says to create a new quote", async () => {
+    renderBuilder(quote({ status: "approved", customer_id: "c1", title: "מאושרת", approved_at: "2026-11-09T10:00:00Z" }));
+    expect(await screen.findByText(he.quoteLockedApproved)).toBeInTheDocument();
+    expect(screen.queryByText(he.quoteLocked)).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: he.cpqMoreActionsAria })[0]);
+    expect(screen.queryByRole("menuitem", { name: he.quoteRevise })).not.toBeInTheDocument();
+  });
+
+  it("a sent quote still offers a new version", async () => {
+    renderBuilder(quote({ status: "sent", customer_id: "c1", title: "נשלחה" }));
+    fireEvent.click((await screen.findAllByRole("button", { name: he.cpqMoreActionsAria }))[0]);
+    expect(screen.getByRole("menuitem", { name: he.quoteRevise })).toBeInTheDocument();
+  });
 });
 

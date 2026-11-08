@@ -95,6 +95,16 @@ class Settings(BaseSettings):
         assert_dev_supabase_target(self.supabase_url, self.app_env)
         return self
 
+    @model_validator(mode="after")
+    def require_service_role_outside_dev(self) -> "Settings":
+        # Quote writes and the Apply confirmation HMAC depend on the service role key;
+        # a deployed API must not start without it (or with an anon/publishable key).
+        if (self.app_env or "").strip().lower() not in DEV_APP_ENVS and not self.supabase_service_role_key:
+            raise ValueError(
+                f"SUPABASE_SERVICE_ROLE_KEY (service role) is required with APP_ENV={self.app_env!r}"
+            )
+        return self
+
     @field_validator("supabase_service_role_key")
     @classmethod
     def reject_non_service_role(cls, value: str | None) -> str | None:

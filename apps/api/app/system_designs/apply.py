@@ -6,12 +6,13 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
-from ..config import Settings, get_settings
+from ..config import DEV_APP_ENVS, Settings, get_settings
 from ..errors import ApiError
 from ..pricing import line_net
 from ..quote_snapshot import catalog_line_snapshot
@@ -158,12 +159,22 @@ def divergence_hash(diverged: list[dict[str, Any]]) -> str:
     return "|".join(sorted(parts))
 
 
+# Local dev without a service key: tokens are valid only within this process.
+_EPHEMERAL_DEV_KEY = secrets.token_bytes(32)
+
+
 def _signing_key(settings: Settings | None = None) -> bytes:
+    """HMAC key for Apply confirmation tokens: derived from the service role secret only.
+
+    Never the anon key (public, shipped to browsers) and never a constant in code.
+    """
     settings = settings or get_settings()
-    raw = (settings.supabase_service_role_key or settings.supabase_anon_key or "").strip()
-    if not raw:
-        raw = "site-secure-dev-apply-confirm"
-    return hashlib.sha256(raw.encode("utf-8")).digest()
+    raw = (settings.supabase_service_role_key or "").strip()
+    if raw:
+        return hashlib.sha256(raw.encode("utf-8")).digest()
+    if (settings.app_env or "").strip().lower() in DEV_APP_ENVS:
+        return _EPHEMERAL_DEV_KEY
+    raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY is required to sign Apply confirmations")
 
 
 def issue_confirmation_token(

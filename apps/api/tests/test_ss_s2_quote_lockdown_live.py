@@ -453,3 +453,102 @@ def test_apply_rpc_as_service_checks_actor_membership(env):
     assert member.json().get("message") == "DESIGN_NOT_FOUND", member.text  # passed auth
     outsider = call(env["owner_b"])
     assert outsider.json().get("message") == "PERMISSION_DENIED", outsider.text
+
+
+def test_cross_workspace_http_remaining_writer_endpoints(env):
+    """Every endpoint that reaches _quote_writer (directly or via _persist_totals/_insert_line)."""
+    api, ws_a, ws_b = env["api"], env["ws_a"], env["ws_b"]
+    tok_a = _auth(env["owner_a"])
+    quote = _draft(env, env["owner_a"])
+    qid, item_id = quote["id"], _item_id(quote)
+    section = api.post(f"/api/v1/workspaces/{ws_a}/quotes/{qid}/sections", headers=tok_a, json={"name": "סעיף A"})
+    assert section.status_code == 200, section.text
+    section_id = section.json()["section"]["id"]
+    design = api.post(f"/api/v1/workspaces/{ws_a}/quotes/{qid}/system-designs", headers=tok_a, json={})
+    assert design.status_code == 200, design.text
+    design_id = design.json()["id"]
+    s = env["s"]
+    before_quote = _db_row(s, "quotes", qid, "title,total_gross,status,version")
+    before_item = _db_row(s, "quote_items", item_id, "qty,unit_price,description,section_id")
+    sections_before = _db_count(s, "quote_sections", f"quote_id=eq.{qid}")
+    tok_b = _auth(env["owner_b"])
+    for ws in (ws_a, ws_b):
+        base = f"/api/v1/workspaces/{ws}/quotes/{qid}"
+        calls = [
+            api.patch(base, headers=tok_b, json={"title": "נחטף"}),
+            api.post(f"{base}/recalculate", headers=tok_b),
+            api.delete(f"{base}/items/{item_id}", headers=tok_b),
+            api.post(f"{base}/apply-template", headers=tok_b, json={"template_id": str(uuid.uuid4())}),
+            api.post(f"{base}/apply-package", headers=tok_b, json={"package_id": str(uuid.uuid4())}),
+            api.patch(f"{base}/sections/{section_id}", headers=tok_b, json={"discount_value": 99}),
+            api.delete(f"{base}/sections/{section_id}", headers=tok_b),
+            api.post(f"{base}/sections/{section_id}/duplicate", headers=tok_b),
+            api.post(
+                f"/api/v1/workspaces/{ws}/system-designs/{design_id}/apply",
+                headers=tok_b,
+                json={"revision": 1},
+            ),
+        ]
+        for res in calls:
+            assert res.status_code in {403, 404}, (ws == ws_a, res.request.url, res.status_code, res.text)
+    assert _db_row(s, "quotes", qid, "title,total_gross,status,version") == before_quote
+    assert _db_row(s, "quote_items", item_id, "qty,unit_price,description,section_id") == before_item
+    assert _db_count(s, "quote_sections", f"quote_id=eq.{qid}") == sections_before
+
+
+def test_component_linkage_is_server_owned(env):
+    """A client cannot point a design component at a manual line (Apply would delete it and keep
+    its price), and editing a design does not wipe linkage written by Apply."""
+    api, ws, s = env["api"], env["ws_a"], env["s"]
+    tok = _auth(env["owner_a"])
+    quote = _draft(env, env["owner_a"])
+    qid, manual_item = quote["id"], _item_id(quote)
+    design = api.post(f"/api/v1/workspaces/{ws}/quotes/{qid}/system-designs", headers=tok, json={})
+    assert design.status_code == 200, design.text
+    did, rev = design.json()["id"], design.json()["revision"]
+    patched = api.patch(
+        f"/api/v1/workspaces/{ws}/system-designs/{did}",
+        headers=tok,
+        json={
+            "revision": rev,
+            "components": [
+                {
+                    "role_key": "camera_dome",
+                    "quote_item_id": manual_item,
+                    "applied_product_id": str(uuid.uuid4()),
+                    "applied_qty": 1,
+                    "last_apply_id": str(uuid.uuid4()),
+                }
+            ],
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    rows = httpx.get(
+        f"{s.supabase_url}/rest/v1/system_design_components?design_id=eq.{did}"
+        "&select=id,quote_item_id,applied_product_id,last_apply_id",
+        headers=_svc_headers(s),
+        timeout=30,
+    ).json()
+    assert len(rows) == 1
+    assert rows[0]["quote_item_id"] is None
+    assert rows[0]["applied_product_id"] is None
+    assert rows[0]["last_apply_id"] is None
+
+    # Linkage as Apply writes it (service role) survives a later client edit of the design.
+    linked = httpx.patch(
+        f"{s.supabase_url}/rest/v1/system_design_components?id=eq.{rows[0]['id']}",
+        headers={**_svc_headers(s), "Prefer": "return=minimal"},
+        json={"quote_item_id": manual_item},
+        timeout=30,
+    )
+    assert linked.status_code in {200, 204}, linked.text
+    rev2 = patched.json()["revision"]
+    again = api.patch(
+        f"/api/v1/workspaces/{ws}/system-designs/{did}",
+        headers=tok,
+        json={"revision": rev2, "components": [{"role_key": "camera_dome", "label": "כיפה"}]},
+    )
+    assert again.status_code == 200, again.text
+    after = _db_row(s, "system_design_components", rows[0]["id"], "quote_item_id,label")
+    assert after["quote_item_id"] == manual_item
+    assert after["label"] == "כיפה"

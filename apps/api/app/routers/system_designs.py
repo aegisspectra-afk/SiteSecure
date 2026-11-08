@@ -235,11 +235,9 @@ def _component_payload(
         "selection_origin": origin,
         "reason_codes": reasons,
         "needs_review": body.needs_review,
-        "quote_item_id": body.quote_item_id,
-        "applied_product_id": body.applied_product_id,
-        "applied_qty": body.applied_qty,
-        "applied_output_fingerprint": body.applied_output_fingerprint,
-        "last_apply_id": body.last_apply_id,
+        # quote_item_id / applied_* / last_apply_id are server-owned: only the Apply RPC
+        # writes them. A client value could claim a manual line (Apply would delete it and
+        # keep its price), and echoing None would silently drop real linkage.
     }
 
 

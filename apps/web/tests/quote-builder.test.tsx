@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteBuilder } from "../src/components/quotes/QuoteBuilder";
 import { he } from "../src/i18n/he";
+import { formatMoney } from "../src/lib/quotes";
 import {
   draftHasContent,
   headerFromQuote,
@@ -391,5 +392,37 @@ describe("CPQ builder", () => {
     fireEvent.click(within(fastPath).getByRole("button", { name: he.quoteApplyTemplate }));
     await waitFor(() => expect(api.applyQuoteTemplate).toHaveBeenCalled());
     expect(screen.getByRole("region", { name: he.quoteStartFromTemplate })).toBeInTheDocument();
+  });
+
+  it("shows the server's totals, never a browser recomputation of the lines", () => {
+    // Lines alone would give 900 + 18% = 1,062; the server (pricing.recalculate) says 1,234.50.
+    renderBuilder(
+      quote({
+        customer_id: "c1",
+        title: "בדיקת סכומים",
+        vat_percent: 18,
+        subtotal_net: 1046.19,
+        vat_amount: 188.31,
+        total_gross: 1234.5,
+        items: [
+          {
+            id: "i1",
+            quote_id: "q1",
+            item_type: "catalog",
+            description: "מצלמה",
+            qty: 2,
+            unit_price: 450,
+            discount: 0,
+            discount_type: "amount",
+            sort_order: 10,
+            line_net: 900,
+          },
+        ],
+      }),
+    );
+    const server = formatMoney(1234.5, "ILS");
+    const client = formatMoney(1062, "ILS");
+    expect(screen.getAllByText((_, el) => el?.textContent === server).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText((_, el) => el?.textContent === client)).toHaveLength(0);
   });
 });

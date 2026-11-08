@@ -150,10 +150,11 @@ export function quotesMarginTotals(quotes: QuoteOut[]) {
   const hasLifecycle = priced.some((quote) => quote.status !== "draft");
   if (priced.length < 2 && !hasLifecycle) return null;
   const amount = priced.reduce((sum, quote) => sum + Number(quote.margin_amount || 0), 0);
-  const gross = priced.reduce((sum, quote) => sum + Number(quote.total_gross || 0), 0);
+  // Same base as pricing.recalculate: margin over net revenue (after discounts, before VAT).
+  const net = priced.reduce((sum, quote) => sum + Number(quote.subtotal_net || 0), 0);
   return {
     amount,
-    percent: gross > 0 ? Math.round((amount / gross) * 1000) / 10 : null,
+    percent: net > 0 ? Math.round((amount / net) * 1000) / 10 : null,
   };
 }
 

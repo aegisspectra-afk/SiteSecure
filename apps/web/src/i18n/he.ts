@@ -3200,6 +3200,7 @@ export const he = {
   cpqStageNext: "המשך",
   cpqStageBack: "חזרה",
   cpqStageCompactTotal: "סה״כ",
+  cpqTotalsUpdating: "מתעדכן…",
   cpqContextBarAria: "הקשר לקוח ואתר",
   cpqContextBarMore: "פרטים נוספים",
   cpqContextBarLess: "הסתר פרטים",

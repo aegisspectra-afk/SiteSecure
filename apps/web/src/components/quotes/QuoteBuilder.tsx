@@ -1,6 +1,6 @@
 import { Button, Input, Select, Textarea } from "@site-secure/ui";
 import { ApiClientError, type QuoteGap, type QuoteOut } from "@site-secure/api-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { he } from "../../i18n/he";
@@ -25,7 +25,6 @@ import {
   quoteScopeBreakdown,
   softQuoteAdvisories,
 } from "../../lib/quote-cpq";
-import { recalculateQuotePricing } from "../../lib/quote-pricing";
 import { resolveSystemSectionName } from "../../lib/system-section";
 import {
   CCTV_PLANNED_PACKAGE_PREFIX,
@@ -958,42 +957,23 @@ export function QuoteBuilder({
   );
   const pricedCount = items.filter((item) => item.item_type !== "note" && Number(item.unit_price) > 0).length;
   /**
-   * Always derive display money from the current lines so Planning ↔ Pricing stay in sync
-   * during optimistic add/delete (server totals lag until applyRow).
-   * Server remains canonical after persist; applyRow replaces both items and totals together.
+   * Money shown in the builder is the server's (pricing.recalculate via applyRow). While a
+   * line is optimistic or a save is in flight the last server totals stay on screen, marked
+   * as updating — the browser never computes its own subtotal/VAT/total/margin.
    */
-  const displayTotals = useMemo(() => {
-    const local = recalculateQuotePricing(items, {
-      vat_percent: live.vat_percent,
-      discount_type: live.discount_type,
-      discount_value: live.discount_value,
-      sections: live.sections,
-    });
-    const hasOptimistic = items.some((item) => String(item.id).startsWith("optimistic-"));
-    const serverGross = Number(live.total_gross ?? 0);
-    const revenueSynced = !hasOptimistic && Math.abs(serverGross - local.total_gross) < 0.02;
-    return {
-      subtotal_net: local.subtotal_net,
-      vat_amount: local.vat_amount,
-      total_gross: local.total_gross,
-      quote_discount_amount: local.quote_discount_amount,
-      section_discount_amount: local.section_discount_amount,
-      // Prefer server cost/margin only when revenue already matches (authorized cost fields).
-      cost_total: revenueSynced ? live.cost_total : local.cost_total,
-      margin_amount: revenueSynced ? live.margin_amount : local.margin_amount,
-      margin_percent: revenueSynced ? live.margin_percent : local.margin_percent,
-    };
-  }, [
-    items,
-    live.total_gross,
-    live.cost_total,
-    live.margin_amount,
-    live.margin_percent,
-    live.vat_percent,
-    live.discount_type,
-    live.discount_value,
-    live.sections,
-  ]);
+  const mutationsInFlight = useIsMutating();
+  const totalsPending =
+    mutationsInFlight > 0 || items.some((item) => String(item.id).startsWith("optimistic-"));
+  const displayTotals = {
+    subtotal_net: Number(live.subtotal_net ?? 0),
+    vat_amount: Number(live.vat_amount ?? 0),
+    total_gross: Number(live.total_gross ?? 0),
+    quote_discount_amount: Number(live.quote_discount_amount ?? 0),
+    section_discount_amount: Number(live.section_discount_amount ?? 0),
+    cost_total: live.cost_total,
+    margin_amount: live.margin_amount,
+    margin_percent: live.margin_percent,
+  };
   const scopeBreakdown = useMemo(() => quoteScopeBreakdown(items), [items]);
   const canSendNow = Boolean(live.id) && canSend && live.status === "draft" && canSendWithGaps(liveGaps);
   const completeness = completenessScore(liveGaps);
@@ -2012,6 +1992,7 @@ export function QuoteBuilder({
               subtotalNet={displayTotals.subtotal_net}
               vatAmount={displayTotals.vat_amount}
               totalGross={displayTotals.total_gross}
+              totalsPending={totalsPending}
               discountAmount={displayTotals.quote_discount_amount}
               sectionDiscountAmount={displayTotals.section_discount_amount}
               canViewCost={canViewCost}
@@ -2037,6 +2018,11 @@ export function QuoteBuilder({
               <span className="cpq-summary-compact-value ltr-meta" dir="ltr">
                 {formatMoney(displayTotals.total_gross, currency)}
               </span>
+              {totalsPending ? (
+                <span className="text-xs text-fg-muted" role="status">
+                  {he.cpqTotalsUpdating}
+                </span>
+              ) : null}
             </section>
           )}
         </>

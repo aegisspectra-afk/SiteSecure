@@ -9,7 +9,8 @@ import {
   lineDraftToPatchForFields,
   mergeDraftFromItem,
   patchFieldsFromPatch,
-  previewLineNet,
+  lineDiscountType,
+  lineDraftToPatch,
   QUOTE_LINE_FIELDS,
   type QuoteLineDraft,
   type QuoteLineField,
@@ -169,7 +170,9 @@ export const QuoteLineRow = memo(function QuoteLineRow({
 
   const override = isPriceOverride(item);
   const listPrice = catalogListPrice(item);
-  const lineTotal = previewLineNet(item, draft);
+  // Server line_net only; while this row has unsaved edits the value is marked as updating.
+  const lineTotal = Number(item.line_net ?? 0);
+  const linePending = String(item.id).startsWith("optimistic-") || lineDraftToPatch(draft, item) !== null;
   const isNote = item.item_type === "note";
   const isLabor = item.item_type === "labor";
 
@@ -299,7 +302,7 @@ export const QuoteLineRow = memo(function QuoteLineRow({
       />
       <Input
         id={`item-discount-${item.id}`}
-        label={he.quoteDiscountPercentLabel}
+        label={lineDiscountType(item) === "amount" ? he.quoteDiscountAmountIls : he.quoteDiscountPercentLabel}
         type="text"
         inputMode="decimal"
         className="ltr-meta"
@@ -315,6 +318,11 @@ export const QuoteLineRow = memo(function QuoteLineRow({
           <span className="cpq-line-total ltr-meta" dir="ltr">
             {formatMoney(lineTotal, currency)}
           </span>
+          {linePending ? (
+            <span className="cpq-line-total-label" role="status">
+              {he.cpqTotalsUpdating}
+            </span>
+          ) : null}
         </div>
         {savedFlash ? <span className="cpq-line-saved">{he.cpqLineSaved}</span> : null}
         {persistError ? (

@@ -8,6 +8,7 @@ export function QuoteSummaryAside({
   subtotalNet,
   vatAmount,
   totalGross,
+  totalsPending = false,
   discountAmount,
   sectionDiscountAmount,
   canViewCost,
@@ -32,6 +33,8 @@ export function QuoteSummaryAside({
   subtotalNet?: number | null;
   vatAmount?: number | null;
   totalGross?: number | null;
+  /** Server totals are being recomputed (optimistic line or save in flight). */
+  totalsPending?: boolean;
   discountAmount?: number | null;
   sectionDiscountAmount?: number | null;
   canViewCost: boolean;
@@ -101,6 +104,11 @@ export function QuoteSummaryAside({
               <p className="cpq-summary-total-value ltr-meta" dir="ltr">
                 {formatMoney(totalGross, currency)}
               </p>
+              {totalsPending ? (
+                <p className="cpq-summary-total-hint" role="status" data-testid="quote-totals-pending">
+                  {he.cpqTotalsUpdating}
+                </p>
+              ) : null}
               <p className="cpq-summary-total-hint">{he.cpqTotalIncludesVat}</p>
             </div>
           </div>

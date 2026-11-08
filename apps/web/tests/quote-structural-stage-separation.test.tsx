@@ -12,6 +12,7 @@ const catalogItem = {
   qty: 2,
   unit_price: 100,
   discount: 5,
+  discount_type: "percent", // 2 × 100 − 5% = 190 (a stored type is required; the DB default is "amount")
   line_net: 190,
   item_type: "catalog",
   product_id: "p1",

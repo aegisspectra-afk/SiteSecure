@@ -30,6 +30,17 @@ export type QuoteLinePatch = {
 
 export const LINE_ITEM_DISCOUNT_TYPE = "percent" as const;
 
+/**
+ * Discount unit for a line: a new discount typed in the UI is a percent, but an existing
+ * non-zero discount keeps its stored type (templates, packages and CCTV apply write amounts).
+ * Never reinterpret a stored ₪ amount as a percent.
+ */
+export function lineDiscountType(item: QuoteItemOut): "percent" | "amount" {
+  if ((item.discount ?? 0) === 0) return LINE_ITEM_DISCOUNT_TYPE;
+  const stored = (item.discount_type || "amount").toLowerCase();
+  return stored === "percent" || stored === "%" ? "percent" : "amount";
+}
+
 export function lineDraftFromItem(item: QuoteItemOut): QuoteLineDraft {
   const discount = item.discount ?? 0;
   return {
@@ -83,7 +94,7 @@ export function previewLineNet(item: QuoteItemOut, draft: QuoteLineDraft): numbe
   const price = parseDraftNumber(draft.unit_price, item.unit_price);
   const gross = Math.round(qty * price * 100) / 100;
   const discount = parseDraftNumber(draft.discount, item.discount ?? 0);
-  return applyLineDiscount(gross, discount, LINE_ITEM_DISCOUNT_TYPE);
+  return applyLineDiscount(gross, discount, lineDiscountType(item));
 }
 
 export function lineDraftToPatch(draft: QuoteLineDraft, item: QuoteItemOut): QuoteLinePatch | null {
@@ -105,10 +116,9 @@ export function lineDraftToPatch(draft: QuoteLineDraft, item: QuoteItemOut): Quo
   }
   const discount = coerceDraftNumber(draft.discount);
   const itemDiscount = item.discount ?? 0;
-  const itemDiscountType = (item.discount_type || "amount").toLowerCase();
-  if (Math.abs(discount - itemDiscount) > 0.0001 || itemDiscountType !== LINE_ITEM_DISCOUNT_TYPE) {
+  if (Math.abs(discount - itemDiscount) > 0.0001) {
     patch.discount = discount;
-    patch.discount_type = LINE_ITEM_DISCOUNT_TYPE;
+    patch.discount_type = lineDiscountType(item);
   }
   return Object.keys(patch).length ? patch : null;
 }

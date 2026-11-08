@@ -65,7 +65,7 @@ QUOTE_SELECT_SAFE = (
 )
 QUOTE_LIST_SELECT = (
     "id,workspace_id,number,status,customer_id,contact_id,site_id,lead_id,owner_user_id,currency,"
-    "total_gross,valid_until,title,"
+    "subtotal_net,total_gross,valid_until,title,"
     "project_name,version,created_at,updated_at,"
     "customers(display_name),sites(name)"
 )

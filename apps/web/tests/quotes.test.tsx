@@ -387,12 +387,21 @@ describe("quote workspace helpers", () => {
     expect(
       quotesMarginTotals([quote({ id: "1", number: "A", status: "draft", margin_amount: 4, total_gross: 10 })]),
     ).toBeNull();
+    // Margin % is over net revenue like the server (4 / 10), not over the VAT-inclusive total (4 / 11.8).
     expect(
-      quotesMarginTotals([quote({ id: "1", number: "A", status: "approved", margin_amount: 4, total_gross: 10 })]),
+      quotesMarginTotals([
+        quote({ id: "1", number: "A", status: "approved", margin_amount: 4, subtotal_net: 10, total_gross: 11.8 }),
+      ]),
     ).toEqual({
       amount: 4,
       percent: 40,
     });
+    expect(
+      quotesMarginTotals([
+        quote({ id: "1", number: "A", status: "sent", margin_amount: 300, subtotal_net: 1000, total_gross: 1180 }),
+        quote({ id: "2", number: "B", status: "approved", margin_amount: 100, subtotal_net: 1000, total_gross: 1180 }),
+      ]),
+    ).toEqual({ amount: 400, percent: 20 });
     expect(quoteDraftGap(quote({ id: "1", number: "A", status: "draft" }))).toBe("empty");
   });
 });

@@ -6,6 +6,7 @@ import {
   lineDraftFromItem,
   lineDraftToPatch,
   lineDraftToPatchForFields,
+  lineDiscountType,
   previewLineNet,
 } from "../src/lib/quote-line-edit";
 
@@ -83,5 +84,36 @@ describe("quote-line-edit", () => {
       qty: "5",
     };
     expect([...dirtyLineFields(draft, baseItem)]).toEqual(["description", "qty"]);
+  });
+
+  describe("stored ₪ amount discounts (templates, packages, CCTV apply)", () => {
+    const amountItem = { ...baseItem, qty: 1, unit_price: 1000, discount: 50, discount_type: "amount", line_net: 950 };
+
+    it("previews the line like the server: 1000 - ₪50 = 950, not 50%", () => {
+      expect(lineDiscountType(amountItem)).toBe("amount");
+      expect(previewLineNet(amountItem, lineDraftFromItem(amountItem))).toBe(950);
+    });
+
+    it("never marks an untouched amount discount dirty or patches it to percent", () => {
+      const draft = lineDraftFromItem(amountItem);
+      expect(lineDraftToPatch(draft, amountItem)).toBeNull();
+      expect(dirtyLineFields(draft, amountItem).has("discount")).toBe(false);
+      const qtyOnly = { ...draft, qty: "2" };
+      expect(lineDraftToPatch(qtyOnly, amountItem)).toEqual({ qty: 2 });
+    });
+
+    it("keeps the stored unit when the amount is edited", () => {
+      const draft = { ...lineDraftFromItem(amountItem), discount: "60" };
+      expect(lineDraftToPatch(draft, amountItem)).toEqual({ discount: 60, discount_type: "amount" });
+      expect(previewLineNet(amountItem, draft)).toBe(940);
+    });
+
+    it("a new discount on a line without one is a percent", () => {
+      const noDiscount = { ...amountItem, discount: 0 };
+      expect(lineDiscountType(noDiscount)).toBe("percent");
+      const draft = { ...lineDraftFromItem(noDiscount), discount: "10" };
+      expect(lineDraftToPatch(draft, noDiscount)).toEqual({ discount: 10, discount_type: "percent" });
+      expect(previewLineNet(noDiscount, draft)).toBe(900);
+    });
   });
 });

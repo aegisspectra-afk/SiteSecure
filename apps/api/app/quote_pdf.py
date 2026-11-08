@@ -44,6 +44,8 @@ _SOURCE_META_RE = re.compile(
 _SOURCE_NUM_RE = re.compile(r"מס[׳'`]?\s*\d+")
 
 
+OPTIONAL_LINE_PREFIX = "(אופציונלי – לא כלול בסה״כ)"
+
 def _txt(value: object) -> str:
     return str(value or "").strip()
 
@@ -704,6 +706,8 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
                         continue
                     idx += 1
                     cell_desc = _line_description(item)
+                    if item.get("is_optional"):
+                        cell_desc = f"{OPTIONAL_LINE_PREFIX} {cell_desc}"
                     sku_cell = _sku_ltr(item.get("sku")) if _txt(item.get("sku")) else "—"
                     _font(pdf, size=8.5)
                     row = table.row()
@@ -760,13 +764,23 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         box_x = pdf.l_margin + pdf.epw - box_w
         y = pdf.get_y()
         rows_data: list[tuple[str, str, bool]] = []
+        # Order matches pricing.recalculate: lines -> section discounts -> quote discount -> VAT.
+        section_disc = float(document.get("section_discount_amount") or 0)
+        quote_disc = float(document.get("quote_discount_amount") or 0)
+        has_breakdown = document.get("items_subtotal") is not None
+        if _flag("showSubtotal", True) and has_breakdown and (section_disc or quote_disc):
+            rows_data.append(("סכום השורות", _money(document.get("items_subtotal"), currency), False))
+        if _flag("showDiscountTotal", True):
+            if section_disc:
+                rows_data.append(("הנחות סעיפים", f"-{_money(section_disc, currency)}", False))
+            disc = document.get("discount_value")
+            if quote_disc or (disc and not has_breakdown):
+                dtype = document.get("discount_type")
+                dlabel = f"הנחת הצעה ({_pct(disc)})" if dtype == "percent" else "הנחת הצעה"
+                amount = _money(quote_disc, currency) if has_breakdown else _money(disc, currency)
+                rows_data.append((dlabel, f"-{amount}", False))
         if _flag("showSubtotal", True):
             rows_data.append(("לפני מע״מ", _money(document.get("subtotal_net"), currency), False))
-        disc = document.get("discount_value")
-        if disc and _flag("showDiscountTotal", True):
-            dtype = document.get("discount_type")
-            dlabel = _pct(disc) if dtype == "percent" else _money(disc, currency)
-            rows_data.append(("הנחה", dlabel, False))
         vat_pct = document.get("vat_percent")
         vat_amount = document.get("vat_amount")
         tax_status = _txt(company.get("tax_status"))
@@ -779,6 +793,13 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
         if _flag("showGrandTotal", True):
             rows_data.append(
                 ("סה״כ כולל מע״מ" if show_vat else "סה״כ לתשלום", _money(document.get("total_gross"), currency), True)
+            )
+        if float(document.get("optional_subtotal") or 0) > 0:
+            rows_data.append(
+                ("פריטים אופציונליים (לא כלולים)", _money(document.get("optional_total_gross"), currency), False)
+            )
+            rows_data.append(
+                ("סה״כ כולל אופציונליים", _money(document.get("total_with_options_gross"), currency), False)
             )
 
         box_h = 7 + len(rows_data) * 6.8 + 3

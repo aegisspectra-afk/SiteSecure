@@ -338,6 +338,8 @@ def prepare_commercial_lines(
                 "unit": product.get("unit"),
                 "catalog_snapshot": snapshot,
                 "section_id": str(section_id) if section_id else None,
+                # Optional components stay out of the quote total (pricing.recalculate).
+                "is_optional": bool(ln.get("optional")),
             }
         )
     return rows

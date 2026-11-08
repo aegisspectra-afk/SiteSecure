@@ -41,10 +41,15 @@ export function lineDiscountType(item: QuoteItemOut): "percent" | "amount" {
   return stored === "percent" || stored === "%" ? "percent" : "amount";
 }
 
+/** What the customer document shows for a line: description, else the line name. */
+export function lineDisplayText(item: QuoteItemOut): string {
+  return item.description || item.name || "";
+}
+
 export function lineDraftFromItem(item: QuoteItemOut): QuoteLineDraft {
   const discount = item.discount ?? 0;
   return {
-    description: item.description ?? "",
+    description: lineDisplayText(item),
     sku: item.sku ?? "",
     qty: formatDraftNumber(item.qty),
     unit_price: formatDraftNumber(item.unit_price),
@@ -99,7 +104,7 @@ export function previewLineNet(item: QuoteItemOut, draft: QuoteLineDraft): numbe
 
 export function lineDraftToPatch(draft: QuoteLineDraft, item: QuoteItemOut): QuoteLinePatch | null {
   const patch: QuoteLinePatch = {};
-  if (draft.description !== (item.description ?? "")) {
+  if (draft.description !== lineDisplayText(item)) {
     patch.description = draft.description;
   }
   const sku = draft.sku.trim() || null;

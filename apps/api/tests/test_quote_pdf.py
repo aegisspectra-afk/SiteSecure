@@ -227,3 +227,76 @@ def test_pdf_approved_document_survives_rerender_like_refresh():
         assert "מאשר בדיקה" in text
         assert "מאושר" in text or "אושרה" in text
         assert len(pdf_bytes) > 2000
+
+
+def _breakdown_doc():
+    quote = {
+        "id": "q",
+        "number": "Q-1",
+        "version": 1,
+        "status": "sent",
+        "title": "מצלמות",
+        "currency": "ILS",
+        "vat_percent": 18,
+        "discount_type": "amount",
+        "discount_value": 50,
+        "subtotal_net": 1050,
+        "vat_amount": 189,
+        "total_gross": 1239,
+        "items_subtotal": 1200,
+        "lines_subtotal": 1100,
+        "section_discount_amount": 100,
+        "quote_discount_amount": 50,
+        "optional_subtotal": 300,
+        "optional_vat_amount": 54,
+        "optional_total_gross": 354,
+        "total_with_options_gross": 1593,
+        "sections_breakdown": [{"section_id": "S", "lines_net": 1000, "discount_amount": 100, "net": 900}],
+        "cost_total": 777,
+    }
+    items = [
+        {"id": "a", "item_type": "catalog", "name": "Cam", "description": "מצלמה", "qty": 2,
+         "unit_price": 500, "line_net": 1000, "section_id": "S"},
+        {"id": "b", "item_type": "catalog", "name": "PTZ", "description": "PTZ", "qty": 1,
+         "unit_price": 300, "line_net": 300, "section_id": "S", "is_optional": True},
+    ]
+    return public_payload(
+        quote,
+        items,
+        workspace={"name": "W"},
+        customer={"display_name": "C"},
+        site=None,
+        sections=[{"id": "S", "name": "סעיף", "discount_type": "percent", "discount_value": 10}],
+        branding={"name": "W"},
+    )
+
+
+def test_public_payload_carries_pricing_breakdown_without_cost():
+    doc = _breakdown_doc()
+    assert doc["items_subtotal"] == 1200
+    assert doc["section_discount_amount"] == 100
+    assert doc["quote_discount_amount"] == 50
+    assert doc["optional_total_gross"] == 354
+    assert doc["total_with_options_gross"] == 1593
+    assert doc["sections_breakdown"] == [
+        {"section_id": "S", "lines_net": 1000.0, "discount_amount": 100.0, "net": 900.0}
+    ]
+    assert doc["items"][1]["is_optional"] is True
+    assert "cost_total" not in doc
+    assert "777" not in str(doc)
+
+
+def test_pdf_marks_optional_lines_and_shows_breakdown_in_order():
+    import io
+
+    import pypdf
+
+    pdf_bytes, _ = render_quote_pdf(_breakdown_doc())
+    text = "".join(page.extract_text() for page in pypdf.PdfReader(io.BytesIO(pdf_bytes)).pages)
+    assert "אופציונלי" in text
+    assert "הנחות סעיפים" in text
+    assert "הנחת הצעה" in text
+    for amount in ("1,200", "1,050", "1,239", "354", "1,593"):
+        assert amount in text, amount
+    # Lines total precedes the net-before-VAT figure (discounts are applied, not appended).
+    assert text.index("1,200") < text.index("1,050") < text.index("1,239")

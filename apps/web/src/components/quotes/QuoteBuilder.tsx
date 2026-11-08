@@ -2655,6 +2655,7 @@ export function QuoteBuilder({
         <QuoteLinesPanel
           items={items}
           sections={live.sections ?? []}
+          sectionsBreakdown={live.sections_breakdown ?? []}
           currency={currency}
           canEdit={canEdit}
           canCatalog={canCatalog}

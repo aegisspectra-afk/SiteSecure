@@ -459,7 +459,8 @@ describe("customer-facing quote document", () => {
     expect(screen.getAllByText(/Q-00009/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("רומן קופן")).toBeInTheDocument();
     expect(screen.getByText("אתר הרצליה")).toBeInTheDocument();
-    expect(screen.getByText(he.quoteDiscount)).toBeInTheDocument();
+    // S4: the quote-level discount row names what it is (older snapshots have no breakdown).
+    expect(screen.getByText(`${he.quoteDiscountQuoteLabel} (10%)`)).toBeInTheDocument();
     expect(screen.getByText(he.quoteDocWarranty)).toBeInTheDocument();
     expect(screen.getByText("גישה מהחניה")).toBeInTheDocument();
     expect(document.getElementById("quote-document-print-root")).toBeTruthy();

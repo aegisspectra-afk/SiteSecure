@@ -16695,6 +16695,11 @@ html.theme-revealing::view-transition-new(root) {
   color: var(--color-fg);
 }
 
+.quote-doc-section-discount {
+  font-weight: 400;
+  color: var(--color-fg-muted);
+}
+
 .cpq-summary-scope-hint {
   margin: 0 0 0.35rem;
   font-size: 0.6875rem;

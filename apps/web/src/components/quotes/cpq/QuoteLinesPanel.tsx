@@ -1,4 +1,4 @@
-import type { CatalogProduct, QuoteItemOut, QuoteSection } from "@site-secure/api-client";
+import type { CatalogProduct, QuoteItemOut, QuoteSection, QuoteSectionBreakdown } from "@site-secure/api-client";
 import { Button, Input } from "@site-secure/ui";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -29,6 +29,7 @@ export type QuoteLinesWorkspaceMode = "planning" | "pricing";
 export function QuoteLinesPanel({
   items,
   sections = [],
+  sectionsBreakdown = [],
   currency,
   canEdit,
   canCatalog,
@@ -65,6 +66,8 @@ export function QuoteLinesPanel({
 }: {
   items: QuoteItemOut[];
   sections?: QuoteSection[];
+  /** Server per-section totals (pricing.recalculate): non-optional lines, after section discount. */
+  sectionsBreakdown?: QuoteSectionBreakdown[];
   currency: string;
   canEdit: boolean;
   canCatalog: boolean;
@@ -106,6 +109,7 @@ export function QuoteLinesPanel({
   const [emptyCatalogOpen, setEmptyCatalogOpen] = useState(false);
   const sectionOrder = [...sections].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const grouped = groupBySection(rows, sectionOrder);
+  const sectionNetById = new Map(sectionsBreakdown.map((row) => [row.section_id, Number(row.net || 0)]));
   const [sectionMenuId, setSectionMenuId] = useState<string | null>(null);
   const isEmpty = rows.length === 0 && sectionOrder.length === 0;
 
@@ -265,9 +269,7 @@ export function QuoteLinesPanel({
       ) : (
         <div className="flex flex-col gap-5">
           {grouped.map((group) => {
-            const sectionNet = group.items
-              .filter((i) => i.item_type !== "note")
-              .reduce((sum, i) => sum + Number(i.line_net || 0), 0);
+            const sectionNet = group.id ? sectionNetById.get(group.id) : undefined;
             return (
               <div key={group.id ?? "none"} className="flex flex-col gap-3">
                 {group.section ? (
@@ -285,7 +287,7 @@ export function QuoteLinesPanel({
                       )}
                       <p className="mt-1 text-xs text-fg-muted">
                         {he.quoteItemsCount(group.items.length)}
-                        {group.items.length ? ` · ${formatMoney(sectionNet, currency)}` : ""}
+                        {group.items.length && sectionNet != null ? ` · ${formatMoney(sectionNet, currency)}` : ""}
                         {Number(group.section.discount_value || 0) > 0 ? ` · ${he.cpqSectionDiscount}` : ""}
                       </p>
                       {isPricing && (onPatchSectionDiscount || Number(group.section.discount_value || 0) > 0) ? (

@@ -116,4 +116,23 @@ describe("quote-line-edit", () => {
       expect(previewLineNet(noDiscount, draft)).toBe(900);
     });
   });
+
+  describe("lines that carry only a name (manual/API lines)", () => {
+    const named = { ...baseItem, description: "", name: "שירות בדיקה" };
+
+    it("shows the same text the customer document shows", () => {
+      expect(lineDraftFromItem(named).description).toBe("שירות בדיקה");
+    });
+
+    it("does not save anything just because the line was opened", () => {
+      expect(lineDraftToPatch(lineDraftFromItem(named), named)).toBeNull();
+      expect(dirtyLineFields(lineDraftFromItem(named), named).size).toBe(0);
+    });
+
+    it("an edit is saved as the description the document will show", () => {
+      const draft = { ...lineDraftFromItem(named), description: "שירות בדיקה שנתי" };
+      expect(lineDraftToPatch(draft, named)).toEqual({ description: "שירות בדיקה שנתי" });
+    });
+  });
 });
+

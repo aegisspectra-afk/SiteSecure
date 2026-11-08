@@ -573,6 +573,9 @@ export type QuoteOut = {
   margin_override_reason?: string | null;
   margin_override_at?: string | null;
   revise_reason?: string | null;
+  /** Non-optional lines before section discounts (pricing.recalculate). */
+  items_subtotal?: number | null;
+  sections_breakdown?: QuoteSectionBreakdown[];
   lines_subtotal?: number | null;
   section_discount_amount?: number | null;
   quote_discount_amount?: number | null;
@@ -1586,6 +1589,13 @@ export type FleetImportCommitResult = {
   errors?: Array<{ row?: number; message: string }>;
 };
 
+export type QuoteSectionBreakdown = {
+  section_id: string;
+  lines_net: number;
+  discount_amount: number;
+  net: number;
+};
+
 export type PublicQuote = {
   id: string;
   number: string;
@@ -1609,6 +1619,9 @@ export type PublicQuote = {
   vat_percent: number;
   discount_type?: string | null;
   discount_value?: number | null;
+  /** Non-optional lines before section discounts (pricing.recalculate). */
+  items_subtotal?: number | null;
+  sections_breakdown?: QuoteSectionBreakdown[];
   lines_subtotal?: number | null;
   section_discount_amount?: number | null;
   quote_discount_amount?: number | null;

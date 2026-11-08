@@ -552,3 +552,68 @@ def test_component_linkage_is_server_owned(env):
     after = _db_row(s, "system_design_components", rows[0]["id"], "quote_item_id,label")
     assert after["quote_item_id"] == manual_item
     assert after["label"] == "כיפה"
+
+
+def test_cctv_apply_keeps_optional_component_out_of_total(env):
+    """End-to-end Apply: an optional design component becomes an optional line, the quote total
+    excludes it, and the customer's public link shows exactly the server's totals."""
+    api, ws, s = env["api"], env["ws_a"], env["s"]
+    tok = _auth(env["owner_a"])
+    cam = api.post(
+        f"/api/v1/workspaces/{ws}/catalog/products",
+        headers=tok,
+        json={"name": "מצלמת כיפה S4", "sku": f"S4-CAM-{uuid.uuid4().hex[:6]}", "list_price": 500, "cost": 300},
+    )
+    ptz = api.post(
+        f"/api/v1/workspaces/{ws}/catalog/products",
+        headers=tok,
+        json={"name": "מצלמת PTZ S4", "sku": f"S4-PTZ-{uuid.uuid4().hex[:6]}", "list_price": 2000, "cost": 1500},
+    )
+    assert cam.status_code == 200, cam.text
+    assert ptz.status_code == 200, ptz.text
+    created = api.post(f"/api/v1/workspaces/{ws}/quotes", headers=tok, json={"customer_id": env["customer_a"], "title": "CCTV S4"})
+    qid = created.json()["id"]
+    valid = (datetime.now(UTC) + timedelta(days=30)).date().isoformat()
+    api.patch(f"/api/v1/workspaces/{ws}/quotes/{qid}", headers=tok, json={"valid_until": valid, "payment_terms": "שוטף + 30"})
+    design = api.post(f"/api/v1/workspaces/{ws}/quotes/{qid}/system-designs", headers=tok, json={})
+    did, rev = design.json()["id"], design.json()["revision"]
+    patched = api.patch(
+        f"/api/v1/workspaces/{ws}/system-designs/{did}",
+        headers=tok,
+        json={
+            "revision": rev,
+            "components": [
+                {"role_key": "camera_dome", "quantity": 2, "user_selected_product_id": cam.json()["id"],
+                 "selection_origin": "USER_OVERRIDE"},
+                {"role_key": "camera_ptz", "quantity": 1, "optional": True,
+                 "user_selected_product_id": ptz.json()["id"], "selection_origin": "USER_OVERRIDE"},
+            ],
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    applied = api.post(
+        f"/api/v1/workspaces/{ws}/system-designs/{did}/apply",
+        headers=tok,
+        json={"revision": patched.json()["revision"]},
+    )
+    assert applied.status_code == 200, applied.text
+    rows = httpx.get(
+        f"{s.supabase_url}/rest/v1/quote_items?quote_id=eq.{qid}&select=product_id,qty,line_net,is_optional",
+        headers=_svc_headers(s),
+        timeout=30,
+    ).json()
+    by_product = {r["product_id"]: r for r in rows}
+    assert by_product[ptz.json()["id"]]["is_optional"] is True
+    assert by_product[cam.json()["id"]]["is_optional"] is False
+    quote_row = _db_row(s, "quotes", qid, "subtotal_net,total_gross")
+    assert float(quote_row["subtotal_net"]) == 1000.0  # 2 x 500; the 2,000 PTZ is optional
+    assert float(quote_row["total_gross"]) == 1180.0
+
+    sent = _send(env, env["owner_a"], qid)
+    public = api.get(f"/api/v1/public/quotes/{sent['public_token']}").json()
+    assert float(public["total_gross"]) == float(quote_row["total_gross"])
+    assert float(public["subtotal_net"]) == float(quote_row["subtotal_net"])
+    assert float(public["optional_total_gross"]) == 2360.0
+    assert float(public["total_with_options_gross"]) == 3540.0
+    optional_lines = [i for i in public["items"] if i.get("is_optional")]
+    assert len(optional_lines) == 1 and float(optional_lines[0]["line_net"]) == 2000.0

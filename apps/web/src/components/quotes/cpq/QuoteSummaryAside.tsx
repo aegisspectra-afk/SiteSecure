@@ -86,13 +86,14 @@ export function QuoteSummaryAside({
           ) : null}
 
           <div className="cpq-summary-rules">
-            <PriceLine label={he.quoteSubtotalBeforeVat} value={formatMoney(subtotalNet, currency)} />
+            {/* pricing.recalculate order: discounts are applied before the pre-VAT figure. */}
             {sectionDiscountAmount != null && sectionDiscountAmount > 0 ? (
               <PriceLine label={he.cpqSectionDiscount} value={`−${formatMoney(sectionDiscountAmount, currency)}`} />
             ) : null}
             {discountAmount != null && discountAmount > 0 ? (
               <PriceLine label={he.cpqQuoteDiscount} value={`−${formatMoney(discountAmount, currency)}`} />
             ) : null}
+            <PriceLine label={he.quoteSubtotalBeforeVat} value={formatMoney(subtotalNet, currency)} />
             <PriceLine label={he.quoteTaxHint(vatPercent)} value={formatMoney(vatAmount, currency)} />
           </div>
 

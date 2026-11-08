@@ -124,3 +124,28 @@ def test_apply_discount_and_margin_status():
     assert margin_status(35, target=30, minimum=15) == "healthy"
     assert margin_status(20, target=30, minimum=15) == "warning"
     assert margin_status(10, target=30, minimum=15) == "critical"
+
+
+def test_breakdown_lines_sections_and_options():
+    # Section S: 2 x 500 = 1000, 10% section discount -> 900. Optional 300 in S is excluded.
+    # Loose: 200. Quote discount 50 (amount). VAT 18%.
+    items = [
+        {"id": "a", "item_type": "catalog", "qty": 2, "unit_price": 500, "section_id": "S", "cost": 300},
+        {"id": "b", "item_type": "catalog", "qty": 1, "unit_price": 300, "section_id": "S", "is_optional": True},
+        {"id": "c", "item_type": "labor", "qty": 1, "unit_price": 200},
+    ]
+    sections = [{"id": "S", "discount_type": "percent", "discount_value": 10}]
+    out = recalculate(items, vat_percent=18, discount_type="amount", discount_value=50, sections=sections)
+    assert out["items_subtotal"] == 1200.0  # lines before section discounts, options excluded
+    assert out["section_discount_amount"] == 100.0
+    assert out["lines_subtotal"] == 1100.0
+    assert out["quote_discount_amount"] == 50.0
+    assert out["subtotal_net"] == 1050.0
+    assert out["vat_amount"] == 189.0
+    assert out["total_gross"] == 1239.0
+    assert out["sections_breakdown"] == [
+        {"section_id": "S", "lines_net": 1000.0, "discount_amount": 100.0, "net": 900.0}
+    ]
+    assert out["optional_subtotal"] == 300.0
+    assert out["optional_total_gross"] == 354.0
+    assert out["total_with_options_gross"] == 1593.0

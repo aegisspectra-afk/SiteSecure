@@ -56,14 +56,22 @@ function groupItems(quote: PublicQuote) {
 function numberedLines(quote: PublicQuote) {
   const { sections, bySection, loose } = groupItems(quote);
   const rows: Array<
-    | { kind: "section"; id: string; name: string }
+    | { kind: "section"; id: string; name: string; discount: number }
     | { kind: "line"; item: PublicQuote["items"][number]; index: number | null }
   > = [];
+  const sectionDiscount = new Map(
+    (quote.sections_breakdown ?? []).map((row) => [row.section_id, Number(row.discount_amount || 0)]),
+  );
   let n = 0;
   for (const section of sections) {
     const items = bySection.get(section.id) ?? [];
     if (!items.length && !section.name) continue;
-    rows.push({ kind: "section", id: section.id, name: section.name || he.cpqSectionUntitled });
+    rows.push({
+      kind: "section",
+      id: section.id,
+      name: section.name || he.cpqSectionUntitled,
+      discount: sectionDiscount.get(section.id) ?? 0,
+    });
     for (const item of items) {
       if (item.item_type === "note") {
         rows.push({ kind: "line", item, index: null });
@@ -115,6 +123,12 @@ export function QuoteDocument({
   const signature = quote.signature;
   const lines = numberedLines(quote);
   const showLineDiscount = quote.items.some((item) => Number(item.discount || 0) > 0);
+  // Server breakdown (pricing.recalculate); older frozen snapshots may not carry it.
+  const hasBreakdown = quote.items_subtotal != null;
+  const sectionDiscountTotal = Number(quote.section_discount_amount || 0);
+  const quoteDiscountTotal = Number(quote.quote_discount_amount || 0);
+  const showLinesTotal = hasBreakdown && (sectionDiscountTotal > 0 || quoteDiscountTotal > 0);
+  const optionalTotal = Number(quote.optional_subtotal || 0);
   const colCount = showLineDiscount ? 7 : 6;
   const statusLabel =
     quote.superseded || quote.status === "superseded"
@@ -215,6 +229,12 @@ export function QuoteDocument({
                     <td colSpan={colCount}>
                       <span className="quote-doc-section-accent" aria-hidden />
                       {row.name}
+                      {row.discount > 0 ? (
+                        <span className="quote-doc-section-discount">
+                          {" · "}
+                          {he.quoteDocSectionDiscountInline(formatMoney(-row.discount, currency))}
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -235,16 +255,31 @@ export function QuoteDocument({
 
       <section className="quote-doc-totals" aria-label={he.quoteTotalDue}>
         <dl>
-          <div>
-            <dt>{he.quoteSubtotal}</dt>
-            <dd>{formatMoney(quote.subtotal_net, currency)}</dd>
-          </div>
-          {discountLabel ? (
+          {showLinesTotal ? (
             <div>
-              <dt>{he.quoteDiscount}</dt>
-              <dd>{discountLabel}</dd>
+              <dt>{he.quoteDocLinesTotal}</dt>
+              <dd>{formatMoney(quote.items_subtotal, currency)}</dd>
             </div>
           ) : null}
+          {sectionDiscountTotal > 0 ? (
+            <div>
+              <dt>{he.quoteDocSectionDiscounts}</dt>
+              <dd>{formatMoney(-sectionDiscountTotal, currency)}</dd>
+            </div>
+          ) : null}
+          {quoteDiscountTotal > 0 || (discountLabel && !hasBreakdown) ? (
+            <div>
+              <dt>
+                {he.quoteDiscountQuoteLabel}
+                {quote.discount_type === "percent" && discountLabel ? ` (${discountLabel})` : ""}
+              </dt>
+              <dd>{hasBreakdown ? formatMoney(-quoteDiscountTotal, currency) : discountLabel}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>{he.quoteDocBeforeVat}</dt>
+            <dd>{formatMoney(quote.subtotal_net, currency)}</dd>
+          </div>
           {showVat ? (
             <div>
               <dt>{vatLabel}</dt>
@@ -255,6 +290,18 @@ export function QuoteDocument({
             <dt>{he.quoteTotalDue}</dt>
             <dd>{formatMoney(quote.total_gross, currency)}</dd>
           </div>
+          {optionalTotal > 0 ? (
+            <>
+              <div data-testid="quote-doc-optional-total">
+                <dt>{he.quoteDocOptionalTotal}</dt>
+                <dd>{formatMoney(quote.optional_total_gross, currency)}</dd>
+              </div>
+              <div>
+                <dt>{he.quoteDocTotalWithOptions}</dt>
+                <dd>{formatMoney(quote.total_with_options_gross, currency)}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
       </section>
 
@@ -369,12 +416,17 @@ function LineRow({
   const primary = item.description || item.name || (isNote ? he.quoteAddNote : "—");
   const sku = item.sku?.trim() || "";
   return (
-    <tr className="quote-doc-line-row">
+    <tr className={item.is_optional && !isNote ? "quote-doc-line-row is-optional" : "quote-doc-line-row"}>
       <td className="quote-doc-col-num ltr-meta">{isNote ? "—" : index}</td>
       <td className="quote-doc-col-sku ltr-meta">{isNote ? "" : sku || "—"}</td>
       <td>
         <div className="quote-doc-line-desc">
           <span>{primary}</span>
+          {item.is_optional && !isNote ? (
+            <span className="quote-doc-optional-badge" data-testid="quote-doc-optional-badge">
+              {he.quoteDocOptionalNotIncluded}
+            </span>
+          ) : null}
         </div>
       </td>
       <td className="ltr-meta">{isNote ? "" : item.qty}</td>

@@ -160,4 +160,69 @@ describe("QuoteDocument", () => {
     expect(screen.getByText("הערה ללקוח")).toBeTruthy();
     expect(screen.getByText(/1,180/)).toBeTruthy();
   });
+
+  it("marks optional lines and lists discounts before the pre-VAT total, options apart", () => {
+    const { container } = render(
+      <QuoteDocument
+        quote={{
+          id: "q2",
+          number: "Q-00020",
+          version: 1,
+          status: "sent",
+          superseded: false,
+          title: "מצלמות",
+          currency: "ILS",
+          vat_percent: 18,
+          discount_type: "amount",
+          discount_value: 50,
+          items_subtotal: 1200,
+          lines_subtotal: 1100,
+          section_discount_amount: 100,
+          quote_discount_amount: 50,
+          subtotal_net: 1050,
+          vat_amount: 189,
+          total_gross: 1239,
+          optional_subtotal: 300,
+          optional_vat_amount: 54,
+          optional_total_gross: 354,
+          total_with_options_gross: 1593,
+          sections_breakdown: [{ section_id: "s1", lines_net: 1000, discount_amount: 100, net: 900 }],
+          company: { name: "אגיס", brand_name: "אגיס" },
+          customer: { display_name: "לקוח" },
+          site: null,
+          sections: [{ id: "s1", name: "מצלמות", sort_order: 0 }],
+          signature: {
+            mode: "approval_name_v1",
+            required: true,
+            title: he.quoteDocSignatureTitle,
+            consent_he: he.quoteDocSignatureConsent,
+            fields: ["full_name", "date"],
+          },
+          items: [
+            { id: "a", quote_id: "q2", description: "מצלמה", qty: 2, unit_price: 500, line_net: 1000, item_type: "catalog", section_id: "s1" },
+            { id: "b", quote_id: "q2", description: "PTZ", qty: 1, unit_price: 300, line_net: 300, item_type: "catalog", section_id: "s1", is_optional: true },
+            { id: "c", quote_id: "q2", description: "התקנה", qty: 1, unit_price: 200, line_net: 200, item_type: "labor" },
+          ],
+        }}
+      />,
+    );
+    const badges = screen.getAllByTestId("quote-doc-optional-badge");
+    expect(badges).toHaveLength(1);
+    expect(badges[0].textContent).toBe(he.quoteDocOptionalNotIncluded);
+    const sectionDiscount = container.querySelector(".quote-doc-section-discount")?.textContent ?? "";
+    expect(sectionDiscount).toContain("הנחת סעיף");
+    expect(sectionDiscount).toContain("100");
+    const labels = [...container.querySelectorAll(".quote-doc-totals dt")].map((dt) => dt.textContent);
+    expect(labels).toEqual([
+      he.quoteDocLinesTotal,
+      he.quoteDocSectionDiscounts,
+      he.quoteDiscountQuoteLabel,
+      he.quoteDocBeforeVat,
+      `${he.quoteTax} 18%`,
+      he.quoteTotalDue,
+      he.quoteDocOptionalTotal,
+      he.quoteDocTotalWithOptions,
+    ]);
+    expect(labels).not.toContain(he.quoteSubtotal);
+  });
 });

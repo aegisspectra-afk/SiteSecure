@@ -22,6 +22,10 @@ PUBLIC_ITEM_KEYS = (
 )
 
 OPTIONAL_PUBLIC_TOTAL_KEYS = (
+    "items_subtotal",
+    "lines_subtotal",
+    "section_discount_amount",
+    "quote_discount_amount",
     "optional_subtotal",
     "optional_vat_amount",
     "optional_total_gross",
@@ -207,6 +211,17 @@ def public_payload(
     for key in OPTIONAL_PUBLIC_TOTAL_KEYS:
         if key in quote and quote[key] is not None:
             payload[key] = _num(quote[key])
+    if isinstance(quote.get("sections_breakdown"), list):
+        payload["sections_breakdown"] = [
+            {
+                "section_id": str(row.get("section_id")),
+                "lines_net": _num(row.get("lines_net")),
+                "discount_amount": _num(row.get("discount_amount")),
+                "net": _num(row.get("net")),
+            }
+            for row in quote["sections_breakdown"]
+            if isinstance(row, dict)
+        ]
     if snap:
         payload["company_snapshot"] = snap
     if pdf_template and isinstance(pdf_template, dict):

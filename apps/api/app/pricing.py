@@ -173,6 +173,7 @@ def recalculate(
 
     lines_subtotal = Decimal("0.00")
     section_discount_total = Decimal("0.00")
+    sections_breakdown: list[dict] = []
     for key, sub in section_subtotals.items():
         if key and key in section_map:
             section = section_map[key]
@@ -183,8 +184,20 @@ def recalculate(
             )
             lines_subtotal += after
             section_discount_total += disc
+            # Per-section display rows (non-optional lines only); totals above are unchanged.
+            sections_breakdown.append(
+                {
+                    "section_id": key,
+                    "lines_net": float(sub.quantize(TWOPLACES, rounding=ROUND_HALF_UP)),
+                    "discount_amount": float(disc),
+                    "net": float(after.quantize(TWOPLACES, rounding=ROUND_HALF_UP)),
+                }
+            )
         else:
             lines_subtotal += sub
+    items_subtotal = sum(section_subtotals.values(), Decimal("0.00")).quantize(
+        TWOPLACES, rounding=ROUND_HALF_UP
+    )
 
     lines_subtotal = lines_subtotal.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
     quote_discount_amount = Decimal("0.00")
@@ -220,6 +233,8 @@ def recalculate(
 
     return {
         "items": computed_items,
+        "items_subtotal": float(items_subtotal),
+        "sections_breakdown": sections_breakdown,
         "lines_subtotal": float(lines_subtotal),
         "section_discount_amount": float(section_discount_total.quantize(TWOPLACES, rounding=ROUND_HALF_UP)),
         "quote_discount_amount": float(quote_discount_amount),

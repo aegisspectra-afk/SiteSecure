@@ -273,6 +273,31 @@ def _service() -> ServiceClient:
     return ServiceClient(get_settings())
 
 
+# Customer-facing breakdown from pricing.recalculate (no cost or margin keys).
+PRICING_BREAKDOWN_KEYS = (
+    "items_subtotal",
+    "sections_breakdown",
+    "lines_subtotal",
+    "section_discount_amount",
+    "quote_discount_amount",
+    "optional_subtotal",
+    "optional_vat_amount",
+    "optional_total_gross",
+    "total_with_options_gross",
+)
+
+
+def _pricing_breakdown(quote: dict, items: list[dict], sections: list[dict]) -> dict:
+    computed = pricing.recalculate(
+        items,
+        vat_percent=quote.get("vat_percent"),
+        discount_type=quote.get("discount_type"),
+        discount_value=quote.get("discount_value"),
+        sections=sections,
+    )
+    return {key: computed.get(key) for key in PRICING_BREAKDOWN_KEYS}
+
+
 def _quote_writer() -> ServiceClient:
     """Writes to quote totals/lifecycle, quote_items and quote_versions.
 
@@ -761,13 +786,7 @@ def _with_validation(client: UserClient, workspace_id: UUID, quote: dict, items:
         discount_value=quote.get("discount_value"),
         sections=sections,
     )
-    out["lines_subtotal"] = computed.get("lines_subtotal")
-    out["section_discount_amount"] = computed.get("section_discount_amount")
-    out["quote_discount_amount"] = computed.get("quote_discount_amount")
-    out["optional_subtotal"] = computed.get("optional_subtotal")
-    out["optional_vat_amount"] = computed.get("optional_vat_amount")
-    out["optional_total_gross"] = computed.get("optional_total_gross")
-    out["total_with_options_gross"] = computed.get("total_with_options_gross")
+    out.update({key: computed.get(key) for key in PRICING_BREAKDOWN_KEYS})
     if show_cost:
         out["optional_cost_total"] = computed.get("optional_cost_total")
     else:
@@ -886,6 +905,9 @@ def _upsert_version_snapshot(
     branding = settings.get("branding") if isinstance(settings.get("branding"), dict) else {}
     quotes_cfg = settings.get("quotes") if isinstance(settings.get("quotes"), dict) else {}
     sections = _load_sections(client, workspace_id, quote_id)
+    # The send/share row comes back with the safe select only; recompute the breakdown so
+    # the frozen customer document carries option and discount totals.
+    quote = {**quote, **_pricing_breakdown(quote, items, sections)}
     pdf_tpl_row = _load_default_pdf_template(client, workspace_id)
     pdf_template: dict | None = None
     if pdf_tpl_row:
@@ -1119,21 +1141,7 @@ def _document_payload(
     elif pdf_template is None:
         pdf_template = {}
         merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config={})
-    computed = pricing.recalculate(
-        items,
-        vat_percent=quote.get("vat_percent"),
-        discount_type=quote.get("discount_type"),
-        discount_value=quote.get("discount_value"),
-        sections=sections,
-    )
-    quote_doc = dict(quote)
-    quote_doc["lines_subtotal"] = computed.get("lines_subtotal")
-    quote_doc["section_discount_amount"] = computed.get("section_discount_amount")
-    quote_doc["quote_discount_amount"] = computed.get("quote_discount_amount")
-    quote_doc["optional_subtotal"] = computed.get("optional_subtotal")
-    quote_doc["optional_vat_amount"] = computed.get("optional_vat_amount")
-    quote_doc["optional_total_gross"] = computed.get("optional_total_gross")
-    quote_doc["total_with_options_gross"] = computed.get("total_with_options_gross")
+    quote_doc = {**quote, **_pricing_breakdown(quote, items, sections)}
     return public_payload(
         quote_doc,
         items,

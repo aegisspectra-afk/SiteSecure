@@ -1,5 +1,7 @@
 # SITE SECURE: רשימת שלב E (פריסה)
 
+> קבצי ה-rollback נמצאים ב-`supabase/rollbacks/` (הועברו מ-`tmp/` ב-S3b). ההערות בראש המיגרציות `20261107120000`, `20261108100000` ו-`20261113120000` עדיין מפנות ל-`tmp/`, כי לא עורכים מיגרציה קיימת. הקבצים עצמם נמצאים כאן.
+
 **סטטוס: חסום עד הודעת הבעלים.** שום דבר כאן לא הורץ בענן. כל המיגרציות הוחלו מקומית בלבד.
 
 ## 0. תנאים מקדימים (פעולות של הבעלים)
@@ -11,14 +13,15 @@
 ## 1. מיגרציות שלא הוחלו בענן (לפי סדר הגרסה)
 | גרסה | קובץ | תנאי מקדים | Rollback |
 |---|---|---|---|
-| 20261031112121 | quote_contact_search_indexes | צריך להפעיל `pg_trgm` בפרויקט **לפני** המיגרציה (דרך הדשבורד) | `tmp/rollback_20261031112121_quote_contact_search.sql` |
-| 20261031120000 | warranty_public_token_hash | — | `tmp/rollback_20261031120000_warranty_hash.sql` |
-| 20261031121000 | quote_public_access_required_ttl | — | `tmp/rollback_20261031121000_quote_ttl.sql` |
-| 20261031122000 | storage_rls_documents_signed_only | — | `tmp/rollback_20261031122000_storage_rls.sql` |
-| 20261031193159 | drop_unused_customer_notes_activities | ספירת שורות ב-`customer_notes` וב-`customer_activities` וגיבוי. ה-rollback משחזר רק את מבנה הטבלאות, לא את הנתונים. **לא הוחלה גם מקומית.** | `tmp/rollback_20261031193159_customer_notes.sql` |
-| 20261107120000 | ss_quote_money_lockdown | **מצומדת לקוד ה-API**, ראו סעיף 2 | `tmp/rollback_20261107120000_ss_quote_money_lockdown.sql` |
-| 20261108100000 | ss_apply_optional_lines | אחרי 20261107120000. מחליפה את אותו RPC ושומרת את ה-grants (service_role בלבד). מצומדת לקוד ה-API מ-`0f85b19`: API ישן לא שולח `is_optional`, והשורות נוצרות כרגילות. | `tmp/rollback_20261108100000_ss_apply_optional_lines.sql` (מחזירה את גרסת S2) |
-| 20261113120000 | ss_lock_function_grants_and_role_escalation | אחרי 20261108100000. מבטלת EXECUTE מ-anon ומ-authenticated על כל הפונקציות ב-public (חוץ מ-pg_trgm), ומשאירה ל-authenticated רק 25 פונקציות. מוסיפה triggers נגד הסלמת תפקידים. **לפני החלה בענן:** לוודא שהפונקציות שבענן זהות למקומיות; לולאת ה-REVOKE דינמית ומכסה כל פונקציה שקיימת. אחרי ההחלה: create_workspace מקבל רק solo. | `tmp/rollback_20261113120000_ss_lock_function_grants_and_role_escalation.sql` (משחזרת את ה-ACL המדויק) |
+| 20261031112121 | quote_contact_search_indexes | צריך להפעיל `pg_trgm` בפרויקט **לפני** המיגרציה (דרך הדשבורד) | `supabase/rollbacks/rollback_20261031112121_quote_contact_search.sql` |
+| 20261031120000 | warranty_public_token_hash | — | `supabase/rollbacks/rollback_20261031120000_warranty_hash.sql` |
+| 20261031121000 | quote_public_access_required_ttl | — | `supabase/rollbacks/rollback_20261031121000_quote_ttl.sql` |
+| 20261031122000 | storage_rls_documents_signed_only | — | `supabase/rollbacks/rollback_20261031122000_storage_rls.sql` |
+| 20261031193159 | drop_unused_customer_notes_activities | ספירת שורות ב-`customer_notes` וב-`customer_activities` וגיבוי. ה-rollback משחזר רק את מבנה הטבלאות, לא את הנתונים. **לא הוחלה גם מקומית.** | `supabase/rollbacks/rollback_20261031193159_customer_notes.sql` |
+| 20261107120000 | ss_quote_money_lockdown | **מצומדת לקוד ה-API**, ראו סעיף 2 | `supabase/rollbacks/rollback_20261107120000_ss_quote_money_lockdown.sql` |
+| 20261108100000 | ss_apply_optional_lines | אחרי 20261107120000. מחליפה את אותו RPC ושומרת את ה-grants (service_role בלבד). מצומדת לקוד ה-API מ-`0f85b19`: API ישן לא שולח `is_optional`, והשורות נוצרות כרגילות. | `supabase/rollbacks/rollback_20261108100000_ss_apply_optional_lines.sql` (מחזירה את גרסת S2) |
+| 20261113120000 | ss_lock_function_grants_and_role_escalation | אחרי 20261108100000. מבטלת EXECUTE מ-anon ומ-authenticated על כל הפונקציות ב-public (חוץ מ-pg_trgm), ומשאירה ל-authenticated רק 25 פונקציות. מוסיפה triggers נגד הסלמת תפקידים. **לפני החלה בענן:** לוודא שהפונקציות שבענן זהות למקומיות; לולאת ה-REVOKE דינמית ומכסה כל פונקציה שקיימת. אחרי ההחלה: create_workspace מקבל רק solo. | `supabase/rollbacks/rollback_20261113120000_ss_lock_function_grants_and_role_escalation.sql` (משחזרת את ה-ACL המדויק) |
+| 20261113150000 | ss_membership_write_policies | אחרי 20261113120000. INSERT/UPDATE/DELETE על `ssp_memberships` רק לבעלי ה-workspace ול-org_admin פעיל. **חוסם את patrol_manager** מעדכון סטטוס או מחלקה דרך ה-API. בעלים יוצר לעצמו חברות SSP רק כשאין לו כבר. | `supabase/rollbacks/rollback_20261113150000_ss_membership_write_policies.sql` |
 
 `20261023140000_ssp_unit_login` שייכת ל-SSP ולא להיקף של SITE SECURE. לא נוגעים בה.
 

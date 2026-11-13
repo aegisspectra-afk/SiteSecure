@@ -305,3 +305,88 @@ def test_workspace_administrator_cannot_change_own_role(env):
     )
     row = _svc_get(s, "workspace_memberships", f"workspace_id=eq.{env['ws']}&user_id=eq.{admin_uid}&select=role_key")[0]
     assert row["role_key"] == "administrator"
+
+
+# --- S3b: who may write ssp_memberships at all --------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def department(env):
+    s = env["s"]
+    unit = _svc_post(s, "ssp_org_units", {"workspace_id": env["ws"], "company_pk": env["company"]["id"], "name": "S3b unit"})
+    return _svc_post(
+        s,
+        "ssp_departments",
+        {"workspace_id": env["ws"], "company_pk": env["company"]["id"], "org_unit_id": unit["id"], "key": f"s3b{uuid.uuid4().hex[:6]}", "name_he": "מחלקה"},
+    )
+
+
+def _membership(env, name: str) -> dict:
+    return _svc_get(env["s"], "ssp_memberships", f"id=eq.{env['ssp'][name]['id']}&select=status,department_id,product_role")[0]
+
+
+def test_member_cannot_change_another_members_status(env):
+    s = env["s"]
+    before = _membership(env, "admin")
+    httpx.patch(
+        f"{s.supabase_url}/rest/v1/ssp_memberships?id=eq.{env['ssp']['admin']['id']}",
+        headers={**_rest(s, env["tokens"]["member"]), "Prefer": "return=minimal"},
+        json={"status": "inactive"},
+        timeout=30,
+    )
+    assert _membership(env, "admin") == before
+
+
+def test_member_cannot_change_own_or_others_department(env, department):
+    s = env["s"]
+    headers = {**_rest(s, env["tokens"]["member"]), "Prefer": "return=minimal"}
+    for name in ("member", "admin"):
+        before = _membership(env, name)
+        httpx.patch(
+            f"{s.supabase_url}/rest/v1/ssp_memberships?id=eq.{env['ssp'][name]['id']}",
+            headers=headers,
+            json={"department_id": department["id"]},
+            timeout=30,
+        )
+        assert _membership(env, name) == before, name
+
+
+def test_member_cannot_delete_memberships(env):
+    s = env["s"]
+    headers = {**_rest(s, env["tokens"]["member"]), "Prefer": "return=minimal"}
+    for name in ("admin", "member"):
+        httpx.delete(f"{s.supabase_url}/rest/v1/ssp_memberships?id=eq.{env['ssp'][name]['id']}", headers=headers, timeout=30)
+        assert _svc_get(s, "ssp_memberships", f"id=eq.{env['ssp'][name]['id']}&select=id"), name
+
+
+def test_owner_can_change_a_members_status(env):
+    s = env["s"]
+    target = env["ssp"]["member"]["id"]
+    res = httpx.patch(
+        f"{s.supabase_url}/rest/v1/ssp_memberships?id=eq.{target}",
+        headers={**_rest(s, env["tokens"]["owner"]), "Prefer": "return=minimal"},
+        json={"status": "inactive"},
+        timeout=30,
+    )
+    assert res.status_code in {200, 204}, res.text
+    assert _membership(env, "member")["status"] == "inactive"
+    httpx.patch(
+        f"{s.supabase_url}/rest/v1/ssp_memberships?id=eq.{target}",
+        headers={**_svc(s), "Prefer": "return=minimal"},
+        json={"status": "active"},
+        timeout=30,
+    )
+
+
+def test_owner_bootstraps_own_ssp_membership_only_once(env):
+    s = env["s"]
+    owner_uid = _uid(env["tokens"]["owner"])
+    row = {"workspace_id": env["ws"], "company_pk": env["company"]["id"], "user_id": owner_uid, "product_role": "org_admin"}
+    headers = {**_rest(s, env["tokens"]["owner"]), "Prefer": "return=minimal"}
+    first = httpx.post(f"{s.supabase_url}/rest/v1/ssp_memberships", headers=headers, json=row, timeout=30)
+    assert first.status_code == 201, first.text
+    second = httpx.post(f"{s.supabase_url}/rest/v1/ssp_memberships", headers=headers, json=row, timeout=30)
+    assert second.status_code >= 400
+    # Refused by the explicit rule, not merely by the (company, user) unique constraint.
+    assert "SSP_MEMBERSHIP_EXISTS" in second.text, second.text
+    assert len(_svc_get(s, "ssp_memberships", f"workspace_id=eq.{env['ws']}&user_id=eq.{owner_uid}&select=id")) == 1

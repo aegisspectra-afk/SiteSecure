@@ -1,7 +1,7 @@
 """Apply one migration file to LOCAL Supabase only (127.0.0.1:54322) and register its version.
 
 Usage: python tmp/apply_local_migration.py supabase/migrations/<file>.sql
-       python tmp/apply_local_migration.py --rollback tmp/rollback_<file>.sql
+       python tmp/apply_local_migration.py --rollback supabase/rollbacks/rollback_<file>.sql
 """
 from __future__ import annotations
 

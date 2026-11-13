@@ -18,6 +18,7 @@
 | 20261031193159 | drop_unused_customer_notes_activities | ספירת שורות ב-`customer_notes` וב-`customer_activities` וגיבוי. ה-rollback משחזר רק את מבנה הטבלאות, לא את הנתונים. **לא הוחלה גם מקומית.** | `tmp/rollback_20261031193159_customer_notes.sql` |
 | 20261107120000 | ss_quote_money_lockdown | **מצומדת לקוד ה-API**, ראו סעיף 2 | `tmp/rollback_20261107120000_ss_quote_money_lockdown.sql` |
 | 20261108100000 | ss_apply_optional_lines | אחרי 20261107120000. מחליפה את אותו RPC ושומרת את ה-grants (service_role בלבד). מצומדת לקוד ה-API מ-`0f85b19`: API ישן לא שולח `is_optional`, והשורות נוצרות כרגילות. | `tmp/rollback_20261108100000_ss_apply_optional_lines.sql` (מחזירה את גרסת S2) |
+| 20261113120000 | ss_lock_function_grants_and_role_escalation | אחרי 20261108100000. מבטלת EXECUTE מ-anon ומ-authenticated על כל הפונקציות ב-public (חוץ מ-pg_trgm), ומשאירה ל-authenticated רק 25 פונקציות. מוסיפה triggers נגד הסלמת תפקידים. **לפני החלה בענן:** לוודא שהפונקציות שבענן זהות למקומיות; לולאת ה-REVOKE דינמית ומכסה כל פונקציה שקיימת. אחרי ההחלה: create_workspace מקבל רק solo. | `tmp/rollback_20261113120000_ss_lock_function_grants_and_role_escalation.sql` (משחזרת את ה-ACL המדויק) |
 
 `20261023140000_ssp_unit_login` שייכת ל-SSP ולא להיקף של SITE SECURE. לא נוגעים בה.
 

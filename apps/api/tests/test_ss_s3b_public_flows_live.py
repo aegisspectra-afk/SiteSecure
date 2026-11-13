@@ -165,3 +165,57 @@ def test_ssp_site_activation_code_to_device_session(settings):
 
     reused = api.post("/api/v1/public/ssp/site-activate", json={"code": code, "device_label": "שני"})
     assert reused.status_code >= 400, _snippet(reused)
+
+
+def test_ssp_join_by_user_code_request_and_approve(settings):
+    """/ssp/join -> ssp_request_site_user_join, approve -> ssp_approve_site_user_join (service)."""
+    s, api = settings, TestClient(app)
+    owner, ws_id = _ssp_workspace(s, api, "join")
+    site = api.post(f"/api/v1/workspaces/{ws_id}/ssp/sites", headers=_auth(owner), json={"name": "סניף צפון", "kind": "office"})
+    assert site.status_code in {200, 201}, _snippet(site)
+    site_id = str(site.json()["id"])
+
+    marker = uuid.uuid4().hex[:10]
+    joiner_email, password = f"ss.s3b.joiner.{marker}@sitesecure.test", f"S3b-{marker}-9x"
+    _create_local_user(s, joiner_email, password)
+    joiner = _password_grant(s, joiner_email, password)
+    joiner_uid = _svc_get(s, "profiles", f"email=eq.{joiner_email}&select=id")[0]["id"]
+    added = httpx.post(
+        f"{s.supabase_url}/rest/v1/workspace_memberships",
+        headers={**_svc(s), "Prefer": "return=minimal"},
+        json={"workspace_id": ws_id, "user_id": joiner_uid, "role_key": "technician", "status": "active"},
+        timeout=30,
+    )
+    assert added.status_code == 201, added.text
+
+    def issue() -> str:
+        res = api.post(
+            f"/api/v1/workspaces/{ws_id}/ssp/sites/{site_id}/activation-codes",
+            headers=_auth(owner),
+            json={"audience": "user", "invited_role": "patrol_officer"},
+        )
+        assert res.status_code == 201, _snippet(res)
+        assert res.json()["join_path"]
+        return res.json()["code"]
+
+    code = issue()
+    requested = api.post(f"/api/v1/workspaces/{ws_id}/ssp/join", headers=_auth(joiner), json={"code": code})
+    assert requested.status_code in {200, 201}, _snippet(requested)
+    assert requested.json()["status"] == "pending"
+    enrollment_id = requested.json()["enrollment_id"]
+    assert not _svc_get(s, "ssp_memberships", f"workspace_id=eq.{ws_id}&user_id=eq.{joiner_uid}&select=id")
+
+    approved = api.post(f"/api/v1/workspaces/{ws_id}/ssp/enrollments/{enrollment_id}/approve", headers=_auth(owner))
+    assert approved.status_code == 200, _snippet(approved)
+    rows = _svc_get(s, "ssp_memberships", f"workspace_id=eq.{ws_id}&user_id=eq.{joiner_uid}&select=product_role,status")
+    assert rows == [{"product_role": "patrol_officer", "status": "active"}], rows
+
+    reused = api.post(f"/api/v1/workspaces/{ws_id}/ssp/join", headers=_auth(joiner), json={"code": code})
+    assert reused.status_code >= 400, _snippet(reused)
+
+    # Someone who is not a workspace member cannot redeem a valid code.
+    outsider_email = f"ss.s3b.outsider.{marker}@sitesecure.test"
+    _create_local_user(s, outsider_email, password)
+    outsider = _password_grant(s, outsider_email, password)
+    refused = api.post(f"/api/v1/workspaces/{ws_id}/ssp/join", headers=_auth(outsider), json={"code": issue()})
+    assert refused.status_code in {400, 403, 404}, _snippet(refused)

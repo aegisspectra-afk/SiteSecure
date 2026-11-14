@@ -273,7 +273,7 @@ describe("OpsDashboard", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: he.usageThresholdMeterFull("משתמשים במשרד") })).toBeInTheDocument();
-    expect(screen.getByText(he.usageThresholdBody("1/1 משתמשים במשרד"))).toBeInTheDocument();
+    expect(screen.getByText(he.usageQuotaOf("משתמשים במשרד", 1, 1))).toBeInTheDocument();
     // Phase 1B.3: actionable banner only — no full usage wall on Dashboard.
     expect(screen.queryByRole("heading", { name: he.dashWorkspaceTitle })).not.toBeInTheDocument();
   });

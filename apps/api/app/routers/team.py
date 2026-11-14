@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from ..audit import write_audit
 from ..authz.catalog import load_catalog
 from ..authz.engine import authorize
+from ..authz.limits import evaluate_seat_limit, raise_plan_limit, seat_limit_key
 from ..authz.usage import (
     fetch_customers_count,
     fetch_customers_detail_he,
@@ -108,6 +109,41 @@ def _raise_decision(decision, *, client: UserClient, workspace_id: str, action: 
     )
     status = 401 if decision.code == "UNAUTHENTICATED" else 403
     raise ApiError(status, decision.code or "PERMISSION_DENIED", decision.message_he, decision.details)
+
+
+def _enforce_seat_on_change(
+    client: UserClient,
+    ctx,
+    workspace_id: str,
+    member_id: str,
+    row: dict,
+    patch: dict[str, str],
+) -> None:
+    """A role change or reactivation that takes a seat in a bucket must fit the plan,
+    exactly like an invitation does. Moving within the same bucket, or out of it, is free."""
+    old_role = str(row.get("role_key") or "")
+    old_active = str(row.get("status") or "active") == "active"
+    new_role = patch.get("role_key", old_role)
+    new_active = patch.get("status", row.get("status") or "active") == "active"
+    if not new_active:
+        return
+    if old_active and seat_limit_key(old_role) == seat_limit_key(new_role):
+        return
+    roles = list(fetch_occupancy(client, workspace_id).roles)
+    if old_active and old_role in roles:
+        roles.remove(old_role)  # the member being changed does not compete with itself
+    decision = evaluate_seat_limit(plan_key=ctx.plan_key, invite_role=new_role, occupied_roles=roles)
+    if decision.allowed:
+        return
+    write_audit(
+        client,
+        workspace_id,
+        "users.manage",
+        entity_type="membership",
+        entity_id=member_id,
+        metadata={"result": "denied", "code": decision.code, "role_key": new_role},
+    )
+    raise_plan_limit(decision)
 
 
 def _profile(row: dict) -> dict:
@@ -284,6 +320,7 @@ def patch_member(
         patch["status"] = body.status
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    _enforce_seat_on_change(client, ctx, str(workspace_id), str(member_id), row, patch)
     res = client.patch(
         "workspace_memberships",
         patch,

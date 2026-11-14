@@ -8,7 +8,6 @@ import {
 } from "../../lib/activation";
 import {
   attentionEntityCount,
-  attentionQueue,
   filterLeadAttention,
   leadsToAttentionGroups,
 } from "../../lib/attention-queue";
@@ -90,12 +89,9 @@ export function OpsDashboard({
     ...(showActivation ? [] : leadsToAttentionGroups(leadRows)),
   ];
   const attentionTotal = attentionEntityCount(attentionGroups);
-  const attentionQuoteIds = new Set(
-    attentionQueue(attentionGroups)
-      .filter((row) => row.item.entity_type === "quote")
-      .map((row) => row.item.entity_id),
-  );
-  const recentQuotes = (data.recent_quotes ?? []).filter((quote) => !attentionQuoteIds.has(quote.id));
+  // The API already leaves out quotes shown under "needs attention" (and falls back to the
+  // newest when all of them are there). Filtering again here emptied the card.
+  const recentQuotes = data.recent_quotes ?? [];
   const activityItems = data.activity ?? [];
 
   const setupProgress =
@@ -258,14 +254,9 @@ export function ObserveDashboard({
   const leadRows = filterLeadAttention(leadAttentionItems);
   const attentionGroups = [...data.attention, ...leadsToAttentionGroups(leadRows)];
   const attentionTotal = attentionEntityCount(attentionGroups);
-  const attentionQuoteIds = new Set(
-    attentionQueue(attentionGroups)
-      .filter((row) => row.item.entity_type === "quote")
-      .map((row) => row.item.entity_id),
-  );
   const showToday = data.today.items.length > 0;
   const showAttention = attentionTotal > 0;
-  const recentQuotes = (data.recent_quotes ?? []).filter((quote) => !attentionQuoteIds.has(quote.id));
+  const recentQuotes = data.recent_quotes ?? [];
   const activityItems = data.activity ?? [];
   const showActivity = activityItems.length > 0;
   const empty =

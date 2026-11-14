@@ -26,9 +26,12 @@ export function UsageThresholdBanner({
   const primary = meters[0];
   const line = usageMeterQuotaLine(primary);
   const primaryTone = meterTone(primary);
-  const title = primary.at_limit
-    ? he.usageThresholdMeterFull(primary.label_he)
-    : he.usageThresholdTitle;
+  const over = !primary.unlimited && primary.limit > 0 && primary.current > primary.limit;
+  const title = over
+    ? he.usageThresholdMeterOver(primary.label_he)
+    : primary.at_limit
+      ? he.usageThresholdMeterFull(primary.label_he)
+      : he.usageThresholdTitle;
 
   return (
     <section
@@ -42,7 +45,9 @@ export function UsageThresholdBanner({
         <h2 id="usage-threshold-heading" className="ops-usage-row-title">
           {title}
         </h2>
-        <p className="ops-usage-row-body tabular-nums">{line}</p>
+        <p className="ops-usage-row-body tabular-nums" data-testid="usage-threshold-line">
+          {line}
+        </p>
       </div>
       {canManageTeam ? (
         <Link to="/app/settings/users" className="ops-usage-row-link">

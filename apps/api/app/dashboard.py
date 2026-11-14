@@ -62,6 +62,7 @@ VANITY_KEYS = frozenset(
 ATTENTION_CAP = 5
 TODAY_CAP = 24
 ACTIVITY_CAP = 8
+RECENT_QUOTES_CAP = 5
 
 
 def _resolve_tz(tz_name: str | None) -> ZoneInfo:
@@ -215,6 +216,12 @@ def build_dashboard(
         tz,
         variant=variant,
         assignments_reliable=assignments_reliable,
+        exclude_quote_ids=frozenset(
+            item["entity_id"]
+            for group in attention
+            for item in group["items"]
+            if item.get("entity_type") == "quote"
+        ),
     )
     business_chart = None
     if variant in {"ops", "sales", "observe"} and visible_quotes:
@@ -497,6 +504,7 @@ def _ops_summary(
     *,
     variant: HomeVariant,
     assignments_reliable: bool,
+    exclude_quote_ids: frozenset[str] = frozenset(),
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     statuses = ("draft", "sent", "viewed", "approved", "rejected", "expired", "cancelled")
     counts = {key: 0 for key in statuses}
@@ -539,7 +547,11 @@ def _ops_summary(
 
     recent: list[dict[str, Any]] = []
     if variant != "today":
-        for quote in quotes[:5]:
+        # Quotes already listed under "needs attention" are not repeated here. When every
+        # quote is in that list, fall back to the newest ones: an empty card would claim
+        # there are no quotes at all.
+        fresh = [q for q in quotes if str(q["id"]) not in exclude_quote_ids]
+        for quote in (fresh or quotes)[:RECENT_QUOTES_CAP]:
             recent.append(
                 {
                     "id": str(quote["id"]),

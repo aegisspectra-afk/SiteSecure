@@ -1,3 +1,4 @@
+import { he } from "../i18n/he";
 import type { DashboardSummary, WorkspaceUsageMeter } from "@site-secure/api-client";
 
 /** Percent = approved / counted quotes. Counted statuses today: draft, sent, viewed, approved, rejected. */
@@ -94,11 +95,16 @@ export function storageHint(meter: WorkspaceUsageMeter): string {
   return `${formatStorageBytes(meter.current)} / ${formatStorageBytes(meter.limit)}`;
 }
 
-/** Human line for quota banners: "2/3 מושבים" or storage equivalent. */
+/**
+ * Human line for quota banners: "משתמשים במשרד: 2 מתוך 3". Words, not "2/3": in RTL a
+ * bare "2/1" reads as either "2 of 1" or "1 of 2" depending on how the eye scans it.
+ */
 export function usageMeterQuotaLine(meter: WorkspaceUsageMeter): string {
   if (meter.unit === "bytes") return `${meter.label_he}: ${storageHint(meter)}`;
   if (meter.unlimited || meter.limit <= 0) return `${meter.label_he}: ${meter.current}`;
-  return `${meter.current}/${meter.limit} ${meter.label_he}`;
+  const base = he.usageQuotaOf(meter.label_he, meter.current, meter.limit);
+  const over = meter.current - meter.limit;
+  return over > 0 ? `${base} · ${he.usageQuotaOver(over)}` : base;
 }
 
 export function storageNext(meter: WorkspaceUsageMeter): string | undefined {

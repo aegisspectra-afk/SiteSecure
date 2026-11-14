@@ -113,6 +113,8 @@ export function QuotePipeline({
             </div>
           </dl>
 
+          {/* Rejected appears only when there are some. There is no hidden "0" placeholder:
+              a bare number without its label was announced (and, unstyled, shown) on its own. */}
           {rejected > 0 ? (
             linked && rejectedTab ? (
               <Link
@@ -138,11 +140,7 @@ export function QuotePipeline({
                 </span>
               </div>
             )
-          ) : (
-            <span className="sr-only" data-testid="quote-pipeline-rejected">
-              0
-            </span>
-          )}
+          ) : null}
         </>
       )}
     </section>

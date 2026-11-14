@@ -5,12 +5,12 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Callable, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..authz.engine import authorize
 from ..authz.guard import require
-from ..dashboard import DEFAULT_WORKSPACE_TZ, build_dashboard
+from ..dashboard import ATTENTION_CAP, ATTENTION_FULL_CAP, DEFAULT_WORKSPACE_TZ, build_dashboard
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..identity import actor_id
 from ..rest import as_list
@@ -152,7 +152,10 @@ def get_dashboard(
     workspace_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    attention: Annotated[Literal["summary", "full"], Query()] = "summary",
 ) -> DashboardOut:
+    """attention=full returns every attention item (the unified "show all" list); the
+    dashboard keeps the short per-group preview."""
     ctx = load_authz_context(client, actor_id(user), str(workspace_id))
     require(ctx, "dashboard.view")
 
@@ -307,6 +310,7 @@ def get_dashboard(
         can_jobs_complete=can_jobs_complete,
         assignments_reliable=assignments_reliable,
         project_source_quote_ids=project_source_quote_ids,
+        attention_cap=ATTENTION_FULL_CAP if attention == "full" else ATTENTION_CAP,
     )
     jobs_by_id = {str(j["id"]): j for j in jobs}
     for item in payload.get("today", {}).get("items", []):

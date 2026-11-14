@@ -112,3 +112,15 @@ def test_cross_workspace_member_patch_is_not_found(settings):
     res = api.patch(f"/api/v1/workspaces/{ws_a}/members/{tech_a}", headers=_auth(owner_b), json={"role_key": "viewer"})
     assert res.status_code in {403, 404}, _snippet(res)
     assert _role_of(s, tech_a)[0] == "technician"
+
+
+def test_dashboard_full_attention_is_workspace_scoped(settings):
+    s, api = settings, TestClient(app)
+    owner_a, ws_a = _owner_workspace(s, api, "dash-a")
+    owner_b, _ws_b = _owner_workspace(s, api, "dash-b")
+    own = api.get(f"/api/v1/workspaces/{ws_a}/dashboard", headers=_auth(owner_a), params={"attention": "full"})
+    assert own.status_code == 200, _snippet(own)
+    other = api.get(f"/api/v1/workspaces/{ws_a}/dashboard", headers=_auth(owner_b), params={"attention": "full"})
+    assert other.status_code in {403, 404}, _snippet(other)
+    bad = api.get(f"/api/v1/workspaces/{ws_a}/dashboard", headers=_auth(owner_a), params={"attention": "everything"})
+    assert bad.status_code in {400, 422}, _snippet(bad)

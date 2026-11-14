@@ -63,3 +63,21 @@ def test_recent_quotes_capped_at_five():
     quotes.reverse()
     payload = _build("owner", quotes=quotes)
     assert len(payload["recent_quotes"]) == 5
+
+
+# --- D1: "הצג הכל" — the unified list needs every attention item, not the 5-per-group preview.
+
+def test_attention_is_capped_for_the_dashboard_and_full_on_request():
+    from app.dashboard import ATTENTION_CAP
+
+    quotes = [_quote(i, "sent", f"2026-08-1{i % 10}T00:00:00+00:00") for i in range(1, 9)]
+    preview = _build("owner", quotes=quotes)
+    full = _build("owner", quotes=quotes, attention_cap=200)
+
+    def sent_ids(payload: dict) -> list[str]:
+        group = next(g for g in payload["attention"] if g["kind"] == "quote_awaiting_customer")
+        assert group["count"] == len(group["items"])
+        return [item["entity_id"] for item in group["items"]]
+
+    assert len(sent_ids(preview)) == ATTENTION_CAP
+    assert sorted(sent_ids(full)) == sorted(q["id"] for q in quotes)

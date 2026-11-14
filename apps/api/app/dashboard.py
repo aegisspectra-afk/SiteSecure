@@ -60,6 +60,7 @@ VANITY_KEYS = frozenset(
 )
 
 ATTENTION_CAP = 5
+ATTENTION_FULL_CAP = 200
 TODAY_CAP = 24
 ACTIVITY_CAP = 8
 RECENT_QUOTES_CAP = 5
@@ -138,8 +139,12 @@ def _item(
 def _group(kind: str, label_he: str, items: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not items:
         return None
-    capped = items[:ATTENTION_CAP]
-    return {"kind": kind, "label_he": label_he, "count": len(capped), "items": capped}
+    return {"kind": kind, "label_he": label_he, "count": len(items), "items": list(items)}
+
+
+def _cap_group(group: dict[str, Any], cap: int) -> dict[str, Any]:
+    capped = group["items"][:cap]
+    return {**group, "count": len(capped), "items": capped}
 
 
 def build_dashboard(
@@ -160,7 +165,10 @@ def build_dashboard(
     can_jobs_complete: bool,
     assignments_reliable: bool,
     project_source_quote_ids: frozenset[str] | None = None,
+    attention_cap: int = ATTENTION_CAP,
 ) -> dict[str, Any]:
+    """attention_cap limits items per attention group: ATTENTION_CAP for the dashboard,
+    ATTENTION_FULL_CAP for the unified "show all" list."""
     variant = home_variant(role_key)
     if now.tzinfo is None:
         now = now.replace(tzinfo=UTC)
@@ -197,6 +205,8 @@ def build_dashboard(
         group = _group("job_overdue", "עבודות באיחור", overdue)
         if group:
             attention.append(group)
+
+    attention = [_cap_group(group, attention_cap) for group in attention]
 
     today_items = _today_jobs(
         visible_jobs,

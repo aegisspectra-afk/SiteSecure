@@ -108,9 +108,9 @@ describe("DASH-5 QuotePipeline", () => {
     expect(screen.getByTestId("quote-pipeline-viewed")).toHaveTextContent("2");
     expect(screen.getByTestId("quote-pipeline-approved")).toHaveTextContent("1");
     expect(screen.getByTestId("quote-pipeline-rejected")).toHaveTextContent("1");
-    expect(screen.getByText(he.snapshotOpenValue)).toBeInTheDocument();
-    expect(screen.getByText(/84,200/)).toBeInTheDocument();
-    expect(screen.getByText(/12,000/)).toBeInTheDocument();
+    // D1: open/approved values are shown once, in the hero balance, not again here.
+    expect(screen.queryByText(he.snapshotOpenValue)).not.toBeInTheDocument();
+    expect(screen.queryByText(/84,200/)).not.toBeInTheDocument();
     expect(document.querySelectorAll(".ops-quote-pipeline-count.ltr-meta").length).toBeGreaterThan(0);
   });
 
@@ -164,14 +164,9 @@ describe("DASH-5 RecentQuotes", () => {
   });
 
   it("shows compact empty state without competing hero CTA", () => {
-    render(<RecentQuotes quotes={[]} canCreate />);
+    // D1: "הצעת מחיר חדשה" lives once, in the hero quick actions.
+    render(<RecentQuotes quotes={[]} />);
     expect(screen.getByTestId("recent-quotes-empty")).toBeInTheDocument();
-    expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.newQuoteAction })).toBeInTheDocument();
-  });
-
-  it("hides create on empty when read-only", () => {
-    render(<RecentQuotes quotes={[]} canCreate={false} />);
     expect(screen.getByText(he.recentQuotesEmptyTitle)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: he.newQuoteAction })).not.toBeInTheDocument();
   });

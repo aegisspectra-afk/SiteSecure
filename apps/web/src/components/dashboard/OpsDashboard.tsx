@@ -187,7 +187,6 @@ export function OpsDashboard({
                     <CommandStatus
                       attention={attentionGroups}
                       canCreateProject={canCreateProject}
-                      viewAllTo={showQuotes ? "/app/quotes" : "/app/today"}
                       workspaceId={workspaceId}
                     />
                   ) : null}
@@ -202,7 +201,7 @@ export function OpsDashboard({
                   {showActivity ? <DashboardActivity items={activityItems} /> : null}
                   {showCommercial && summary ? <QuotePipeline summary={summary} /> : null}
                   {showCommercial ? (
-                    <RecentQuotes quotes={recentQuotes} canCreate={Boolean(quoteCta)} />
+                    <RecentQuotes quotes={recentQuotes} />
                   ) : null}
                 </div>
               </DashboardZone>
@@ -308,7 +307,7 @@ export function ObserveDashboard({
             <div className={secondaryClass}>
               {showActivity ? <DashboardActivity items={activityItems} /> : null}
               {showQuotes && data.summary ? <QuotePipeline summary={data.summary} linked={false} /> : null}
-              {showQuotes ? <RecentQuotes quotes={recentQuotes} canCreate={false} /> : null}
+              {showQuotes ? <RecentQuotes quotes={recentQuotes} /> : null}
             </div>
           </DashboardZone>
         ) : null}

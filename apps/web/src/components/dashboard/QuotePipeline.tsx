@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@site-secure/ui";
 import type { DashboardSummary } from "@site-secure/api-client";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
 import { pipelineTabForStatus } from "../../lib/quote-workspace";
 
 const FLOW = ["draft", "sent", "viewed", "approved"] as const;
@@ -98,20 +97,7 @@ export function QuotePipeline({
             })}
           </ol>
 
-          <dl className="ops-quote-pipeline-values">
-            <div className="ops-quote-pipeline-value">
-              <dt>{he.snapshotOpenValue}</dt>
-              <dd className="tabular-nums ltr-meta" dir="ltr">
-                {formatMoney(summary.quotes_open_value ?? 0)}
-              </dd>
-            </div>
-            <div className="ops-quote-pipeline-value is-approved">
-              <dt>{he.snapshotApprovedValue}</dt>
-              <dd className="tabular-nums ltr-meta" dir="ltr">
-                {formatMoney(summary.quotes_approved_value ?? 0)}
-              </dd>
-            </div>
-          </dl>
+          {/* Open and approved values live once, in the dashboard hero balance. */}
 
           {/* Rejected appears only when there are some. There is no hidden "0" placeholder:
               a bare number without its label was announced (and, unstyled, shown) on its own. */}

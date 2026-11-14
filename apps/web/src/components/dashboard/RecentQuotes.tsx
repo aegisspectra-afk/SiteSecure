@@ -4,18 +4,15 @@ import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
 import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { relativeAgeLabel } from "../../lib/relative-age";
-import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
 const MAX_RECENT = 5;
 
 /** DASH-5 — dense quote list (not an admin table). */
 export function RecentQuotes({
   quotes,
-  canCreate = false,
   embedded = false,
 }: {
   quotes: RecentQuote[];
-  canCreate?: boolean;
   embedded?: boolean;
 }) {
   const rows = quotes.slice(0, MAX_RECENT);
@@ -25,9 +22,6 @@ export function RecentQuotes({
       <div className="ops-recent-empty" data-testid="recent-quotes-empty">
         <p className="text-sm font-medium text-fg">{he.recentQuotesEmptyTitle}</p>
         <p className="mt-1 text-sm text-fg-muted">{he.recentQuotesEmptyBody}</p>
-        {canCreate ? (
-          <NewQuoteButton className="mt-3 ops-qa-primary is-quote-cta">{he.newQuoteAction}</NewQuoteButton>
-        ) : null}
       </div>
     );
     if (embedded) return empty;

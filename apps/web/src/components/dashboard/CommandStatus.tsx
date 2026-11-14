@@ -9,12 +9,13 @@ import { DashboardCreateProjectDialog } from "./DashboardCreateProjectDialog";
 export function CommandStatus({
   attention = [],
   canCreateProject = true,
-  viewAllTo = "/app/quotes",
+  viewAllTo = "/app/attention",
   workspaceId,
 }: {
   attention?: AttentionGroup[];
   canCreateProject?: boolean;
-  viewAllTo?: "/app/quotes" | "/app/today" | "/app/leads";
+  /** "Show all" opens the unified list (quotes, jobs and leads), not one module's list. */
+  viewAllTo?: "/app/attention";
   workspaceId?: string | null;
 }) {
   const [projectItem, setProjectItem] = useState<DashboardItem | null>(null);
@@ -52,7 +53,7 @@ export function CommandStatus({
           {he.dashCommandQueueCount(count)}
         </h2>
         {hasMore ? (
-          <Link to={viewAllTo} className="ops-section-link">
+          <Link to={viewAllTo} className="ops-section-link" data-testid="attention-view-all">
             {he.attentionShowAll}
           </Link>
         ) : null}

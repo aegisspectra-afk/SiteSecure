@@ -33,6 +33,7 @@ import { Route as AdminOrganizationsRouteImport } from "./routes/admin/organizat
 import { Route as AdminUsersRouteImport } from "./routes/admin/users"
 import { Route as AppIndexRouteImport } from "./routes/app/index"
 import { Route as AppAnalyticsRouteImport } from "./routes/app/analytics"
+import { Route as AppAttentionRouteImport } from "./routes/app/attention"
 import { Route as AppCatalogRouteImport } from "./routes/app/catalog"
 import { Route as AppDashboardRouteImport } from "./routes/app/dashboard"
 import { Route as AppFleetRouteRouteImport } from "./routes/app/fleet/route"
@@ -264,6 +265,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   id: "/analytics",
   path: "/analytics",
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppAttentionRoute = AppAttentionRouteImport.update({
+  id: "/attention",
+  path: "/attention",
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppCatalogRoute = AppCatalogRouteImport.update({
@@ -859,6 +865,7 @@ export interface FileRoutesByFullPath {
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/analytics": typeof AppAnalyticsRoute
+  "/app/attention": typeof AppAttentionRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
@@ -987,6 +994,7 @@ export interface FileRoutesByTo {
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/analytics": typeof AppAnalyticsRoute
+  "/app/attention": typeof AppAttentionRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
@@ -1125,6 +1133,7 @@ export interface FileRoutesById {
   "/admin/organizations": typeof AdminOrganizationsRoute
   "/admin/users": typeof AdminUsersRoute
   "/app/analytics": typeof AppAnalyticsRoute
+  "/app/attention": typeof AppAttentionRoute
   "/app/catalog": typeof AppCatalogRoute
   "/app/dashboard": typeof AppDashboardRoute
   "/app/today": typeof AppTodayRoute
@@ -1265,6 +1274,7 @@ export interface FileRouteTypes {
     | "/admin/organizations"
     | "/admin/users"
     | "/app/analytics"
+    | "/app/attention"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
@@ -1393,6 +1403,7 @@ export interface FileRouteTypes {
     | "/admin/organizations"
     | "/admin/users"
     | "/app/analytics"
+    | "/app/attention"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
@@ -1530,6 +1541,7 @@ export interface FileRouteTypes {
     | "/admin/organizations"
     | "/admin/users"
     | "/app/analytics"
+    | "/app/attention"
     | "/app/catalog"
     | "/app/dashboard"
     | "/app/today"
@@ -1832,6 +1844,13 @@ declare module "@tanstack/react-router" {
       path: "/analytics"
       fullPath: "/app/analytics"
       preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    "/app/attention": {
+      id: "/app/attention"
+      path: "/attention"
+      fullPath: "/app/attention"
+      preLoaderRoute: typeof AppAttentionRouteImport
       parentRoute: typeof AppRouteRoute
     }
     "/app/catalog": {
@@ -2869,6 +2888,7 @@ interface AppRouteRouteChildren {
   AppSspRouteRoute: typeof AppSspRouteRouteWithChildren
   AppWorkforceRouteRoute: typeof AppWorkforceRouteRouteWithChildren
   AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAttentionRoute: typeof AppAttentionRoute
   AppCatalogRoute: typeof AppCatalogRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppTodayRoute: typeof AppTodayRoute
@@ -2901,6 +2921,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSspRouteRoute: AppSspRouteRouteWithChildren,
   AppWorkforceRouteRoute: AppWorkforceRouteRouteWithChildren,
   AppAnalyticsRoute: AppAnalyticsRoute,
+  AppAttentionRoute: AppAttentionRoute,
   AppCatalogRoute: AppCatalogRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppTodayRoute: AppTodayRoute,

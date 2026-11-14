@@ -2293,8 +2293,11 @@ export function createApiClient(opts: {
         body: JSON.stringify(body),
       }),
     getWorkspace: (workspaceId: string) => request<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`),
-    getDashboard: (workspaceId: string) =>
-      request<DashboardResponse>(`/api/v1/workspaces/${workspaceId}/dashboard`),
+    /** attention: "full" returns every attention item (unified "show all" list). */
+    getDashboard: (workspaceId: string, opts?: { attention?: "summary" | "full" }) =>
+      request<DashboardResponse>(
+        `/api/v1/workspaces/${workspaceId}/dashboard${opts?.attention === "full" ? "?attention=full" : ""}`,
+      ),
     listNotifications: (
       workspaceId: string,
       opts: { unread_only?: boolean; limit?: number; cursor?: string | null } = {},

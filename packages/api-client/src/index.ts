@@ -483,6 +483,24 @@ export type DashboardResponse = {
   summary: DashboardSummary;
   recent_quotes: RecentQuote[];
   business_chart?: BusinessChart | null;
+  /** Owner/administrator/manager only. */
+  ops_board?: OpsBoard | null;
+};
+
+export type OpsTechnician = {
+  user_id: string;
+  /** Full name or email; "לא ידוע" when the member cannot be read. */
+  name: string;
+  jobs_today: number;
+  in_progress: number;
+  completed: number;
+};
+
+export type OpsBoard = {
+  technicians: OpsTechnician[];
+  jobs_today: number;
+  unassigned_today: number;
+  unassigned_open: number;
 };
 
 export type NotificationOut = {

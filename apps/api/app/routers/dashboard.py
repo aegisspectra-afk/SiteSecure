@@ -106,6 +106,23 @@ class BusinessChartOut(BaseModel):
     conversion_change_percent: int | None = None
 
 
+class OpsTechnicianOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: str
+    name: str
+    jobs_today: int
+    in_progress: int
+    completed: int
+
+
+class OpsBoardOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    technicians: list[OpsTechnicianOut]
+    jobs_today: int
+    unassigned_today: int
+    unassigned_open: int
+
+
 class DashboardOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
     home_variant: Literal["ops", "sales", "today", "observe"]
@@ -116,6 +133,8 @@ class DashboardOut(BaseModel):
     summary: DashboardSummaryOut
     recent_quotes: list[RecentQuoteOut]
     business_chart: BusinessChartOut | None = None
+    # Owner/administrator/manager only (assignment data is reliable for them).
+    ops_board: OpsBoardOut | None = None
 
 
 def _optional_list(res) -> list[dict[str, Any]]:
@@ -253,6 +272,19 @@ def get_dashboard(
         phase2["sites"] = lambda: _optional_list(
             client.get("sites", params={"id": site_filter, "select": "id,name,address"})
         )
+    assignee_ids = {uid for ids in job_assignees.values() for uid in ids}
+    if assignments_reliable and can_jobs_view and assignee_ids:
+        # Names of assigned technicians, read under RLS and scoped to this workspace.
+        phase2["members"] = lambda: _optional_list(
+            client.get(
+                "workspace_memberships",
+                params={
+                    "workspace_id": f"eq.{ws}",
+                    "user_id": f"in.({','.join(sorted(assignee_ids))})",
+                    "select": "user_id,profiles(full_name,email)",
+                },
+            )
+        )
     if approved_ids:
         phase2["projects"] = lambda: _optional_list(
             client.get(
@@ -283,6 +315,15 @@ def get_dashboard(
         if line:
             site_addresses[str(row["id"])] = line
 
+    member_names: dict[str, str] = {}
+    for row in batch2.get("members") or []:
+        profile = row.get("profiles") or {}
+        if isinstance(profile, list):
+            profile = profile[0] if profile else {}
+        label = str(profile.get("full_name") or "").strip() or str(profile.get("email") or "").strip()
+        if label:
+            member_names[str(row["user_id"])] = label
+
     events: list[dict[str, Any]] = []
     quote_numbers = {str(q["id"]): q.get("number") or "" for q in quotes}
     for event in raw_events:
@@ -311,6 +352,7 @@ def get_dashboard(
         assignments_reliable=assignments_reliable,
         project_source_quote_ids=project_source_quote_ids,
         attention_cap=ATTENTION_FULL_CAP if attention == "full" else ATTENTION_CAP,
+        member_names=member_names,
     )
     jobs_by_id = {str(j["id"]): j for j in jobs}
     for item in payload.get("today", {}).get("items", []):

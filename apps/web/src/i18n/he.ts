@@ -258,6 +258,15 @@ export const he = {
   usageThresholdBody: (detail: string) => detail,
   usageThresholdHint: "מומלץ לבדוק בהגדרות אם צריך להרחיב מכסה.",
   attentionShowAll: "הצג הכל →",
+  opsBoardTitle: "תפעול",
+  opsBoardByTechnician: "עבודות היום לפי טכנאי",
+  opsBoardTechLine: (total: number, active: number, done: number) =>
+    `${total === 1 ? "עבודה אחת היום" : `${total} עבודות היום`} · ${active} בביצוע · ${done} הסתיימו`,
+  opsBoardNoAssignedToday: "אין היום עבודות משובצות לטכנאים",
+  opsBoardUnassignedTitle: "עבודות לא משובצות",
+  opsBoardUnassignedLine: (open: number, today: number) =>
+    open === 0 ? "כל העבודות הפתוחות משובצות" : `${open} פתוחות ללא טכנאי · ${today} מהן היום`,
+  opsBoardUnassignedCta: "לשיבוץ",
   attentionPageTitle: (count: number) => `דורשים טיפול · ${count}`,
   attentionPageBack: "← חזרה ללוח הבקרה",
   attentionPageError: "לא ניתן לטעון את רשימת הפריטים שדורשים טיפול",

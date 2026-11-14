@@ -22,6 +22,7 @@ import { buildCreateActions } from "./DashboardCreateMenu";
 import { DashboardCommandHero } from "./DashboardCommandHero";
 import { DashboardFreshness } from "./DashboardFreshness";
 import { DashboardZone } from "./DashboardZone";
+import { OpsBoardCard } from "./OpsBoardCard";
 import { QuotePipeline } from "./QuotePipeline";
 import { RecentQuotes } from "./RecentQuotes";
 import { UsageThresholdBanner, usageThresholdMeters } from "./UsageThresholdBanner";
@@ -99,6 +100,9 @@ export function OpsDashboard({
       ? { percent: setup.percent, done: setup.done, total: setup.total }
       : null;
   const todayItems = data.today.items;
+  // The API sends ops_board only to owner/administrator/manager (who can assign jobs);
+  // the same rule is applied here so a stray payload is never shown to other roles.
+  const opsBoard = can(roleKey, "jobs.assign", features) ? (data.ops_board ?? null) : null;
   // Sales API returns empty today jobs by design — hide the empty Today tile (no /app/today ping-pong).
   const showToday =
     can(roleKey, "jobs.view", features) && homeVariant(roleKey) !== "sales";
@@ -112,7 +116,7 @@ export function OpsDashboard({
   const showCommercial = showQuotes && Boolean(summary) && !showActivation;
   const showUtility = showActivation || showUsageBanner;
 
-  const showPrimary = showTodaySection || showAttention;
+  const showPrimary = showTodaySection || showAttention || Boolean(opsBoard);
   const showSecondary = showActivity || showCommercial;
 
   const isSparseWorkbench = !showAttention && !showSecondary && showTodaySection && showUtility;
@@ -162,6 +166,7 @@ export function OpsDashboard({
         {isSparseWorkbench ? (
           <div className="ops-command-workbench is-low-data">
             {showTodaySection ? <ActiveWork items={todayItems} compactEmpty /> : null}
+            {opsBoard ? <OpsBoardCard board={opsBoard} /> : null}
             <div className="ops-command-rail">
               {showActivation ? (
                 <ActivationCard
@@ -192,6 +197,7 @@ export function OpsDashboard({
                   ) : null}
                   {showTodaySection ? <ActiveWork items={todayItems} compactEmpty /> : null}
                 </div>
+                {opsBoard ? <OpsBoardCard board={opsBoard} /> : null}
               </DashboardZone>
             ) : null}
 

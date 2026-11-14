@@ -1,5 +1,9 @@
-"""D1 bug: "משתמשים במשרד 2/1". Only the invite path checked the seat limit; changing a
-member's role into the office bucket, or reactivating a disabled one, did not.
+"""D1 dashboard, live against LOCAL Supabase.
+
+- Seat limit: only the invite path checked it; changing a member's role into the office
+  bucket, or reactivating a disabled one, did not.
+- "הצג הכל": the full attention list stays workspace scoped.
+- Ops card: technician names are read under RLS for this workspace.
 
 LOCAL Supabase only. Solo plan from catalog.json: seats_operator=1 (the owner).
 """
@@ -124,3 +128,45 @@ def test_dashboard_full_attention_is_workspace_scoped(settings):
     assert other.status_code in {403, 404}, _snippet(other)
     bad = api.get(f"/api/v1/workspaces/{ws_a}/dashboard", headers=_auth(owner_a), params={"attention": "everything"})
     assert bad.status_code in {400, 422}, _snippet(bad)
+
+
+def _svc_insert(s, table: str, row: dict) -> dict:
+    res = httpx.post(
+        f"{s.supabase_url}/rest/v1/{table}",
+        headers={**_svc(s), "Prefer": "return=representation"},
+        json=row,
+        timeout=30,
+    )
+    assert res.status_code == 201, res.text
+    return res.json()[0]
+
+
+def test_ops_board_names_todays_technicians_within_the_workspace(settings):
+    """D1 ops card, live: technician names are read under RLS for this workspace only."""
+    from datetime import UTC, datetime
+
+    s, api = settings, TestClient(app)
+    owner, ws_id = _owner_workspace(s, api, "ops")
+    owner_b, _ws_b = _owner_workspace(s, api, "ops-b")
+    marker = uuid.uuid4().hex[:8]
+    tech_email = f"ss.d1.tech.{marker}@sitesecure.test"
+    tech_uid = _create_local_user(s, tech_email, f"D1-{marker}-9x")
+    _svc_insert(s, "workspace_memberships", {"workspace_id": ws_id, "user_id": tech_uid, "role_key": "technician", "status": "active"})
+    customer = _svc_insert(s, "customers", {"workspace_id": ws_id, "display_name": f"לקוח {marker}"})
+    site = _svc_insert(s, "sites", {"workspace_id": ws_id, "customer_id": customer["id"], "code": f"S{marker}", "name": "אתר"})
+    now = datetime.now(UTC).isoformat()
+    base = {"workspace_id": ws_id, "customer_id": customer["id"], "site_id": site["id"], "status": "in_progress", "scheduled_for": now}
+    assigned = _svc_insert(s, "jobs", {**base, "number": f"J-{marker}-1", "title": "התקנה"})
+    _svc_insert(s, "jobs", {**base, "number": f"J-{marker}-2", "title": "ללא טכנאי", "status": "scheduled"})
+    _svc_insert(s, "assignments", {"workspace_id": ws_id, "user_id": tech_uid, "resource_type": "job", "resource_id": assigned["id"]})
+
+    res = api.get(f"/api/v1/workspaces/{ws_id}/dashboard", headers=_auth(owner))
+    assert res.status_code == 200, _snippet(res)
+    board = res.json()["ops_board"]
+    assert board["technicians"] == [
+        {"user_id": tech_uid, "name": tech_email, "jobs_today": 1, "in_progress": 1, "completed": 0}
+    ], board
+    assert board["unassigned_open"] == 1
+
+    other = api.get(f"/api/v1/workspaces/{ws_id}/dashboard", headers=_auth(owner_b))
+    assert other.status_code in {403, 404}, _snippet(other)

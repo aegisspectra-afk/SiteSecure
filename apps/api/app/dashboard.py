@@ -166,6 +166,7 @@ def build_dashboard(
     assignments_reliable: bool,
     project_source_quote_ids: frozenset[str] | None = None,
     attention_cap: int = ATTENTION_CAP,
+    member_names: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """attention_cap limits items per attention group: ATTENTION_CAP for the dashboard,
     ATTENTION_FULL_CAP for the unified "show all" list."""
@@ -217,6 +218,10 @@ def build_dashboard(
         can_jobs_complete=can_jobs_complete and variant == "today",
     )
 
+    ops_board = None
+    if variant == "ops" and assignments_reliable and can_jobs_view:
+        ops_board = _ops_board(today_items, visible_jobs, job_assignees, member_names or {})
+
     summary, recent_quotes = _ops_summary(
         visible_quotes,
         visible_jobs,
@@ -245,6 +250,7 @@ def build_dashboard(
         "summary": summary,
         "recent_quotes": recent_quotes,
         "business_chart": business_chart,
+        "ops_board": ops_board,
     }
     _assert_no_vanity(payload)
     return payload
@@ -460,6 +466,62 @@ def _today_jobs(
         )
     )
     return rows
+
+
+ACTIVE_JOB = frozenset({"en_route", "arrived", "in_progress", "blocked"})
+UNKNOWN_MEMBER_HE = "לא ידוע"
+
+
+def _ops_board(
+    today_items: list[dict[str, Any]],
+    jobs: list[dict[str, Any]],
+    job_assignees: dict[str, set[str]],
+    member_names: dict[str, str],
+) -> dict[str, Any]:
+    """Ops card: today's jobs per technician and jobs nobody is assigned to.
+
+    "Today" is the same set as the Today list (_today_jobs). A job with two assignees
+    counts for both. Names come from workspace memberships; a missing one is "לא ידוע".
+    """
+    today_ids = {str(row["entity_id"]) for row in today_items if row.get("entity_type") == "job"}
+    per_user: dict[str, dict[str, Any]] = {}
+    unassigned_today = 0
+    for row in today_items:
+        if row.get("entity_type") != "job":
+            continue
+        job_id = str(row["entity_id"])
+        status = str(row.get("status") or "")
+        assignees = job_assignees.get(job_id, set())
+        if not assignees:
+            if status != "completed":
+                unassigned_today += 1
+            continue
+        for user_id in assignees:
+            entry = per_user.setdefault(
+                user_id,
+                {
+                    "user_id": user_id,
+                    "name": member_names.get(user_id) or UNKNOWN_MEMBER_HE,
+                    "jobs_today": 0,
+                    "in_progress": 0,
+                    "completed": 0,
+                },
+            )
+            entry["jobs_today"] += 1
+            if status in ACTIVE_JOB:
+                entry["in_progress"] += 1
+            elif status == "completed":
+                entry["completed"] += 1
+    unassigned_open = sum(
+        1 for job in jobs if job.get("status") in OPEN_JOB and not job_assignees.get(str(job["id"]))
+    )
+    technicians = sorted(per_user.values(), key=lambda e: (-e["jobs_today"], e["name"]))
+    return {
+        "technicians": technicians,
+        "jobs_today": len(today_ids),
+        "unassigned_today": unassigned_today,
+        "unassigned_open": unassigned_open,
+    }
 
 
 def _activity(

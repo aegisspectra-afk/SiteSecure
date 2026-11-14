@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Menu, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { he } from "../../../i18n/he";
+import { DisabledReason } from "./DisabledReason";
 import { QuoteStepper } from "./QuoteStepper";
 import { QuoteSaveIndicator } from "./QuoteSaveIndicator";
 import type { QuoteWorkspaceStep } from "./types";
@@ -19,11 +20,8 @@ export function QuoteHeader({
   hasLiveId,
   activeStep,
   onStepSelect,
-  canEdit,
-  savePending,
-  saveDisabled,
-  onSave,
   previewDisabled,
+  previewDisabledReason,
   onPreview,
   primaryCtaLabel,
   primaryCtaDisabled,
@@ -54,11 +52,9 @@ export function QuoteHeader({
   hasLiveId: boolean;
   activeStep: QuoteWorkspaceStep;
   onStepSelect: (step: QuoteWorkspaceStep) => void;
-  canEdit: boolean;
-  savePending: boolean;
-  saveDisabled: boolean;
-  onSave: () => void;
   previewDisabled: boolean;
+  /** Why preview is disabled; shown as a tooltip (a disabled button cannot show one). */
+  previewDisabledReason?: string;
   onPreview: () => void;
   primaryCtaLabel: string | null;
   primaryCtaDisabled: boolean;
@@ -128,25 +124,25 @@ export function QuoteHeader({
         </div>
 
         <div className="cpq-header-actions cpq-header-actions-desktop">
-          {canEdit ? (
-            <Button variant="ghost" loading={savePending} disabled={saveDisabled} onClick={onSave}>
-              {he.save}
+          {/* No manual "save": the draft saves itself (QuoteSaveIndicator shows when). */}
+          <DisabledReason reason={previewDisabled ? previewDisabledReason : undefined}>
+            <Button variant="secondary" disabled={previewDisabled} onClick={onPreview}>
+              {he.cpqCustomerView}
             </Button>
-          ) : null}
-          <Button variant="secondary" disabled={previewDisabled} onClick={onPreview}>
-            {he.cpqCustomerView}
-          </Button>
+          </DisabledReason>
           {primaryCtaLabel ? (
-            <Button
-              className="cpq-header-primary-cta"
-              variant={primaryCtaVariant}
-              disabled={primaryCtaDisabled}
-              title={primaryCtaTitle}
-              loading={primaryCtaLoading}
-              onClick={onPrimaryCta}
-            >
-              {primaryCtaLabel}
-            </Button>
+            <DisabledReason reason={primaryCtaDisabled ? primaryCtaTitle : undefined}>
+              <Button
+                className="cpq-header-primary-cta"
+                variant={primaryCtaVariant}
+                disabled={primaryCtaDisabled}
+                title={primaryCtaTitle}
+                loading={primaryCtaLoading}
+                onClick={onPrimaryCta}
+              >
+                {primaryCtaLabel}
+              </Button>
+            </DisabledReason>
           ) : null}
           <div className="relative" ref={moreMenuRef}>
             <Button

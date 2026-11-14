@@ -247,7 +247,8 @@ describe("Quote mobile actions", () => {
   it("keeps low-frequency actions in overflow", () => {
     renderBuilder(quote());
     openMobileOverflow();
-    expect(screen.getByRole("menuitem", { name: he.save })).toBeInTheDocument();
+    // Q1: drafts save automatically; there is no manual "שמירה" item.
+    expect(screen.queryByRole("menuitem", { name: he.save })).not.toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: he.quotePdfDownload })).toBeInTheDocument();
   });
 

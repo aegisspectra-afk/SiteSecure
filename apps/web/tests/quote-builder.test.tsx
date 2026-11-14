@@ -225,7 +225,8 @@ describe("CPQ builder", () => {
   it("opens an unsaved quote locally without creating a draft", async () => {
     vi.useFakeTimers();
     renderBuilder(unsavedQuote("ws"));
-    expect(screen.getByText(he.quoteUnsaved)).toBeInTheDocument();
+    // Q1: the status chip says "טיוטה"; the save line explains autosave instead of repeating it.
+    expect(screen.getByText(he.cpqAutosavePending)).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: he.cpqCustomerView })[0]).toBeDisabled();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);

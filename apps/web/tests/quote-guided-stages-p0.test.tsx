@@ -182,11 +182,11 @@ describe("QuoteBuilder guided stages P0", () => {
 
   it("preserves title draft across stage switches", () => {
     renderBuilder(quote());
-    const title = screen.getByLabelText(he.quoteTitle);
+    const title = screen.getByLabelText(he.quoteNameOptional);
     fireEvent.change(title, { target: { value: "הצעת בדיקה" } });
     clickStage(he.cpqWorkflowContent);
     clickStage(he.cpqWorkflowDetails);
-    expect((screen.getByLabelText(he.quoteTitle) as HTMLInputElement).value).toBe("הצעת בדיקה");
+    expect((screen.getByLabelText(he.quoteNameOptional) as HTMLInputElement).value).toBe("הצעת בדיקה");
     expect(createQuote).not.toHaveBeenCalled();
   });
 });

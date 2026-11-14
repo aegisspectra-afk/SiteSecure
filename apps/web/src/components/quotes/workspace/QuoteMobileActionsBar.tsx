@@ -3,6 +3,7 @@ import { ChevronUp, MoreHorizontal } from "lucide-react";
 import { memo, useEffect, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { he } from "../../../i18n/he";
+import { DisabledReason } from "./DisabledReason";
 
 /**
  * Single persistent Quote Builder mobile dock.
@@ -17,6 +18,7 @@ export const QuoteMobileActionsBar = memo(function QuoteMobileActionsBar({
   statusLabel,
   canEdit,
   previewDisabled,
+  previewDisabledReason,
   onPreview,
   onAdd,
   primaryCtaLabel,
@@ -37,6 +39,7 @@ export const QuoteMobileActionsBar = memo(function QuoteMobileActionsBar({
   statusLabel: string;
   canEdit: boolean;
   previewDisabled: boolean;
+  previewDisabledReason?: string;
   onPreview: () => void;
   onAdd: () => void;
   primaryCtaLabel: string | null;
@@ -83,6 +86,7 @@ export const QuoteMobileActionsBar = memo(function QuoteMobileActionsBar({
         </button>
 
         {showPrimaryCta && primaryCtaLabel ? (
+          <DisabledReason reason={primaryCtaDisabled ? primaryCtaTitle : undefined}>
           <Button
             type="button"
             className="cpq-mobile-action-primary"
@@ -93,6 +97,7 @@ export const QuoteMobileActionsBar = memo(function QuoteMobileActionsBar({
           >
             {primaryCtaLabel}
           </Button>
+          </DisabledReason>
         ) : null}
 
         <div className="relative cpq-mobile-action-overflow" ref={overflowRef}>
@@ -125,12 +130,16 @@ export const QuoteMobileActionsBar = memo(function QuoteMobileActionsBar({
                   type="button"
                   role="menuitem"
                   disabled={previewDisabled}
+                  title={previewDisabled ? previewDisabledReason : undefined}
                   onClick={() => {
                     onPreview();
                     onOverflowToggle();
                   }}
                 >
                   {he.cpqCustomerView}
+                  {previewDisabled && previewDisabledReason ? (
+                    <span className="block text-xs text-fg-muted">{previewDisabledReason}</span>
+                  ) : null}
                 </button>
               </div>
               {overflowMenu}

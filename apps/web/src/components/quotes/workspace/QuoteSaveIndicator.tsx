@@ -1,7 +1,10 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import { he } from "../../../i18n/he";
 
-const SAVED_AGO_TICK_MS = 30_000;
+/** 24-hour local time of the last save, e.g. "23:58". */
+export function formatSavedTime(at: number): string {
+  return new Intl.DateTimeFormat("he-IL", { hour: "2-digit", minute: "2-digit", hour12: false }).format(at);
+}
 
 export const QuoteSaveIndicator = memo(function QuoteSaveIndicator({
   saveState,
@@ -14,31 +17,20 @@ export const QuoteSaveIndicator = memo(function QuoteSaveIndicator({
   dirty: boolean;
   hasLiveId: boolean;
 }) {
-  const [tick, setTick] = useState(0);
-
-  const showSavedAgo = saveState === "saved" && hasLiveId && !dirty && savedAt != null;
-
-  useEffect(() => {
-    if (!showSavedAgo) return;
-    const id = window.setInterval(() => setTick((value) => value + 1), SAVED_AGO_TICK_MS);
-    return () => window.clearInterval(id);
-  }, [showSavedAgo, savedAt]);
-
   const label = useMemo(() => {
     if (saveState === "saving") return he.cpqSaving;
     if (saveState === "error") return he.quoteSaveError;
-    if (!hasLiveId) return he.quoteUnsaved;
+    // The status chip already says "טיוטה"; this line only talks about saving.
+    if (!hasLiveId) return he.cpqAutosavePending;
     if (dirty) return he.cpqUnsavedChanges;
-    if (savedAt) {
-      return he.cpqSavedAgo(Math.max(0, Math.round((Date.now() - savedAt) / 1000)));
-    }
+    if (savedAt) return he.cpqSavedAt(formatSavedTime(savedAt));
     return he.cpqSavedJustNow;
-  }, [dirty, hasLiveId, saveState, savedAt, tick]);
+  }, [dirty, hasLiveId, saveState, savedAt]);
 
   const dotState = saveState === "error" ? "error" : dirty ? "dirty" : saveState;
 
   return (
-    <p className="cpq-save-state cpq-save-state-inline" aria-live="polite">
+    <p className="cpq-save-state cpq-save-state-inline" aria-live="polite" data-testid="quote-save-indicator">
       <span className={`cpq-save-dot is-${dotState}`} />
       {label}
     </p>

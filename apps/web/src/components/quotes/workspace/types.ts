@@ -15,6 +15,11 @@ export function adjacentQuoteWorkspaceStep(
   return QUOTE_WORKSPACE_STEPS[next] ?? null;
 }
 
-export function initialQuoteWorkspaceStep(itemCount: number): QuoteWorkspaceStep {
-  return itemCount > 0 ? "items" : "details";
+export function initialQuoteWorkspaceStep(
+  itemCount: number,
+  context?: { customerId?: string | null; siteId?: string | null },
+): QuoteWorkspaceStep {
+  // Customer and site already known (e.g. from the URL): step 1 has nothing left to ask.
+  if (itemCount > 0 || (context?.customerId && context?.siteId)) return "items";
+  return "details";
 }

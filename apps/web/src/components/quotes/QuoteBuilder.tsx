@@ -68,6 +68,7 @@ import {
 import { liveQuoteToPublicDocument } from "../../lib/quote-live-document";
 import { buildQuoteReadiness, buildUnifiedReadinessItems } from "../../lib/quote-readiness";
 import { QuoteContextBar } from "./workspace/QuoteContextBar";
+import { DisabledReason } from "./workspace/DisabledReason";
 import { QuoteHeader } from "./workspace/QuoteHeader";
 import { QuoteMobileSheet } from "./workspace/QuoteMobileSheet";
 import { QuoteMobileActionsBar } from "./workspace/QuoteMobileActionsBar";
@@ -227,7 +228,12 @@ export function QuoteBuilder({
   );
   const [workspaceTab, setWorkspaceTab] = useState<"quote" | "profit" | "checks" | "history">("quote");
   const [activeStep, setActiveStep] = useState<QuoteWorkspaceStep>(() =>
-    initialQuoteWorkspaceStep(quote.items?.length ?? 0),
+    // Only customer + site that arrive in the URL skip step 1; an existing quote keeps its
+    // usual entry (step 1 still offers "start from template" for an empty scoped quote).
+    initialQuoteWorkspaceStep(quote.items?.length ?? 0, {
+      customerId: initialCustomerId,
+      siteId: initialSiteId,
+    }),
   );
   const [detailsExpanded, setDetailsExpanded] = useState(() => !quote.customer_id);
   /** Mobile-only accordion; desktop always shows context body via CSS. Default closed for compact mobile. */
@@ -241,7 +247,11 @@ export function QuoteBuilder({
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [quickCatalogQ, setQuickCatalogQ] = useState("");
   const [quickCatalogKind, setQuickCatalogKind] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<number | null>(quote.id ? Date.now() : null);
+  const [savedAt, setSavedAt] = useState<number | null>(() => {
+    if (!quote.id) return null;
+    const at = quote.updated_at ? Date.parse(quote.updated_at) : Number.NaN;
+    return Number.isFinite(at) ? at : null;
+  });
   const [siteMismatchPending, setSiteMismatchPending] = useState<{
     id: string;
     name: string;
@@ -1708,7 +1718,11 @@ export function QuoteBuilder({
   }
 
   const primaryCtaLabel = lifecyclePrimary.label;
-  const primaryCtaDisabled = lifecyclePrimary.disabled;
+  const noItems = (live.items?.length ?? 0) === 0;
+  const sendBlockedByItems = lifecyclePrimary.kind === "send" && noItems;
+  const primaryCtaDisabled = lifecyclePrimary.disabled || sendBlockedByItems;
+  const previewDisabled = noItems || (!live.id && !draftHasContent(draft));
+  const previewDisabledReason = noItems ? he.quoteNeedsItemsHint : undefined;
 
   const customerPhoneDisplay = customerData?.phone || primaryContactPhone || linkedLead?.phone || "";
   const liveDocument = liveQuoteToPublicDocument(
@@ -1750,21 +1764,6 @@ export function QuoteBuilder({
         className={`cpq-overflow-menu cpq-overflow-menu-wide${placement === "up" ? " is-up" : ""}${placement === "mobile" ? " is-mobile is-up" : ""}`}
         role="menu"
       >
-        {placement === "mobile" && canEdit ? (
-          <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!live.id && !draftHasContent(draft)}
-              onClick={() => {
-                save.mutate();
-                setMobileMenuOpen(false);
-              }}
-            >
-              {he.save}
-            </button>
-          </div>
-        ) : null}
         <div className="cpq-overflow-group" role="group" aria-label={he.cpqMenuDocument}>
           <p className="cpq-overflow-label">{he.cpqMenuDocument}</p>
           <button
@@ -2039,20 +2038,18 @@ export function QuoteBuilder({
 
   const stageNavFooter = (
     <div className="cpq-stage-nav-footer">
-      <Button
-        type="button"
-        variant="ghost"
-        disabled={!adjacentQuoteWorkspaceStep(activeStep, -1)}
-        onClick={() => goAdjacentStage(-1)}
-      >
-        {activeStep === "pricing"
-          ? he.cpqStageBackToPlanning
-          : activeStep === "review"
-            ? he.cpqStageBackToPricing
-            : activeStep === "items"
-              ? he.cpqStageBackToDetails
-              : he.cpqStageBack}
-      </Button>
+      {adjacentQuoteWorkspaceStep(activeStep, -1) ? (
+        <Button type="button" variant="ghost" onClick={() => goAdjacentStage(-1)} data-testid="cpq-stage-back">
+          {activeStep === "pricing"
+            ? he.cpqStageBackToPlanning
+            : activeStep === "review"
+              ? he.cpqStageBackToPricing
+              : he.cpqStageBackToDetails}
+        </Button>
+      ) : (
+        // First step: no dead "back" button; the empty slot keeps "next" in place.
+        <span aria-hidden />
+      )}
       <Button
         type="button"
         variant="secondary"
@@ -2087,11 +2084,8 @@ export function QuoteBuilder({
         hasLiveId={Boolean(live.id)}
         activeStep={activeStep}
         onStepSelect={goToStep}
-        canEdit={canEdit}
-        savePending={save.isPending}
-        saveDisabled={!live.id && !draftHasContent(draft)}
-        onSave={() => save.mutate()}
-        previewDisabled={!live.id && !draftHasContent(draft)}
+        previewDisabled={previewDisabled}
+        previewDisabledReason={previewDisabledReason}
         onPreview={() => void goCustomerView()}
         primaryCtaLabel={primaryCtaLabel && (lifecyclePrimary.kind !== "send" || canSend) ? primaryCtaLabel : null}
         primaryCtaDisabled={primaryCtaDisabled}
@@ -2115,10 +2109,12 @@ export function QuoteBuilder({
         }
         onPrimaryCta={() => runPrimaryCta()}
         primaryCtaTitle={
-          lifecyclePrimary.title ??
-          (lifecyclePrimary.kind === "send" && !canSendNow
-            ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
-            : undefined)
+          sendBlockedByItems
+            ? he.quoteNeedsItemsHint
+            : (lifecyclePrimary.title ??
+              (lifecyclePrimary.kind === "send" && !canSendNow
+                ? he.cpqSendBlockedHint(Math.max(missingCompleteness, 1))
+                : undefined))
         }
         moreOpen={moreOpen}
         morePlacement={morePlacement}
@@ -2508,7 +2504,7 @@ export function QuoteBuilder({
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input id="title" label={he.quoteTitle} value={draft.title} disabled={!canEdit} onChange={(ev) => updateDraft({ title: ev.target.value })} />
+            <Input id="title" label={he.quoteNameOptional} value={draft.title} disabled={!canEdit} onChange={(ev) => updateDraft({ title: ev.target.value })} />
             <Input id="valid_until" label={he.quoteValidUntil} type="date" value={draft.valid_until} disabled={!canEdit} onChange={(ev) => updateDraft({ valid_until: ev.target.value })} />
           </div>
 
@@ -2754,9 +2750,11 @@ export function QuoteBuilder({
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled={!live.id && !draftHasContent(draft)} onClick={() => void goCustomerView()}>
-                {he.cpqCustomerView}
-              </Button>
+              <DisabledReason reason={previewDisabled ? previewDisabledReason : undefined}>
+                <Button type="button" variant="secondary" disabled={previewDisabled} onClick={() => void goCustomerView()}>
+                  {he.cpqCustomerView}
+                </Button>
+              </DisabledReason>
             </div>
           </section>
           {stageNavFooter}
@@ -2787,7 +2785,8 @@ export function QuoteBuilder({
             canSendNow={canSendNow}
             statusLabel={statusDisplayLabel}
             canEdit={canEdit}
-            previewDisabled={!live.id && !draftHasContent(draft)}
+            previewDisabled={previewDisabled}
+            previewDisabledReason={previewDisabledReason}
             onPreview={() => void goCustomerView()}
             onAdd={() => {
               if (activeStep === "pricing" || activeStep === "review") {

@@ -1,5 +1,5 @@
-import { act, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { QuoteSaveIndicator } from "../src/components/quotes/workspace/QuoteSaveIndicator";
 import { he } from "../src/i18n/he";
 
@@ -14,17 +14,9 @@ describe("QuoteSaveIndicator", () => {
     expect(screen.getByText(he.quoteSaveError)).toBeInTheDocument();
   });
 
-  it("updates saved-ago copy over time without parent rerender", () => {
-    vi.useFakeTimers();
-    const savedAt = Date.now() - 5_000;
+  it("shows the clock time of the last save (Q1: 'נשמר · 23:58')", () => {
+    const savedAt = new Date(2026, 10, 14, 23, 58).getTime();
     render(<QuoteSaveIndicator saveState="saved" savedAt={savedAt} dirty={false} hasLiveId />);
-    expect(screen.getByText(he.cpqSavedAgo(5))).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(30_000);
-    });
-
-    expect(screen.getByText(he.cpqSavedAgo(35))).toBeInTheDocument();
-    vi.useRealTimers();
+    expect(screen.getByText(he.cpqSavedAt("23:58"))).toBeInTheDocument();
   });
 });

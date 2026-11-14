@@ -503,7 +503,8 @@ function QuotesTable({
           const customer =
             row.customer_name?.trim() ||
             (row.status === "draft" ? he.quotesDraftNoCustomer : he.quotesNoCustomer);
-          const project = row.site_name?.trim() || row.project_name?.trim() || row.title?.trim() || "—";
+          const project = row.site_name?.trim() || row.project_name?.trim() || "—";
+          const quoteName = row.title?.trim();
           return (
             <TR
               key={row.id}
@@ -534,6 +535,11 @@ function QuotesTable({
                 <span>{row.number}</span>
                 {row.version && row.version > 1 ? (
                   <span className="ms-2 text-xs text-fg-muted">{he.quotesVersion(row.version)}</span>
+                ) : null}
+                {quoteName ? (
+                  <span className="block max-w-[16rem] truncate text-xs font-normal text-fg-muted" data-testid="quote-row-name">
+                    {quoteName}
+                  </span>
                 ) : null}
               </TD>
               <TD>

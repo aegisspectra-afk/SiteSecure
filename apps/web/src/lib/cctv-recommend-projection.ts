@@ -21,6 +21,7 @@ import {
   semanticRoleOf,
 } from "./cctv-component-keys";
 import { formatUnresolvedRequirementHe } from "./cctv-recommend-copy";
+import { isLaborComponent, laborHours, laborLineName } from "./cctv-labor";
 
 /** Stable marker for planned CCTV equipment free-lines (send-block + idempotent replace). */
 export const CCTV_PLANNED_PACKAGE_PREFIX = "cctv-planned:";
@@ -51,6 +52,10 @@ export type CctvPlannedQuoteLine = {
   package_name: string;
   /** Engineering requirement for UI / Design hydrate — NOT for customer description. */
   engineeringRequirement: string;
+  /** Q2.6 service line: qty is hours; priced with the workspace hourly rate when set. */
+  labor?: { hours: number; rate: number | null };
+  /** Unit price for the line (labor lines only); 0/undefined = unpriced. */
+  unitPrice?: number;
 };
 
 export function linesFingerprint(lines: CctvBuildQuoteLine[], planned: CctvPlannedQuoteLine[] = []): string {
@@ -178,8 +183,35 @@ export function plannedLineFromComponent(component: CctvRecommendationComponent)
 }
 
 export type AddRecommendationGate =
-  | { ok: true; lines: CctvBuildQuoteLine[]; planned: CctvPlannedQuoteLine[]; incomplete: boolean }
+  | {
+      ok: true;
+      lines: CctvBuildQuoteLine[];
+      planned: CctvPlannedQuoteLine[];
+      incomplete: boolean;
+      /** Q2.6: service lines added without a price because no hourly rate is set. */
+      unpricedLabor: boolean;
+    }
   | { ok: false; reason: "blocking" | "empty" };
+
+/** Q2.6: a service component with no catalog product becomes an hours line. */
+export function laborLineFromComponent(
+  component: CctvRecommendationComponent,
+  rate: number | null,
+): CctvPlannedQuoteLine | null {
+  const key = componentKeyOf(component);
+  const hours = laborHours(key, Number(component.quantity) || 1);
+  if (hours == null) return null;
+  const base = plannedLineFromComponent(component);
+  const name = laborLineName(key, hours, rate);
+  return {
+    ...base,
+    qty: hours,
+    name,
+    description: name,
+    labor: { hours, rate },
+    unitPrice: rate ?? 0,
+  };
+}
 
 /**
  * Apply gate: engineering INVALID_INPUT blocks entirely.
@@ -244,7 +276,10 @@ export function switchNeed(rec: SystemRecommendation | null, selection: ReviewSe
 export function canAddRecommendationToQuote(
   rec: SystemRecommendation,
   selection: ReviewSelectionState,
+  opts: { laborRate?: number | null } = {},
 ): AddRecommendationGate {
+  const laborRate = opts.laborRate ?? null;
+  let unpricedLabor = false;
   if (rec.status === "INVALID_INPUT") {
     return { ok: false, reason: "blocking" };
   }
@@ -270,6 +305,16 @@ export function canAddRecommendationToQuote(
     const textAssistedCore =
       Boolean(picked) && picked!.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional;
 
+    if (!picked && isLaborComponent(key)) {
+      // Q2.6: services are hours × rate; no catalog item needed.
+      const labor = laborLineFromComponent(c, laborRate);
+      if (labor) {
+        planned.push(labor);
+        if (laborRate == null) unpricedLabor = true;
+        continue;
+      }
+    }
+
     if (picked && !textAssistedCore) {
       lines.push({
         componentKey: key,
@@ -291,7 +336,7 @@ export function canAddRecommendationToQuote(
   }
   if (!lines.length && !planned.length) return { ok: false, reason: "empty" };
   if (rec.blocking || rec.status === "BLOCKED") incomplete = true;
-  return { ok: true, lines, planned, incomplete };
+  return { ok: true, lines, planned, incomplete, unpricedLabor };
 }
 
 /** Drop component keys already inserted during a partial apply. */

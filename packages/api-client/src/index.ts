@@ -676,6 +676,11 @@ export type QuotePatchBody = {
   internal_notes?: string | null;
 };
 
+export type LaborRateOut = {
+  labor_hourly_rate: number | null;
+  can_edit: boolean;
+};
+
 export type QuoteItemIn = {
   product_id?: string;
   item_type?: string;
@@ -3593,6 +3598,14 @@ export function createApiClient(opts: {
       request<WorkspaceSettingsOut>(`/api/v1/workspaces/${workspaceId}/settings`, {
         method: "PATCH",
         body: JSON.stringify(body),
+      }),
+    /** Q2.6: hourly labor rate for service lines (null until the workspace sets one). */
+    getLaborRate: (workspaceId: string) =>
+      request<LaborRateOut>(`/api/v1/workspaces/${workspaceId}/settings/labor-rate`),
+    putLaborRate: (workspaceId: string, laborHourlyRate: number | null) =>
+      request<LaborRateOut>(`/api/v1/workspaces/${workspaceId}/settings/labor-rate`, {
+        method: "PUT",
+        body: JSON.stringify({ labor_hourly_rate: laborHourlyRate }),
       }),
     listWorkspaceRoles: (workspaceId: string) =>
       request<WorkspaceRoleOut[]>(`/api/v1/workspaces/${workspaceId}/roles`),

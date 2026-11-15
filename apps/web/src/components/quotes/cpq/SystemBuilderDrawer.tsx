@@ -59,6 +59,7 @@ import {
   type ReviewSelectionState,
 } from "../../../lib/cctv-recommend-projection";
 import { domainLabel, visibleDomains } from "../../../lib/domain-registry";
+import { normalizeLaborRate } from "../../../lib/cctv-labor";
 
 type Step = "requirements" | "loading" | "review";
 
@@ -145,6 +146,12 @@ export function SystemBuilderDrawer({
   const [divergence, setDivergence] = useState<SystemDesignApplyDiverged | null>(null);
   const [lastCalcFingerprint, setLastCalcFingerprint] = useState<string | null>(null);
   const [persistState, setPersistState] = useState<PersistTrustState>("idle");
+  /** Q2.6: workspace hourly labor rate (null = not set; service lines go in unpriced). */
+  const [laborRate, setLaborRate] = useState<number | null>(null);
+  const [laborRateEditable, setLaborRateEditable] = useState(false);
+  const [laborRateDraft, setLaborRateDraft] = useState("");
+  const [laborRateError, setLaborRateError] = useState<string | null>(null);
+  const [laborRateSaving, setLaborRateSaving] = useState(false);
   /** Q2: background (auto) calculation in flight; the requirements screen stays put. */
   const [calculating, setCalculating] = useState(false);
   const calcRunRef = useRef(0);
@@ -205,8 +212,87 @@ export function SystemBuilderDrawer({
 
   const addGate = useMemo(() => {
     if (!recommendation) return { ok: false as const, reason: "empty" as const };
-    return canAddRecommendationToQuote(recommendation, selection);
-  }, [recommendation, selection]);
+    return canAddRecommendationToQuote(recommendation, selection, { laborRate });
+  }, [recommendation, selection, laborRate]);
+
+  useEffect(() => {
+    if (!open || typeof api.getLaborRate !== "function") return;
+    let cancelled = false;
+    api
+      .getLaborRate(workspaceId)
+      .then((out) => {
+        if (cancelled) return;
+        setLaborRate(normalizeLaborRate(out.labor_hourly_rate));
+        setLaborRateEditable(Boolean(out.can_edit));
+      })
+      .catch(() => {
+        if (!cancelled) setLaborRate(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, api, workspaceId]);
+
+  async function saveLaborRate() {
+    const value = normalizeLaborRate(laborRateDraft);
+    if (value == null) {
+      setLaborRateError(he.laborRateInvalid);
+      return;
+    }
+    setLaborRateSaving(true);
+    setLaborRateError(null);
+    try {
+      const out = await api.putLaborRate(workspaceId, value);
+      setLaborRate(normalizeLaborRate(out.labor_hourly_rate));
+    } catch (err) {
+      setLaborRateError(apiErrorMessage(err, he.laborRateInvalid));
+    } finally {
+      setLaborRateSaving(false);
+    }
+  }
+
+  const laborPanel =
+    systemType === "cctv" && step === "review" && recommendation ? (
+      <section className="cpq-cctv-labor" data-testid="cctv-labor-rate" aria-label={he.laborRateSection}>
+        <p className="text-sm text-fg-muted">{he.laborRateLead}</p>
+        {laborRate != null ? (
+          <p className="text-sm font-medium text-fg" data-testid="cctv-labor-rate-current">
+            {he.laborRateCurrent(laborRate)}
+          </p>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-warning" role="status" data-testid="cctv-labor-rate-missing">
+              {he.laborRateMissing}
+            </p>
+            {laborRateEditable ? (
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="grid gap-1 text-sm" htmlFor="cctv-labor-rate-input">
+                  <span>{he.laborRateLabel}</span>
+                  <input
+                    id="cctv-labor-rate-input"
+                    className="cpq-cctv-ws-text-input"
+                    dir="ltr"
+                    inputMode="decimal"
+                    value={laborRateDraft}
+                    onChange={(ev) => setLaborRateDraft(ev.target.value)}
+                  />
+                </label>
+                <Button type="button" variant="secondary" loading={laborRateSaving} onClick={() => void saveLaborRate()}>
+                  {he.laborRateSave}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-fg-muted">{he.laborRateAskAdmin}</p>
+            )}
+            {laborRateError ? (
+              <p className="text-sm text-danger" role="alert">
+                {laborRateError}
+              </p>
+            ) : null}
+          </>
+        )}
+      </section>
+    ) : null;
 
   function adoptDesign(design: SystemDesign) {
     designRef.current = design;
@@ -896,6 +982,7 @@ export function SystemBuilderDrawer({
             api={api}
           />
         ) : null}
+        {laborPanel}
       </div>
     </QuoteFlowSheet>
   );

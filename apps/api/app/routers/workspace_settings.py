@@ -130,6 +130,9 @@ def patch_workspace_settings(
             errors = validate_branding_values(value)
             if errors:
                 raise ApiError(400, "VALIDATION_ERROR", "פרטי מיתוג לא תקינים", {"fields": errors})
+        if field == "quotes" and LABOR_RATE_KEY in value and value[LABOR_RATE_KEY] is not None:
+            if _labor_rate_value({LABOR_RATE_KEY: value[LABOR_RATE_KEY]}) is None:
+                raise ApiError(400, "VALIDATION_ERROR", "תעריף לשעה לא תקין", {"fields": {LABOR_RATE_KEY: "invalid"}})
         merged = _merge(current.get(field) or {}, value)
         if field == "localization":
             merged["currency"] = "ILS"
@@ -829,3 +832,79 @@ def preview_pdf_template(
     document = attach_logo_bytes(document, logo)
     pdf_bytes, filename = render_quote_pdf(document)
     return pdf_response(pdf_bytes, f"SAMPLE-{filename}", inline=inline)
+
+
+# ---------------------------------------------------------------------------
+# Q2.6: hourly labor rate for priced service lines (workspace_settings.quotes).
+# Readable by anyone who builds quotes; editable with workspace.edit. No default:
+# until it is set, service lines are added unpriced.
+
+LABOR_RATE_KEY = "labor_hourly_rate"
+LABOR_RATE_MAX = 10_000
+
+
+class LaborRateOut(BaseModel):
+    labor_hourly_rate: float | None
+    can_edit: bool
+
+
+class LaborRateIn(BaseModel):
+    labor_hourly_rate: float | None = Field(default=None, gt=0, le=LABOR_RATE_MAX)
+
+
+def _labor_rate_value(quotes: dict[str, Any] | None) -> float | None:
+    raw = (quotes or {}).get(LABOR_RATE_KEY)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if 0 < value <= LABOR_RATE_MAX else None
+
+
+@router.get("/settings/labor-rate", response_model=LaborRateOut)
+def get_labor_rate(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> LaborRateOut:
+    ctx = load_authz_context(client, user["id"], str(workspace_id))
+    allowed = authorize(ctx=ctx, action="quotes.create")
+    if not allowed.allowed:
+        allowed = authorize(ctx=ctx, action="quotes.edit")
+    _raise(allowed)
+    row = _settings_row(client, str(workspace_id))
+    return LaborRateOut(
+        labor_hourly_rate=_labor_rate_value(row.get("quotes")),
+        can_edit=authorize(ctx=ctx, action="workspace.edit").allowed,
+    )
+
+
+@router.put("/settings/labor-rate", response_model=LaborRateOut)
+def put_labor_rate(
+    workspace_id: UUID,
+    body: LaborRateIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> LaborRateOut:
+    ctx = load_authz_context(client, user["id"], str(workspace_id))
+    _raise(authorize(ctx=ctx, action="workspace.edit"))
+    current = _settings_row(client, str(workspace_id))
+    quotes = dict(current.get("quotes") or {})
+    if body.labor_hourly_rate is None:
+        quotes.pop(LABOR_RATE_KEY, None)
+    else:
+        quotes[LABOR_RATE_KEY] = round(float(body.labor_hourly_rate), 2)
+    res = client.patch(
+        "workspace_settings",
+        {"quotes": quotes},
+        params={"workspace_id": f"eq.{workspace_id}"},
+    )
+    if res.status_code not in {200, 204} or not res.json():
+        raise ApiError(403, "PERMISSION_DENIED", MESSAGES["PERMISSION_DENIED"])
+    write_audit(
+        client,
+        str(workspace_id),
+        "workspace.edit",
+        metadata={"result": "success", "fields": ["quotes.labor_hourly_rate"]},
+    )
+    return LaborRateOut(labor_hourly_rate=_labor_rate_value(quotes), can_edit=True)

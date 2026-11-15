@@ -10,6 +10,7 @@ import {
   type WorkspacePrefs,
 } from "../../../lib/workspace-prefs";
 import { useSession } from "../../../lib/session";
+import { normalizeLaborRate } from "../../../lib/cctv-labor";
 
 export const Route = createFileRoute("/app/settings/quotes")({
   component: QuotesSettingsPage,
@@ -31,6 +32,10 @@ function QuotesSettingsBody() {
   const [baseline, setBaseline] = useState<WorkspacePrefs | null>(null);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  /** Q2.6: hourly labor rate (empty = not set; service lines stay unpriced). */
+  const [laborRate, setLaborRate] = useState("");
+  const [laborBaseline, setLaborBaseline] = useState("");
+  const laborInvalid = laborRate.trim() !== "" && normalizeLaborRate(laborRate) == null;
 
   const query = useQuery({
     queryKey: ["workspace-settings", workspaceId],
@@ -43,6 +48,9 @@ function QuotesSettingsBody() {
     const next = prefsFromSettings(query.data);
     setPrefs(next);
     setBaseline(next);
+    const rate = normalizeLaborRate((query.data.quotes as Record<string, unknown> | undefined)?.labor_hourly_rate);
+    setLaborRate(rate != null ? String(rate) : "");
+    setLaborBaseline(rate != null ? String(rate) : "");
   }, [query.data]);
 
   const dirty =
@@ -50,24 +58,30 @@ function QuotesSettingsBody() {
     (prefs.quoteValidityDays !== baseline.quoteValidityDays ||
       prefs.paymentTerms !== baseline.paymentTerms ||
       prefs.showVatOnQuotes !== baseline.showVatOnQuotes ||
-      prefs.pdfNotes !== baseline.pdfNotes);
+      prefs.pdfNotes !== baseline.pdfNotes ||
+      laborRate.trim() !== laborBaseline);
 
   const save = useMutation({
-    mutationFn: () =>
-      api.patchWorkspaceSettings(workspaceId!, {
+    mutationFn: async () => {
+      await api.patchWorkspaceSettings(workspaceId!, {
         quotes: {
           validity_days: prefs.quoteValidityDays,
           show_vat: prefs.showVatOnQuotes,
           payment_terms: prefs.paymentTerms,
           pdf_notes: prefs.pdfNotes,
         },
-      }),
+      });
+      if (laborRate.trim() !== laborBaseline) {
+        await api.putLaborRate(workspaceId!, laborRate.trim() ? normalizeLaborRate(laborRate) : null);
+      }
+    },
     onSuccess: async () => {
       setSaveError(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
       setBaseline(prefs);
+      setLaborBaseline(laborRate.trim());
     },
     onError: () => setSaveError(he.settingsError),
   });
@@ -105,7 +119,21 @@ function QuotesSettingsBody() {
             value={prefs.paymentTerms}
             onChange={(ev) => setPrefs({ ...prefs, paymentTerms: ev.target.value })}
           />
+          <Input
+            id="quote-labor-rate"
+            label={he.laborRateLabel}
+            inputMode="decimal"
+            value={laborRate}
+            onChange={(ev) => setLaborRate(ev.target.value)}
+            className="ltr-meta"
+          />
         </div>
+        <p className="settings-field-hint">{he.laborRateLead}</p>
+        {laborInvalid ? (
+          <p className="text-sm text-danger" role="alert">
+            {he.laborRateInvalid}
+          </p>
+        ) : null}
         <label className="settings-toggle">
           <input
             type="checkbox"
@@ -139,7 +167,7 @@ function QuotesSettingsBody() {
           variant="primary"
           className="self-start"
           loading={save.isPending}
-          disabled={!dirty}
+          disabled={!dirty || laborInvalid}
           title={!dirty ? he.settingsSaveDisabled : undefined}
         >
           {he.saveSettings}

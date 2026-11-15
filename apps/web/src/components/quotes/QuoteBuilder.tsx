@@ -1401,7 +1401,8 @@ export function QuoteBuilder({
         description: line.description,
         name: line.name,
         qty: line.qty,
-        unit_price: 0,
+        // Q2.6: service hours carry the workspace hourly rate; other planned lines stay unpriced.
+        unit_price: line.unitPrice ?? 0,
         section_id: sectionId,
         package_name: line.package_name,
         is_optional: line.optional,

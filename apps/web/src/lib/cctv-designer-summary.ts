@@ -19,6 +19,7 @@ import {
   canAddRecommendationToQuote,
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
+import { formatTb } from "./cctv-storage-display";
 
 export type CalcFreshness = "draft" | "fresh" | "stale";
 
@@ -278,8 +279,15 @@ export function buildCalculatedMetrics(
     metrics.push({
       id: "storage",
       label: "אחסון (שרת)",
-      value: `≈${summary.requiredTb.toFixed(1)} TB${summary.hddPacking ? ` · ${summary.hddPacking}` : ""}`,
+      value: `≈${formatTb(summary.requiredTb)} TB · ${summary.hddPacking ?? summary.commercialDisk ?? "—"}`,
       ltr: true,
+    });
+  }
+  if (summary.bitrateAssumption) {
+    metrics.push({
+      id: "storage-assumption",
+      label: "הנחת אחסון",
+      value: summary.bitrateAssumption,
     });
   }
 

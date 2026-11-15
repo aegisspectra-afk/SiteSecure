@@ -18,6 +18,7 @@ import {
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
 import { hasEquipmentIntent } from "./cctv-equipment-intent-e2";
+import { commercialDiskLabel, formatTb } from "./cctv-storage-display";
 
 /** Engineering completeness — independent of catalog matching. */
 export type EngineeringStatus = "ENGINEERING_INCOMPLETE" | "ENGINEERING_COMPLETE";
@@ -261,7 +262,10 @@ export function formatRequirementChips(component: CctvRecommendationComponent): 
         t.required_tb ??
         t.requiredTbWithOverhead ??
         t.required_tb_with_overhead;
-      if (tb != null) push(`כ־${Number(tb).toFixed(1)}TB`);
+      if (tb != null) {
+        const disk = commercialDiskLabel(Number(tb));
+        push(disk ? `כונן ${disk} (כ־${formatTb(Number(tb))}TB)` : `כ־${formatTb(Number(tb))}TB`);
+      }
       break;
     }
     case "poe_switch":

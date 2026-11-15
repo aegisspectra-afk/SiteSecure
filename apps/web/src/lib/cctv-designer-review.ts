@@ -20,6 +20,7 @@ import {
   resolveComponentProduct,
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
+import { formatTb } from "./cctv-storage-display";
 
 export type ReviewCardStatus = "needs" | "selected" | "optional" | "verify" | "incompatible";
 
@@ -172,7 +173,7 @@ export function requirementTextForCard(
   const parts: string[] = [];
   if (typeof t.resolutionMpMin === "number") parts.push(`≥${t.resolutionMpMin} MP`);
   if (typeof t.minChannels === "number") parts.push(`≥${t.minChannels} ערוצים`);
-  if (typeof t.requiredTb === "number") parts.push(`≈${Number(t.requiredTb).toFixed(1)} TB`);
+  if (typeof t.requiredTb === "number") parts.push(`≈${formatTb(Number(t.requiredTb))} TB`);
   if (typeof t.minPoePorts === "number") parts.push(`≥${t.minPoePorts} יציאות PoE`);
   if (typeof t.minPoeBudgetW === "number") parts.push(`תקציב ≥${Math.round(t.minPoeBudgetW)}W`);
   if (typeof t.minBudgetW === "number") parts.push(`תקציב ≥${Math.round(t.minBudgetW)}W`);
@@ -362,7 +363,7 @@ export function candidateSpecLines(
     if (poeW != null) lines.push(`${Math.round(poeW)}W`);
   } else if (role === "storage") {
     const tb = attrNum(attrs, "capacity_tb", "capacityTb");
-    if (tb != null) lines.push(`${tb} TB`);
+    if (tb != null) lines.push(`${formatTb(tb)} TB`);
     const surv = attrs.surveillance_grade ?? attrs.surveillanceGrade;
     if (surv === true) lines.push("surveillance");
   } else if (role === "poe_switch" || role === "network_switch") {

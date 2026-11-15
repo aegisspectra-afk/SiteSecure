@@ -27,6 +27,7 @@ import {
   type ReviewSelectionState,
 } from "../../../lib/cctv-recommend-projection";
 import { CctvComponentPicker } from "./CctvComponentPicker";
+import { formatTb } from "../../../lib/cctv-storage-display";
 
 type Props = {
   rec: SystemRecommendation;
@@ -113,7 +114,7 @@ export function CctvReviewPanel({
           {summary.requiredTb != null ? (
             <>
               {" "}
-              · <Ltr>≈{summary.requiredTb.toFixed(1)}TB</Ltr>
+              · <Ltr>≈{formatTb(summary.requiredTb)}TB</Ltr>
             </>
           ) : null}
         </p>

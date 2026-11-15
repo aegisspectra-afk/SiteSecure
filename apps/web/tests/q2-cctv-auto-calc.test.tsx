@@ -82,7 +82,7 @@ describe("Q2.3 automatic calculation", () => {
     expect(recommendCctv).not.toHaveBeenCalled();
     await advance(AUTO_CALC_DEBOUNCE_MS + 50);
     expect(recommendCctv).toHaveBeenCalledTimes(1);
-    expect(recommendCctv.mock.calls[0]![1]).toMatchObject({ camera_count: 7 });
+    expect((recommendCctv.mock.calls as unknown as unknown[][])[0]![1]).toMatchObject({ camera_count: 7 });
   });
 
   it("shows one status only (no separate calc/save/readiness pills)", async () => {

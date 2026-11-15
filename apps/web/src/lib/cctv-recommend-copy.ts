@@ -9,6 +9,7 @@ import type {
   SystemRecommendation,
 } from "@site-secure/api-client";
 import { componentKeyOf, semanticRoleOf } from "./cctv-component-keys";
+import { commercialDiskLabel, formatTb, storageBitrateAssumptionHe } from "./cctv-storage-display";
 
 export type ReviewGroupId = "cameras" | "recording" | "network" | "infrastructure" | "services";
 
@@ -115,11 +116,13 @@ export function formatReasonHe(reason: CctvReasonCode): string {
     case "ROLE_STORAGE_FROM_RETENTION": {
       const tb = num(p, "requiredTb");
       return tb != null
-        ? `נפח האחסון נגזר מימי השמירה והגדרות ההקלטה שנבחרו (≈${tb.toFixed(1)}TB מהשרת).`
+        ? `נפח האחסון נגזר מימי השמירה והגדרות ההקלטה שנבחרו (≈${formatTb(tb)}TB מהשרת).`
         : "נפח האחסון נגזר מימי שמירה והגדרות הקלטה (שרת).";
     }
-    case "STORAGE_BITRATE_DEFAULTED":
-      return "קצב נתונים משוער לפי ברירת מחדל הנדסית (H.265/הנדסה בשרת)";
+    case "STORAGE_BITRATE_DEFAULTED": {
+      const assumption = storageBitrateAssumptionHe({ bitrateMbps: num(p, "bitrateMbps") }, typeof p.codec === "string" ? p.codec : null);
+      return assumption ? `הנחת קצב נתונים: ${assumption}` : "קצב נתונים משוער לפי ברירת מחדל הנדסית (H.265)";
+    }
     case "EXTERNAL_SWITCH_REQUIRED": {
       const ipCams = num(p, "ipCameraCount");
       if (String(p.technology ?? "") === "hybrid" && ipCams != null) {
@@ -211,7 +214,10 @@ export function formatReasonHe(reason: CctvReasonCode): string {
       return "מספר מפרצי HDD ב־NVR לא ידוע";
     case "HDD_OPTIONS_EMPTY": {
       const tb = num(p, "requiredTb");
-      if (tb != null) return `לא נמצא כונן אחסון מתאים בקטלוג (נדרש ≈${tb}TB)`;
+      if (tb != null) {
+        const disk = commercialDiskLabel(tb);
+        return `לא נמצא כונן אחסון מתאים בקטלוג (נדרש ≈${formatTb(tb)}TB${disk ? `, מוצע ${disk}` : ""})`;
+      }
       return "לא נמצא כונן אחסון מתאים בקטלוג";
     }
     case "ENVIRONMENT_UNSPECIFIED":
@@ -268,6 +274,10 @@ export type EngineeringSummary = {
   channelTier: number | null;
   requiredTb: number | null;
   hddPacking: string | null;
+  /** Q2: next commercial disk size for the requirement ("4TB", "2 × 12TB"). */
+  commercialDisk: string | null;
+  /** Q2: "≈4 Mbps למצלמה, H.265" — the bitrate the engine assumed. */
+  bitrateAssumption: string | null;
   poePorts: number | null;
   poeBudgetW: number | null;
   architecture: "integrated" | "external_switch" | "unknown";
@@ -284,7 +294,7 @@ export function buildEngineeringSummary(rec: SystemRecommendation): EngineeringS
 
   let hddPacking: string | null = null;
   if (hdd.status === "ok" && hdd.driveCount != null && hdd.driveCapacityTb != null) {
-    hddPacking = `${hdd.driveCount} × ${hdd.driveCapacityTb}TB`;
+    hddPacking = `${hdd.driveCount} × ${formatTb(Number(hdd.driveCapacityTb))}TB`;
   }
 
   const external = arch.externalSwitchRequired === true;
@@ -295,6 +305,12 @@ export function buildEngineeringSummary(rec: SystemRecommendation): EngineeringS
     requiredTb:
       typeof storage.requiredTbWithOverhead === "number" ? storage.requiredTbWithOverhead : null,
     hddPacking,
+    commercialDisk:
+      typeof storage.requiredTbWithOverhead === "number" ? commercialDiskLabel(storage.requiredTbWithOverhead) : null,
+    bitrateAssumption: storageBitrateAssumptionHe(
+      storage as { bitrateMbps?: unknown },
+      typeof input.codec === "string" ? input.codec : null,
+    ),
     poePorts: typeof poe.requiredPorts === "number" ? poe.requiredPorts : null,
     poeBudgetW: typeof poe.requiredBudgetW === "number" ? poe.requiredBudgetW : null,
     architecture: external ? "external_switch" : arch.externalSwitchRequired === false ? "integrated" : "unknown",
@@ -374,7 +390,10 @@ export function formatUnresolvedRequirementHe(component: CctvRecommendationCompo
           : typeof t.requiredTbWithOverhead === "number"
             ? t.requiredTbWithOverhead
             : null;
-    if (tb != null) return `נדרש ≈${Number(tb).toFixed(1)}TB`;
+    if (tb != null) {
+      const disk = commercialDiskLabel(Number(tb));
+      return disk ? `כונן ${disk} (נדרש ≈${formatTb(Number(tb))}TB)` : `נדרש ≈${formatTb(Number(tb))}TB`;
+    }
     return heUnresolvedFallback(component);
   }
   if (role === "poe_switch" || role === "switch") {

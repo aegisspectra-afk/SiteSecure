@@ -2736,6 +2736,8 @@ export const he = {
   quoteSiteAddress: "כתובת אתר",
   quoteTitle: "כותרת",
   quoteNameOptional: "שם ההצעה (אופציונלי)",
+  apiFieldInComponent: (field: string, n: number) => `${field} (רכיב ${n})`,
+  apiValidationWithField: (message: string, fields: string) => `${message}. שדה: ${fields}`,
   quoteNeedsItemsHint: "הוסיפו לפחות פריט אחד כדי לשלוח ללקוח או לפתוח תצוגת לקוח",
   cpqSavedAt: (time: string) => `נשמר · ${time}`,
   cpqAutosavePending: "יישמר אוטומטית כשתוסיפו תוכן",

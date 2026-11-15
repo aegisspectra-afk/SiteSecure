@@ -50,7 +50,7 @@ COMPONENT_SELECT = (
     "resolution_status,technical_requirements,candidates,engine_preferred_product_id,"
     "user_selected_product_id,selection_origin,reason_codes,needs_review,quote_item_id,"
     "applied_product_id,applied_qty,applied_output_fingerprint,last_apply_id,"
-    "created_at,updated_at"
+    "equipment_intent,created_at,updated_at"
 )
 QUOTE_PARENT_SELECT = "id,workspace_id,site_id,owner_user_id,status,deleted_at"
 
@@ -80,6 +80,9 @@ class SystemDesignComponentIn(BaseModel):
     selection_origin: str = "UNSELECTED"
     reason_codes: list[Any] = Field(default_factory=list)
     needs_review: bool = False
+    # Stage E2: what the designer asked for when no catalog product is chosen yet
+    # (column system_design_components.equipment_intent, migration 0056).
+    equipment_intent: dict[str, Any] | None = None
     # Linkage / apply fields accepted for round-trip storage before Apply exists;
     # R1 does not set them via Apply.
     quote_item_id: str | None = None
@@ -216,6 +219,11 @@ def _component_payload(
         candidates = sanitize_candidates(body.candidates)
         tech = sanitize_json_object(body.technical_requirements, field="technical_requirements")
         reasons = sanitize_reason_codes(body.reason_codes)
+        intent = (
+            None
+            if body.equipment_intent is None
+            else sanitize_json_object(body.equipment_intent, field="equipment_intent")
+        )
     except ValueError as exc:
         raise ApiError(400, "VALIDATION_ERROR", str(exc)) from exc
     return {
@@ -235,6 +243,7 @@ def _component_payload(
         "selection_origin": origin,
         "reason_codes": reasons,
         "needs_review": body.needs_review,
+        "equipment_intent": intent,
         # quote_item_id / applied_* / last_apply_id are server-owned: only the Apply RPC
         # writes them. A client value could claim a manual line (Apply would delete it and
         # keep its price), and echoing None would silently drop real linkage.

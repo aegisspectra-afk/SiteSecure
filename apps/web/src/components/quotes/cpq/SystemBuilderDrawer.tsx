@@ -6,6 +6,7 @@
  * CCTV sizing is server-authoritative. Do not call legacy keyword matching here.
  */
 
+import { apiErrorMessage } from "../../../lib/api-validation-message";
 import {
   ApiClientError,
   type ApiClient,
@@ -226,7 +227,7 @@ export function SystemBuilderDrawer({
       hydratingRef.current = true;
       applyHydratedDesign(design);
     } catch (err) {
-      setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignLoadError);
+      setPersistError(apiErrorMessage(err, he.cpqCctvDesignLoadError));
     } finally {
       hydratingRef.current = false;
     }
@@ -275,7 +276,7 @@ export function SystemBuilderDrawer({
         setPersistState("error");
         return null;
       }
-      setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignSaveError);
+      setPersistError(apiErrorMessage(err, he.cpqCctvDesignSaveError));
       setPersistState("error");
       return null;
     }
@@ -393,7 +394,7 @@ export function SystemBuilderDrawer({
         setPersistState("idle");
         savedReqFingerprintRef.current = null;
         setStep("requirements");
-        setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignLoadError);
+        setPersistError(apiErrorMessage(err, he.cpqCctvDesignLoadError));
       } finally {
         if (!cancelled && openGen.current === gen) {
           setHydrating(false);
@@ -453,12 +454,12 @@ export function SystemBuilderDrawer({
       try {
         await persistRecommendationState(rec, merged.selection, req, merged.needsReviewRoles);
       } catch (err) {
-        setPersistError(err instanceof ApiClientError ? err.message : he.cpqCctvDesignSaveError);
+        setPersistError(apiErrorMessage(err, he.cpqCctvDesignSaveError));
       }
     } catch (err) {
       setRecommendation(null);
       setStep("requirements");
-      setServerError(err instanceof ApiClientError ? err.message : he.cpqCctvServerError);
+      setServerError(apiErrorMessage(err, he.cpqCctvServerError));
     }
   }
 

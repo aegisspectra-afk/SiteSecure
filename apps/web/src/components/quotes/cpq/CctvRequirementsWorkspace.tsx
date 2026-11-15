@@ -479,16 +479,20 @@ export function CctvRequirementsHeader({
   setReq,
   calcState,
   disabled = false,
+  status,
 }: {
   req: CctvBuildRequirements;
   setReq: (next: CctvBuildRequirements) => void;
   calcState: CalcState;
   disabled?: boolean;
+  /** Q2: the designer's single status; when absent the calc freshness label is shown. */
+  status?: { key: string; label: string };
 }) {
   const pro = isProfessionalMode(req);
   const tech = req.cctvTechnology;
-  const calcLabel =
-    calcState === "stale"
+  const calcLabel = status
+    ? status.label
+    : calcState === "stale"
       ? he.cpqCctvCalcStale
       : calcState === "fresh"
         ? he.cpqCctvCalcFresh
@@ -509,7 +513,9 @@ export function CctvRequirementsHeader({
                 : "cpq-cctv-ws-calc-state"
           }
           role="status"
+          aria-live="polite"
           data-testid="cctv-calc-state"
+          data-status={status?.key}
         >
           {calcLabel}
         </p>

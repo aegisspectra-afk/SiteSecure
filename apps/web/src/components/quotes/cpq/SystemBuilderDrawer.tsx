@@ -28,6 +28,7 @@ import {
 } from "../../../lib/cctv-build-requirements";
 import { requirementsCalcFingerprint } from "../../../lib/cctv-designer-workspace";
 import {
+  designerStatus,
   deriveDesignerReadiness,
   type PersistTrustState,
 } from "../../../lib/cctv-designer-summary";
@@ -102,6 +103,9 @@ function leadDefaults(lead?: LeadOut | null): CctvBuildRequirements {
   });
 }
 
+/** Q2: automatic calculation runs this long after the last requirements change. */
+export const AUTO_CALC_DEBOUNCE_MS = 600;
+
 export function SystemBuilderDrawer({
   open,
   onClose,
@@ -141,6 +145,9 @@ export function SystemBuilderDrawer({
   const [divergence, setDivergence] = useState<SystemDesignApplyDiverged | null>(null);
   const [lastCalcFingerprint, setLastCalcFingerprint] = useState<string | null>(null);
   const [persistState, setPersistState] = useState<PersistTrustState>("idle");
+  /** Q2: background (auto) calculation in flight; the requirements screen stays put. */
+  const [calculating, setCalculating] = useState(false);
+  const calcRunRef = useRef(0);
   const savedReqFingerprintRef = useRef<string | null>(null);
 
   const designRef = useRef<SystemDesign | null>(null);
@@ -148,6 +155,10 @@ export function SystemBuilderDrawer({
   const hydratingRef = useRef(false);
   const selectionPersistTimer = useRef<number | null>(null);
   const openGen = useRef(0);
+  /** Quote this drawer created itself (first save on a new quote) while it stayed open. */
+  const selfCreatedQuoteRef = useRef<string | null>(null);
+  const creatingQuoteRef = useRef(false);
+  const wasOpenRef = useRef(false);
 
   const currentFingerprint = useMemo(() => requirementsCalcFingerprint(req), [req]);
   const requirementsStale = Boolean(
@@ -158,6 +169,15 @@ export function SystemBuilderDrawer({
     : requirementsStale
       ? "stale"
       : "fresh";
+
+  const requirementsValid = validateCctvBuildRequirements(req).ok;
+  const status = designerStatus({
+    valid: requirementsValid,
+    calculating,
+    calcError: Boolean(serverError),
+    calcState,
+    persistState,
+  });
 
   const designerReadiness = useMemo(
     () =>
@@ -291,7 +311,13 @@ export function SystemBuilderDrawer({
     let quote = quoteId;
     if (!quote) {
       if (!ensureQuoteId) return;
-      quote = await ensureQuoteId();
+      creatingQuoteRef.current = true;
+      try {
+        quote = await ensureQuoteId();
+        selfCreatedQuoteRef.current = quote;
+      } finally {
+        creatingQuoteRef.current = false;
+      }
     }
     await ensureDesign(quote, requirements);
     const calculatedAt = new Date().toISOString();
@@ -336,7 +362,18 @@ export function SystemBuilderDrawer({
 
   // Open / hydrate — no empty Design creation on mere open.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpenRef.current = false;
+      selfCreatedQuoteRef.current = null;
+      return;
+    }
+    // The quote id arrived because this drawer just created the quote: the design and the
+    // local review state are already current. Reloading would reset them and recalculate.
+    if (wasOpenRef.current && quoteId && (creatingQuoteRef.current || quoteId === selfCreatedQuoteRef.current)) {
+      selfCreatedQuoteRef.current = quoteId;
+      return;
+    }
+    wasOpenRef.current = true;
     const gen = ++openGen.current;
     setSystemType("cctv");
     setInputError(null);
@@ -410,7 +447,12 @@ export function SystemBuilderDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open/quote gate
   }, [open, quoteId, workspaceId, api, lead]);
 
-  async function calculate() {
+  /**
+   * silent = automatic run after an edit: stays on the requirements screen, keeps the user's
+   * place, and ignores a response that a newer run has already superseded.
+   */
+  async function calculate(opts: { silent?: boolean } = {}) {
+    const silent = Boolean(opts.silent);
     if (systemType !== "cctv") return;
     if (conflict) {
       setPersistError(he.cpqCctvDesignConflict);
@@ -435,33 +477,51 @@ export function SystemBuilderDrawer({
     setInputError(null);
     setServerError(null);
     setPersistError(null);
-    setStep("loading");
+    const run = ++calcRunRef.current;
+    const reqAtRun = req;
+    if (silent) setCalculating(true);
+    else setStep("loading");
     onClearRecovery?.();
     setAppliedOnce(false);
     setLastLines(null);
     const priorSelection = selection;
     try {
-      const body = requirementsToRecommendBody(req);
+      const body = requirementsToRecommendBody(reqAtRun);
       const rec = await api.recommendCctv(workspaceId, body);
+      if (run !== calcRunRef.current) return; // a newer edit already started another run
       const merged = mergeSelectionAfterRecalculate(rec, priorSelection);
       setRecommendation(rec);
       setSelection(merged.selection);
       setNeedsReviewKeys(merged.needsReviewRoles);
       setNeedsReviewHint(merged.needsReviewRoles.size > 0);
-      setLastCalcFingerprint(requirementsCalcFingerprint(req));
-      setStep("review");
+      setLastCalcFingerprint(requirementsCalcFingerprint(reqAtRun));
+      if (!silent) setStep("review");
       // Persist after successful recommend — failure must not erase local review state.
       try {
-        await persistRecommendationState(rec, merged.selection, req, merged.needsReviewRoles);
+        await persistRecommendationState(rec, merged.selection, reqAtRun, merged.needsReviewRoles);
       } catch (err) {
         setPersistError(apiErrorMessage(err, he.cpqCctvDesignSaveError));
       }
     } catch (err) {
+      if (run !== calcRunRef.current) return;
       setRecommendation(null);
       setStep("requirements");
       setServerError(apiErrorMessage(err, he.cpqCctvServerError));
+    } finally {
+      if (run === calcRunRef.current) setCalculating(false);
     }
   }
+
+  // Q2: calculate automatically 600 ms after the last valid change on the requirements screen.
+  useEffect(() => {
+    if (!open || systemType !== "cctv" || step !== "requirements" || hydrating || conflict) return;
+    if (!requirementsValid || currentFingerprint === lastCalcFingerprint) return;
+    const timer = window.setTimeout(() => {
+      void calculate({ silent: true });
+    }, AUTO_CALC_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on requirement changes only
+  }, [open, systemType, step, hydrating, conflict, requirementsValid, currentFingerprint, lastCalcFingerprint]);
 
   async function handleAdd(resume?: PartialApplyRecovery | null, confirmationToken?: string | null) {
     if (!addGate.ok || applying || localApplying) return;
@@ -678,8 +738,15 @@ export function SystemBuilderDrawer({
           {systemType === "free_build" ? he.domainFreeBuildBack : he.cancel}
         </Button>
         {systemType === "cctv" ? (
-          <Button type="button" disabled={conflict} onClick={() => void calculate()}>
-            {lastCalcFingerprint ? he.cpqCctvRecalculate : he.cpqCctvCalculate}
+          <Button
+            type="button"
+            disabled={conflict || calculating}
+            onClick={() => {
+              if (calcState === "fresh" && recommendation) setStep("review");
+              else void calculate();
+            }}
+          >
+            {calcState === "fresh" && recommendation ? he.cpqCctvContinueToEquipment : he.cpqCctvCalculate}
           </Button>
         ) : null}
       </div>
@@ -776,6 +843,7 @@ export function SystemBuilderDrawer({
                   setReq={updateRequirements}
                   calcState={calcState}
                   disabled={conflict}
+                  status={status}
                 />
                 <div className="cpq-cctv-designer-shell-body">
                   <CctvEngineeringSummaryPanel
@@ -784,13 +852,13 @@ export function SystemBuilderDrawer({
                     calcState={calcState}
                     readiness={designerReadiness}
                     persistState={persistState}
-                    stale={requirementsStale}
+                    stale={false}
                   />
                   <CctvRequirementsWorkspace
                     req={req}
                     setReq={updateRequirements}
                     inputError={inputError}
-                    stale={requirementsStale}
+                    stale={false}
                     calcState={calcState}
                     disabled={conflict}
                     hideHeader

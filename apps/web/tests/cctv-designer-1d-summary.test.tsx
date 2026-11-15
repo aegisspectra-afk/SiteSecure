@@ -8,6 +8,7 @@ import type { SystemRecommendation } from "@site-secure/api-client";
 import { defaultCctvBuildRequirements } from "../src/lib/cctv-build-requirements";
 import { applyTechnology, requirementsCalcFingerprint } from "../src/lib/cctv-designer-workspace";
 import {
+  designerStatus,
   buildCalculatedMetrics,
   buildLiveInputFacts,
   buildValidationCenter,
@@ -287,7 +288,7 @@ describe("SYSTEM-DESIGNER-1 Slice D summary", () => {
     ).toBe("added_to_quote");
   });
 
-  it("J. save state vs calc state are independent labels", () => {
+  it("J. save and calc state stay as data; the label is the designer's single status (Q2)", () => {
     render(
       <CctvEngineeringSummaryPanel
         req={defaultCctvBuildRequirements()}
@@ -301,8 +302,11 @@ describe("SYSTEM-DESIGNER-1 Slice D summary", () => {
     const root = screen.getByTestId("cctv-engineering-summary");
     expect(root).toHaveAttribute("data-calc", "stale");
     expect(root).toHaveAttribute("data-persist", "saved");
-    expect(root.textContent).toMatch(/נשמר/);
-    expect(root.textContent).toMatch(/לא חושבו/);
+    // Q2: no separate save/calc pills in the panel; the header shows designerStatus().
+    expect(root.querySelectorAll(".cpq-cctv-sum-pill")).toHaveLength(0);
+    expect(
+      designerStatus({ valid: true, calculating: false, calcError: false, calcState: "stale", persistState: "saved" }).label,
+    ).toBe("יחושב אוטומטית");
   });
 
   it("K. mobile summary behavior — collapsible toggle present", async () => {

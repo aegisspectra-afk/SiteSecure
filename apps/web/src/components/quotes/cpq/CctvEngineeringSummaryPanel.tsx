@@ -9,10 +9,7 @@ import {
   buildCalculatedMetrics,
   buildLiveInputFacts,
   buildValidationCenter,
-  calcFreshnessLabelHe,
   explainabilityLines,
-  persistTrustLabelHe,
-  readinessLabelHe,
   techLabelShort,
   type CalcFreshness,
   type DesignerReadiness,
@@ -87,17 +84,7 @@ export function CctvEngineeringSummaryPanel({
         </button>
       </div>
 
-      <div className="cpq-cctv-sum-status-row" role="status">
-        <span className={`cpq-cctv-sum-pill is-readiness is-${readiness}`}>
-          {readinessLabelHe(readiness)}
-        </span>
-        <span className={`cpq-cctv-sum-pill is-calc is-${calcState}`}>
-          {calcFreshnessLabelHe(calcState)}
-        </span>
-        <span className={`cpq-cctv-sum-pill is-persist is-${persistState}`}>
-          {persistTrustLabelHe(persistState)}
-        </span>
-      </div>
+      {/* Q2: the designer shows one status (header); readiness/calc/persist stay as data. */}
 
       {stale ? (
         <p className="cpq-cctv-sum-stale" role="status" aria-live="polite" data-testid="cctv-sum-stale">
@@ -124,12 +111,6 @@ export function CctvEngineeringSummaryPanel({
           <section className="cpq-cctv-sum-block" aria-labelledby={`${titleId}-calc`}>
             <h3 className="cpq-cctv-sum-block-title" id={`${titleId}-calc`}>
               מדדים מחושבים (שרת)
-              {calcState === "stale" ? (
-                <span className="cpq-cctv-sum-stale-tag"> לא עדכני</span>
-              ) : null}
-              {calcState === "draft" ? (
-                <span className="cpq-cctv-sum-stale-tag"> ממתין לחישוב</span>
-              ) : null}
             </h3>
             {metrics.length === 0 ? (
               <p className="cpq-cctv-sum-empty">אין מדדים מהשרת עד לחישוב מערכת.</p>

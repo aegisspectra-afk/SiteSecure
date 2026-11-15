@@ -2824,6 +2824,7 @@ export const he = {
   cpqBuildSystemLead: "דרישות → חישוב הנדסי → המלצה → הוספה להצעה.",
   cpqCctvCalculate: "חשב מערכת",
   cpqCctvRecalculate: "חשב מחדש",
+  cpqCctvContinueToEquipment: "המשך לבחירת ציוד",
   cpqCctvPlanning: "מתכנן את המערכת…",
   cpqCctvApplying: "מוסיף להצעה…",
   cpqCctvDesignerTitle: "תכנון CCTV",

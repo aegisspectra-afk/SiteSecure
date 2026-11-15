@@ -33,6 +33,55 @@ export type DesignerReadiness =
 
 export type PersistTrustState = "idle" | "saving" | "saved" | "dirty" | "error";
 
+/** Q2: the one status shown in the designer (replaces readiness + calc + persist pills). */
+export type DesignerStatusKey =
+  | "needs_input"
+  | "pending"
+  | "calculating"
+  | "saving"
+  | "ready"
+  | "calculated"
+  | "calc_error"
+  | "save_error";
+
+export type DesignerStatus = { key: DesignerStatusKey; label: string };
+
+const DESIGNER_STATUS_HE: Record<DesignerStatusKey, string> = {
+  needs_input: "חסרים נתונים לחישוב",
+  pending: "יחושב אוטומטית",
+  calculating: "מחשב…",
+  saving: "שומר…",
+  ready: "מחושב ונשמר",
+  calculated: "מחושב",
+  calc_error: "שגיאה בחישוב",
+  save_error: "מחושב · שגיאה בשמירה",
+};
+
+export function designerStatus(opts: {
+  valid: boolean;
+  calculating: boolean;
+  calcError: boolean;
+  calcState: CalcFreshness;
+  persistState: PersistTrustState;
+}): DesignerStatus {
+  const key: DesignerStatusKey = !opts.valid
+    ? "needs_input"
+    : opts.calculating
+      ? "calculating"
+      : opts.calcError
+        ? "calc_error"
+        : opts.calcState !== "fresh"
+          ? "pending"
+          : opts.persistState === "error"
+            ? "save_error"
+            : opts.persistState === "saving"
+              ? "saving"
+              : opts.persistState === "saved"
+                ? "ready"
+                : "calculated";
+  return { key, label: DESIGNER_STATUS_HE[key] };
+}
+
 export type ValidationSeverity = "blocker" | "warning" | "info";
 
 export type ValidationItem = {

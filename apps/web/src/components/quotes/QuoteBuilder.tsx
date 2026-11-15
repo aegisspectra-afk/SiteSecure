@@ -343,10 +343,27 @@ export function QuoteBuilder({
     return createGate.current;
   }
 
+  /**
+   * /app/quotes/new -> /app/quotes/$id once the draft exists. Navigating remounts the
+   * builder, so while the system designer is open the move waits until it closes
+   * (otherwise the CCTV window closed right after its first save on a new quote).
+   */
+  const deferRouteRef = useRef(false);
+  const pendingRouteRef = useRef<string | null>(null);
   function commitRoute(id: string) {
     if (!startedUnsaved.current || routed.current || !id) return;
+    if (deferRouteRef.current) {
+      pendingRouteRef.current = id;
+      return;
+    }
     routed.current = true;
     void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: id }, replace: true });
+  }
+  function releaseDeferredRoute() {
+    deferRouteRef.current = false;
+    const pending = pendingRouteRef.current ?? liveRef.current.id;
+    pendingRouteRef.current = null;
+    if (pending) commitRoute(pending);
   }
 
   async function persistHeader(opts?: { skipRoute?: boolean }): Promise<QuoteOut> {
@@ -1505,6 +1522,7 @@ export function QuoteBuilder({
       setQuickCatalogKind(null);
       setQuickAddOpen(false);
       setSystemBuilderFocusKey(null);
+      deferRouteRef.current = true;
       setSystemBuilderOpen(true);
       return;
     }
@@ -1571,6 +1589,7 @@ export function QuoteBuilder({
     }
     if (action === "buildSystem") {
       setSystemBuilderFocusKey(null);
+      deferRouteRef.current = true;
       setSystemBuilderOpen(true);
     }
   }
@@ -2496,6 +2515,7 @@ export function QuoteBuilder({
                 canEdit && canCatalog
                   ? () => {
                       setSystemBuilderFocusKey(null);
+                      deferRouteRef.current = true;
                       setSystemBuilderOpen(true);
                     }
                   : undefined
@@ -2684,12 +2704,14 @@ export function QuoteBuilder({
           onResolvePlanned={(packageName) => {
             const key = componentKeyFromPlannedPackage(packageName);
             setSystemBuilderFocusKey(key);
+            deferRouteRef.current = true;
             setSystemBuilderOpen(true);
           }}
           onOpenSystemBuilder={
             canEdit && canCatalog && activeStep === "items"
               ? () => {
                   setSystemBuilderFocusKey(null);
+                  deferRouteRef.current = true;
                   setSystemBuilderOpen(true);
                 }
               : undefined
@@ -2986,6 +3008,7 @@ export function QuoteBuilder({
           setSystemBuilderFocusKey(null);
           setBuildSystemApplyError(null);
           goToStep("items");
+          releaseDeferredRoute();
         }}
         workspaceId={workspaceId}
         quoteId={live.id || null}

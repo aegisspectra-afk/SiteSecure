@@ -1,6 +1,7 @@
 /**
  * SYSTEM-DESIGNER-1 Slice C — requirements workspace UI/state tests A–L.
  */
+import { he } from "../src/i18n/he";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -53,7 +54,9 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
     expect(root).toHaveAttribute("data-tech", "ip");
     expect(root).toHaveAttribute("data-mode", "quick");
     expect(screen.getByLabelText("מצלמות IP")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "רשת ו-PoE" })).toBeInTheDocument();
+    // Q2: quick mode shows the PoE assumption instead of the full network section.
+    expect(screen.getByLabelText(he.cpqCctvAssumptionPoe)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "רשת ו-PoE" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("FPS")).not.toBeInTheDocument();
     expect(screen.queryByText("ארון תקשורת")).not.toBeInTheDocument();
   });
@@ -81,6 +84,9 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
       "analog_hd",
     );
     expect(screen.queryByRole("heading", { name: "רשת ו-PoE" })).not.toBeInTheDocument();
+    // Q2: analog quick mode has no PoE assumption; coax path and PSU live in professional mode.
+    expect(screen.queryByLabelText(he.cpqCctvAssumptionPoe)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "מקצועי" }));
     expect(screen.getAllByText(/RG59/).length).toBeGreaterThan(0);
     expect(screen.getByText("ספק כוח מרכזי")).toBeInTheDocument();
   });
@@ -115,7 +121,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute("data-tech", "hybrid");
     expect(screen.getByLabelText("מצלמות IP")).toBeInTheDocument();
     expect(screen.getByLabelText("מצלמות אנלוגיות")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "רשת ו-PoE" })).toBeInTheDocument();
+    expect(screen.getByLabelText(he.cpqCctvAssumptionPoe)).toBeInTheDocument();
   });
 
   it("F. Hybrid Professional — IP subset PoE hint + pro fields", () => {

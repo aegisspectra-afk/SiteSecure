@@ -8,6 +8,7 @@ import type {
   SystemRecommendation,
 } from "@site-secure/api-client";
 import {
+  effectiveCableMeters,
   validateCctvBuildRequirements,
   type CctvBuildRequirements,
 } from "./cctv-build-requirements";
@@ -334,7 +335,8 @@ export function buildValidationCenter(opts: {
     });
   }
 
-  if (!opts.req.cableDistanceMeters.trim()) {
+  // Only a real gap: no total and no per-camera length (the quick-mode default is 30 m).
+  if (effectiveCableMeters(opts.req) == null) {
     items.push({
       id: "cable-missing",
       severity: "warning",

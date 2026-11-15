@@ -34,7 +34,10 @@ export type CctvBuildRequirements = {
   motionDutyCycle: string;
   expansionHeadroomPercent: string;
   manufacturerPreference: string;
+  /** Total cable length override (professional). Empty -> cableMetersPerCamera × cameras. */
   cableDistanceMeters: string;
+  /** Q2 quick-mode assumption: meters of cable per camera (default 30, editable). */
+  cableMetersPerCamera: string;
   remoteViewing: boolean;
   upsRequested: boolean;
   commissioningRequested: boolean;
@@ -56,6 +59,50 @@ export type LeadPrefillSource = {
   infrastructure?: string | null;
   location?: string | null;
 };
+
+/**
+ * Q2 quick-mode assumptions. Each is shown as "הנחה" until the user changes it, and stays
+ * editable. They feed the same server engine; no formula changes.
+ */
+export const CCTV_QUICK_ASSUMPTIONS = {
+  cableMetersPerCamera: "30",
+  architectureIntent: "prefer_nvr_integrated",
+  poeRequired: true,
+  recordingMode: "continuous",
+} as const;
+
+export type CctvAssumptionKey = "cable" | "poe" | "recording";
+
+/** True while the value is still the quick-mode assumption (not chosen by the user). */
+export function isAssumed(req: CctvBuildRequirements, key: CctvAssumptionKey): boolean {
+  if (key === "cable") {
+    return !req.cableDistanceMeters.trim() && req.cableMetersPerCamera.trim() === CCTV_QUICK_ASSUMPTIONS.cableMetersPerCamera;
+  }
+  if (key === "poe") {
+    return req.poeRequired === CCTV_QUICK_ASSUMPTIONS.poeRequired && req.architectureIntent === CCTV_QUICK_ASSUMPTIONS.architectureIntent;
+  }
+  return req.recordingMode === CCTV_QUICK_ASSUMPTIONS.recordingMode;
+}
+
+/** Cameras that run on cable from the recorder (all of them, for every technology). */
+function cabledCameras(req: CctvBuildRequirements): number {
+  if (req.cctvTechnology === "hybrid") {
+    return Math.max(0, Math.floor(req.ipCameraCount)) + Math.max(0, Math.floor(req.analogCameraCount));
+  }
+  return Math.max(1, Math.floor(req.cameraCount));
+}
+
+/**
+ * Total cable meters sent to the engine: an explicit total wins; otherwise meters per camera
+ * × cameras. Undefined when neither is a positive number.
+ */
+export function effectiveCableMeters(req: CctvBuildRequirements): number | undefined {
+  const total = optNumber(req.cableDistanceMeters);
+  if (total != null && total > 0) return total;
+  const perCamera = optNumber(req.cableMetersPerCamera ?? "");
+  if (perCamera != null && perCamera > 0) return Math.round(perCamera * cabledCameras(req) * 100) / 100;
+  return undefined;
+}
 
 export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): CctvBuildRequirements {
   const cameraCount = lead?.cameraCount && lead.cameraCount > 0 ? lead.cameraCount : 4;
@@ -95,8 +142,9 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
     motionDutyCycle: "",
     expansionHeadroomPercent: "",
     manufacturerPreference: "",
-    // Do not invent meters — only surface empty field when cabling likely needed
+    // Total stays empty; quick mode assumes CCTV_QUICK_ASSUMPTIONS.cableMetersPerCamera per camera.
     cableDistanceMeters: likelyNeedsCable ? "" : "",
+    cableMetersPerCamera: CCTV_QUICK_ASSUMPTIONS.cableMetersPerCamera,
     remoteViewing: Boolean(lead?.remoteViewing),
     upsRequested: false,
     commissioningRequested: false,
@@ -197,7 +245,7 @@ export function requirementsToRecommendBody(req: CctvBuildRequirements): CctvRec
   if (hours != null) body.recording_hours_per_day = hours;
   const duty = optNumber(req.motionDutyCycle);
   if (duty != null) body.motion_duty_cycle = duty > 1 ? duty / 100 : duty;
-  const cable = optNumber(req.cableDistanceMeters);
+  const cable = effectiveCableMeters(req);
   if (cable != null) body.cable_distance_meters = cable;
   const power = optNumber(req.cameraMaxPowerW);
   if (power != null) body.camera_max_power_w = power;

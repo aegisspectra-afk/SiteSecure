@@ -6,7 +6,12 @@
 import { Input, Select } from "@site-secure/ui";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { he } from "../../../i18n/he";
-import type { CctvBuildRequirements } from "../../../lib/cctv-build-requirements";
+import {
+  effectiveCableMeters,
+  isAssumed,
+  type CctvAssumptionKey,
+  type CctvBuildRequirements,
+} from "../../../lib/cctv-build-requirements";
 import {
   applyTechnology,
   isProfessionalMode,
@@ -269,6 +274,205 @@ function Section({
   );
 }
 
+function AssumptionBadge({ req, which }: { req: CctvBuildRequirements; which: CctvAssumptionKey }) {
+  const assumed = isAssumed(req, which);
+  return (
+    <span
+      className={assumed ? "cpq-cctv-ws-assumption-badge is-assumed" : "cpq-cctv-ws-assumption-badge is-changed"}
+      data-testid={`cctv-assumption-${which}-badge`}
+    >
+      {assumed ? he.cpqCctvAssumptionBadge : he.cpqCctvAssumptionChanged}
+    </span>
+  );
+}
+
+type PoeChoice = "integrated" | "external" | "none";
+
+function poeChoiceOf(req: CctvBuildRequirements): PoeChoice {
+  if (!req.poeRequired) return "none";
+  return req.architectureIntent === "prefer_external_switch" ? "external" : "integrated";
+}
+
+/**
+ * Q2 quick mode: only cameras, indoor/outdoor, resolution and retention, plus the
+ * assumptions the engine uses (each marked "הנחה" and editable in place).
+ */
+function QuickRequirements({
+  req,
+  setReq,
+  patch,
+  disabled,
+  inputError,
+}: {
+  req: CctvBuildRequirements;
+  setReq: (next: CctvBuildRequirements) => void;
+  patch: (partial: Partial<CctvBuildRequirements>) => void;
+  disabled: boolean;
+  inputError: string | null;
+}) {
+  const tech = req.cctvTechnology;
+  const totalCable = effectiveCableMeters(req);
+  return (
+    <div className="cpq-cctv-ws-quick" data-testid="cctv-quick-fields">
+      <section className="cpq-cctv-ws-section is-active" aria-label={he.cpqCctvQuickFieldsLabel}>
+        <div className="cpq-cctv-ws-section-body">
+          {tech === "hybrid" ? (
+            <div className="cpq-cctv-ws-grid-2">
+              <Stepper
+                id="cpq-ip-count"
+                label={he.cpqCctvIpCameraCount}
+                value={req.ipCameraCount}
+                disabled={disabled}
+                min={0}
+                onChange={(n) => setReq(patchCameraCounts(req, { ipCameraCount: n }))}
+              />
+              <Stepper
+                id="cpq-analog-count"
+                label={he.cpqCctvAnalogCameraCount}
+                value={req.analogCameraCount}
+                disabled={disabled}
+                min={0}
+                onChange={(n) => setReq(patchCameraCounts(req, { analogCameraCount: n }))}
+              />
+            </div>
+          ) : (
+            <Stepper
+              id="cpq-camera-count"
+              label={tech === "analog_hd" ? he.cpqCctvAnalogCameraCount : he.cpqCctvIpCameraCount}
+              value={req.cameraCount}
+              disabled={disabled}
+              min={1}
+              onChange={(n) => setReq(patchCameraCounts(req, { cameraCount: n }))}
+            />
+          )}
+          <Select
+            id="cpq-environment"
+            label={he.cpqCctvEnvironment}
+            value={req.environment}
+            disabled={disabled}
+            onChange={(ev) => patch({ environment: ev.target.value as CctvBuildRequirements["environment"] })}
+          >
+            <option value="">{he.cpqCctvEnvironmentUnspecified}</option>
+            <option value="indoor">{he.leadsReqLocationIndoor}</option>
+            <option value="outdoor">{he.leadsReqLocationOutdoor}</option>
+            <option value="indoor_outdoor">{he.leadsReqLocationBoth}</option>
+          </Select>
+          <Select
+            id="cpq-resolution"
+            label={he.cpqCctvResolution}
+            value={String(req.resolutionMp)}
+            disabled={disabled}
+            onChange={(ev) => patch({ resolutionMp: Number(ev.target.value) })}
+          >
+            <option value="2">2 {he.cpqCctvUnitMp}</option>
+            <option value="4">4 {he.cpqCctvUnitMp}</option>
+            <option value="5">5 {he.cpqCctvUnitMp}</option>
+            <option value="8">8 {he.cpqCctvUnitMp}</option>
+            <option value="12">12 {he.cpqCctvUnitMp}</option>
+          </Select>
+          <Stepper
+            id="cpq-retention"
+            label={he.cpqCctvRetention}
+            value={req.retentionDays}
+            unit={he.cpqCctvUnitDays}
+            disabled={disabled}
+            min={1}
+            max={365}
+            onChange={(n) => patch({ retentionDays: n })}
+          />
+        </div>
+      </section>
+
+      <section
+        className="cpq-cctv-ws-section cpq-cctv-ws-assumptions"
+        aria-labelledby="cpq-cctv-assumptions-title"
+        data-testid="cctv-assumptions"
+      >
+        <h3 className="cpq-cctv-ws-section-title" id="cpq-cctv-assumptions-title">
+          {he.cpqCctvAssumptionsTitle}
+        </h3>
+        <p className="cpq-cctv-ws-hint">{he.cpqCctvAssumptionsLead}</p>
+        <div className="cpq-cctv-ws-section-body">
+          <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-cable">
+            <UnitInput
+              id="cpq-cable-per-camera"
+              label={he.cpqCctvAssumptionCable}
+              value={req.cableMetersPerCamera}
+              unit={he.cpqCctvUnitMeters}
+              disabled={disabled || Boolean(req.cableDistanceMeters.trim())}
+              onChange={(v) => patch({ cableMetersPerCamera: v })}
+            />
+            <AssumptionBadge req={req} which="cable" />
+            <p className="cpq-cctv-ws-hint">
+              {req.cableDistanceMeters.trim()
+                ? he.cpqCctvCableTotalOverrides
+                : totalCable != null
+                  ? he.cpqCctvCableTotalHint(totalCable)
+                  : null}
+            </p>
+          </div>
+          {tech !== "analog_hd" ? (
+            <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-poe">
+              <Select
+                id="cpq-assumption-poe"
+                label={he.cpqCctvAssumptionPoe}
+                value={poeChoiceOf(req)}
+                disabled={disabled}
+                onChange={(ev) => {
+                  const v = ev.target.value as PoeChoice;
+                  patch(
+                    v === "none"
+                      ? { poeRequired: false }
+                      : {
+                          poeRequired: true,
+                          architectureIntent: v === "external" ? "prefer_external_switch" : "prefer_nvr_integrated",
+                        },
+                  );
+                }}
+              >
+                <option value="integrated">{he.cpqCctvAssumptionPoeIntegrated}</option>
+                <option value="external">{he.cpqCctvAssumptionPoeExternal}</option>
+                <option value="none">{he.cpqCctvAssumptionPoeNone}</option>
+              </Select>
+              <AssumptionBadge req={req} which="poe" />
+            </div>
+          ) : null}
+          <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-recording">
+            <Select
+              id="cpq-recording-mode"
+              label={he.cpqCctvAssumptionRecording}
+              value={req.recordingMode}
+              disabled={disabled}
+              onChange={(ev) => patch({ recordingMode: ev.target.value as CctvBuildRequirements["recordingMode"] })}
+            >
+              <option value="continuous">{he.cpqCctvModeContinuous}</option>
+              <option value="scheduled">{he.cpqCctvModeScheduled}</option>
+              <option value="motion">{he.cpqCctvModeMotion}</option>
+            </Select>
+            <AssumptionBadge req={req} which="recording" />
+            {req.recordingMode === "scheduled" ? (
+              <UnitInput
+                id="cpq-hours"
+                label={he.cpqCctvRecordingHours}
+                value={req.recordingHoursPerDay}
+                unit={he.cpqCctvUnitHours}
+                disabled={disabled}
+                onChange={(v) => patch({ recordingHoursPerDay: v })}
+              />
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      {inputError ? (
+        <p className="cpq-cctv-ws-error" role="alert" data-testid="cctv-req-error">
+          {inputError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Tech / mode chrome — rendered above the engineering summary in the designer shell. */
 export function CctvRequirementsHeader({
   req,
@@ -401,6 +605,9 @@ export function CctvRequirementsWorkspace({
         </p>
       ) : null}
 
+      {!pro ? (
+        <QuickRequirements req={req} setReq={setReq} patch={patch} disabled={disabled} inputError={inputError} />
+      ) : (
       <div className="cpq-cctv-ws-layout">
         <nav className="cpq-cctv-ws-rail" aria-label={he.cpqCctvNavLabel}>
           {sections.map((id) => (
@@ -714,6 +921,14 @@ export function CctvRequirementsWorkspace({
                 <option value="unknown">{he.cpqCctvArchUnknown}</option>
               </Select>
               <UnitInput
+                id="cpq-cable-per-camera"
+                label={he.cpqCctvCableMetersPerCamera}
+                value={req.cableMetersPerCamera}
+                unit={he.cpqCctvUnitMeters}
+                disabled={disabled || Boolean(req.cableDistanceMeters.trim())}
+                onChange={(v) => patch({ cableMetersPerCamera: v })}
+              />
+              <UnitInput
                 id="cpq-cable-m"
                 label={he.cpqCctvCableMeters}
                 value={req.cableDistanceMeters}
@@ -863,6 +1078,7 @@ export function CctvRequirementsWorkspace({
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
 }

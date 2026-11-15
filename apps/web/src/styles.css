@@ -28492,3 +28492,39 @@ html.dark .ssp-site-tone.is-officer {
 .ops-shell[data-testid="ssp-product-shell"] .ops-topbar-meta {
   color: var(--color-fg);
 }
+
+/* Q2 — CCTV quick mode: four fields + assumptions ("הנחה", editable). */
+.cpq-cctv-ws-quick {
+  display: grid;
+  gap: 1rem;
+}
+.cpq-cctv-ws-assumptions .cpq-cctv-ws-section-body {
+  display: grid;
+  gap: 0.75rem;
+}
+.cpq-cctv-ws-assumption {
+  display: grid;
+  gap: 0.25rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid var(--color-border);
+}
+.cpq-cctv-ws-assumption:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+.cpq-cctv-ws-assumption-badge {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.cpq-cctv-ws-assumption-badge.is-assumed {
+  background: color-mix(in srgb, var(--color-warning, #b45309) 12%, transparent);
+  color: var(--color-warning, #b45309);
+}
+.cpq-cctv-ws-assumption-badge.is-changed {
+  background: var(--color-bg-subtle);
+  color: var(--color-fg-muted);
+}

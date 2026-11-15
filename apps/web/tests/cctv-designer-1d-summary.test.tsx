@@ -206,7 +206,8 @@ describe("SYSTEM-DESIGNER-1 Slice D summary", () => {
   });
 
   it("G. warning state for missing cable", () => {
-    const req = { ...defaultCctvBuildRequirements(), cableDistanceMeters: "" };
+    // Q2: the quick-mode default (30 m per camera) is not a gap; only no length at all is.
+    const req = { ...defaultCctvBuildRequirements(), cableDistanceMeters: "", cableMetersPerCamera: "" };
     const items = buildValidationCenter({ req, calcState: "draft", recommendation: null });
     expect(items.some((i) => i.severity === "warning" && i.code === "CABLE_DISTANCE_UNRESOLVED")).toBe(
       true,

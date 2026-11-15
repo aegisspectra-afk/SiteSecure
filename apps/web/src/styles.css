@@ -28528,3 +28528,14 @@ html.dark .ssp-site-tone.is-officer {
   background: var(--color-bg-subtle);
   color: var(--color-fg-muted);
 }
+
+/* Q2.5 — why the PoE switch is (not) needed. */
+.cpq-cctv-review-switch-need {
+  margin-block: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-fg-muted);
+}
+.cpq-cctv-review-switch-need.is-required {
+  color: var(--color-warning, #b45309);
+  font-weight: 600;
+}

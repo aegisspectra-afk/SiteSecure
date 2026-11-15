@@ -28,6 +28,7 @@ import {
 } from "../../../lib/cctv-recommend-projection";
 import { CctvComponentPicker } from "./CctvComponentPicker";
 import { formatTb } from "../../../lib/cctv-storage-display";
+import { POE_SWITCH_KEY, switchNeed, switchNeedLabelHe } from "../../../lib/cctv-poe-switch";
 
 type Props = {
   rec: SystemRecommendation;
@@ -65,6 +66,7 @@ export function CctvReviewPanel({
   const tech = technologyFromRecommendation(rec);
   const summary = buildEngineeringSummary(rec);
   const visible = rec.components.filter((c) => !selection.removedComponentIds.has(componentKeyOf(c)));
+  const poeSwitchNeed = switchNeed(rec, selection);
   const sections = groupComponentsForReview(visible);
   const preview = buildApplyReadinessPreview(rec, selection);
 
@@ -197,6 +199,16 @@ export function CctvReviewPanel({
                       {reviewStatusLabelHe(status)}
                     </span>
                   </div>
+
+                  {key === POE_SWITCH_KEY && switchNeedLabelHe(poeSwitchNeed) ? (
+                    <p
+                      className={`cpq-cctv-review-switch-need is-${poeSwitchNeed}`}
+                      data-testid="cctv-switch-need"
+                      data-need={poeSwitchNeed}
+                    >
+                      {switchNeedLabelHe(poeSwitchNeed)}
+                    </p>
+                  ) : null}
 
                   {reqText ? (
                     <div className="cpq-cctv-review-block">

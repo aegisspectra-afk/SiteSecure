@@ -188,6 +188,59 @@ export type AddRecommendationGate =
  * Optional unresolved components are omitted.
  * TEXT_ASSISTED never auto-satisfies a required core component (treated as planned).
  */
+/**
+ * Q2.5: is the PoE switch needed?
+ * - required: the server requires it, or the chosen recorder lacks PoE ports / budget.
+ * - not_needed: the chosen recorder covers the cameras' PoE ports and budget.
+ * - conditional: no recorder chosen yet, or its PoE ports/budget are not known.
+ * - not_applicable: no switch in this recommendation (analog, PoE off, integrated NVR).
+ */
+export type SwitchNeed = "required" | "not_needed" | "conditional" | "not_applicable";
+
+export const POE_SWITCH_KEY = "poe_switch_main";
+const SWITCH_RECORDER_KEY = "recorder_main";
+const SWITCH_CONDITIONAL_CODE = "SWITCH_CONDITIONAL_ON_RECORDER";
+
+function poeAttrNum(attrs: Record<string, unknown> | undefined, ...keys: string[]): number | null {
+  if (!attrs) return null;
+  for (const k of keys) {
+    const v = attrs[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() && Number.isFinite(Number(v))) return Number(v);
+  }
+  return null;
+}
+
+export function switchNeed(rec: SystemRecommendation | null, selection: ReviewSelectionState): SwitchNeed {
+  if (!rec) return "not_applicable";
+  const sw = rec.components.find((c) => componentKeyOf(c) === POE_SWITCH_KEY);
+  if (!sw) return "not_applicable";
+  const conditional = (sw.reason_codes ?? []).some((r) => r.code === SWITCH_CONDITIONAL_CODE);
+  if (!conditional) return "required";
+
+  const recorder = rec.components.find((c) => componentKeyOf(c) === SWITCH_RECORDER_KEY);
+  const picked = recorder ? resolveComponentProduct(recorder, selection) : null;
+  if (!picked) return "conditional";
+
+  const attrs = (picked.product.attributes ?? {}) as Record<string, unknown>;
+  const ports = poeAttrNum(attrs, "poe_ports", "poePorts");
+  const budget = poeAttrNum(attrs, "poe_budget_w", "poeBudgetW");
+  const poe = ((rec.engineering ?? {}) as Record<string, unknown>).poe as
+    | { requiredPorts?: number; requiredBudgetW?: number }
+    | undefined;
+  const needPorts = typeof poe?.requiredPorts === "number" ? poe.requiredPorts : null;
+  const needBudget = typeof poe?.requiredBudgetW === "number" ? poe.requiredBudgetW : null;
+
+  if (ports == null) return "conditional";
+  if (ports === 0) return "required";
+  if (needPorts != null && ports < needPorts) return "required";
+  if (needBudget != null) {
+    if (budget == null) return "conditional";
+    if (budget < needBudget) return "required";
+  }
+  return "not_needed";
+}
+
 export function canAddRecommendationToQuote(
   rec: SystemRecommendation,
   selection: ReviewSelectionState,
@@ -199,9 +252,20 @@ export function canAddRecommendationToQuote(
   const lines: CctvBuildQuoteLine[] = [];
   const planned: CctvPlannedQuoteLine[] = [];
   let incomplete = false;
+  const poeSwitch = switchNeed(rec, selection);
   for (const c of rec.components) {
     const key = componentKeyOf(c);
     if (selection.removedComponentIds.has(key)) continue;
+    if (key === POE_SWITCH_KEY && poeSwitch !== "required") {
+      // Q2.5: a conditional / unneeded switch goes in only when the user picked one.
+      if (!selection.selectedByComponentId[key]) continue;
+    }
+    if (key === POE_SWITCH_KEY && poeSwitch === "required" && c.optional && !resolveComponentProduct(c, selection)) {
+      // The chosen recorder made the conditional switch required: plan it like a core item.
+      incomplete = true;
+      planned.push(plannedLineFromComponent(c));
+      continue;
+    }
     const picked = resolveComponentProduct(c, selection);
     const textAssistedCore =
       Boolean(picked) && picked!.confidence === "TEXT_ASSISTED" && c.blocking && !c.optional;

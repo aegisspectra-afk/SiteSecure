@@ -307,7 +307,9 @@ export function buildCalculatedMetrics(
         ? "מתג PoE חיצוני"
         : summary.architecture === "integrated"
           ? "PoE משולב במקליט"
-          : "ארכיטקטורה לא נקבעה";
+          : summary.architecture === "conditional"
+            ? "מתג PoE מותנה במקליט"
+            : "ארכיטקטורה לא נקבעה";
     if (poeArch.evaluation !== "NOT_APPLICABLE") {
       metrics.push({ id: "arch", label: "רשת/PoE", value: archLabel });
     }

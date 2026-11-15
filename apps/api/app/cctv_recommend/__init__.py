@@ -1023,6 +1023,14 @@ def build_system_recommendation(
             elif recorder.get("selected") and try_integrated and poe.get("status") != "ok":
                 external_switch = True
 
+    # Q2: a PoE switch is needed only when the recorder that is chosen lacks PoE or budget.
+    # With no recorder chosen yet (e.g. none in the catalog) the switch is conditional:
+    # offered, optional and non-blocking, until the user picks the recorder.
+    switch_conditional = False
+    if tech == "ip" and external_switch and not force_external and not (recorder and recorder.get("selected")):
+        external_switch = False
+        switch_conditional = True
+
     drive_bays = (inp.get("recorder") or {}).get("driveBays")
     max_hdd = (inp.get("recorder") or {}).get("maxHddTb")
     if recorder and recorder.get("selected"):
@@ -1080,7 +1088,7 @@ def build_system_recommendation(
     )
 
     # --- PoE switch (IP / Hybrid IP subset only) ---
-    if tech != "analog_hd" and external_switch and poe_required:
+    if tech != "analog_hd" and (external_switch or switch_conditional) and poe_required:
         sw_ports = poe.get("requiredPorts") or ip_count or inp["cameraCount"]
         sw_req = {
             "minPorts": sw_ports,
@@ -1091,11 +1099,12 @@ def build_system_recommendation(
             **engineering,
             "poeArchitecture": {
                 "evaluation": "INSUFFICIENT_PORTS" if force_external else "UNKNOWN",
-                "externalSwitchRequired": True,
+                "externalSwitchRequired": not switch_conditional,
+                "switchConditional": switch_conditional,
                 "switchRequirement": sw_req,
                 "reasons": [
                     {
-                        "code": "EXTERNAL_SWITCH_REQUIRED",
+                        "code": "SWITCH_CONDITIONAL_ON_RECORDER" if switch_conditional else "EXTERNAL_SWITCH_REQUIRED",
                         "params": {
                             "forced": force_external,
                             "technology": tech,
@@ -1114,26 +1123,27 @@ def build_system_recommendation(
             min_budget_w=sw_req.get("minPoeBudgetW"),
             manufacturer_preference=manufacturer_preference,
         )
-        components.append(
-            _stamp(
-                switch,
-                component_key=COMPONENT_KEYS["poe_switch"],
-                role="poe_switch",
-                qty=1,
-                optional=False,
-                reason_codes=[
-                    {
-                        "code": "EXTERNAL_SWITCH_REQUIRED",
-                        "params": {
-                            "technology": tech,
-                            "ipCameraCount": ip_count,
-                            "requiredPorts": sw_ports,
-                            "requiredBudgetW": poe.get("requiredBudgetW"),
-                        },
-                    }
-                ],
-            )
+        switch_component = _stamp(
+            switch,
+            component_key=COMPONENT_KEYS["poe_switch"],
+            role="poe_switch",
+            qty=1,
+            optional=switch_conditional,
+            reason_codes=[
+                {
+                    "code": "SWITCH_CONDITIONAL_ON_RECORDER" if switch_conditional else "EXTERNAL_SWITCH_REQUIRED",
+                    "params": {
+                        "technology": tech,
+                        "ipCameraCount": ip_count,
+                        "requiredPorts": sw_ports,
+                        "requiredBudgetW": poe.get("requiredBudgetW"),
+                    },
+                }
+            ],
         )
+        if switch_conditional:
+            switch_component["blocking"] = False
+        components.append(switch_component)
     elif tech != "analog_hd":
         engineering = {
             **engineering,

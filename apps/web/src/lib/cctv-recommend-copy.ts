@@ -280,7 +280,7 @@ export type EngineeringSummary = {
   bitrateAssumption: string | null;
   poePorts: number | null;
   poeBudgetW: number | null;
-  architecture: "integrated" | "external_switch" | "unknown";
+  architecture: "integrated" | "external_switch" | "conditional" | "unknown";
 };
 
 export function buildEngineeringSummary(rec: SystemRecommendation): EngineeringSummary {
@@ -313,7 +313,13 @@ export function buildEngineeringSummary(rec: SystemRecommendation): EngineeringS
     ),
     poePorts: typeof poe.requiredPorts === "number" ? poe.requiredPorts : null,
     poeBudgetW: typeof poe.requiredBudgetW === "number" ? poe.requiredBudgetW : null,
-    architecture: external ? "external_switch" : arch.externalSwitchRequired === false ? "integrated" : "unknown",
+    architecture: external
+      ? "external_switch"
+      : arch.switchConditional === true
+        ? "conditional"
+        : arch.externalSwitchRequired === false
+          ? "integrated"
+          : "unknown",
   };
 }
 

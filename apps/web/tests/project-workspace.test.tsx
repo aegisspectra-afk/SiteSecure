@@ -292,6 +292,8 @@ describe("ProjectWorkspace", () => {
         customer_id: "c1",
         site_id: "s1",
       }),
+      // DEMO-3.3: every create carries an idempotency key.
+      expect.objectContaining({ idempotencyKey: expect.any(String) }),
     );
     expect(navigate).toHaveBeenCalledWith({
       to: "/app/jobs/$jobId",

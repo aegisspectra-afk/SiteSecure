@@ -21,6 +21,7 @@ import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes
 import { planQuotaMessage } from "../../lib/plan-quota";
 import { quoteCreateSearch } from "../../lib/workflow-context";
 import { useSession } from "../../lib/session";
+import { useIdempotencyKey } from "../../lib/idempotency-key";
 
 type SiteTab = "overview" | "systems" | "equipment" | "service" | "quotes" | "documents" | "history" | "field";
 
@@ -338,15 +339,21 @@ export function SiteDossier({ siteId }: { siteId: string }) {
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.sitesError),
   });
 
+  const installAttempt = useIdempotencyKey();
   const startInstall = useMutation({
     mutationFn: () =>
-      api.createJob(workspaceId!, {
-        title: he.installationJobTitle(siteQuery.data?.name ?? ""),
-        customer_id: siteQuery.data!.customer_id,
-        site_id: siteId,
-        kind: "installation",
-      }),
+      api.createJob(
+        workspaceId!,
+        {
+          title: he.installationJobTitle(siteQuery.data?.name ?? ""),
+          customer_id: siteQuery.data!.customer_id,
+          site_id: siteId,
+          kind: "installation",
+        },
+        { idempotencyKey: installAttempt.current() },
+      ),
     onSuccess: (job) => {
+      installAttempt.renew();
       void queryClient.invalidateQueries({ queryKey: ["site-jobs", workspaceId, siteId] });
       void navigate({ to: "/app/jobs/$jobId", params: { jobId: job.id } });
     },
@@ -439,7 +446,12 @@ export function SiteDossier({ siteId }: { siteId: string }) {
             </Button>
           ) : null}
           {canJobs ? (
-            <Button type="button" loading={startInstall.isPending} onClick={() => startInstall.mutate()}>
+            <Button
+              type="button"
+              loading={startInstall.isPending}
+              disabled={startInstall.isPending}
+              onClick={() => startInstall.mutate()}
+            >
               {he.installationStart}
             </Button>
           ) : null}

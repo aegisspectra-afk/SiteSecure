@@ -20,6 +20,7 @@ import { useSession } from "../../lib/session";
 import { CreateInstalledAssetsConfirm } from "./CreateInstalledAssetsConfirm";
 import { ProjectJobCard } from "./ProjectJobCard";
 import { ProjectPlannedScope } from "./ProjectPlannedScope";
+import { useIdempotencyKey } from "../../lib/idempotency-key";
 
 type ProjectWorkspaceProps = {
   projectId: string;
@@ -90,16 +91,22 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
     retry: false,
   });
 
+  const installAttempt = useIdempotencyKey();
   const startInstall = useMutation({
     mutationFn: () =>
-      api.createJob(workspaceId!, {
-        title: he.installationJobTitle(projectQuery.data?.name ?? siteQuery.data?.name ?? ""),
-        customer_id: customerId!,
-        site_id: siteId!,
-        kind: "installation",
-        project_id: projectId,
-      }),
+      api.createJob(
+        workspaceId!,
+        {
+          title: he.installationJobTitle(projectQuery.data?.name ?? siteQuery.data?.name ?? ""),
+          customer_id: customerId!,
+          site_id: siteId!,
+          kind: "installation",
+          project_id: projectId,
+        },
+        { idempotencyKey: installAttempt.current() },
+      ),
     onSuccess: (job) => {
+      installAttempt.renew();
       void queryClient.invalidateQueries({ queryKey: ["project-jobs", workspaceId, projectId] });
       void queryClient.invalidateQueries({ queryKey: ["site-jobs", workspaceId, siteId] });
       void queryClient.invalidateQueries({ queryKey: ["jobs-list"] });

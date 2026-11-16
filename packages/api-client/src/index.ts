@@ -3279,10 +3279,13 @@ export function createApiClient(opts: {
         service_call_id?: string;
         priority?: string;
       },
+      /** DEMO-3.3: same key = same job (double click / retry never creates a second one). */
+      opts?: { idempotencyKey?: string },
     ) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs`, {
         method: "POST",
         body: JSON.stringify(body),
+        headers: opts?.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : undefined,
       }),
     /** DEMO-3.1: optional visit time in the same step. */
     assignJob: (

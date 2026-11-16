@@ -5,6 +5,7 @@ import { useState } from "react";
 import { he } from "../../i18n/he";
 import { emptySchedule, scheduleToApi, type ScheduleInputs } from "../../lib/job-schedule";
 import { JobScheduleFields } from "./JobScheduleFields";
+import { useIdempotencyKey } from "../../lib/idempotency-key";
 
 /**
  * DEMO-3.1: creating an installation job asks for the visit time and, when allowed, the
@@ -30,6 +31,7 @@ export function NewInstallJobDialog({
   const [schedule, setSchedule] = useState<ScheduleInputs>(emptySchedule());
   const [userId, setUserId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const attempt = useIdempotencyKey();
 
   const membersQuery = useQuery({
     queryKey: ["members-assign", workspaceId],
@@ -44,11 +46,16 @@ export function NewInstallJobDialog({
     mutationFn: async () => {
       const parsed = scheduleToApi(schedule);
       if (!parsed.ok) throw new Error(parsed.error);
-      const created = await api.createJob(workspaceId, { ...job, kind: "installation", ...(parsed.value ?? {}) });
+      const created = await api.createJob(
+        workspaceId,
+        { ...job, kind: "installation", ...(parsed.value ?? {}) },
+        { idempotencyKey: attempt.current() },
+      );
       if (userId) await api.assignJob(workspaceId, created.id, { user_id: userId });
       return created;
     },
     onSuccess: (created) => {
+      attempt.renew();
       setError(null);
       onCreated(created);
     },

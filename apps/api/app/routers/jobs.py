@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..audit import write_audit
@@ -64,6 +65,31 @@ class JobAssign(BaseModel):
 
 
 MAX_JOB_DURATION_HOURS = 24
+_IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_-]{8,100}$")
+
+
+def _idempotency_key(raw: str | None) -> str | None:
+    """DEMO-3.3: optional client key for one create attempt (8-100 of A-Z a-z 0-9 _ -)."""
+    if raw is None or raw == "":
+        return None
+    if not _IDEMPOTENCY_KEY.match(raw):
+        raise ApiError(400, "VALIDATION_ERROR", "מפתח בקשה לא תקין", {"field": "Idempotency-Key"})
+    return raw
+
+
+def _job_by_idempotency_key(client: UserClient, workspace_id: UUID, key: str) -> dict | None:
+    rows = as_list(
+        client.get(
+            "jobs",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "idempotency_key": f"eq.{key}",
+                "select": JOB_SELECT,
+                "limit": "1",
+            },
+        )
+    )
+    return rows[0] if rows else None
 
 
 def _parse_ts(value: str, field: str) -> datetime:
@@ -360,15 +386,22 @@ def create_job(
     body: JobCreate,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> JobOut:
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "jobs.create", resource=ResourceRef(type="job", site_id=body.site_id))
+    key = _idempotency_key(idempotency_key)
     one_or_404(
         client.get(
             "sites",
             params={"id": f"eq.{body.site_id}", "workspace_id": f"eq.{workspace_id}", "select": "id,customer_id"},
         )
     )
+    # DEMO-3.3: the same create attempt (double click, retry) returns the job it already made.
+    if key:
+        earlier = _job_by_idempotency_key(client, workspace_id, key)
+        if earlier:
+            return _out(client, workspace_id, earlier)
     payload: dict[str, Any] = {
         "workspace_id": str(workspace_id),
         "created_by": actor_id(user),
@@ -384,7 +417,15 @@ def create_job(
         payload["service_call_id"] = body.service_call_id
     if body.priority:
         payload["priority"] = body.priority
-    row = created_or_403(client.post("jobs", payload))
+    if key:
+        payload["idempotency_key"] = key
+    res = client.post("jobs", payload)
+    if key and res.status_code == 409:
+        # A concurrent request with the same key won the unique index: return its job.
+        earlier = _job_by_idempotency_key(client, workspace_id, key)
+        if earlier:
+            return _out(client, workspace_id, earlier)
+    row = created_or_403(res)
     checklist = INSTALLATION_CHECKLIST if body.kind == "installation" else SERVICE_CHECKLIST if body.kind == "service" else ()
     for index, label in enumerate(checklist):
         try:

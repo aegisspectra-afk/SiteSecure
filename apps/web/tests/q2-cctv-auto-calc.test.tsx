@@ -103,32 +103,7 @@ describe("Q2.3 automatic calculation", () => {
   });
 });
 
-describe("Q2.3 first save on a new quote", () => {
-  it("does not reload or recalculate when the quote id arrives from the drawer's own save", async () => {
-    const design = { id: "d1", revision: 1, engine_type: "cctv", created_at: "2026-11-15T00:00:00Z", components: [] };
-    const full = {
-      recommendCctv,
-      listSystemDesigns: vi.fn(async () => ({ items: [design] })),
-      createSystemDesign: vi.fn(async () => design),
-      patchSystemDesign: vi.fn(async () => ({ ...design, revision: 2 })),
-      getSystemDesign: vi.fn(async () => design),
-    } as unknown as ApiClient;
-    const ensureQuoteId = vi.fn(async () => "q1");
-    const client = new QueryClient();
-    const view = (quoteId: string | null) => (
-      <QueryClientProvider client={client}>
-        <SystemBuilderDrawer open onClose={() => {}} workspaceId="ws" quoteId={quoteId} ensureQuoteId={ensureQuoteId} api={full} onApply={() => {}} />
-      </QueryClientProvider>
-    );
-    const { rerender } = render(view(null));
-    await advance(AUTO_CALC_DEBOUNCE_MS + 50);
-    expect(ensureQuoteId).toHaveBeenCalledTimes(1);
-    const listsBefore = (full.listSystemDesigns as ReturnType<typeof vi.fn>).mock.calls.length;
-    rerender(view("q1")); // the parent now knows the quote it created for us
-    await advance(AUTO_CALC_DEBOUNCE_MS * 3);
-    expect(recommendCctv).toHaveBeenCalledTimes(1);
-    expect(full.getSystemDesign).not.toHaveBeenCalled();
-    expect((full.listSystemDesigns as ReturnType<typeof vi.fn>).mock.calls.length).toBe(listsBefore);
-    expect(screen.getByTestId("cctv-designer-requirements-shell")).toBeInTheDocument();
-  });
+describe("Q2.3 / DEMO-2.3 first save on a new quote", () => {
+  // DEMO-2.3: the quote is now created by "הוסף תכנון להצעה", not by the calculation;
+  // the no-reload-after-own-save check lives in demo2-no-empty-draft.test.tsx.
 });

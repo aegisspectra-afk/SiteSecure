@@ -393,10 +393,13 @@ export function SystemBuilderDrawer({
     nextSelection: ReviewSelectionState,
     requirements: CctvBuildRequirements,
     needsReviewRoles: Set<string>,
+    opts: { allowCreate?: boolean } = {},
   ) {
     let quote = quoteId;
     if (!quote) {
-      if (!ensureQuoteId) return;
+      // DEMO-2.3: no quote is created until it gets content. A calculation on a new quote
+      // stays local; "הוסף תכנון להצעה" creates the quote and saves the design.
+      if (!ensureQuoteId || !opts.allowCreate) return;
       creatingQuoteRef.current = true;
       try {
         quote = await ensureQuoteId();
@@ -616,9 +619,22 @@ export function SystemBuilderDrawer({
     setLastLines(addGate.lines);
     setLocalApplyError(null);
 
-    const design = designRef.current;
+    let design = designRef.current;
     const planned = addGate.ok ? addGate.planned : [];
     const resolved = addGate.ok ? addGate.lines : [];
+
+    if (!design && recommendation && ensureQuoteId && (resolved.length > 0 || planned.length > 0)) {
+      // DEMO-2.3: first content for a new quote: create it now, then the durable apply path.
+      setLocalApplying(true);
+      try {
+        await persistRecommendationState(recommendation, selection, req, new Set(), { allowCreate: true });
+      } catch (err) {
+        setLocalApplyError(apiErrorMessage(err, he.cpqCctvDesignSaveError));
+      } finally {
+        setLocalApplying(false);
+      }
+      design = designRef.current;
+    }
 
     if (design) {
       // Durable atomic Apply for resolved catalog products; planned free-lines separately.

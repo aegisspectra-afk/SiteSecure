@@ -20,7 +20,7 @@ import { useSession } from "../../lib/session";
 import { CreateInstalledAssetsConfirm } from "./CreateInstalledAssetsConfirm";
 import { ProjectJobCard } from "./ProjectJobCard";
 import { ProjectPlannedScope } from "./ProjectPlannedScope";
-import { useIdempotencyKey } from "../../lib/idempotency-key";
+import { useIdempotencyKey, useSingleFlight } from "../../lib/idempotency-key";
 
 type ProjectWorkspaceProps = {
   projectId: string;
@@ -92,6 +92,7 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
   });
 
   const installAttempt = useIdempotencyKey();
+  const installFlight = useSingleFlight();
   const startInstall = useMutation({
     mutationFn: () =>
       api.createJob(
@@ -293,7 +294,9 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
               type="button"
               loading={startInstall.isPending}
               disabled={startInstall.isPending}
-              onClick={() => startInstall.mutate()}
+              onClick={() => {
+                if (installFlight.begin()) startInstall.mutate(undefined, { onSettled: () => installFlight.end() });
+              }}
               data-testid="project-start-install"
             >
               {he.projectStartInstallation}
@@ -337,7 +340,9 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
                     type="button"
                     loading={startInstall.isPending}
                     disabled={startInstall.isPending}
-                    onClick={() => startInstall.mutate()}
+                    onClick={() => {
+                if (installFlight.begin()) startInstall.mutate(undefined, { onSettled: () => installFlight.end() });
+              }}
                   >
                     {he.projectStartInstallation}
                   </Button>

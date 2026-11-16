@@ -21,7 +21,7 @@ import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes
 import { planQuotaMessage } from "../../lib/plan-quota";
 import { quoteCreateSearch } from "../../lib/workflow-context";
 import { useSession } from "../../lib/session";
-import { useIdempotencyKey } from "../../lib/idempotency-key";
+import { useIdempotencyKey, useSingleFlight } from "../../lib/idempotency-key";
 
 type SiteTab = "overview" | "systems" | "equipment" | "service" | "quotes" | "documents" | "history" | "field";
 
@@ -340,6 +340,7 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   });
 
   const installAttempt = useIdempotencyKey();
+  const installFlight = useSingleFlight();
   const startInstall = useMutation({
     mutationFn: () =>
       api.createJob(
@@ -450,7 +451,9 @@ export function SiteDossier({ siteId }: { siteId: string }) {
               type="button"
               loading={startInstall.isPending}
               disabled={startInstall.isPending}
-              onClick={() => startInstall.mutate()}
+              onClick={() => {
+                if (installFlight.begin()) startInstall.mutate(undefined, { onSettled: () => installFlight.end() });
+              }}
             >
               {he.installationStart}
             </Button>

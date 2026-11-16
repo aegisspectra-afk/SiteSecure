@@ -19,3 +19,20 @@ export function useIdempotencyKey(): { current: () => string; renew: () => void 
   }, []);
   return { current, renew };
 }
+
+/**
+ * Synchronous in-flight guard: a double click fires both clicks before React re-renders the
+ * button as disabled, so `disabled={isPending}` alone lets the second one through.
+ */
+export function useSingleFlight(): { begin: () => boolean; end: () => void } {
+  const busy = useRef(false);
+  const begin = useCallback(() => {
+    if (busy.current) return false;
+    busy.current = true;
+    return true;
+  }, []);
+  const end = useCallback(() => {
+    busy.current = false;
+  }, []);
+  return { begin, end };
+}

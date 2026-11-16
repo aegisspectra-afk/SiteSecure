@@ -5,7 +5,7 @@ import { useState } from "react";
 import { he } from "../../i18n/he";
 import { emptySchedule, scheduleToApi, type ScheduleInputs } from "../../lib/job-schedule";
 import { JobScheduleFields } from "./JobScheduleFields";
-import { useIdempotencyKey } from "../../lib/idempotency-key";
+import { useIdempotencyKey, useSingleFlight } from "../../lib/idempotency-key";
 
 /**
  * DEMO-3.1: creating an installation job asks for the visit time and, when allowed, the
@@ -32,6 +32,7 @@ export function NewInstallJobDialog({
   const [userId, setUserId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const attempt = useIdempotencyKey();
+  const flight = useSingleFlight();
 
   const membersQuery = useQuery({
     queryKey: ["members-assign", workspaceId],
@@ -60,6 +61,7 @@ export function NewInstallJobDialog({
       onCreated(created);
     },
     onError: (err) => setError(err instanceof ApiClientError || err instanceof Error ? err.message : he.jobLoadError),
+    onSettled: () => flight.end(),
   });
 
   return (
@@ -100,7 +102,9 @@ export function NewInstallJobDialog({
             data-testid="new-install-job-submit"
             disabled={create.isPending}
             loading={create.isPending}
-            onClick={() => create.mutate()}
+            onClick={() => {
+              if (flight.begin()) create.mutate();
+            }}
           >
             {he.jobNewInstallCreate}
           </Button>

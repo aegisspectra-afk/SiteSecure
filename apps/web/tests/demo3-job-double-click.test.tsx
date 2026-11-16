@@ -45,6 +45,16 @@ describe("DEMO-3.3 a second click never creates a second job", () => {
     expect(createJob).toHaveBeenCalledTimes(1);
   });
 
+  it("two clicks in the same instant (before React re-renders) still make one request", async () => {
+    const createJob = vi.fn(async () => ({ id: "j1" }));
+    const onCreated = renderDialog({ createJob } as never);
+    const submit = screen.getByTestId("new-install-job-submit");
+    fireEvent.click(submit);
+    fireEvent.click(submit); // no await in between: the button is not disabled yet
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    expect(createJob).toHaveBeenCalledTimes(1);
+  });
+
   it("a retry after a failure sends the same Idempotency-Key", async () => {
     const createJob = vi
       .fn()

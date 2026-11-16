@@ -5,7 +5,7 @@ import { LoginForm } from "../components/LoginForm";
 import { he } from "../i18n/he";
 import { authErrorMessage } from "../lib/auth-errors";
 import { authLaunchSequence } from "../lib/auth-launch";
-import { afterAuthPath, sanitizeNextPath } from "../lib/auth-routes";
+import { landingPathForSession, sanitizeNextPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
 import { clearUnitSession, hasUnitSession, saveUnitSession } from "../lib/unit-session";
@@ -52,8 +52,8 @@ function LoginPage() {
     if (!ready || formError || submitting) return;
     setLaunching(true);
     void (async () => {
-      const dest = afterAuthPath(session!.has_workspace, next);
-      if (session!.has_workspace && dest === "/platform") {
+      const dest = landingPathForSession(session!, next);
+      if (session!.has_workspace && dest !== "/onboarding") {
         await authLaunchSequence({
           onWorkspace: () => setLaunchReady(false),
           onReady: () => setLaunchReady(true),
@@ -143,8 +143,8 @@ function LoginPage() {
             return;
           }
           const hydrated = await refresh();
-          const dest = afterAuthPath(Boolean(hydrated?.has_workspace), next);
-          if (hydrated?.has_workspace && dest === "/platform") {
+          const dest = landingPathForSession(hydrated ?? null, next);
+          if (hydrated?.has_workspace && dest !== "/onboarding") {
             await authLaunchSequence({
               onWorkspace: () => setLaunchReady(false),
               onReady: () => setLaunchReady(true),

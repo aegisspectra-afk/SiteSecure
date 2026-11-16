@@ -1,3 +1,5 @@
+import { isProductAvailable } from "./entitlement-revoke";
+
 /** Unauthenticated /app and onboarding send guests to Login. `/` is the public website. */
 /** Safe post-auth redirects for invite acceptance (and similar deep links). */
 
@@ -33,4 +35,27 @@ export function afterAuthPath(hasWorkspace: boolean, next?: string | null): stri
 /** After the 4-step solo setup, enter Site Secure ops — not the product picker. */
 export function onboardingEnterPath(): "/app/dashboard" {
   return "/app/dashboard";
+}
+
+/**
+ * DEMO-4: where a signed-in user lands. A single-workspace user (an owner included) goes
+ * straight to Site Secure (/app/dashboard; a technician is sent on to /app/today there).
+ * /platform (the product picker) is for platform admins and users with several workspaces,
+ * and for a workspace without Site Secure (e.g. SSP only) so nobody lands on a locked shell.
+ * A safe ?next= deep link (invites) still wins.
+ */
+export function landingPathForSession(
+  session: {
+    has_workspace: boolean;
+    is_platform_admin?: boolean | null;
+    memberships: { features?: string[] | null }[];
+  } | null,
+  next?: string | null,
+): string {
+  const safe = sanitizeNextPath(next);
+  if (safe) return safe;
+  if (!session?.has_workspace || session.memberships.length === 0) return "/onboarding";
+  if (session.is_platform_admin) return "/platform";
+  if (session.memberships.length > 1) return "/platform";
+  return isProductAvailable("site_secure", session.memberships[0]?.features ?? []) ? "/app/dashboard" : "/platform";
 }

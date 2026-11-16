@@ -11,6 +11,7 @@ from ..authz.guard import require
 from ..authz.scope import (
     apply_assigned_job_list_filter,
     apply_assigned_project_list_filter,
+    apply_assigned_service_call_list_filter,
     apply_assigned_task_list_filter,
     empty_assigned_page,
     is_assigned_scope,
@@ -501,7 +502,7 @@ def get_project(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "projects.view")
-    return one_or_404(
+    row = one_or_404(
         client.get(
             "projects",
             params={
@@ -511,6 +512,8 @@ def get_project(
             },
         )
     )
+    require(ctx, "projects.view", resource=ResourceRef(type="project", id=str(row["id"])))
+    return row
 
 
 PLANNED_ITEM_SELECT = (
@@ -553,6 +556,7 @@ def list_project_planned_items(
             },
         )
     )
+    require(ctx, "projects.view", resource=ResourceRef(type="project", id=str(project_id)))
     return {"items": _load_project_planned_items(client, workspace_id, project_id)}
 
 
@@ -575,6 +579,7 @@ def preview_create_installed_assets(
             },
         )
     )
+    require(ctx, "projects.view", resource=ResourceRef(type="project", id=str(project_id)))
     site_id = str(project.get("site_id") or "")
     planned = _load_project_planned_items(client, workspace_id, project_id)
     counts = count_assets_by_planned_item(client, str(workspace_id), str(project_id))
@@ -619,6 +624,7 @@ def create_installed_assets(
             },
         )
     )
+    require(ctx, "projects.view", resource=ResourceRef(type="project", id=str(project_id)))
     site_id = str(project.get("site_id") or "")
     if not site_id:
         raise ApiError(400, "VALIDATION_ERROR", "לפרויקט אין אתר — לא ניתן ליצור ציוד מותקן")
@@ -792,7 +798,7 @@ def list_service_calls(
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
-    apply_assigned_job_list_filter(ctx, params)
+    apply_assigned_service_call_list_filter(ctx, params)
     rows = as_list(client.get("service_calls", params=params))
     page = page_from_rows(rows, page_size)
     return {"items": _enrich_service_rows(client, workspace_id, page.items), "next_cursor": page.next_cursor}

@@ -64,6 +64,12 @@ def authorize(
     return _allow()
 
 
+# Work items a technician must be assigned to. Sharing a site with an assigned job is not
+# enough (DEMO-1): only the item itself, or for project / service call the item of an
+# assigned job, which expand_assigned_resource_ids adds to assigned_resource_ids.
+ITEM_SCOPED_TYPES = frozenset({"job", "project", "service_call"})
+
+
 def _scope_ok(scope: str, ctx: AuthzContext, resource: ResourceRef | None) -> bool:
     if resource is None or resource.id is None:
         return True
@@ -74,6 +80,8 @@ def _scope_ok(scope: str, ctx: AuthzContext, resource: ResourceRef | None) -> bo
             return True
         return resource.owner_user_id == ctx.user_id
     if scope == "assigned":
+        if resource.type in ITEM_SCOPED_TYPES:
+            return ctx.user_id in resource.assignee_ids or resource.id in ctx.assigned_resource_ids
         if resource.site_assigned:
             return True
         if ctx.user_id in resource.assignee_ids:

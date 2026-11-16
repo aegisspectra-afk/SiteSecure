@@ -185,7 +185,7 @@ def build_dashboard(
         visible_jobs = [
             j
             for j in visible_jobs
-            if j.get("id") in assigned_resource_ids or j.get("site_id") in assigned_resource_ids
+            if j.get("id") in assigned_resource_ids  # own jobs only, not every job at the site
         ]
     if variant == "sales":
         visible_jobs = []

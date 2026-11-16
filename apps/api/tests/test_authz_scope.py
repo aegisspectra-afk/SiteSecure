@@ -43,7 +43,9 @@ def test_apply_assigned_filters():
 
     job_params: dict[str, str] = {"workspace_id": "eq.w1"}
     apply_assigned_job_list_filter(_ctx("technician", assigned=("j1", "s9")), job_params)
-    assert "or(id.in.(j1,s9),site_id.in.(j1,s9))" in job_params["and"]
+    # DEMO-1: jobs match by id only; a shared site no longer lets other jobs through.
+    assert "id.in.(j1,s9)" in job_params["and"]
+    assert "site_id" not in job_params["and"]
 
     owner_params: dict[str, str] = {"workspace_id": "eq.w1"}
     apply_assigned_job_list_filter(_ctx("owner", assigned=("j1",)), owner_params)
@@ -63,3 +65,16 @@ def test_assigned_task_filter_is_assignee_only_even_with_site_customer():
     owner_params: dict[str, str] = {"workspace_id": "eq.w1"}
     apply_assigned_task_list_filter(_ctx("owner", assigned=("site-1",)), owner_params)
     assert owner_params == {"workspace_id": "eq.w1"}
+
+
+def test_assigned_job_scope_ignores_shared_site():
+    from app.authz.engine import _scope_ok
+    from app.authz.types import ResourceRef
+
+    ctx = _ctx("technician", assigned=("job-a", "site-1"))
+    other = ResourceRef(type="job", id="job-b", site_id="site-1")
+    own = ResourceRef(type="job", id="job-a", site_id="site-1")
+    assert _scope_ok("assigned", ctx, own)
+    assert not _scope_ok("assigned", ctx, other)
+    assert not _scope_ok("assigned", ctx, ResourceRef(type="service_call", id="sc-1", site_id="site-1"))
+    assert _scope_ok("assigned", ctx, ResourceRef(type="site", id="site-1", site_id="site-1"))

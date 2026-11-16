@@ -49,6 +49,11 @@ AUTHENTICATED_ALLOWED = frozenset(
         "auth_is_platform_admin",
         "auth_is_privileged",
         "auth_job_visible",
+        # DEMO-1 policy helpers (technician assigned-job scope).
+        "auth_via_assigned_job",
+        "auth_assigned_project_visible",
+        "auth_assigned_service_call_visible",
+        "auth_assigned_document_entity_visible",
         "auth_role",
         "auth_role_in",
         "auth_site_visible",

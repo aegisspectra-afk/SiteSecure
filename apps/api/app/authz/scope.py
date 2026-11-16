@@ -16,7 +16,11 @@ def expand_assigned_resource_ids(
     workspace_id: str,
     assignment_rows: list[dict[str, Any]],
 ) -> frozenset[str]:
-    """Union assignment ids with related site/customer ids (mirrors RLS site visibility paths)."""
+    """Union assignment ids with related site/customer ids (mirrors RLS site visibility paths).
+
+    Also adds the project and service call of each assigned job (DEMO-1): those are the
+    only projects / service calls a technician reaches through a job.
+    """
     ids: set[str] = set()
     by_type: dict[str, list[str]] = {}
     for row in assignment_rows:
@@ -34,7 +38,7 @@ def expand_assigned_resource_ids(
     customer_ids: set[str] = set(by_type.get("customer") or [])
 
     for rtype, table, select_cols in (
-        ("job", "jobs", "id,site_id,customer_id"),
+        ("job", "jobs", "id,site_id,customer_id,project_id,service_call_id"),
         ("project", "projects", "id,site_id,customer_id"),
         ("service_call", "service_calls", "id,site_id"),
     ):
@@ -52,6 +56,9 @@ def expand_assigned_resource_ids(
         if res.status_code != 200:
             continue
         for row in res.json() or []:
+            for linked in ("project_id", "service_call_id"):
+                if rtype == "job" and row.get(linked):
+                    ids.add(str(row[linked]))
             site_id = row.get("site_id")
             if site_id:
                 site_ids.add(str(site_id))
@@ -123,28 +130,18 @@ def apply_assigned_column_filter(
 
 
 def apply_assigned_job_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
-    """Jobs: id or site_id in expanded assignment set."""
-    if not is_assigned_scope(ctx):
-        return params
-    ids = sorted({str(i) for i in ctx.assigned_resource_ids if i})
-    if not ids:
-        params["id"] = f"eq.{_EMPTY_UUID}"
-        return params
-    csv = ",".join(ids)
-    _and_clause(params, f"or(id.in.({csv}),site_id.in.({csv}))")
-    return params
+    """Jobs: only jobs assigned to the actor. A shared site is not enough (DEMO-1)."""
+    return apply_assigned_column_filter(ctx, params, column="id")
 
 
 def apply_assigned_project_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
-    if not is_assigned_scope(ctx):
-        return params
-    ids = sorted({str(i) for i in ctx.assigned_resource_ids if i})
-    if not ids:
-        params["id"] = f"eq.{_EMPTY_UUID}"
-        return params
-    csv = ",".join(ids)
-    _and_clause(params, f"or(id.in.({csv}),site_id.in.({csv}))")
-    return params
+    """Projects: assigned to the actor, or the project of a job assigned to the actor."""
+    return apply_assigned_column_filter(ctx, params, column="id")
+
+
+def apply_assigned_service_call_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:
+    """Service calls: assigned to the actor, or the call of a job assigned to the actor."""
+    return apply_assigned_column_filter(ctx, params, column="id")
 
 
 def apply_assigned_task_list_filter(ctx: AuthzContext, params: dict[str, str]) -> dict[str, str]:

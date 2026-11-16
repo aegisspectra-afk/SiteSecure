@@ -58,6 +58,49 @@ class JobComplete(BaseModel):
 class JobAssign(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id: str
+    # DEMO-3.1: "שבץ טכנאי" sets the visit time in the same step (optional).
+    scheduled_for: str | None = None
+    scheduled_end: str | None = None
+
+
+MAX_JOB_DURATION_HOURS = 24
+
+
+def _parse_ts(value: str, field: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        raise ApiError(400, "VALIDATION_ERROR", "מועד לא תקין", {"field": field}) from None
+    if parsed.tzinfo is None:
+        raise ApiError(400, "VALIDATION_ERROR", "מועד חייב לכלול אזור זמן", {"field": field})
+    return parsed
+
+
+def _schedule_patch(start: str | None, end: str | None, existing: dict | None = None) -> dict[str, str]:
+    """DEMO-3.1: validated scheduled_for / scheduled_end (duration = end - start).
+
+    An end needs a start (given now or already on the job); the end is after the start and
+    within MAX_JOB_DURATION_HOURS. Returns only the fields that were sent.
+    """
+    out: dict[str, str] = {}
+    start_dt = _parse_ts(start, "scheduled_for") if start else None
+    end_dt = _parse_ts(end, "scheduled_end") if end else None
+    if start_dt is None and end_dt is not None:
+        current = (existing or {}).get("scheduled_for")
+        if not current:
+            raise ApiError(400, "VALIDATION_ERROR", "יש לקבוע שעת התחלה לפני שעת סיום", {"field": "scheduled_for"})
+        start_dt = _parse_ts(str(current), "scheduled_for")
+    if start_dt is not None and end_dt is not None:
+        hours = (end_dt - start_dt).total_seconds() / 3600
+        if hours <= 0:
+            raise ApiError(400, "VALIDATION_ERROR", "שעת הסיום חייבת להיות אחרי שעת ההתחלה", {"field": "scheduled_end"})
+        if hours > MAX_JOB_DURATION_HOURS:
+            raise ApiError(400, "VALIDATION_ERROR", "משך עבודה עד 24 שעות", {"field": "scheduled_end"})
+    if start:
+        out["scheduled_for"] = start_dt.isoformat()  # type: ignore[union-attr]
+    if end:
+        out["scheduled_end"] = end_dt.isoformat()  # type: ignore[union-attr]
+    return out
 
 
 class ChecklistItemCreate(BaseModel):
@@ -334,10 +377,7 @@ def create_job(
         "site_id": body.site_id,
         "kind": body.kind,
     }
-    if body.scheduled_for:
-        payload["scheduled_for"] = body.scheduled_for
-    if body.scheduled_end:
-        payload["scheduled_end"] = body.scheduled_end
+    payload.update(_schedule_patch(body.scheduled_for, body.scheduled_end))
     if body.project_id:
         payload["project_id"] = body.project_id
     if body.service_call_id:
@@ -411,6 +451,8 @@ def patch_job(
     patch = body.model_dump(exclude_none=True)
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    if "scheduled_for" in patch or "scheduled_end" in patch:
+        patch.update(_schedule_patch(patch.get("scheduled_for"), patch.get("scheduled_end"), existing))
     row = patched_or_403(
         client.patch("jobs", patch, params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"})
     )
@@ -581,6 +623,11 @@ def assign_job(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.assign", resource=_ref(existing))
+    schedule = (
+        _schedule_patch(body.scheduled_for, body.scheduled_end, existing)
+        if body.scheduled_for or body.scheduled_end
+        else {}
+    )
     # Verify target is a workspace member.
     one_or_404(
         client.get(
@@ -658,11 +705,17 @@ def assign_job(
         title=f"{existing.get('number') or 'עבודה'} — שויכה ל־{to_name}",
         body=body_text,
     )
+    if schedule:
+        patched_or_403(
+            client.patch("jobs", schedule, params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"})
+        )
     assignees = _job_assignees(client, workspace_id, str(job_id))
     primary = next((a for a in assignees if a.user_id == body.user_id), None)
     return {
         "job_id": str(job_id),
         "user_id": body.user_id,
+        "scheduled_for": schedule.get("scheduled_for", existing.get("scheduled_for")),
+        "scheduled_end": schedule.get("scheduled_end", existing.get("scheduled_end")),
         "assigned_at": primary.assigned_at if primary else None,
         "assigned_by": primary.assigned_by if primary else actor,
         "assignees": [a.model_dump() for a in assignees],

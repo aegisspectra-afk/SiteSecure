@@ -1,9 +1,10 @@
 import { ApiClientError } from "@site-secure/api-client";
 import { Button, ErrorState, PageHeader, Status } from "@site-secure/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, FileText } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { NewInstallJobDialog } from "../../../components/jobs/NewInstallJobDialog";
 import { addressLine } from "../../../components/modules/ModuleKit";
 import { RequirePermission } from "../../../components/settings/RequirePermission";
 import { he } from "../../../i18n/he";
@@ -55,20 +56,9 @@ function ProjectDetailBody() {
     queryFn: () => api.getSite(workspaceId!, siteId!),
   });
 
-  const startInstall = useMutation({
-    mutationFn: () =>
-      api.createJob(workspaceId!, {
-        title: he.installationJobTitle(projectQuery.data?.name ?? siteQuery.data?.name ?? ""),
-        customer_id: customerId!,
-        site_id: siteId!,
-        kind: "installation",
-        project_id: projectId,
-      }),
-    onSuccess: (job) => {
-      void queryClient.invalidateQueries({ queryKey: ["site-jobs", workspaceId, siteId] });
-      void navigate({ to: "/app/jobs/$jobId", params: { jobId: job.id } });
-    },
-  });
+  // DEMO-3.1: "התחלת התקנה" opens a dialog with the visit time and the technician.
+  const [newJobOpen, setNewJobOpen] = useState(false);
+  const canAssign = can(membership?.role_key, "jobs.assign", membership?.features ?? []);
 
   const quoteQuery = useQuery({
     queryKey: ["quote", workspaceId, quoteId],
@@ -122,13 +112,34 @@ function ProjectDetailBody() {
               </Button>
             ) : null}
             {canJobs && customerId && siteId ? (
-              <Button type="button" loading={startInstall.isPending} onClick={() => startInstall.mutate()}>
+              <Button type="button" data-testid="project-start-install" onClick={() => setNewJobOpen(true)}>
                 {he.projectStartInstallation}
               </Button>
             ) : null}
           </div>
         }
       />
+
+      {canJobs && customerId && siteId ? (
+        <NewInstallJobDialog
+          open={newJobOpen}
+          onClose={() => setNewJobOpen(false)}
+          api={api}
+          workspaceId={workspaceId}
+          canAssign={canAssign}
+          job={{
+            title: he.installationJobTitle(project.name ?? siteQuery.data?.name ?? ""),
+            customer_id: customerId,
+            site_id: siteId,
+            project_id: projectId,
+          }}
+          onCreated={(job) => {
+            setNewJobOpen(false);
+            void queryClient.invalidateQueries({ queryKey: ["site-jobs", workspaceId, siteId] });
+            void navigate({ to: "/app/jobs/$jobId", params: { jobId: job.id } });
+          }}
+        />
+      ) : null}
 
       <div className="ops-card grid gap-3 p-4 text-sm sm:grid-cols-2">
         <div>

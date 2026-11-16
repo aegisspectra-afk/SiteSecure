@@ -3282,16 +3282,33 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    assignJob: (workspaceId: string, jobId: string, body: { user_id: string }) =>
+    /** DEMO-3.1: optional visit time in the same step. */
+    assignJob: (
+      workspaceId: string,
+      jobId: string,
+      body: { user_id: string; scheduled_for?: string; scheduled_end?: string },
+    ) =>
       request<{
         job_id: string;
         user_id: string;
+        scheduled_for?: string | null;
+        scheduled_end?: string | null;
         assigned_at?: string | null;
         assigned_by?: string | null;
         assignees: JobAssigneeOut[];
         reassigned: boolean;
       }>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/assign`, {
         method: "POST",
+        body: JSON.stringify(body),
+      }),
+    /** DEMO-3.1: edit a job (title, kind, priority, visit time). */
+    patchJob: (
+      workspaceId: string,
+      jobId: string,
+      body: { title?: string; kind?: string; priority?: string; scheduled_for?: string; scheduled_end?: string },
+    ) =>
+      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}`, {
+        method: "PATCH",
         body: JSON.stringify(body),
       }),
     enRouteJob: (workspaceId: string, jobId: string) =>

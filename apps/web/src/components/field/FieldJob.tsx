@@ -25,6 +25,8 @@ import { planQuotaMessage } from "../../lib/plan-quota";
 import { useOnlineStatus } from "../../lib/use-online-status";
 import { useSession } from "../../lib/session";
 import { FieldActionSheet } from "./FieldActionSheet";
+import { JobAssignForm } from "../jobs/JobAssignForm";
+import { formatScheduleHe } from "../../lib/job-schedule";
 
 function jobStatusLabel(status: string): string {
   return he.jobStatuses[status as keyof typeof he.jobStatuses] ?? status;
@@ -76,7 +78,6 @@ export function FieldJob({ jobId }: { jobId: string }) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
-  const [assignUserId, setAssignUserId] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
 
   const jobQuery = useQuery({
@@ -162,15 +163,6 @@ export function FieldJob({ jobId }: { jobId: string }) {
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
   });
 
-  const assignMut = useMutation({
-    mutationFn: () => api.assignJob(workspaceId!, jobId, { user_id: assignUserId }),
-    onSuccess: () => {
-      setAssignUserId("");
-      invalidateJob();
-    },
-    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
-  });
-
   const toggleItem = useMutation({
     mutationFn: (input: { itemId: string; completed: boolean }) =>
       api.patchJobChecklistItem(workspaceId!, jobId, input.itemId, { completed: input.completed }),
@@ -221,8 +213,8 @@ export function FieldJob({ jobId }: { jobId: string }) {
   const done = items.filter((item) => item.completed).length;
   const equipment = equipmentQuery.data?.items ?? [];
   const photos = docsQuery.data?.items ?? [];
-  const scheduled = formatTime(job.scheduled_for);
-  const scheduledEnd = formatTime(job.scheduled_end);
+  // DEMO-3.1: date and time window, e.g. "ה׳ 20.11 · 08:00–10:00".
+  const scheduledWindow = formatScheduleHe(job.scheduled_for, job.scheduled_end);
   const assignee = job.assignees?.[0];
   // Presentation mirrors existing client gating (server remains authoritative).
   const canEnRoute = canStart && job.status === "scheduled";
@@ -353,12 +345,9 @@ export function FieldJob({ jobId }: { jobId: string }) {
               <p className="mt-0.5 text-sm text-fg-muted">{customerQuery.data.display_name}</p>
             ) : null}
             <div className="field-job-object-meta">
-              {scheduled ? (
-                <p className="public-mono text-sm text-fg" dir="ltr">
-                  <bdi>
-                    {scheduled}
-                    {scheduledEnd ? `–${scheduledEnd}` : ""}
-                  </bdi>
+              {scheduledWindow ? (
+                <p className="text-sm text-fg" data-testid="job-schedule-window">
+                  <bdi>{scheduledWindow}</bdi>
                 </p>
               ) : (
                 <p className="text-sm text-fg-muted">{he.fieldNoSchedule}</p>
@@ -514,32 +503,17 @@ export function FieldJob({ jobId }: { jobId: string }) {
               </p>
             ) : null}
             {canAssign && !jobDone ? (
-              <div className="mt-3 flex flex-col gap-2">
-                <label className="text-xs font-medium text-fg-muted">
-                  {assignee ? he.reassignTechnician : he.assignTechnician}
-                  <select
-                    className="field-control mt-1"
-                    value={assignUserId}
-                    onChange={(ev) => setAssignUserId(ev.target.value)}
-                  >
-                    <option value="">{he.assignTechnician}</option>
-                    {techMembers.map((m) => (
-                      <option key={m.user_id} value={m.user_id}>
-                        {m.full_name || m.email || m.user_id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!assignUserId || !online}
-                  loading={assignMut.isPending}
-                  onClick={() => assignMut.mutate()}
-                >
-                  {assignee ? he.reassignTechnician : he.assignTechnician}
-                </Button>
-              </div>
+              <JobAssignForm
+                key={`rail-${job.scheduled_for ?? ""}-${job.scheduled_end ?? ""}-${assignee?.user_id ?? ""}`}
+                className="mt-3"
+                api={api}
+                workspaceId={workspaceId!}
+                job={job}
+                members={techMembers}
+                hasAssignee={Boolean(assignee)}
+                online={online}
+                onDone={invalidateJob}
+              />
             ) : null}
           </section>
 
@@ -591,34 +565,20 @@ export function FieldJob({ jobId }: { jobId: string }) {
           {canAssign && !jobDone ? (
             <li className="field-sheet-assign">
               <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.fieldAssignKicker}</p>
-              <label className="mt-2 block text-xs text-fg-muted">
-                {assignee ? he.reassignTechnician : he.assignTechnician}
-                <select
-                  className="field-control mt-1"
-                  value={assignUserId}
-                  onChange={(ev) => setAssignUserId(ev.target.value)}
-                >
-                  <option value="">{he.assignTechnician}</option>
-                  {techMembers.map((m) => (
-                    <option key={m.user_id} value={m.user_id}>
-                      {m.full_name || m.email || m.user_id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Button
-                type="button"
-                className="mt-3 w-full"
-                variant="secondary"
-                disabled={!assignUserId || !online}
-                loading={assignMut.isPending}
-                onClick={() => {
-                  assignMut.mutate();
+              <JobAssignForm
+                key={`sheet-${job.scheduled_for ?? ""}-${job.scheduled_end ?? ""}-${assignee?.user_id ?? ""}`}
+                className="mt-2"
+                api={api}
+                workspaceId={workspaceId!}
+                job={job}
+                members={techMembers}
+                hasAssignee={Boolean(assignee)}
+                online={online}
+                onDone={() => {
+                  invalidateJob();
                   setMoreOpen(false);
                 }}
-              >
-                {assignee ? he.reassignTechnician : he.assignTechnician}
-              </Button>
+              />
             </li>
           ) : null}
         </ul>

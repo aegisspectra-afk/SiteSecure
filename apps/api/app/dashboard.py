@@ -246,6 +246,14 @@ def build_dashboard(
         "generated_at": now.isoformat(),
         "attention": attention,
         "today": {"label_he": "היום", "items": today_items[:TODAY_CAP]},
+        "unscheduled": (
+            {
+                "label_he": "ללא מועד",
+                "items": _unscheduled_jobs(visible_jobs, names, can_jobs_start=can_jobs_start)[:TODAY_CAP],
+            }
+            if variant == "today"
+            else None
+        ),
         "activity": _activity(events, visible_jobs, names, variant)[:ACTIVITY_CAP],
         "summary": summary,
         "recent_quotes": recent_quotes,
@@ -465,6 +473,36 @@ def _today_jobs(
             row.get("scheduled_for") or "",
         )
     )
+    return rows
+
+
+def _unscheduled_jobs(
+    jobs: list[dict[str, Any]],
+    names: dict[str, str],
+    *,
+    can_jobs_start: bool,
+) -> list[dict[str, Any]]:
+    """DEMO-3.2: assigned jobs that are still waiting for a date ("ללא מועד")."""
+    rows: list[dict[str, Any]] = []
+    for job in jobs:
+        if str(job.get("status") or "") != "scheduled" or job.get("scheduled_for"):
+            continue
+        rows.append(
+            _item(
+                entity_type="job",
+                entity_id=str(job["id"]),
+                number=str(job.get("number") or ""),
+                title_he=str(job.get("title") or "עבודה"),
+                customer_name=names.get(str(job["customer_id"])) if job.get("customer_id") else None,
+                site_name=names.get(str(job["site_id"])) if job.get("site_id") else None,
+                scheduled_for=None,
+                scheduled_end=None,
+                status="scheduled",
+                severity="later",
+                actions=["en_route"] if can_jobs_start else [],
+            )
+        )
+    rows.sort(key=lambda row: row.get("number") or "")
     return rows
 
 

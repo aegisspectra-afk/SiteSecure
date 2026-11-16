@@ -129,6 +129,8 @@ class DashboardOut(BaseModel):
     generated_at: str
     attention: list[AttentionGroupOut]
     today: TodayBlockOut
+    # DEMO-3.2: technician home only: assigned jobs with no date yet.
+    unscheduled: TodayBlockOut | None = None
     activity: list[ActivityItemOut]
     summary: DashboardSummaryOut
     recent_quotes: list[RecentQuoteOut]

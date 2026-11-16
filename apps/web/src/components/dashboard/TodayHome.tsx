@@ -15,6 +15,8 @@ export function TodayHome({
 }) {
   const online = useOnlineStatus();
   const count = data.today.items.length;
+  // DEMO-3.2: assigned jobs without a date stay visible under "ללא מועד".
+  const unscheduled = data.unscheduled?.items ?? [];
 
   return (
     <div className="field-today">
@@ -39,13 +41,29 @@ export function TodayHome({
         </div>
       ) : null}
 
-      {count === 0 ? (
+      {count === 0 && unscheduled.length === 0 ? (
         <div className="field-empty">
           <EmptyState title={he.todayEmptyTitle} description={he.todayEmptyBody} />
         </div>
+      ) : count === 0 ? (
+        <p className="text-sm text-fg-muted" data-testid="today-nothing-today">
+          {he.todayNothingToday}
+        </p>
       ) : (
         <TodayList items={data.today.items} onAction={onAction} busyId={busyId} />
       )}
+
+      {unscheduled.length > 0 ? (
+        <section className="field-today-unscheduled mt-6" data-testid="today-unscheduled" aria-labelledby="today-unscheduled-title">
+          <h2 id="today-unscheduled-title" className="text-base font-semibold text-fg">
+            {he.todayUnscheduledTitle} <span className="tabular-nums text-fg-muted">({unscheduled.length})</span>
+          </h2>
+          <p className="mt-1 text-xs text-fg-muted">{he.todayUnscheduledLead}</p>
+          <div className="mt-3">
+            <TodayList items={unscheduled} onAction={onAction} busyId={busyId} />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

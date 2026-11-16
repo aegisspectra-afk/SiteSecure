@@ -479,6 +479,8 @@ export type DashboardResponse = {
   generated_at: string;
   attention: AttentionGroup[];
   today: { label_he: string; items: DashboardItem[] };
+  /** DEMO-3.2: technician home only: assigned jobs with no date yet. */
+  unscheduled?: { label_he: string; items: DashboardItem[] } | null;
   activity: { entity_type: string; entity_id: string; title_he: string; occurred_at: string }[];
   summary: DashboardSummary;
   recent_quotes: RecentQuote[];

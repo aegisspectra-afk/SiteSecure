@@ -3020,10 +3020,14 @@ export const he = {
   cpqCctvCatalogComplete: "השלם קטלוג",
   cpqCctvCatalogEmptyShort:
     "אין מוצרים תואמים בקטלוג — אפשר להוסיף את התכנון כ«נדרש ציוד» ולהשלים אחר כך.",
-  cpqCctvAddPlanHint: (planned: number, resolved: number) =>
-    resolved > 0
-      ? `יתווספו ${resolved} פריטי קטלוג ו־${planned} שורות «נדרש ציוד».`
-      : `יתווספו ${planned} שורות «נדרש ציוד».`,
+  /** DEMO-2.2: labor lines are work, counted apart from equipment still to choose. */
+  cpqCctvAddPlanHint: (planned: number, resolved: number, labor = 0) => {
+    const parts: string[] = [];
+    if (resolved > 0) parts.push(`${resolved} פריטי קטלוג`);
+    if (labor > 0) parts.push(`${labor} שורות עבודה`);
+    if (planned > 0) parts.push(`${planned} שורות «נדרש ציוד»`);
+    return parts.length ? `יתווספו ${parts.join(" ו־")}.` : "";
+  },
   cpqCctvKindCore: "ליבה",
   cpqCctvKindOptional: "אופציונלי",
   cpqCctvKindManual: "ממתין לציוד",

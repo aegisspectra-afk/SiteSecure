@@ -764,7 +764,11 @@ export function SystemBuilderDrawer({
       <div className="cpq-cctv-designer-footer flex w-full flex-col gap-2">
         {!divergence && !(recovery && lastLines) && addGate.ok && addGate.planned.length > 0 ? (
           <p className="text-xs text-fg-muted ms-auto" role="status">
-            {he.cpqCctvAddPlanHint(addGate.planned.length, addGate.lines.length)}
+            {he.cpqCctvAddPlanHint(
+              addGate.planned.filter((line) => line.itemType !== "labor").length,
+              addGate.lines.length,
+              addGate.planned.filter((line) => line.itemType === "labor").length,
+            )}
           </p>
         ) : null}
         <div className="flex flex-wrap justify-end gap-2">

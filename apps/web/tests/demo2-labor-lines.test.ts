@@ -71,3 +71,11 @@ describe("DEMO-2.2 review screen", () => {
     expect(preview.needsEquipment).toBe(0);
   });
 });
+
+describe("DEMO-2.2 add hint", () => {
+  it("counts labor lines as work, not as «נדרש ציוד»", async () => {
+    const { he } = await import("../src/i18n/he");
+    expect(he.cpqCctvAddPlanHint(0, 5, 3)).toBe("יתווספו 5 פריטי קטלוג ו־3 שורות עבודה.");
+    expect(he.cpqCctvAddPlanHint(2, 5, 3)).toBe("יתווספו 5 פריטי קטלוג ו־3 שורות עבודה ו־2 שורות «נדרש ציוד».");
+  });
+});

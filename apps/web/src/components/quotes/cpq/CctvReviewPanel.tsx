@@ -126,18 +126,13 @@ export function CctvReviewPanel({
           data-testid="cctv-apply-readiness-preview"
           role="status"
         >
-          <span>
-            <strong>{preview.required}</strong> רכיבי חובה
+          {/* Q2.8: one simple counter. Required components still needing equipment are the gap. */}
+          <span data-testid="cctv-selected-counter" data-selected={preview.selected} data-required={preview.required}>
+            <strong>{preview.selected}</strong> מתוך <strong>{preview.required}</strong> נבחרו
           </span>
-          <span>
-            <strong>{preview.selected}</strong> נבחרו
-          </span>
-          <span>
-            <strong>{preview.needsEquipment}</strong> דורשים ציוד
-          </span>
-          <span>
-            <strong>{preview.optional}</strong> אופציונליים
-          </span>
+          {preview.optional > 0 ? (
+            <span className="cpq-cctv-review-preview-muted">· {he.cpqCctvOptionalCount(preview.optional)}</span>
+          ) : null}
         </div>
 
         {readiness?.empty_catalog ? (

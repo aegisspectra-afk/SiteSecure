@@ -16,6 +16,7 @@ import {
   type PersistTrustState,
 } from "../../../lib/cctv-designer-summary";
 import { isProfessionalMode } from "../../../lib/cctv-designer-workspace";
+import { Info, OctagonAlert, TriangleAlert } from "lucide-react";
 import { he } from "../../../i18n/he";
 
 type Props = {
@@ -32,6 +33,19 @@ function Ltr({ children }: { children: ReactNode }) {
   return (
     <span className="ltr-meta" dir="ltr">
       {children}
+    </span>
+  );
+}
+
+/** Q2.8: Hebrew severity label with an icon (was BLOCKER / WARNING / INFO). */
+function SeverityTag({ severity }: { severity: "blocker" | "warning" | "info" }) {
+  const label =
+    severity === "blocker" ? he.cpqSeverityBlocker : severity === "warning" ? he.cpqSeverityWarning : he.cpqSeverityInfo;
+  const Icon = severity === "blocker" ? OctagonAlert : severity === "warning" ? TriangleAlert : Info;
+  return (
+    <span className="cpq-cctv-sum-val-sev" data-testid={`cctv-severity-${severity}`}>
+      <Icon className="cpq-cctv-sum-val-icon" aria-hidden strokeWidth={2.25} />
+      {label}
     </span>
   );
 }
@@ -144,21 +158,9 @@ export function CctvEngineeringSummaryPanel({
               <p className="cpq-cctv-sum-empty">אין התראות כרגע.</p>
             ) : (
               <ul className="cpq-cctv-sum-val-list">
-                {blockers.map((item) => (
-                  <li key={item.id} className="cpq-cctv-sum-val is-blocker">
-                    <span className="cpq-cctv-sum-val-sev">BLOCKER</span>
-                    <span>{item.message}</span>
-                  </li>
-                ))}
-                {warnings.map((item) => (
-                  <li key={item.id} className="cpq-cctv-sum-val is-warning">
-                    <span className="cpq-cctv-sum-val-sev">WARNING</span>
-                    <span>{item.message}</span>
-                  </li>
-                ))}
-                {infos.map((item) => (
-                  <li key={item.id} className="cpq-cctv-sum-val is-info">
-                    <span className="cpq-cctv-sum-val-sev">INFO</span>
+                {[...blockers, ...warnings, ...infos].map((item) => (
+                  <li key={item.id} className={`cpq-cctv-sum-val is-${item.severity}`} data-severity={item.severity}>
+                    <SeverityTag severity={item.severity} />
                     <span>{item.message}</span>
                   </li>
                 ))}

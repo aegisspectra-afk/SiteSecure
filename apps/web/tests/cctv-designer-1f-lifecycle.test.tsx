@@ -153,10 +153,8 @@ describe("SYSTEM-DESIGNER-1F lifecycle", () => {
     );
     const box = screen.getByTestId("cctv-apply-readiness-preview");
     expect(box).toHaveTextContent("3");
-    expect(box).toHaveTextContent("רכיבי חובה");
-    expect(box).toHaveTextContent("נבחרו");
-    expect(box).toHaveTextContent("דורשים ציוד");
-    expect(box).toHaveTextContent("אופציונליים");
+    // Q2.8: one simple "X מתוך Y נבחרו" counter.
+    expect(box).toHaveTextContent(/\d+ מתוך \d+ נבחרו/);
   });
 
   it("B. double Apply gate — canAdd is idempotent projection (no fake SKU/price)", () => {

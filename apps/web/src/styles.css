@@ -28559,3 +28559,20 @@ html.dark .ssp-site-tone.is-officer {
   font-weight: 600;
   color: var(--color-warning, #b45309);
 }
+
+/* Q2.8 - Hebrew severity tags with icons; simple selection counter. */
+.cpq-cctv-sum-val-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.cpq-cctv-sum-val-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+}
+.cpq-cctv-review-preview-muted {
+  color: var(--color-fg-muted);
+}

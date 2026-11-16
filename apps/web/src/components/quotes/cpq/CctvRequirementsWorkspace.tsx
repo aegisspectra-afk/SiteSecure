@@ -636,7 +636,7 @@ export function CctvRequirementsWorkspace({
             <p className="cpq-cctv-ws-hint">
               {tech === "ip" ? (
                 <>
-                  {he.cpqCctvRecorderPathIp} · <Ltr>PoE</Ltr> / network · <Ltr>CAT</Ltr>
+                  {he.cpqCctvRecorderPathIp} · <Ltr>PoE</Ltr> / רשת · <Ltr>CAT</Ltr>
                 </>
               ) : tech === "analog_hd" ? (
                 <>
@@ -767,7 +767,7 @@ export function CctvRequirementsWorkspace({
                 <option value="">{he.cpqCameraMixed}</option>
                 <option value="dome">{he.cpqCameraDome}</option>
                 <option value="bullet">{he.cpqCameraBullet}</option>
-                <option value="turret">Turret</option>
+                <option value="turret">{he.cpqCameraTurret}</option>
                 <option value="ptz">PTZ</option>
               </Select>
             )}
@@ -784,7 +784,7 @@ export function CctvRequirementsWorkspace({
                 />
                 <Select
                   id="cpq-codec"
-                  label="Codec"
+                  label={he.cpqCctvCodec}
                   value={req.codec}
                   disabled={disabled}
                   onChange={(ev) =>

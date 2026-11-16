@@ -185,7 +185,7 @@ export function requirementTextForCard(
   if (component.role === "recorder" && channelTier != null && !parts.length) {
     parts.push(`≥${channelTier} ערוצים`);
   }
-  if (t.technology === "analog_hd") parts.push("Analog HD");
+  if (t.technology === "analog_hd") parts.push("אנלוגי HD");
   if (t.technology === "ip") parts.push("IP");
   return parts.join(" · ");
 }

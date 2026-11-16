@@ -57,7 +57,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
     // Q2: quick mode shows the PoE assumption instead of the full network section.
     expect(screen.getByLabelText(he.cpqCctvAssumptionPoe)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "רשת ו-PoE" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("FPS")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("תמונות לשנייה")).not.toBeInTheDocument();
     expect(screen.queryByText("ארון תקשורת")).not.toBeInTheDocument();
   });
 
@@ -71,14 +71,14 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
       "data-mode",
       "professional",
     );
-    expect(screen.getByLabelText("FPS")).toBeInTheDocument();
+    expect(screen.getByLabelText("תמונות לשנייה")).toBeInTheDocument();
     expect(screen.getByText("ארון תקשורת")).toBeInTheDocument();
   });
 
   it("C. Analog Quick — hides PoE/network, shows coax path & PSU", async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.click(screen.getByRole("radio", { name: "Analog HD" }));
+    await user.click(screen.getByRole("radio", { name: "אנלוגי HD" }));
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute(
       "data-tech",
       "analog_hd",
@@ -117,7 +117,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
   it("E. Hybrid Quick — dual counts + PoE section", async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.click(screen.getByRole("radio", { name: "Hybrid" }));
+    await user.click(screen.getByRole("radio", { name: "היברידי" }));
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute("data-tech", "hybrid");
     expect(screen.getByLabelText("מצלמות IP")).toBeInTheDocument();
     expect(screen.getByLabelText("מצלמות אנלוגיות")).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
       />,
     );
     expect(screen.getAllByText(/PoE מחושב רק עבור מצלמות/).length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("FPS")).toBeInTheDocument();
+    expect(screen.getByLabelText("תמונות לשנייה")).toBeInTheDocument();
   });
 
   it("G. Quick→Pro preserves values", () => {
@@ -223,7 +223,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
   it("technology switch updates workspace immediately", async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.click(screen.getByRole("radio", { name: "Hybrid" }));
+    await user.click(screen.getByRole("radio", { name: "היברידי" }));
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute("data-tech", "hybrid");
     await user.click(screen.getByRole("radio", { name: "IP" }));
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute("data-tech", "ip");

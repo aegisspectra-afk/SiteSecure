@@ -158,7 +158,7 @@ describe("SYSTEM-DESIGNER-1 Slice D summary", () => {
     expect(metrics.some((m) => m.id === "cable_ip")).toBe(true);
     expect(metrics.some((m) => m.id === "cable_analog")).toBe(true);
     const explain = explainabilityLines(rec);
-    expect(explain.some((l) => l.includes("Hybrid") && l.includes("4"))).toBe(true);
+    expect(explain.some((l) => l.includes("היברידי") && l.includes("4"))).toBe(true);
   });
 
   it("D. stale after edit — metrics marked not fresh", () => {

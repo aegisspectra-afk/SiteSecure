@@ -106,4 +106,15 @@ describe("Q2.3 automatic calculation", () => {
 describe("Q2.3 / DEMO-2.3 first save on a new quote", () => {
   // DEMO-2.3: the quote is now created by "הוסף תכנון להצעה", not by the calculation;
   // the no-reload-after-own-save check lives in demo2-no-empty-draft.test.tsx.
+  it("an automatic calculation never creates an empty quote", async () => {
+    const ensureQuoteId = vi.fn(async () => "q1");
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SystemBuilderDrawer open onClose={() => {}} workspaceId="ws" quoteId={null} ensureQuoteId={ensureQuoteId} api={api} onApply={() => {}} />
+      </QueryClientProvider>,
+    );
+    await advance(AUTO_CALC_DEBOUNCE_MS * 3);
+    expect(recommendCctv).toHaveBeenCalledTimes(1);
+    expect(ensureQuoteId).not.toHaveBeenCalled();
+  });
 });

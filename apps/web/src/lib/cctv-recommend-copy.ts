@@ -89,6 +89,49 @@ function num(params: Record<string, unknown> | undefined, key: string): number |
   return null;
 }
 
+/** DEMO-2.4: short Hebrew text for engine codes that have no dedicated sentence above. */
+const REASON_FALLBACK_HE: Record<string, string> = {
+  NVR_POE_UNKNOWN: "יכולת ה־PoE של המקליט לא ידועה — יש לבחור מקליט עם נתוני PoE",
+  NVR_POE_SUFFICIENT: "ה־PoE של המקליט מספיק למצלמות",
+  NVR_POE_PORTS_INSUFFICIENT: "אין במקליט מספיק יציאות PoE",
+  NVR_POE_BUDGET_INSUFFICIENT: "תקציב ההספק של המקליט לא מספיק",
+  NVR_POE_BOTH_INSUFFICIENT: "אין במקליט מספיק יציאות PoE ותקציב הספק",
+  POE_POWER_UNRESOLVED: "צריכת החשמל של המצלמות לא ידועה — לא ניתן לחשב תקציב PoE",
+  POE_POWER_ENGINEERING_DEFAULT: "צריכת החשמל חושבה לפי ברירת מחדל הנדסית",
+  POE_HEADROOM_APPLIED: "נוסף מרווח ביטחון לתקציב ה־PoE",
+  RECORDER_HEADROOM_APPLIED: "נוסף מרווח הרחבה לערוצי המקליט",
+  RECORDER_UNSUPPORTED_COUNT: "אין מקליט בקטלוג לכמות המצלמות הזו",
+  NVR_ONLY_TEXT_ASSISTED: "המקליט זוהה מתיאור טקסט בלבד — דורש אימות",
+  NVR_TEXT_ASSISTED_REQUIRES_VERIFICATION: "המקליט זוהה מתיאור טקסט — דורש אימות מפרט",
+  HDD_BAYS_UNKNOWN: "מספר תאי הכוננים במקליט לא ידוע",
+  HDD_CAPACITY_IMPOSSIBLE: "נפח האחסון הנדרש גדול מהאפשרי במקליט",
+  HDD_NOT_SURVEILLANCE_GRADE: "הכונן אינו מיועד למערכות הקלטה",
+  HDD_SURVEILLANCE_GRADE_UNKNOWN: "לא ידוע אם הכונן מיועד למערכות הקלטה",
+  HDD_OPTIONS_EMPTY: "אין כוננים מתאימים בקטלוג",
+  HDD_PACKED: "האחסון חולק על כמה כוננים",
+  STORAGE_UNRESOLVED_BITRATE: "קצב הנתונים לא ידוע — נפח האחסון משוער",
+  STORAGE_OVERHEAD_APPLIED: "נוסף מרווח לנפח האחסון",
+  STORAGE_MOTION_DUTY_DEFAULTED: "הקלטה בתנועה חושבה לפי ברירת מחדל",
+  STORAGE_BITRATE_OVERRIDE: "קצב הנתונים נקבע ידנית",
+  CABLE_DISTANCE_UNRESOLVED: "אורך הכבל לא הוזן — התשתית תושלם ידנית",
+  CABLE_NO_METER_UNIT_PRODUCT: "אין בקטלוג כבל הנמכר במטרים",
+  CABLE_UNIT_REQUIRES_MANUAL_QTY: "יחידת המכירה של הכבל דורשת כמות ידנית",
+  CABLE_UNIT_UNKNOWN_ASSUMED_METERS: "יחידת הכבל לא ידועה — הונח שמדובר במטרים",
+  CABLE_IP_PATH: "כבל רשת CAT למצלמות IP",
+  CABLE_ANALOG_PATH: "כבל קואקסיאלי למצלמות אנלוגיות",
+  POWER_SUPPLY_FOR_ANALOG: "נדרש ספק כוח למצלמות האנלוגיות",
+  HYBRID_CAMERA_SPLIT_MISMATCH: "פיצול המצלמות במערך ההיברידי לא תואם לסך המצלמות",
+  HYBRID_CAMERA_SPLIT_UNRESOLVED: "חסר פיצול מצלמות IP ואנלוגיות במערך ההיברידי",
+  PREFERRED_MANUFACTURER_UNAVAILABLE: "היצרן המועדף לא זמין בקטלוג",
+  CATALOG_EMPTY: "הקטלוג ריק",
+  CATALOG_CORE_INCOMPLETE: "חסרים בקטלוג פריטי ליבה",
+  COMPONENT_UNRESOLVED: "רכיב חובה לא נפתר",
+  ENVIRONMENT_UNSPECIFIED: "סביבת ההתקנה לא צוינה",
+  SERVICE_UNRESOLVED: "שירות מתומחר לפי שעות × תעריף",
+  INVALID_INPUT: "נתוני הדרישות לא תקינים",
+  INPUT_VALIDATION_ERROR: "נתוני הדרישות לא תקינים",
+};
+
 export function formatReasonHe(reason: CctvReasonCode): string {
   const p = reason.params ?? {};
   const code = reason.code;
@@ -126,7 +169,7 @@ export function formatReasonHe(reason: CctvReasonCode): string {
     case "EXTERNAL_SWITCH_REQUIRED": {
       const ipCams = num(p, "ipCameraCount");
       if (String(p.technology ?? "") === "hybrid" && ipCams != null) {
-        return `נדרש מתג PoE חיצוני עבור ${ipCams} מצלמות IP במערך Hybrid.`;
+        return `נדרש מתג PoE חיצוני עבור ${ipCams} מצלמות IP במערך היברידי.`;
       }
       return "נדרש מתג PoE חיצוני כי יציאות/תקציב ההספק של המקליט אינם מספיקים.";
     }
@@ -141,12 +184,12 @@ export function formatReasonHe(reason: CctvReasonCode): string {
       const an = num(p, "analogCameraCount");
       if (tech === "analog_hd") {
         return tier != null
-          ? `נבחר מסלול Analog HD → DVR/XVR עם לפחות ${tier} ערוצים.`
-          : "נבחר מסלול Analog HD → DVR/XVR.";
+          ? `נבחר מסלול אנלוגי HD → DVR/XVR עם לפחות ${tier} ערוצים.`
+          : "נבחר מסלול אנלוגי HD → DVR/XVR.";
       }
       if (tech === "hybrid") {
         if (ip != null && an != null) {
-          return `נבחר מסלול Hybrid בגלל שילוב של ${ip} IP + ${an} Analog${
+          return `נבחר מסלול היברידי בגלל שילוב של ${ip} מצלמות IP ו־${an} אנלוגיות${
             tier != null ? ` → מקליט ≥${tier} ערוצים` : ""
           }.`;
         }
@@ -205,7 +248,7 @@ export function formatReasonHe(reason: CctvReasonCode): string {
     case "CATALOG_CORE_INCOMPLETE":
       return "חסר מידע טכני מאומת ברכיבי ליבה בקטלוג";
     case "SERVICE_UNRESOLVED":
-      return `שירות לא נפתר: ${roleLabelHe(String(p.role ?? ""))}`;
+      return `שירות לפי שעות × תעריף: ${roleLabelHe(String(p.role ?? ""))}`;
     case "CABLE_CATEGORY_MATCH":
       return `כבל לפי מרחק: ${num(p, "meters") ?? "—"} מ׳`;
     case "SERVICE_CATEGORY_MATCH":
@@ -235,8 +278,8 @@ export function formatReasonHe(reason: CctvReasonCode): string {
     default:
       break;
   }
-  // Fallback: readable but not raw-only
-  return code.replace(/_/g, " ").toLowerCase();
+  // DEMO-2.4: Hebrew for codes without a dedicated sentence; never the raw code.
+  return REASON_FALLBACK_HE[code] ?? "נדרשת בדיקה נוספת בתכנון";
 }
 
 export function confidenceLabelHe(confidence: string | null | undefined): string {

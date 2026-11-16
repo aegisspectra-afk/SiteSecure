@@ -12,7 +12,7 @@ import {
   validateCctvBuildRequirements,
   type CctvBuildRequirements,
 } from "./cctv-build-requirements";
-import { componentKeyOf } from "./cctv-component-keys";
+import { commercialLabelHe, componentKeyOf } from "./cctv-component-keys";
 import { isProfessionalMode } from "./cctv-designer-workspace";
 import { buildEngineeringSummary, formatReasonHe } from "./cctv-recommend-copy";
 import {
@@ -152,8 +152,8 @@ export function calcFreshnessLabelHe(state: CalcFreshness): string {
 }
 
 export function techLabelShort(tech: CctvBuildRequirements["cctvTechnology"]): string {
-  if (tech === "analog_hd") return "Analog HD";
-  if (tech === "hybrid") return "Hybrid";
+  if (tech === "analog_hd") return "אנלוגי HD";
+  if (tech === "hybrid") return "היברידי";
   return "IP";
 }
 
@@ -266,7 +266,7 @@ export function buildCalculatedMetrics(
 
   if (summary.channelTier != null) {
     const path =
-      tech === "analog_hd" ? "DVR/XVR" : tech === "hybrid" ? "XVR/Hybrid" : "NVR";
+      tech === "analog_hd" ? "DVR/XVR" : tech === "hybrid" ? "XVR (היברידי)" : "NVR";
     metrics.push({
       id: "recorder",
       label: "מקליט (שרת)",
@@ -296,7 +296,7 @@ export function buildCalculatedMetrics(
       metrics.push({
         id: "poe",
         label: tech === "hybrid" ? "PoE ל־IP (שרת)" : "PoE (שרת)",
-        value: `${summary.poePorts} ports${
+        value: `${summary.poePorts} יציאות${
           summary.poeBudgetW != null ? ` · ≥${Math.round(summary.poeBudgetW)} W` : ""
         }`,
         ltr: true,
@@ -313,15 +313,15 @@ export function buildCalculatedMetrics(
     if (poeArch.evaluation !== "NOT_APPLICABLE") {
       metrics.push({ id: "arch", label: "רשת/PoE", value: archLabel });
     }
-    metrics.push({ id: "cable_ip", label: "כבל רשת", value: "CAT path", ltr: true });
+    metrics.push({ id: "cable_ip", label: "כבל רשת", value: "כבל CAT" });
   } else {
-    metrics.push({ id: "cable_analog", label: "כבל", value: "RG59 / Coax", ltr: true });
+    metrics.push({ id: "cable_analog", label: "כבל", value: "כבל קואקסיאלי RG59" });
     metrics.push({ id: "psu", label: "חשמל", value: "ספק כוח מרכזי" });
   }
 
   if (tech === "hybrid") {
-    metrics.push({ id: "cable_analog", label: "כבל אנלוגי", value: "RG59 / Coax", ltr: true });
-    metrics.push({ id: "psu", label: "חשמל", value: "ספק כוח ל־Analog" });
+    metrics.push({ id: "cable_analog", label: "כבל אנלוגי", value: "כבל קואקסיאלי RG59" });
+    metrics.push({ id: "psu", label: "חשמל", value: "ספק כוח למצלמות האנלוגיות" });
   }
 
   return metrics;
@@ -367,7 +367,7 @@ export function buildValidationCenter(opts: {
   if (!v.ok) {
     const msg =
       v.messageKey === "hybridSplit"
-        ? "פיצול Hybrid לא תקין — סכום IP + Analog חייב להיות ≥1 ושווה לסך המצלמות."
+        ? "פיצול היברידי לא תקין — סכום מצלמות IP ואנלוגיות חייב להיות ≥1 ושווה לסך המצלמות."
         : v.messageKey === "cameras"
           ? "יש להזין מספר מצלמות תקין (≥1)."
           : v.messageKey === "retention"
@@ -430,7 +430,7 @@ export function buildValidationCenter(opts: {
         items.push({
           id: `comp-${componentKeyOf(c)}`,
           severity: "blocker",
-          message: `רכיב חובה לא נפתר: ${componentKeyOf(c)}`,
+          message: `רכיב חובה לא נפתר: ${commercialLabelHe(componentKeyOf(c))}`,
           code: "COMPONENT_UNRESOLVED",
         });
       }
@@ -439,7 +439,7 @@ export function buildValidationCenter(opts: {
         items.push({
           id: `unk-${componentKeyOf(c)}`,
           severity: "warning",
-          message: `התאמה UNKNOWN עבור ${componentKeyOf(c)} — דורש אימות מפרט.`,
+          message: `התאמה לא ידועה עבור ${commercialLabelHe(componentKeyOf(c))} — דורש אימות מפרט.`,
           code: "COMPATIBILITY_UNKNOWN",
         });
       }

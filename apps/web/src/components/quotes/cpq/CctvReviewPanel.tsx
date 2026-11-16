@@ -219,6 +219,12 @@ export function CctvReviewPanel({
                     </div>
                   ) : null}
 
+                  {status === "labor" ? (
+                    <div className="cpq-cctv-review-block" data-testid="cctv-review-labor-note">
+                      <p className="cpq-cctv-review-label">תמחור</p>
+                      <p className="cpq-cctv-review-value">{he.cpqCctvLaborCardNote}</p>
+                    </div>
+                  ) : (
                   <div className="cpq-cctv-review-block">
                     <p className="cpq-cctv-review-label">מוצר</p>
                     {picked ? (
@@ -239,8 +245,10 @@ export function CctvReviewPanel({
                       <p className="cpq-cctv-review-value is-muted">טרם נבחר</p>
                     )}
                   </div>
+                  )}
 
                   <div className="cpq-cctv-review-actions">
+                    {status === "labor" ? null : (
                     <Button
                       type="button"
                       variant={picked ? "secondary" : "primary"}
@@ -248,6 +256,7 @@ export function CctvReviewPanel({
                     >
                       {picked ? he.cpqCctvReplace : "בחר מוצר"}
                     </Button>
+                    )}
                     {component.optional ? (
                       <Button
                         type="button"

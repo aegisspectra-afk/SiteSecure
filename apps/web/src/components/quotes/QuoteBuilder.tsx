@@ -36,7 +36,7 @@ import {
   type CctvPlannedQuoteLine,
   type PartialApplyRecovery,
 } from "../../lib/cctv-recommend-projection";
-import { componentKeyFromPlannedPackage } from "../../lib/cctv-component-keys";
+import { CCTV_LABOR_PACKAGE_PREFIX, componentKeyFromPlannedPackage } from "../../lib/cctv-component-keys";
 import { pickActiveCctvDesign } from "../../lib/cctv-design-persistence";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
@@ -1388,7 +1388,8 @@ export function QuoteBuilder({
     const stale = (working.items ?? []).filter(
       (item) =>
         isCctvPlannedQuoteItem(item) ||
-        String(item.package_name || "").startsWith(CCTV_PLANNED_PACKAGE_PREFIX),
+        String(item.package_name || "").startsWith(CCTV_PLANNED_PACKAGE_PREFIX) ||
+        String(item.package_name || "").startsWith(CCTV_LABOR_PACKAGE_PREFIX),
     );
     for (const item of stale) {
       working = await api.deleteQuoteItem(workspaceId, working.id, item.id);
@@ -1397,7 +1398,8 @@ export function QuoteBuilder({
 
     for (const line of planned) {
       working = await api.addQuoteItem(workspaceId, working.id, {
-        item_type: "free",
+        // DEMO-2.2: labor lines are work ("labor"); planned equipment gaps stay "free".
+        item_type: line.itemType ?? "free",
         description: line.description,
         name: line.name,
         qty: line.qty,

@@ -251,13 +251,31 @@ def margin_rule(quote: dict, items: list[dict], workspace: dict, settings: dict)
     ]
 
 
+# DEMO-2.2: wizard services priced as hours x rate. They are work, never missing equipment.
+CCTV_LABOR_KEYS = frozenset({"installation_camera", "recorder_setup_main", "testing_main"})
+
+
+def _is_labor_line(item: dict, pkg: str) -> bool:
+    if pkg.startswith("cctv-labor:") or _text(item.get("item_type")) == "labor":
+        return True
+    # Quotes made before DEMO-2.2 stored priced labor under cctv-planned:<service key>.
+    key = pkg[len("cctv-planned:"):] if pkg.startswith("cctv-planned:") else ""
+    try:
+        price = float(item.get("unit_price") or 0)
+    except (TypeError, ValueError):
+        price = 0
+    return key in CCTV_LABOR_KEYS and price > 0
+
+
 def planned_equipment_rule(quote: dict, items: list[dict], workspace: dict, settings: dict) -> list[dict]:
-    """Block send when required CCTV planned free-lines remain unresolved."""
+    """Block send when required CCTV planned equipment remains unchosen (labor never blocks)."""
     pending: list[str] = []
     for item in items:
         if item.get("is_optional"):
             continue
         pkg = _text(item.get("package_name"))
+        if _is_labor_line(item, pkg):
+            continue
         desc = _text(item.get("description"))
         name = _text(item.get("name"))
         if pkg.startswith("cctv-planned:") or desc.startswith("נדרש ציוד"):

@@ -21,8 +21,10 @@ import {
   type ReviewSelectionState,
 } from "./cctv-recommend-projection";
 import { formatTb } from "./cctv-storage-display";
+import { isLaborComponent } from "./cctv-labor";
 
-export type ReviewCardStatus = "needs" | "selected" | "optional" | "verify" | "incompatible";
+/** DEMO-2.2: "labor" = a wizard service priced as hours x rate (work, not equipment). */
+export type ReviewCardStatus = "needs" | "selected" | "optional" | "verify" | "incompatible" | "labor";
 
 export type ReviewSectionId =
   | "summary"
@@ -47,6 +49,8 @@ export function reviewStatusLabelHe(status: ReviewCardStatus): string {
       return "דורש אימות";
     case "incompatible":
       return "לא מתאים";
+    case "labor":
+      return "עבודה · שעות × תעריף";
   }
 }
 
@@ -159,6 +163,7 @@ export function deriveReviewCardStatus(
     }
     return "selected";
   }
+  if (isLaborComponent(componentKeyOf(component))) return "labor";
   if (component.optional) return "optional";
   return "needs";
 }
@@ -239,10 +244,11 @@ export function buildApplyReadinessPreview(
     const key = componentKeyOf(c);
     if (selection.removedComponentIds.has(key)) continue;
     const picked = resolveComponentProduct(c, selection);
+    // DEMO-2.2: services priced as hours x rate are work, not equipment to choose.
+    if (!picked && isLaborComponent(key)) continue;
     if (c.optional) {
       optional += 1;
       if (!picked) optionalUnresolved += 1;
-      else selected += 1;
       continue;
     }
     required += 1;

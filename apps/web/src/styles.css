@@ -28576,3 +28576,9 @@ html.dark .ssp-site-tone.is-officer {
 .cpq-cctv-review-preview-muted {
   color: var(--color-fg-muted);
 }
+
+/* DEMO-2.2 - wizard services are work, not missing equipment. */
+.cpq-cctv-review-chip.is-labor {
+  background: var(--color-bg-subtle);
+  color: var(--color-fg-muted);
+}

@@ -17,6 +17,7 @@ import {
   commercialLabelHe,
   componentKeyFromPlannedPackage,
   componentKeyOf,
+  laborPackageNameFor,
   plannedPackageNameFor,
   semanticRoleOf,
 } from "./cctv-component-keys";
@@ -56,6 +57,8 @@ export type CctvPlannedQuoteLine = {
   labor?: { hours: number; rate: number | null };
   /** Unit price for the line (labor lines only); 0/undefined = unpriced. */
   unitPrice?: number;
+  /** DEMO-2.2: quote item type; labor lines are "labor", planned equipment stays "free". */
+  itemType?: "labor" | "free";
 };
 
 export function linesFingerprint(lines: CctvBuildQuoteLine[], planned: CctvPlannedQuoteLine[] = []): string {
@@ -210,6 +213,9 @@ export function laborLineFromComponent(
     description: name,
     labor: { hours, rate },
     unitPrice: rate ?? 0,
+    // DEMO-2.2: work, not a planned equipment gap.
+    itemType: "labor",
+    package_name: laborPackageNameFor(key),
   };
 }
 
@@ -364,9 +370,15 @@ export function componentKindLabel(
 export function isCctvPlannedQuoteItem(item: {
   package_name?: string | null;
   description?: string | null;
+  unit_price?: number | string | null;
 }): boolean {
   const pkg = String(item.package_name || "");
-  if (pkg.startsWith(CCTV_PLANNED_PACKAGE_PREFIX)) return true;
+  if (pkg.startsWith(CCTV_PLANNED_PACKAGE_PREFIX)) {
+    // DEMO-2.2: older quotes stored priced labor under cctv-planned:; that is work, not a gap.
+    const key = pkg.slice(CCTV_PLANNED_PACKAGE_PREFIX.length);
+    if (isLaborComponent(key) && Number(item.unit_price ?? 0) > 0) return false;
+    return true;
+  }
   // Legacy detection only (old polluted descriptions).
   return String(item.description || "").startsWith(CCTV_PLANNED_DESCRIPTION_PREFIX);
 }

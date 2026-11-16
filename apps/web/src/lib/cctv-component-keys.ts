@@ -149,6 +149,13 @@ export function plannedPackageNameFor(componentKey: string): string {
   return `cctv-planned:${normalizeComponentKey(componentKey)}`;
 }
 
+/** DEMO-2.2: wizard labor lines (hours x rate) are work, never "missing equipment". */
+export const CCTV_LABOR_PACKAGE_PREFIX = "cctv-labor:";
+
+export function laborPackageNameFor(componentKey: string): string {
+  return `${CCTV_LABOR_PACKAGE_PREFIX}${normalizeComponentKey(componentKey)}`;
+}
+
 export function componentKeyFromPlannedPackage(packageName: string | null | undefined): string | null {
   const pkg = String(packageName || "");
   const prefix = "cctv-planned:";

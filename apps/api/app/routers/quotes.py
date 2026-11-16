@@ -18,6 +18,7 @@ from ..authz.usage import fetch_quotes_count
 from ..config import get_settings
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..notify import notify_quote_event, try_notify
+from .catalog import STARTER_SAMPLE_MARKER
 from ..errors import ApiError, MESSAGES
 from ..identity import actor_id
 from ..pagination import decode_cursor, page_from_rows, parse_limit
@@ -718,6 +719,10 @@ def _insert_line(
         sku = body.sku.strip() or None
     if body.product_id and body.name is not None:
         name = body.name.strip() or None
+    # DEMO-2.1: the starter "sample price" mark is office-only; a customer line always
+    # carries the product name instead (also for products seeded before the fix).
+    if (description or "").strip() == STARTER_SAMPLE_MARKER:
+        description = (name or "").strip()
     if unit_price is None:
         unit_price = 0
     if cost is None:

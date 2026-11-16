@@ -63,8 +63,9 @@ describe("Q2.7 starter catalog on the catalog page", () => {
 
   it("marks sample prices in the list", async () => {
     products = [
-      { id: "p1", sku: "SS-HDD-4TB", name: "HDD 4TB", list_price: 490, description: he.catalogSamplePrice, is_active: true },
-      { id: "p2", sku: "REAL-1", name: "פריט אמיתי", list_price: 100, description: "", is_active: true },
+      // DEMO-2.1: the flag comes from metadata; the description stays customer text.
+      { id: "p1", sku: "SS-HDD-4TB", name: "HDD 4TB", list_price: 490, description: "", metadata: { sample_price: true }, is_active: true },
+      { id: "p2", sku: "REAL-1", name: "פריט אמיתי", list_price: 100, description: "", metadata: { sample_price: false }, is_active: true },
     ];
     await renderCatalog();
     await waitFor(() => expect(screen.getByText("פריט אמיתי")).toBeInTheDocument());

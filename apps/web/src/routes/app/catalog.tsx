@@ -838,7 +838,7 @@ function CatalogBody() {
                     <TD>{row.category_path || "—"}</TD>
                     <TD>
                       {formatMoney(row.selling_price ?? row.list_price)}
-                      {(row.description || "").trim() === he.catalogSamplePrice ? (
+                      {row.metadata?.sample_price === true || (row.description || "").trim() === he.catalogSamplePrice ? (
                         <span className="catalog-sample-price" data-testid="catalog-sample-price">
                           {he.catalogSamplePrice}
                         </span>

@@ -722,6 +722,8 @@ export type CatalogProduct = {
   kind: string;
   list_price: number;
   selling_price?: number;
+  /** Office-only flags, e.g. sample_price for starter-catalog prices (DEMO-2.1). */
+  metadata?: Record<string, unknown> | null;
   cost?: number;
   vat_eligible?: boolean;
   tax?: boolean;

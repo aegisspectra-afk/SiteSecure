@@ -53,7 +53,7 @@ def _encode_product_cursor(row: dict) -> str | None:
 # Q4-S: authenticated cannot SELECT products.cost — never request it via UserClient JWT.
 PRODUCT_SELECT = (
     "id,workspace_id,category_id,sku,name,description,unit,kind,list_price,"
-    "vat_eligible,is_labor,is_active,manufacturer,model,attributes,created_at,updated_at"
+    "vat_eligible,is_labor,is_active,manufacturer,model,attributes,metadata,created_at,updated_at"
 )
 PRODUCT_COST_SELECT = "id,cost"
 CATEGORY_SELECT = "id,workspace_id,key,name_he,sort_order,parent_id,archived_at"
@@ -484,16 +484,16 @@ def patch_product(
         )
     )
     patch = body.model_dump(exclude_none=True)
-    # Q2.7: a starter-catalog price is a sample until someone sets the real one.
-    if (
-        "list_price" in patch
-        and "description" not in patch
-        and (existing.get("description") or "").strip() == STARTER_SAMPLE_MARKER
-    ):
-        patch["description"] = ""
-        meta = dict(existing.get("metadata") or {})
+    # Q2.7 / DEMO-2.1: a starter-catalog price is a sample until someone sets the real one.
+    # The flag lives in metadata.sample_price (office-only); older rows may also carry the
+    # mark in the description, which is cleared too.
+    meta = dict(existing.get("metadata") or {})
+    legacy_mark = (existing.get("description") or "").strip() == STARTER_SAMPLE_MARKER
+    if "list_price" in patch and (meta.get("sample_price") is True or legacy_mark):
         meta["sample_price"] = False
-        patch["metadata"] = meta
+        patch["metadata"] = {**meta, **(patch.get("metadata") or {})}
+        if legacy_mark and "description" not in patch:
+            patch["description"] = ""
     if "kind" in patch and patch["kind"] not in {"product", "service", "bundle"}:
         raise ApiError(400, "VALIDATION_ERROR", "סוג פריט לא תקין")
     if "cost" in patch and not _can_view_cost(ctx):

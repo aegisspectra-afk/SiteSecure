@@ -60,7 +60,8 @@ def test_new_workspace_gets_the_starter_catalog(settings):
     rows = _products(s, ws)
     starter = [r for r in rows if (r.get("metadata") or {}).get("starter_catalog") == "v1"]
     assert len(starter) == STARTER_COUNT, [r["sku"] for r in rows]
-    assert all(r["description"] == MARKER and (r["metadata"] or {}).get("sample_price") is True for r in starter)
+    # DEMO-2.1: the sample mark is office-only metadata; the description is customer text.
+    assert all(r["description"] != MARKER and (r["metadata"] or {}).get("sample_price") is True for r in starter)
     assert all(r["category_id"] for r in starter), "every starter item is placed in a category"
     by_sku = {r["sku"]: r for r in starter}
     assert by_sku["SS-NVR-8CH-POE"]["attributes"]["poe_ports"] == 8
@@ -91,7 +92,7 @@ def test_editing_the_price_clears_the_sample_marker(settings):
     s, api = settings, TestClient(app)
     owner, ws = _owner_workspace(s, api, "starter-marker")
     sw = next(r for r in _products(s, ws) if r["sku"] == "SS-SW-8P-POE")
-    assert sw["description"] == MARKER
+    assert (sw["metadata"] or {}).get("sample_price") is True
     res = api.patch(f"/api/v1/workspaces/{ws}/catalog/products/{sw['id']}", headers=_auth(owner), json={"list_price": 520})
     assert res.status_code == 200, _snippet(res)
     after = next(r for r in _products(s, ws) if r["sku"] == "SS-SW-8P-POE")
@@ -99,7 +100,8 @@ def test_editing_the_price_clears_the_sample_marker(settings):
     # Renaming only keeps the marker: the price is still a sample.
     hdd = next(r for r in _products(s, ws) if r["sku"] == "SS-HDD-2TB")
     api.patch(f"/api/v1/workspaces/{ws}/catalog/products/{hdd['id']}", headers=_auth(owner), json={"name": "HDD 2TB"})
-    assert next(r for r in _products(s, ws) if r["sku"] == "SS-HDD-2TB")["description"] == MARKER
+    hdd_after = next(r for r in _products(s, ws) if r["sku"] == "SS-HDD-2TB")
+    assert (hdd_after["metadata"] or {}).get("sample_price") is True and hdd_after["description"] != MARKER
 
 
 def test_starter_load_needs_catalog_edit_and_is_workspace_scoped(settings):

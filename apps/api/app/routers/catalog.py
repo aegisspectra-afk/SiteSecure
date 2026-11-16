@@ -431,6 +431,38 @@ def create_product(
     return _strip_cost(row, show_cost=_can_view_cost(ctx), categories_by_id=cats)
 
 
+STARTER_SAMPLE_MARKER = "מחיר לדוגמה – עדכן"
+
+
+class StarterCatalogOut(BaseModel):
+    inserted: int
+    skipped: int
+    missing_category: int = 0
+
+
+@router.post("/catalog/starter", response_model=StarterCatalogOut)
+def load_starter_catalog(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> StarterCatalogOut:
+    """Q2.7: load the starter CCTV catalog into this workspace. Idempotent: items whose SKU
+    already exists are skipped, never overwritten. Prices are marked as samples."""
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "catalog.edit")
+    # The RPC is service-role only; the workspace id is the one authorization just checked.
+    res = service.rpc("seed_starter_catalog", {"p_workspace_id": str(ctx.workspace_id)})
+    if res.status_code != 200:
+        raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לטעון את הקטלוג ההתחלתי כרגע")
+    data = res.json() if isinstance(res.json(), dict) else {}
+    return StarterCatalogOut(
+        inserted=int(data.get("inserted") or 0),
+        skipped=int(data.get("skipped") or 0),
+        missing_category=int(data.get("missing_category") or 0),
+    )
+
+
 @router.patch("/catalog/products/{product_id}")
 def patch_product(
     workspace_id: UUID,
@@ -447,11 +479,21 @@ def patch_product(
             params={
                 "id": f"eq.{product_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,category_id,attributes",
+                "select": "id,category_id,attributes,description,metadata",
             },
         )
     )
     patch = body.model_dump(exclude_none=True)
+    # Q2.7: a starter-catalog price is a sample until someone sets the real one.
+    if (
+        "list_price" in patch
+        and "description" not in patch
+        and (existing.get("description") or "").strip() == STARTER_SAMPLE_MARKER
+    ):
+        patch["description"] = ""
+        meta = dict(existing.get("metadata") or {})
+        meta["sample_price"] = False
+        patch["metadata"] = meta
     if "kind" in patch and patch["kind"] not in {"product", "service", "bundle"}:
         raise ApiError(400, "VALIDATION_ERROR", "סוג פריט לא תקין")
     if "cost" in patch and not _can_view_cost(ctx):

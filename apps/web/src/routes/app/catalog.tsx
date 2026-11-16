@@ -223,6 +223,18 @@ function CatalogBody() {
     });
   }
 
+  // Q2.7: starter catalog (idempotent on the server).
+  const [starterNotice, setStarterNotice] = useState<string | null>(null);
+  const loadStarter = useMutation({
+    mutationFn: () => api.loadStarterCatalog(workspaceId!),
+    onSuccess: (out) => {
+      setStarterNotice(he.catalogStarterDone(out.inserted, out.skipped));
+      void queryClient.refetchQueries({ queryKey: ["catalog-products", workspaceId] });
+      void queryClient.refetchQueries({ queryKey: ["catalog-categories", workspaceId] });
+    },
+    onError: () => setStarterNotice(he.catalogStarterError),
+  });
+
   const bulkDelete = useMutation({
     mutationFn: async (ids: string[]) => {
       setDeletePhase("running");
@@ -466,6 +478,15 @@ function CatalogBody() {
               <Button variant="ghost" onClick={() => setImportOpen(true)}>
                 {he.catalogImport}
               </Button>
+              <Button
+                variant="ghost"
+                loading={loadStarter.isPending}
+                title={he.catalogStarterHint}
+                onClick={() => loadStarter.mutate()}
+                data-testid="catalog-starter-load"
+              >
+                {he.catalogStarterLoad}
+              </Button>
               {canViewCost ? (
                 <Button variant="ghost" onClick={() => setBulkOpen((v) => !v)}>
                   {he.catalogBulkPricing}
@@ -500,6 +521,11 @@ function CatalogBody() {
       ) : null}
 
       <div className="ops-card flex flex-col gap-4 p-4">
+        {starterNotice ? (
+          <p className="text-sm text-fg" role="status" data-testid="catalog-starter-notice">
+            {starterNotice}
+          </p>
+        ) : null}
         {isTrulyEmpty && canEdit && !editingId ? (
           <div className="flex flex-col items-start gap-3 rounded-[var(--radius-control)] border border-dashed border-border p-6">
             <div>
@@ -507,7 +533,12 @@ function CatalogBody() {
               <p className="mt-1 text-sm text-fg-muted">{he.catalogEmptyBody}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setImportOpen(true)}>{he.catalogImport}</Button>
+              <Button onClick={() => loadStarter.mutate()} loading={loadStarter.isPending}>
+                {he.catalogStarterLoad}
+              </Button>
+              <Button variant="ghost" onClick={() => setImportOpen(true)}>
+                {he.catalogImport}
+              </Button>
               <Button variant="ghost" onClick={startCreate}>
                 {he.catalogAddManual}
               </Button>
@@ -805,7 +836,14 @@ function CatalogBody() {
                     <TD className="font-medium">{row.name}</TD>
                     <TD>{row.manufacturer || "—"}</TD>
                     <TD>{row.category_path || "—"}</TD>
-                    <TD>{formatMoney(row.selling_price ?? row.list_price)}</TD>
+                    <TD>
+                      {formatMoney(row.selling_price ?? row.list_price)}
+                      {(row.description || "").trim() === he.catalogSamplePrice ? (
+                        <span className="catalog-sample-price" data-testid="catalog-sample-price">
+                          {he.catalogSamplePrice}
+                        </span>
+                      ) : null}
+                    </TD>
                     {canViewCost ? <TD>{row.cost != null ? formatMoney(row.cost) : "—"}</TD> : null}
                     <TD>
                       <Status

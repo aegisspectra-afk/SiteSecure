@@ -3431,6 +3431,12 @@ export function createApiClient(opts: {
         `/api/v1/workspaces/${workspaceId}/catalog/products?${params}`,
       );
     },
+    /** Q2.7: load the starter CCTV catalog (idempotent; existing SKUs are skipped). */
+    loadStarterCatalog: (workspaceId: string) =>
+      request<{ inserted: number; skipped: number; missing_category: number }>(
+        `/api/v1/workspaces/${workspaceId}/catalog/starter`,
+        { method: "POST" },
+      ),
     createCatalogProduct: (
       workspaceId: string,
       body: {

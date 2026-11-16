@@ -4046,6 +4046,14 @@ export const he = {
   catalogEmpty: "הקטלוג שלך עדיין ריק",
   catalogEmptyBody: "כדי להתחיל לעבוד, אפשר לייבא מחירון קיים או להוסיף מוצרים ידנית.",
   catalogImport: "ייבוא קטלוג",
+  catalogStarterLoad: "טען קטלוג התחלתי",
+  catalogStarterHint: "מצלמות, מקליטים, דיסקים, מתגי PoE וכבל CAT6 עם מחירים לדוגמה. פריטים קיימים לא נדרסים.",
+  catalogStarterDone: (inserted: number, skipped: number) =>
+    inserted === 0
+      ? `הקטלוג ההתחלתי כבר טעון (${skipped} פריטים קיימים)`
+      : `נטענו ${inserted} פריטים${skipped ? ` · ${skipped} כבר היו קיימים` : ""}. המחירים הם לדוגמה, עדכנו אותם.`,
+  catalogStarterError: "לא ניתן לטעון את הקטלוג ההתחלתי כרגע",
+  catalogSamplePrice: "מחיר לדוגמה – עדכן",
   catalogImportTitle: "ייבוא קטלוג",
   catalogImportSubtitle: "ייבוא מוצרים ומידע טכני מקובץ Excel או CSV",
   catalogImportClose: "סגור",

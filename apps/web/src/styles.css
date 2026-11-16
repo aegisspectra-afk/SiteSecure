@@ -28550,3 +28550,12 @@ html.dark .ssp-site-tone.is-officer {
   border-radius: var(--radius-card, 0.75rem);
   background: var(--color-bg-subtle);
 }
+
+/* Q2.7 - starter catalog sample price marker. */
+.catalog-sample-price {
+  display: block;
+  margin-block-start: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-warning, #b45309);
+}

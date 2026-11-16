@@ -7,6 +7,7 @@
  */
 
 import { apiErrorMessage } from "../../../lib/api-validation-message";
+import { formatMoney } from "../../../lib/quotes";
 import {
   ApiClientError,
   type ApiClient,
@@ -140,6 +141,8 @@ export function SystemBuilderDrawer({
   const [needsReviewKeys, setNeedsReviewKeys] = useState<Set<string>>(() => new Set());
   const [appliedOnce, setAppliedOnce] = useState(false);
   const [applySucceeded, setApplySucceeded] = useState(false);
+  /** DEMO-2.5: the quote total as the server priced it after the add (no client math). */
+  const [appliedTotal, setAppliedTotal] = useState<number | null>(null);
   const [lastLines, setLastLines] = useState<CctvBuildQuoteLine[] | null>(null);
   const [localApplying, setLocalApplying] = useState(false);
   const [localApplyError, setLocalApplyError] = useState<string | null>(null);
@@ -667,6 +670,7 @@ export function SystemBuilderDrawer({
         onClearRecovery?.();
         setApplySucceeded(true);
         setAppliedOnce(true);
+        setAppliedTotal(quoteAfter?.total_gross != null ? Number(quoteAfter.total_gross) : null);
         if (quoteAfter && onAppliedQuote) {
           await onAppliedQuote(quoteAfter);
         } else if (!resolved.length && !planned.length) {
@@ -729,6 +733,11 @@ export function SystemBuilderDrawer({
         <div className="rounded-md border border-success/40 bg-success/5 p-3 text-sm" role="status">
           <p className="font-medium text-fg">{he.cpqCctvApplySuccessTitle}</p>
           <p className="mt-1 text-fg-muted">{he.cpqCctvApplySuccessBody}</p>
+          {appliedTotal != null ? (
+            <p className="mt-2 font-medium text-fg" data-testid="cctv-applied-total" data-total={appliedTotal}>
+              {he.cpqCctvAppliedTotal(formatMoney(appliedTotal))}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <Button

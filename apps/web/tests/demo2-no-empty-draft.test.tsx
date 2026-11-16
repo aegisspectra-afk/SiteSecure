@@ -49,7 +49,7 @@ describe("DEMO-2.3 a quote is created only when it gets content", () => {
   it("adding the plan creates the quote once, saves the design, then applies", async () => {
     const order: string[] = [];
     const design = { id: "d1", revision: 1, engine_type: "cctv", created_at: "2026-11-16T00:00:00Z", components: [] };
-    const quote = { id: "q1", items: [{ id: "i1" }], sections: [] };
+    const quote = { id: "q1", items: [{ id: "i1" }], sections: [], total_gross: 4755.4 };
     const api = {
       recommendCctv: vi.fn(async () => rec()),
       listSystemDesigns: vi.fn(async () => ({ items: [] })),
@@ -99,6 +99,8 @@ describe("DEMO-2.3 a quote is created only when it gets content", () => {
     expect(order).toEqual(["quote", "design", "apply"]);
     expect(onAppliedQuote).toHaveBeenCalledWith(quote);
     expect(screen.getByTestId("cctv-apply-success")).toBeInTheDocument(); // the drawer stays open
+    // DEMO-2.5: the wizard shows the total the server priced, nothing computed locally.
+    expect(screen.getByTestId("cctv-applied-total")).toHaveAttribute("data-total", "4755.4");
     // The parent now knows the quote the drawer created: no reload, no recalculation.
     const calcs = (api.recommendCctv as ReturnType<typeof vi.fn>).mock.calls.length;
     rerender(view("q1"));

@@ -2827,6 +2827,7 @@ export const he = {
   cpqCctvContinueToEquipment: "המשך לבחירת ציוד",
   cpqCctvSelectedOf: (selected: number, required: number) => `${selected} מתוך ${required} נבחרו`,
   cpqCctvOptionalCount: (n: number) => (n === 1 ? "פריט אופציונלי אחד" : `${n} אופציונליים`),
+  cpqCctvAppliedTotal: (total: string) => `סה״כ ההצעה עכשיו: ${total} כולל מע״מ`,
   cpqCctvLaborCardNote: "שעות עבודה × תעריף לשעה. אין צורך לבחור מוצר.",
   cpqSeverityBlocker: "חוסם",
   laborRateLabel: "תעריף לשעה (₪)",

@@ -27,6 +27,7 @@ import { useSession } from "../../lib/session";
 import { FieldActionSheet } from "./FieldActionSheet";
 import { JobAssignForm } from "../jobs/JobAssignForm";
 import { formatScheduleHe } from "../../lib/job-schedule";
+import { JobSignatureSection } from "../jobs/JobSignatureSection";
 
 function jobStatusLabel(status: string): string {
   return he.jobStatuses[status as keyof typeof he.jobStatuses] ?? status;
@@ -472,6 +473,15 @@ export function FieldJob({ jobId }: { jobId: string }) {
             uploading={upload.isPending}
             online={online}
             onPick={() => fileRef.current?.click()}
+          />
+
+          <JobSignatureSection
+            api={api}
+            workspaceId={workspaceId!}
+            job={job}
+            canSign={canStart}
+            online={online}
+            onSigned={invalidateJob}
           />
 
           {jobDone ? (

@@ -12,7 +12,7 @@ from ..audit import write_audit
 from ..authz.guard import require
 from ..authz.scope import apply_assigned_job_list_filter, empty_assigned_page
 from ..authz.types import ResourceRef
-from ..deps import UserClient, current_user, load_authz_context, user_client
+from ..deps import ServiceClient, UserClient, current_user, load_authz_context, service_client, user_client
 from ..errors import ApiError
 from ..identity import actor_id
 from ..job_lifecycle import OPEN_JOB_STATUSES, assert_transition
@@ -25,7 +25,8 @@ router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["jobs"])
 JOB_SELECT = (
     "id,workspace_id,number,title,kind,status,priority,project_id,service_call_id,"
     "customer_id,site_id,scheduled_for,scheduled_end,started_at,arrived_at,completed_at,"
-    "completion_notes,created_by,created_at,updated_at"
+    "completion_notes,created_by,created_at,updated_at,"
+    "customer_signature_document_id,customer_signer_name,customer_signed_at,customer_signed_by"
 )
 
 
@@ -171,6 +172,11 @@ class JobOut(BaseModel):
     updated_at: str
     assignees: list[JobAssigneeOut] = Field(default_factory=list)
     is_assigned: bool = False
+    # DEMO-4.1: customer signature collected on site.
+    customer_signature_document_id: str | None = None
+    customer_signer_name: str | None = None
+    customer_signed_at: str | None = None
+    customer_signed_by: str | None = None
 
 
 def _ctx(client: UserClient, user: dict, workspace_id: UUID):
@@ -274,6 +280,10 @@ def _out(client: UserClient, workspace_id: UUID, row: dict, *, with_assignees: b
         updated_at=row["updated_at"],
         assignees=assignees,
         is_assigned=bool(assignees),
+        customer_signature_document_id=row.get("customer_signature_document_id"),
+        customer_signer_name=row.get("customer_signer_name"),
+        customer_signed_at=row.get("customer_signed_at"),
+        customer_signed_by=row.get("customer_signed_by"),
     )
 
 
@@ -761,6 +771,82 @@ def assign_job(
         "assigned_by": primary.assigned_by if primary else actor,
         "assignees": [a.model_dump() for a in assignees],
         "reassigned": action == "jobs.reassign",
+    }
+
+
+class JobSignatureIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    signer_name: str = Field(min_length=1, max_length=120)
+    signature_data_url: str = Field(min_length=20, max_length=350_000)
+
+
+SIGNABLE_JOB_STATUSES = frozenset({"arrived", "in_progress"})
+
+
+@router.post("/jobs/{job_id}/signature")
+def sign_job(
+    workspace_id: UUID,
+    job_id: UUID,
+    body: JobSignatureIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """DEMO-4.1: the customer signs on the technician's device (name + date + drawing).
+
+    The image goes to the private signatures bucket under {workspace}/job/{job}/; the job keeps
+    the signer, the time and who collected it. Only while the job is on site (arrived /
+    in progress). The signature columns are server-only (trigger), so they are written with
+    the service role after the checks below.
+    """
+    from ..quote_signature import store_signature_document
+
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_job(client, workspace_id, job_id)  # RLS: someone else's job is 404
+    require(ctx, "jobs.start", resource=_ref(existing))
+    signer = " ".join(body.signer_name.split())
+    if not signer:
+        raise ApiError(400, "VALIDATION_ERROR", "יש להזין את שם החותם", {"field": "signer_name"})
+    if existing.get("status") not in SIGNABLE_JOB_STATUSES:
+        raise ApiError(409, "BUSINESS_RULE", "אפשר להחתים לקוח רק כשהעבודה באתר או בתהליך")
+    signed_at = datetime.now(UTC).isoformat()
+    stored = store_signature_document(
+        svc,
+        workspace_id=str(workspace_id),
+        entity_type="job",
+        entity_id=str(job_id),
+        file_stem="customer-signature",
+        signed_at=signed_at,
+        signature_data_url=body.signature_data_url,
+        plan_key=ctx.plan_key,
+    )
+    actor = actor_id(user)
+    patched_or_403(
+        svc.patch(
+            "jobs",
+            {
+                "customer_signature_document_id": stored["document_id"],
+                "customer_signer_name": signer,
+                "customer_signed_at": signed_at,
+                "customer_signed_by": actor,
+            },
+            params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"},
+        )
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "jobs.customer_signature",
+        entity_type="job",
+        entity_id=str(job_id),
+        metadata={"document_id": stored["document_id"], "signer_name": signer},
+    )
+    return {
+        "job_id": str(job_id),
+        "document_id": stored["document_id"],
+        "signer_name": signer,
+        "signed_at": signed_at,
+        "signed_by": actor,
     }
 
 

@@ -76,24 +76,27 @@ def _storage_used_bytes_svc(svc: ServiceClient, workspace_id: str) -> int:
     return total
 
 
-def store_quote_signature_document(
+def store_signature_document(
     svc: ServiceClient,
     *,
-    quote: dict[str, Any],
-    version: int,
-    signer_name: str,
+    workspace_id: str,
+    entity_type: str,
+    entity_id: str,
+    file_stem: str,
     signed_at: str,
     signature_data_url: str,
     plan_key: str | None = None,
 ) -> dict[str, Any]:
-    """Upload signature bytes and insert a documents row. Does not mutate quote_versions."""
+    """Upload a signature image to the private "signatures" bucket and insert a documents row.
+
+    Path: {workspace}/{entity_type}/{entity_id}/{document_id}/{file_stem}.{ext}. Storage quota
+    is checked first; the object is removed again if the documents row cannot be written.
+    """
     image_bytes, mime_type = parse_signature_data_url(signature_data_url)
     document_id = str(uuid.uuid4())
-    workspace_id = str(quote["workspace_id"])
-    quote_id = str(quote["id"])
     ext = "png" if mime_type == "image/png" else "jpg" if mime_type == "image/jpeg" else "webp"
     storage_bucket = "signatures"
-    storage_path = f"{workspace_id}/quote/{quote_id}/{document_id}/signature-v{version}.{ext}"
+    storage_path = f"{workspace_id}/{entity_type}/{entity_id}/{document_id}/{file_stem}.{ext}"
     checksum = hashlib.sha256(image_bytes).hexdigest()
 
     resolved_plan = plan_key
@@ -124,8 +127,8 @@ def store_quote_signature_document(
         {
             "id": document_id,
             "workspace_id": workspace_id,
-            "entity_type": "quote",
-            "entity_id": quote_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
             "kind": "signature",
             "storage_bucket": storage_bucket,
             "storage_path": storage_path,
@@ -133,18 +136,17 @@ def store_quote_signature_document(
             "byte_size": len(image_bytes),
             "reserved_bytes": 0,
             "checksum": checksum,
-            "original_filename": f"signature-v{version}.{ext}",
+            "original_filename": f"{file_stem}.{ext}",
             "captured_at": signed_at,
         },
     )
     # PostgREST create returns 201; as_list() only accepts 200 and would raise BUSINESS_RULE.
     if doc_res.status_code not in {200, 201}:
-        text = doc_res.text or ""
-        if "PLAN_LIMIT_REACHED" in text:
-            try:
-                svc.storage_remove(storage_bucket, storage_path)
-            except Exception:
-                pass
+        try:
+            svc.storage_remove(storage_bucket, storage_path)
+        except Exception:
+            pass
+        if "PLAN_LIMIT_REACHED" in (doc_res.text or ""):
             raise ApiError(
                 403,
                 "PLAN_LIMIT_REACHED",
@@ -156,18 +158,43 @@ def store_quote_signature_document(
     docs = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) and raw else [])
     if not docs:
         raise ApiError(503, "API_UNAVAILABLE", "לא ניתן לשמור את החתימה")
-
     return {
-        "signer_name": signer_name,
-        "signed_at": signed_at,
-        "quote_id": quote_id,
-        "quote_version": int(version),
         "document_id": document_id,
         "storage_bucket": storage_bucket,
         "storage_path": storage_path,
         "mime_type": mime_type,
         "byte_size": len(image_bytes),
         "checksum": checksum,
+    }
+
+
+def store_quote_signature_document(
+    svc: ServiceClient,
+    *,
+    quote: dict[str, Any],
+    version: int,
+    signer_name: str,
+    signed_at: str,
+    signature_data_url: str,
+    plan_key: str | None = None,
+) -> dict[str, Any]:
+    """Upload signature bytes and insert a documents row. Does not mutate quote_versions."""
+    stored = store_signature_document(
+        svc,
+        workspace_id=str(quote["workspace_id"]),
+        entity_type="quote",
+        entity_id=str(quote["id"]),
+        file_stem=f"signature-v{version}",
+        signed_at=signed_at,
+        signature_data_url=signature_data_url,
+        plan_key=plan_key,
+    )
+    return {
+        "signer_name": signer_name,
+        "signed_at": signed_at,
+        "quote_id": str(quote["id"]),
+        "quote_version": int(version),
+        **stored,
         "image_data_url": signature_data_url.strip(),
     }
 

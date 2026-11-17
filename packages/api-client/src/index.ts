@@ -1991,6 +1991,11 @@ export type JobOut = {
   updated_at?: string;
   assignees?: JobAssigneeOut[];
   is_assigned?: boolean;
+  /** DEMO-4.1: customer signature collected on site. */
+  customer_signature_document_id?: string | null;
+  customer_signer_name?: string | null;
+  customer_signed_at?: string | null;
+  customer_signed_by?: string | null;
   customer_name?: string | null;
   site_name?: string | null;
   project_name?: string | null;
@@ -3316,6 +3321,12 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    /** DEMO-4.1: the customer signs on site (name + PNG data URL). */
+    signJob: (workspaceId: string, jobId: string, body: { signer_name: string; signature_data_url: string }) =>
+      request<{ job_id: string; document_id: string; signer_name: string; signed_at: string; signed_by: string }>(
+        `/api/v1/workspaces/${workspaceId}/jobs/${jobId}/signature`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
     enRouteJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/en-route`, { method: "POST" }),
     arrivedJob: (workspaceId: string, jobId: string) =>

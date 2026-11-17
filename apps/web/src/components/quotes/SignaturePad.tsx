@@ -6,9 +6,12 @@ import { he } from "../../i18n/he";
 export function SignaturePad({
   onChange,
   disabled,
+  label,
 }: {
   onChange: (dataUrl: string | null) => void;
   disabled?: boolean;
+  /** DEMO-4.1: the job signature reuses the pad with its own title. */
+  label?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -114,10 +117,12 @@ export function SignaturePad({
 
   return (
     <div className="cqx-signature-pad">
-      <p className="cqx-signature-label">{he.cqxSignatureTitle}</p>
+      <p className="cqx-signature-label">{label ?? he.cqxSignatureTitle}</p>
       <canvas
         ref={canvasRef}
         className="cqx-signature-canvas"
+        data-testid="signature-canvas"
+        style={{ touchAction: "none" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}

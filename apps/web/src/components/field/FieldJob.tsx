@@ -279,7 +279,7 @@ export function FieldJob({ jobId }: { jobId: string }) {
     );
   } else if (canCompleteJob && !completing) {
     primaryAction = (
-      <Button type="button" disabled={!online} onClick={() => setCompleting(true)}>
+      <Button type="button" data-testid="job-complete-open" disabled={!online} onClick={() => setCompleting(true)}>
         {he.completeJob}
       </Button>
     );
@@ -487,6 +487,7 @@ export function FieldJob({ jobId }: { jobId: string }) {
                 ) : null}
                 <Button
                   type="button"
+                  data-testid="job-complete-submit"
                   loading={complete.isPending}
                   disabled={!online || !completionReady || complete.isPending}
                   onClick={() => complete.mutate()}
@@ -739,6 +740,7 @@ function JobWhatsAppShare({
       <Button
         type="button"
         variant="secondary"
+        data-testid="job-whatsapp-share"
         disabled={!mobileOk || !pageUrl}
         title={!mobileOk ? he.jobWhatsAppDisabledHint : undefined}
         onClick={() => {

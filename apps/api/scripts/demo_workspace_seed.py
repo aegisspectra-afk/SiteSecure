@@ -239,9 +239,35 @@ def ensure_field_ops(workspace_id: str) -> None:
     _patch("workspaces", {"id": f"eq.{workspace_id}"}, {"field_ops": field_ops})
 
 
+def _ensure_category(workspace_id: str, key: str) -> str:
+    rows = _get(
+        "product_categories",
+        {
+            "workspace_id": f"eq.{workspace_id}",
+            "key": f"eq.{key}",
+            "select": "id",
+            "archived_at": "is.null",
+            "limit": "1",
+        },
+    )
+    if rows:
+        return str(rows[0]["id"])
+    row = _post(
+        "product_categories",
+        {
+            "workspace_id": workspace_id,
+            "key": key,
+            "name_he": key,
+            "sort_order": 900,
+        },
+    )
+    return str(row["id"])
+
+
 def seed_catalog(workspace_id: str) -> list[str]:
     ids: list[str] = []
     for sku, name, category, sell, cost, mfr, model in CATALOG:
+        category_id = _ensure_category(workspace_id, category)
         existing = _get(
             "products",
             {"workspace_id": f"eq.{workspace_id}", "sku": f"eq.{sku}", "select": "id", "limit": "1"},
@@ -250,7 +276,7 @@ def seed_catalog(workspace_id: str) -> list[str]:
             "workspace_id": workspace_id,
             "sku": sku,
             "name": name,
-            "category": category,
+            "category_id": category_id,
             "unit": "unit",
             "kind": "service" if category == "labor" else "product",
             "is_labor": category == "labor",
@@ -272,8 +298,26 @@ def seed_catalog(workspace_id: str) -> list[str]:
     return ids
 
 
+def require_demo_workspace(workspace_id: str) -> dict:
+    """Refuse destructive demo ops unless the workspace is flagged is_demo=true."""
+    rows = _get(
+        "workspaces",
+        {"id": f"eq.{workspace_id}", "select": "id,name,is_demo", "limit": "1"},
+    )
+    if not rows:
+        _die(f"workspace not found: {workspace_id}")
+    row = rows[0]
+    if row.get("is_demo") is not True:
+        _die(
+            f"refusing demo wipe/reset: workspace {workspace_id} is not is_demo=true "
+            f"(name={row.get('name')!r})"
+        )
+    return row
+
+
 def wipe_demo_entities(workspace_id: str) -> None:
     """Delete transactional demo rows (keeps memberships/products overrides)."""
+    require_demo_workspace(workspace_id)
     # Order matters for FKs — best-effort.
     tables = [
         "handover_public_access",

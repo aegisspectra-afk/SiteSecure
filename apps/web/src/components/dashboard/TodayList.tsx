@@ -132,17 +132,19 @@ function TodayCard({
         }
         meta={
           <>
-            <span className="public-mono ltr-meta" dir="ltr">
+            {/* DEMO-4.4: number and time are separate LTR islands; the separator stays in
+                the RTL flow, so the card reads "J-00003 · 09:00–13:00" from the right. */}
+            <bdi className="public-mono" dir="ltr" data-testid="today-card-number">
               {item.number}
-            </span>
+            </bdi>
+            <span aria-hidden="true">{" · "}</span>
             {start ? (
-              <span className="public-mono ltr-meta" dir="ltr">
-                {" · "}
+              <bdi className="public-mono" dir="ltr" data-testid="today-card-time">
                 {start}
                 {end ? `–${end}` : ""}
-              </span>
+              </bdi>
             ) : (
-              <span>{` · ${he.fieldNoSchedule}`}</span>
+              <span>{he.fieldNoSchedule}</span>
             )}
             {address ? <span className="ss-activity-row-address">{address}</span> : null}
           </>

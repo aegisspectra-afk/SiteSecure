@@ -660,10 +660,10 @@ function PhotosSection({
 function JobMetaFoot({ job }: { job: JobOut }) {
   if (!job.started_at && !job.completed_at) return null;
   return (
-    <p className="public-mono text-[10px] tracking-[0.12em] text-fg-subtle" dir="ltr">
+    <p className="text-xs text-fg-subtle" data-testid="job-meta-foot">
       {[
-        job.started_at ? `START ${formatTime(job.started_at) || formatDate(job.started_at)}` : null,
-        job.completed_at ? `DONE ${formatTime(job.completed_at) || formatDate(job.completed_at)}` : null,
+        job.started_at ? he.fieldStartedAt(formatTime(job.started_at) || formatDate(job.started_at) || "") : null,
+        job.completed_at ? he.fieldDoneAt(formatTime(job.completed_at) || formatDate(job.completed_at) || "") : null,
       ]
         .filter(Boolean)
         .join(" · ")}

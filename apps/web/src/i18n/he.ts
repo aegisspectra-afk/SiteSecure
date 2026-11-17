@@ -13,6 +13,13 @@ export const he = {
   jobWhatsAppDisabledHint: "אין מספר נייד תקין ללקוח",
   jobWhatsAppMessage: (name: string, url: string) =>
     `שלום${name ? ` ${name}` : ""},\nהעבודה הושלמה. ניתן לצפות בתעודת המסירה בקישור:\n${url}`,
+  fieldCompleteBlocked: "לא ניתן לסיים",
+  fieldCompleteNeedSignature: "נדרשת חתימת לקוח לפני הסיום",
+  fieldCompleteNeedChecklist: "יש להשלים את סעיפי החובה בצ׳קליסט",
+  fieldCompleteNeedPhotos: "חסרות תמונות לסעיפים שמחייבים תיעוד",
+  handoverOpenCertificate: "פתח תעודת מסירה",
+  handoverDownloadPdf: "הורד PDF",
+  warrantyMonthsMissingAssign: "לסביבה אין תקופת אחריות מוגדרת — בסיום תיווצר אחריות במצב ממתין להגדרה",
   quoteWhatsAppDisabledHint: "אין מספר נייד תקין ללקוח — לא ניתן לפתוח WhatsApp עם הנמען",
   authPlatformLabel: "פלטפורמת תפעול אבטחה",
   authHeadlineLine1: "תפעול אבטחה",

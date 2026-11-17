@@ -36,6 +36,8 @@ export function JobAssignForm({
   const [schedule, setSchedule] = useState<ScheduleInputs>(initial);
   const [error, setError] = useState<string | null>(null);
 
+  const [warrantyHint, setWarrantyHint] = useState<string | null>(null);
+
   const save = useMutation({
     mutationFn: async () => {
       const parsed = scheduleToApi(schedule);
@@ -46,9 +48,14 @@ export function JobAssignForm({
       if (!parsed.value) throw new Error(he.jobScheduleNeedsDate);
       return api.patchJob(workspaceId, job.id, parsed.value);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setUserId("");
       setError(null);
+      const warning =
+        result && typeof result === "object" && "warranty_months_warning" in result
+          ? (result as { warranty_months_warning?: string | null }).warranty_months_warning
+          : null;
+      setWarrantyHint(warning || null);
       onDone();
     },
     onError: (err) => setError(err instanceof ApiClientError || err instanceof Error ? err.message : he.jobLoadError),
@@ -76,6 +83,7 @@ export function JobAssignForm({
         </select>
       </label>
       <JobScheduleFields value={schedule} onChange={setSchedule} disabled={save.isPending} error={error} />
+      {warrantyHint ? <p className="text-xs text-warning">{warrantyHint}</p> : null}
       <Button
         type="button"
         variant="secondary"

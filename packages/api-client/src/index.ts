@@ -2001,6 +2001,40 @@ export type JobOut = {
   project_name?: string | null;
 };
 
+/** DEMO-5: response from POST …/jobs/{id}/complete */
+export type JobCompleteResult = {
+  job: JobOut;
+  warranty_id?: string | null;
+  equipment_ids?: string[];
+  billing_item_id?: string | null;
+  notification_ids?: string[];
+  outbound_message_id?: string | null;
+  handover_url?: string | null;
+  warranty_pending_period?: boolean;
+  project_status?: string | null;
+  replay?: boolean;
+};
+
+export type PublicHandoverCertificate = {
+  number?: string | null;
+  company: {
+    brand_name?: string | null;
+    name?: string | null;
+    logo_url?: string | null;
+    brand_primary?: string | null;
+    phone?: string | null;
+  };
+  customer?: { display_name?: string | null };
+  site?: { name?: string | null; address?: string | null };
+  technician_name?: string | null;
+  completed_at?: string | null;
+  warranty_label?: string | null;
+  equipment?: Array<{ name?: string | null; qty?: number | null; asset_code?: string | null }>;
+  checklist_summary?: { done: number; not_applicable: number; total: number };
+  signer_name?: string | null;
+  signed_at?: string | null;
+};
+
 export type JobChecklistItem = {
   id: string;
   label_he: string;
@@ -3318,6 +3352,8 @@ export function createApiClient(opts: {
         assigned_by?: string | null;
         assignees: JobAssigneeOut[];
         reassigned: boolean;
+        warranty_months_missing?: boolean;
+        warranty_months_warning?: string | null;
       }>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/assign`, {
         method: "POST",
         body: JSON.stringify(body),
@@ -3344,11 +3380,28 @@ export function createApiClient(opts: {
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/arrived`, { method: "POST" }),
     startJob: (workspaceId: string, jobId: string) =>
       request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/start`, { method: "POST" }),
-    completeJob: (workspaceId: string, jobId: string, body: { completion_notes?: string } = {}) =>
-      request<JobOut>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/complete`, {
+    completeJob: (
+      workspaceId: string,
+      jobId: string,
+      body: { completion_notes?: string } = {},
+      opts: { idempotencyKey?: string } = {},
+    ) =>
+      request<JobCompleteResult>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/complete`, {
         method: "POST",
         body: JSON.stringify(body),
+        headers: opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : undefined,
       }),
+    createJobHandoverLink: (workspaceId: string, jobId: string) =>
+      request<{ handover_url: string; expires_at: string }>(
+        `/api/v1/workspaces/${workspaceId}/jobs/${jobId}/handover/link`,
+        { method: "POST" },
+      ),
+    revokeJobHandoverLink: (workspaceId: string, jobId: string) =>
+      request<{ status: string }>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/handover/revoke`, {
+        method: "POST",
+      }),
+    getPublicHandover: (token: string) => request<PublicHandoverCertificate>(`/api/v1/public/handover/${token}`),
+    downloadPublicHandoverPdf: (token: string) => requestBlob(`/api/v1/public/handover/${token}/pdf`),
     listJobChecklist: (workspaceId: string, jobId: string) =>
       request<JobChecklistItem[]>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/checklist`),
     patchJobChecklistItem: (

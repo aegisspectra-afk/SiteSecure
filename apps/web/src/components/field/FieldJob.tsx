@@ -86,6 +86,8 @@ export function FieldJob({ jobId }: { jobId: string }) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+  const [handoverUrl, setHandoverUrl] = useState<string | null>(null);
+  const completeKeyRef = useRef<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const jobQuery = useQuery({
@@ -162,13 +164,35 @@ export function FieldJob({ jobId }: { jobId: string }) {
   });
 
   const complete = useMutation({
-    mutationFn: () => api.completeJob(workspaceId!, jobId, { completion_notes: notes.trim() || undefined }),
-    onSuccess: () => {
+    mutationFn: () => {
+      if (!completeKeyRef.current) {
+        completeKeyRef.current =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? `complete-${crypto.randomUUID()}`
+            : `complete-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+      return api.completeJob(
+        workspaceId!,
+        jobId,
+        { completion_notes: notes.trim() || undefined },
+        { idempotencyKey: completeKeyRef.current },
+      );
+    },
+    onSuccess: (result) => {
       setCompleting(false);
       setNotes("");
+      setHandoverUrl(result.handover_url || null);
+      completeKeyRef.current = null;
       invalidateJob();
     },
-    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
+    onError: (err) => {
+      if (err instanceof ApiClientError && err.code === "COMPLETION_BLOCKED") {
+        const missing = Array.isArray(err.details?.missing) ? (err.details.missing as string[]) : [];
+        setError(missing.length ? `${he.fieldCompleteBlocked}: ${missing.join(" · ")}` : err.message);
+        return;
+      }
+      setError(err instanceof ApiClientError ? err.message : he.jobLoadError);
+    },
   });
 
   // DEMO-4.3: one item update (done / N/A / notes / photo); errors show on the row.
@@ -214,6 +238,18 @@ export function FieldJob({ jobId }: { jobId: string }) {
   const canEnRoute = canStart && job.status === "scheduled";
   const canArrive = canStart && job.status === "en_route";
   const canStartJob = canStart && job.status === "arrived";
+  const checklistItems = checklistQuery.data ?? [];
+  const checklistReady = checklistItems.every((item) => {
+    if (!item.required) return true;
+    return Boolean(item.completed) || Boolean(item.not_applicable);
+  });
+  const photosReady = checklistItems.every((item) => {
+    if (!item.photo_required || item.not_applicable) return true;
+    if (!item.completed) return true;
+    return Boolean(item.photo_document_id);
+  });
+  const signatureReady = Boolean(job.customer_signature_document_id);
+  const completionReady = checklistReady && photosReady && signatureReady;
   const canCompleteJob = canComplete && job.status === "in_progress";
   const jobDone = job.status === "completed";
   const mapsHref = mapsSearchUrl(siteQuery.data?.address as Record<string, unknown> | null);
@@ -440,7 +476,21 @@ export function FieldJob({ jobId }: { jobId: string }) {
                 placeholder={he.fieldCompletionNotesHint}
               />
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" loading={complete.isPending} disabled={!online} onClick={() => complete.mutate()}>
+                {!completionReady ? (
+                  <p className="mb-2 text-xs text-danger">
+                    {!signatureReady
+                      ? he.fieldCompleteNeedSignature
+                      : !checklistReady
+                        ? he.fieldCompleteNeedChecklist
+                        : he.fieldCompleteNeedPhotos}
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  loading={complete.isPending}
+                  disabled={!online || !completionReady || complete.isPending}
+                  onClick={() => complete.mutate()}
+                >
                   {he.fieldConfirmComplete}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => setCompleting(false)}>
@@ -489,10 +539,17 @@ export function FieldJob({ jobId }: { jobId: string }) {
               {job.completion_notes ? (
                 <p className="mt-3 whitespace-pre-wrap text-sm text-fg-muted">{job.completion_notes}</p>
               ) : null}
+              {handoverUrl ? (
+                <p className="mt-3 text-sm">
+                  <a className="text-action underline" href={handoverUrl} target="_blank" rel="noreferrer">
+                    {he.handoverOpenCertificate}
+                  </a>
+                </p>
+              ) : null}
               <JobWhatsAppShare
                 customerName={customerQuery.data?.display_name || ""}
                 phone={phone}
-                pageUrl={typeof window !== "undefined" ? window.location.href : ""}
+                pageUrl={handoverUrl || (typeof window !== "undefined" ? window.location.href : "")}
               />
             </section>
           ) : null}

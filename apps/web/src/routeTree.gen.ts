@@ -44,6 +44,7 @@ import { Route as AppTodayRouteImport } from "./routes/app/today"
 import { Route as AppWorkforceRouteRouteImport } from "./routes/app/workforce/route"
 import { Route as DemoSspRouteImport } from "./routes/demo/ssp"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
+import { Route as HTokenRouteImport } from "./routes/h/$token"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
@@ -131,6 +132,7 @@ import { Route as AppWorkforcePositionsRouteImport } from "./routes/app/workforc
 import { Route as AppWorkforceSchedulesRouteImport } from "./routes/app/workforce/schedules"
 import { Route as AppWorkforceSitesRouteImport } from "./routes/app/workforce/sites"
 import { Route as PortalInviteTokenRouteImport } from "./routes/portal/invite/$token"
+import { Route as PublicHandoverTokenRouteImport } from "./routes/public/handover/$token"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
 import { Route as AppFleetVehiclesVehicleIdRouteImport } from "./routes/app/fleet/vehicles.$vehicleId"
 import { Route as AppQuotesQuoteIdIndexRouteImport } from "./routes/app/quotes/$quoteId/index"
@@ -320,6 +322,11 @@ const DemoSspRoute = DemoSspRouteImport.update({
 const DevUiRoute = DevUiRouteImport.update({
   id: "/dev/ui",
   path: "/dev/ui",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HTokenRoute = HTokenRouteImport.update({
+  id: "/h/$token",
+  path: "/h/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -758,6 +765,11 @@ const PortalInviteTokenRoute = PortalInviteTokenRouteImport.update({
   path: "/invite/$token",
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PublicHandoverTokenRoute = PublicHandoverTokenRouteImport.update({
+  id: "/public/handover/$token",
+  path: "/public/handover/$token",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PublicQuotesTokenRoute = PublicQuotesTokenRouteImport.update({
   id: "/public/quotes/$token",
   path: "/public/quotes/$token",
@@ -871,6 +883,7 @@ export interface FileRoutesByFullPath {
   "/app/today": typeof AppTodayRoute
   "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
+  "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
@@ -945,6 +958,7 @@ export interface FileRoutesByFullPath {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
   "/app/fleet/": typeof AppFleetIndexRoute
@@ -1000,6 +1014,7 @@ export interface FileRoutesByTo {
   "/app/today": typeof AppTodayRoute
   "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
+  "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
@@ -1073,6 +1088,7 @@ export interface FileRoutesByTo {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers": typeof AppCustomersIndexRoute
   "/app/fleet": typeof AppFleetIndexRoute
@@ -1139,6 +1155,7 @@ export interface FileRoutesById {
   "/app/today": typeof AppTodayRoute
   "/demo/ssp": typeof DemoSspRoute
   "/dev/ui": typeof DevUiRoute
+  "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
@@ -1213,6 +1230,7 @@ export interface FileRoutesById {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
   "/app/fleet/": typeof AppFleetIndexRoute
@@ -1280,6 +1298,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/demo/ssp"
     | "/dev/ui"
+    | "/h/$token"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
@@ -1354,6 +1373,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
     | "/app/fleet/"
@@ -1409,6 +1429,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/demo/ssp"
     | "/dev/ui"
+    | "/h/$token"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
@@ -1482,6 +1503,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers"
     | "/app/fleet"
@@ -1547,6 +1569,7 @@ export interface FileRouteTypes {
     | "/app/today"
     | "/demo/ssp"
     | "/dev/ui"
+    | "/h/$token"
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
@@ -1621,6 +1644,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
     | "/app/fleet/"
@@ -1668,11 +1692,13 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   DemoSspRoute: typeof DemoSspRoute
   DevUiRoute: typeof DevUiRoute
+  HTokenRoute: typeof HTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
   SspTokenRoute: typeof SspTokenRoute
   LegalIndexRoute: typeof LegalIndexRoute
+  PublicHandoverTokenRoute: typeof PublicHandoverTokenRoute
   PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
 }
 
@@ -1921,6 +1947,13 @@ declare module "@tanstack/react-router" {
       path: "/dev/ui"
       fullPath: "/dev/ui"
       preLoaderRoute: typeof DevUiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/h/$token": {
+      id: "/h/$token"
+      path: "/h/$token"
+      fullPath: "/h/$token"
+      preLoaderRoute: typeof HTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/invite/$token": {
@@ -2532,6 +2565,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof PortalInviteTokenRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    "/public/handover/$token": {
+      id: "/public/handover/$token"
+      path: "/public/handover/$token"
+      fullPath: "/public/handover/$token"
+      preLoaderRoute: typeof PublicHandoverTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/public/quotes/$token": {
       id: "/public/quotes/$token"
       path: "/public/quotes/$token"
@@ -3006,11 +3046,13 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   DemoSspRoute: DemoSspRoute,
   DevUiRoute: DevUiRoute,
+  HTokenRoute: HTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
   SspTokenRoute: SspTokenRoute,
   LegalIndexRoute: LegalIndexRoute,
+  PublicHandoverTokenRoute: PublicHandoverTokenRoute,
   PublicQuotesTokenRoute: PublicQuotesTokenRoute,
 }
 export const routeTree = rootRouteImport

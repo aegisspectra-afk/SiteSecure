@@ -107,17 +107,24 @@ function ChecklistRow({
     queryFn: () => api.getDocumentUrl(workspaceId, item.photo_document_id!),
   });
 
-  async function run(patch: Patch) {
-    if (busy) return;
-    setBusy(true);
+  // Actions on one row run in order: tapping V while the note box is open saves the note
+  // (blur) and then the tick; a busy flag used to drop the second one silently.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  function run(patch: Patch) {
     setError(null);
-    try {
-      await onPatch(item.id, patch);
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : he.checklistSaveError);
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true);
+    const next = queue.current.then(async () => {
+      try {
+        await onPatch(item.id, patch);
+      } catch (err) {
+        setError(err instanceof ApiClientError ? err.message : he.checklistSaveError);
+      }
+    });
+    queue.current = next;
+    void next.finally(() => {
+      if (queue.current === next) setBusy(false);
+    });
+    return next;
   }
 
   async function pickPhoto(file: File | undefined) {
@@ -143,7 +150,7 @@ function ChecklistRow({
           type="checkbox"
           className="size-5 shrink-0"
           checked={Boolean(item.completed)}
-          disabled={locked || busy || item.not_applicable || (needsPhoto && !item.completed)}
+          disabled={locked || item.not_applicable || (needsPhoto && !item.completed)}
           aria-describedby={needsPhoto ? `${id}-photo-hint` : undefined}
           onChange={(event) => void run({ completed: event.target.checked })}
         />

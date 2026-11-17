@@ -73,3 +73,24 @@ describe("DEMO-4.3 CCTV checklist", () => {
     expect(screen.getAllByRole("checkbox").every((c) => (c as HTMLInputElement).disabled)).toBe(true);
   });
 });
+
+describe("DEMO-4.3 note then tick on the same row", () => {
+  it("saves the note (blur) and then the tick, in order, without losing the tick", async () => {
+    const calls: unknown[] = [];
+    let release: () => void = () => {};
+    const onPatch = vi.fn((id: string, body: unknown) => {
+      calls.push(body);
+      return calls.length === 1 ? new Promise((r) => (release = () => r({}))) : Promise.resolve({});
+    });
+    const { row } = view(onPatch as never);
+    const r = row("site_walkthrough");
+    fireEvent.click(within(r).getByRole("button", { name: he.checklistNote }));
+    const box = within(r).getByTestId("checklist-notes");
+    fireEvent.change(box, { target: { value: "אושר" } });
+    fireEvent.blur(box);
+    fireEvent.click(within(r).getByRole("checkbox"));
+    await waitFor(() => expect(calls).toHaveLength(1)); // the note is in flight
+    release();
+    await waitFor(() => expect(calls).toEqual([{ notes: "אושר" }, { completed: true }]));
+  });
+});

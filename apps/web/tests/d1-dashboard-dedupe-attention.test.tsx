@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttentionGroup, DashboardResponse } from "@site-secure/api-client";
 import { OpsDashboard } from "../src/components/dashboard/OpsDashboard";
 import { he } from "../src/i18n/he";
+import { formatDashboardMoney } from "../src/lib/quotes";
 import { AttentionPage } from "../src/routes/app/attention";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -87,8 +88,17 @@ beforeEach(() => {
 
 describe("D1 duplicates on the dashboard", () => {
   it("shows the open value once and the new-quote button once", () => {
-    render(<OpsDashboard data={dash([sentGroup(2)])} roleKey="owner" features={["quotes", "crm", "jobs"]} customerCount={2} countsReady />);
-    expect(screen.getAllByText(/19,717\.80/)).toHaveLength(1);
+    const { container } = render(
+      <OpsDashboard data={dash([sentGroup(2)])} roleKey="owner" features={["quotes", "crm", "jobs"]} customerCount={2} countsReady />,
+    );
+    // D3: whole-shekel dashboard money (19717.8 → 19,718 ₪), not decimals.
+    const norm = (s: string) => s.replace(/[\u200f\u00a0\s]/g, "");
+    const openNorm = norm(formatDashboardMoney(summary.quotes_open_value).text);
+    const moneyNodes = Array.from(container.querySelectorAll(".ss-dashboard-money")).filter((el) =>
+      norm(el.textContent || "").includes(openNorm),
+    );
+    expect(moneyNodes.length).toBeGreaterThanOrEqual(1);
+    expect(moneyNodes).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: he.newQuoteAction })).toHaveLength(1);
     // The recent-quotes empty state no longer repeats the button.
     expect(within(screen.getByTestId("recent-quotes")).queryByRole("button")).not.toBeInTheDocument();

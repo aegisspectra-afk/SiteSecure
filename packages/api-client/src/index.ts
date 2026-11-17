@@ -86,6 +86,8 @@ export type SessionMembership = {
   permissions?: string[];
   is_beta?: boolean;
   beta_program?: string | null;
+  /** DEMO-6: demo workspace — banner + hide SSP/Workforce/knowledge/portal. */
+  is_demo?: boolean;
 };
 
 export type SessionResponse = {

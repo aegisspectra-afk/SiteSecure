@@ -50,10 +50,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const features = membership?.features ?? [];
   const permissions = membership?.permissions ?? null;
   const roleKey = membership?.role_key;
-  const groups = appNav(roleKey, features, permissions);
+  const isDemo = Boolean(membership?.is_demo);
+  const navOpts = { isDemo };
+  const groups = appNav(roleKey, features, permissions, navOpts);
   const tabs = bottomNav(roleKey, features, permissions);
   const workItems = mobileWorkNav(roleKey, features, permissions);
-  const moreGroups = mobileMoreNav(roleKey, features, permissions);
+  const moreGroups = mobileMoreNav(roleKey, features, permissions, navOpts);
   const displayName = session?.profile?.full_name?.trim() || session?.email || he.brand;
   const workspaceActive = membership?.workspace_status === "active";
   const online = useOnlineStatus();
@@ -248,6 +250,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main id="main" className="ops-main flex-1 p-4 lg:p-6">
+          {isDemo ? (
+            <div
+              className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-fg"
+              role="status"
+              data-testid="demo-env-banner"
+            >
+              {he.demoEnvBanner}
+            </div>
+          ) : null}
           {workspaceSwitching ? (
             <div
               className="flex min-h-[40vh] items-center justify-center text-sm text-fg-muted"

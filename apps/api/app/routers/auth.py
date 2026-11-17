@@ -35,6 +35,7 @@ class MembershipOut(BaseModel):
     permissions: list[str] = Field(default_factory=list)
     is_beta: bool = False
     beta_program: str | None = None
+    is_demo: bool = False
 
 
 class SessionOut(BaseModel):
@@ -77,7 +78,7 @@ def get_session(
         params={
             "user_id": f"eq.{user_id}",
             "status": "eq.active",
-            "select": "workspace_id,role_key,workspace_role_key,technician_code,program_type,workspaces(id,name,status,is_beta,beta_program)",
+            "select": "workspace_id,role_key,workspace_role_key,technician_code,program_type,workspaces(id,name,status,is_beta,beta_program,is_demo)",
             # Important for UI stability: the frontend uses `memberships[0]` as the active workspace.
             # Make the ordering deterministic.
             "order": "created_at.desc",
@@ -129,6 +130,7 @@ def get_session(
                     permissions=permissions,
                     is_beta=bool(nested.get("is_beta")),
                     beta_program=nested.get("beta_program"),
+                    is_demo=bool(nested.get("is_demo")),
                 )
             )
 

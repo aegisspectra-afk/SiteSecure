@@ -5,7 +5,9 @@ import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { encode } from "uqr";
 import { he } from "../../i18n/he";
+import { activeMembership } from "../../lib/active-membership";
 import { copyTextToClipboard } from "../../lib/clipboard";
+import { useSession } from "../../lib/session";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
   formatPortalExpiry,
@@ -140,7 +142,9 @@ export function CustomerPortalAccess({
   workspaceName?: string;
   contacts?: { name: string; email: string }[];
 }) {
-  const visible = variant === "field" ? canCreate : canView || canCreate;
+  const { session } = useSession();
+  const isDemo = Boolean(activeMembership(session)?.is_demo);
+  const visible = !isDemo && (variant === "field" ? canCreate : canView || canCreate);
   const queryClient = useQueryClient();
   const reducedMotion = useReducedMotion();
   const contactChoices = portalContactChoices({ customerName, customerEmail: defaultEmail, contacts });

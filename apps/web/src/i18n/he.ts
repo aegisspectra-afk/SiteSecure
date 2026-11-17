@@ -4480,6 +4480,7 @@ export const he = {
   catalogUnitPack: "חבילה",
   betaBadge: "Beta",
   betaBadgeHint: "סביבת העבודה הזו משתתפת בתוכנית הבטא",
+  demoEnvBanner: "סביבת הדגמה — הנתונים פיקטיביים; הודעות יוצאות נשארות בתצוגה מקדימה בלבד",
   onboardingBetaTitle: "ברוכים הבאים לתוכנית הבטא",
   onboardingBetaBody: "אתם בין הראשונים שעובדים עם היכולות החדשות. פידבק שלכם עוזר לנו לחדד את המוצר.",
   feedbackOpen: "שליחת משוב",

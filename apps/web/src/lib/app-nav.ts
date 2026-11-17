@@ -172,9 +172,11 @@ export function appNav(
   roleKey: string | undefined,
   features: string[] = [],
   permissions?: string[] | null,
+  opts?: { isDemo?: boolean },
 ): AppNavGroup[] {
   const allow = (permission: string) => can(roleKey, permission, features, permissions);
   const fieldHome = homeVariant(roleKey) === "today";
+  const isDemo = Boolean(opts?.isDemo);
 
   const groups: { id: string; label: string; items: AppNavItem[] }[] = [
     {
@@ -275,7 +277,7 @@ export function appNav(
           to: "/app/knowledge",
           label: he.navKnowledge,
           icon: "knowledge",
-          visible: allow("knowledge.view"),
+          visible: allow("knowledge.view") && !isDemo,
         },
       ],
     },
@@ -405,8 +407,10 @@ export function mobileCommandSections(
   roleKey: string | undefined,
   features: string[] = [],
   permissions?: string[] | null,
+  opts?: { isDemo?: boolean },
 ): MobileCommandSection[] {
   const allow = (permission: string) => can(roleKey, permission, features, permissions);
+  const isDemo = Boolean(opts?.isDemo);
   const primary = mobilePrimaryRoutes(roleKey, features);
   const work = mobileWorkNav(roleKey, features);
 
@@ -450,7 +454,7 @@ export function mobileCommandSections(
       to: "/app/knowledge",
       label: he.navKnowledge,
       icon: "knowledge",
-      visible: allow("knowledge.view"),
+      visible: allow("knowledge.view") && !isDemo,
     },
     {
       to: "/app/analytics",
@@ -485,8 +489,9 @@ export function mobileMoreNav(
   roleKey: string | undefined,
   features: string[] = [],
   permissions?: string[] | null,
+  opts?: { isDemo?: boolean },
 ): AppNavGroup[] {
-  return mobileCommandSections(roleKey, features, permissions).map((section) => ({
+  return mobileCommandSections(roleKey, features, permissions, opts).map((section) => ({
     id: section.id,
     label: section.label,
     items: section.items,

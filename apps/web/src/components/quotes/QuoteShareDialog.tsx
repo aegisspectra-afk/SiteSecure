@@ -88,7 +88,12 @@ export function QuoteShareDialog({
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void onCopy()}>{he.cpqCopySecureLink}</Button>
           {onWhatsApp ? (
-            <Button variant="secondary" disabled={whatsappDisabled} onClick={onWhatsApp}>
+            <Button
+              variant="secondary"
+              disabled={whatsappDisabled}
+              title={whatsappDisabled ? he.quoteWhatsAppDisabledHint : undefined}
+              onClick={onWhatsApp}
+            >
               {he.quoteWhatsApp}
             </Button>
           ) : null}
@@ -96,6 +101,9 @@ export function QuoteShareDialog({
             {he.cancel}
           </Button>
         </div>
+        {onWhatsApp && whatsappDisabled ? (
+          <p className="text-xs text-fg-muted">{he.quoteWhatsAppDisabledHint}</p>
+        ) : null}
       </div>
     </div>
   );

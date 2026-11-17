@@ -59,7 +59,7 @@ import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
 import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
 import { addressLine } from "../modules/ModuleKit";
-import { resolveQuoteRecipientPhone } from "../../lib/quote-recipient-phone";
+import { canWhatsAppRecipientPhone, resolveQuoteRecipientPhone } from "../../lib/quote-recipient-phone";
 import {
   closeSharePlaceholder,
   openSharePlaceholderTab,
@@ -1185,9 +1185,15 @@ export function QuoteBuilder({
     }
   }
 
+  const whatsappPhoneOk = canWhatsAppRecipientPhone({
+    customerPhone: customerData?.phone,
+    contactPhone: primaryContactPhone,
+    leadPhone: linkedLead?.phone,
+  });
+
   async function openWhatsApp(forcePicker = false) {
     if (actionLock.current) return;
-    if (!forcePicker && !customerPhone) {
+    if (!forcePicker && !whatsappPhoneOk) {
       setWhatsappPrompt(true);
       return;
     }
@@ -2938,6 +2944,7 @@ export function QuoteBuilder({
         url={publicUrl}
         customerName={selectedName || undefined}
         onClose={() => setShareOpen(false)}
+        whatsappDisabled={!whatsappPhoneOk}
         onWhatsApp={() => {
           setShareOpen(false);
           void openWhatsApp();

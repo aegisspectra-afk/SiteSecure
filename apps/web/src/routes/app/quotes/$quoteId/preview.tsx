@@ -10,7 +10,10 @@ import { he } from "../../../../i18n/he";
 import { can } from "../../../../lib/can";
 import { canSendWithGaps, partitionGaps } from "../../../../lib/quote-cpq";
 import { downloadAndOpenPdf, downloadBlob } from "../../../../lib/download-blob";
-import { resolveQuoteRecipientPhone } from "../../../../lib/quote-recipient-phone";
+import {
+  canWhatsAppRecipientPhone,
+  resolveQuoteRecipientPhone,
+} from "../../../../lib/quote-recipient-phone";
 import {
   closeSharePlaceholder,
   openSharePlaceholderTab,
@@ -144,12 +147,15 @@ function QuotePreviewBody() {
     }
   }
 
+  const previewPhoneSource = {
+    customerPhone: documentQuery.data?.customer?.phone,
+  };
+  const whatsappPhoneOk = canWhatsAppRecipientPhone(previewPhoneSource);
+
   async function onWhatsApp(forcePicker = false) {
     if (!workspaceId || lock.current) return;
-    const phoneDigits = resolveQuoteRecipientPhone({
-      customerPhone: documentQuery.data?.customer?.phone,
-    });
-    if (!forcePicker && !phoneDigits) {
+    const phoneDigits = resolveQuoteRecipientPhone(previewPhoneSource);
+    if (!forcePicker && !whatsappPhoneOk) {
       setWhatsappPrompt(true);
       return;
     }
@@ -297,6 +303,7 @@ function QuotePreviewBody() {
         url={publicUrl}
         customerName={doc.customer?.display_name || undefined}
         onClose={() => setShareOpen(false)}
+        whatsappDisabled={!whatsappPhoneOk}
         onWhatsApp={() => {
           setShareOpen(false);
           void onWhatsApp();

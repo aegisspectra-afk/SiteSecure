@@ -8,6 +8,8 @@ export type WhatsAppShareBuild = {
   publicUrl: string;
   phoneDigits: string;
   forcePicker?: boolean;
+  /** Defaults to quote message; pass job/handover copy from the caller. */
+  message?: string;
 };
 
 export type WhatsAppOpenResult =
@@ -25,7 +27,9 @@ export function openSharePlaceholderTab(): Window | null {
 }
 
 export function buildWhatsAppShareHref(input: WhatsAppShareBuild): { href: string; phone: string | null } {
-  const text = encodeURIComponent(he.quoteWhatsAppMessage(input.customerName?.trim() || "", input.publicUrl));
+  const body =
+    input.message ?? he.quoteWhatsAppMessage(input.customerName?.trim() || "", input.publicUrl);
+  const text = encodeURIComponent(body);
   const phone = input.forcePicker ? null : toWhatsAppPhone(input.phoneDigits);
   if (!input.forcePicker && !phone) {
     return { href: "", phone: null };

@@ -30,6 +30,11 @@ import { formatScheduleHe } from "../../lib/job-schedule";
 import { JobSignatureSection } from "../jobs/JobSignatureSection";
 import { JobChecklist } from "../jobs/JobChecklist";
 import { uploadJobFile } from "../../lib/job-upload";
+import { isValidIsraeliMobile } from "../../lib/quote-recipient-phone";
+import {
+  openSharePlaceholderTab,
+  resolveWhatsAppOpen,
+} from "../../lib/quote-whatsapp-share";
 
 function jobStatusLabel(status: string): string {
   return he.jobStatuses[status as keyof typeof he.jobStatuses] ?? status;
@@ -484,6 +489,11 @@ export function FieldJob({ jobId }: { jobId: string }) {
               {job.completion_notes ? (
                 <p className="mt-3 whitespace-pre-wrap text-sm text-fg-muted">{job.completion_notes}</p>
               ) : null}
+              <JobWhatsAppShare
+                customerName={customerQuery.data?.display_name || ""}
+                phone={phone}
+                pageUrl={typeof window !== "undefined" ? window.location.href : ""}
+              />
             </section>
           ) : null}
 
@@ -654,6 +664,44 @@ function PhotosSection({
         {!photos.length ? <li className="field-row-empty">{he.fieldPhotosEmpty}</li> : null}
       </ul>
     </section>
+  );
+}
+
+function JobWhatsAppShare({
+  customerName,
+  phone,
+  pageUrl,
+}: {
+  customerName: string;
+  phone: string | null;
+  pageUrl: string;
+}) {
+  const mobileOk = isValidIsraeliMobile(phone);
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!mobileOk || !pageUrl}
+        title={!mobileOk ? he.jobWhatsAppDisabledHint : undefined}
+        onClick={() => {
+          if (!mobileOk || !pageUrl) return;
+          const placeholder = openSharePlaceholderTab();
+          resolveWhatsAppOpen(
+            {
+              customerName,
+              publicUrl: pageUrl,
+              phoneDigits: phone || "",
+              message: he.jobWhatsAppMessage(customerName, pageUrl),
+            },
+            placeholder,
+          );
+        }}
+      >
+        {he.jobWhatsApp}
+      </Button>
+      {!mobileOk ? <p className="text-xs text-fg-muted">{he.jobWhatsAppDisabledHint}</p> : null}
+    </div>
   );
 }
 

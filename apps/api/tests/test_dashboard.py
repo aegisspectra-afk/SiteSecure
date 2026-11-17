@@ -149,6 +149,29 @@ def test_approved_quotes_without_project_are_attention():
     assert all(g["kind"] != "quote_approved_pending_project" for g in linked["attention"])
 
 
+def test_deleted_and_archived_quotes_excluded_from_dashboard_kpis():
+    """Q4: soft-deleted / archived approved quotes must not inflate שווי שאושר or attention."""
+    base = {
+        "number": "Q-DEL",
+        "status": "approved",
+        "customer_id": "c1",
+        "site_id": "s1",
+        "owner_user_id": "u1",
+        "valid_until": "2026-12-01",
+        "updated_at": "2026-08-14T10:00:00+00:00",
+        "total_gross": 5000,
+    }
+    quotes = _quotes() + [
+        {**base, "id": "q-deleted", "deleted_at": "2026-08-14T11:00:00+00:00"},
+        {**base, "id": "q-archived", "number": "Q-ARC", "archived_at": "2026-08-14T11:00:00+00:00"},
+        {**base, "id": "q-alive", "number": "Q-OK", "total_gross": 1000},
+    ]
+    payload = _build("owner", quotes=quotes, project_source_quote_ids=frozenset())
+    assert payload["summary"]["quotes_approved_value"] == 1000
+    pending = next(g for g in payload["attention"] if g["kind"] == "quote_approved_pending_project")
+    assert {i["entity_id"] for i in pending["items"]} == {"q-alive"}
+
+
 def test_home_variant_matrix():
     assert home_variant("owner") == "ops"
     assert home_variant("administrator") == "ops"

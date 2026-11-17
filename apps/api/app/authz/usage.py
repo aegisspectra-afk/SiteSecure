@@ -322,7 +322,12 @@ def _count_rows(client: UserClient, table: str, workspace_id: str, *, filters: d
 
 def fetch_quotes_count(client: UserClient, workspace_id: str) -> int:
     """Count non-deleted quotes in the workspace."""
-    return _count_rows(client, "quotes", workspace_id, filters={"deleted_at": "is.null"})
+    return _count_rows(
+        client,
+        "quotes",
+        workspace_id,
+        filters={"deleted_at": "is.null", "archived_at": "is.null"},
+    )
 
 
 def fetch_customers_count(client: UserClient, workspace_id: str) -> int:

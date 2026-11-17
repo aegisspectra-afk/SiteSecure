@@ -163,6 +163,7 @@ def global_search(
             {
                 "workspace_id": ws,
                 "deleted_at": "is.null",
+                "archived_at": "is.null",
                 "select": "id,number,title,project_name",
                 "or": f"(number.ilike.*{needle}*,title.ilike.*{needle}*,project_name.ilike.*{needle}*)",
                 "limit": str(per),

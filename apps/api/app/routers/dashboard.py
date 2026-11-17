@@ -13,6 +13,7 @@ from ..authz.guard import require
 from ..dashboard import ATTENTION_CAP, ATTENTION_FULL_CAP, DEFAULT_WORKSPACE_TZ, build_dashboard
 from ..deps import UserClient, current_user, load_authz_context, user_client
 from ..identity import actor_id
+from ..quote_visibility import quote_visibility_filters
 from ..rest import as_list
 
 # Cap kept high enough for ops summary buckets, low enough for mobile RTT.
@@ -21,7 +22,10 @@ JOB_DASHBOARD_LIMIT = "100"
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"])
 
-QUOTE_SELECT = "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross"
+QUOTE_SELECT = (
+    "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross,"
+    "archived_at,deleted_at"
+)
 JOB_SELECT = (
     "id,number,title,status,priority,customer_id,site_id,scheduled_for,scheduled_end,"
     "started_at,arrived_at,completed_at,updated_at"
@@ -209,7 +213,7 @@ def get_dashboard(
                 "quotes",
                 params={
                     "workspace_id": f"eq.{ws}",
-                    "deleted_at": "is.null",
+                    **quote_visibility_filters("active"),
                     "select": QUOTE_SELECT,
                     "limit": QUOTE_DASHBOARD_LIMIT,
                     "order": "updated_at.desc",

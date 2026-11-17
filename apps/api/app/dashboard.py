@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from .quote_visibility import quote_is_visible_row
+
 HomeVariant = Literal["ops", "sales", "today", "observe"]
 
 DEFAULT_WORKSPACE_TZ = "Asia/Jerusalem"
@@ -176,7 +178,10 @@ def build_dashboard(
     local_now = _local_now(now, tz_name)
     tz = _resolve_tz(tz_name)
 
-    visible_quotes = quotes if can_quotes_view else []
+    # Defense in depth: never count soft-deleted or archived quotes in KPIs / attention.
+    visible_quotes = (
+        [q for q in quotes if quote_is_visible_row(q, mode="active")] if can_quotes_view else []
+    )
     if variant == "sales":
         visible_quotes = [q for q in visible_quotes if q.get("owner_user_id") == user_id]
 

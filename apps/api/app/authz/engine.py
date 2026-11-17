@@ -116,7 +116,9 @@ def _resource_state(action: str, resource: ResourceRef | None) -> Decision | Non
         None,
     }:
         return _deny("RESOURCE_STATE", state=resource.state)
-    if action == "jobs.complete" and resource.state not in {"in_progress", None}:
+    # completed is allowed so Idempotency-Key replay can reach complete_installation;
+    # a different key still becomes JOB_ALREADY_COMPLETED there.
+    if action == "jobs.complete" and resource.state not in {"in_progress", "completed", None}:
         return _deny("RESOURCE_STATE", state=resource.state)
     return None
 

@@ -20,14 +20,24 @@ from ..supabase_service import ServiceClient
 router = APIRouter(prefix="/api/v1/public/handover", tags=["public-handover"])
 
 _RATE: dict[str, list[float]] = {}
+# Overridable in tests — production stays at 60/minute per IP.
+RATE_LIMIT = 60
+RATE_WINDOW_SECONDS = 60.0
 
 
-def _rate_limit(request: Request, *, limit: int = 60, window: float = 60.0) -> None:
+def clear_rate_limit_buckets() -> None:
+    """Test helper: reset in-memory public handover rate buckets."""
+    _RATE.clear()
+
+
+def _rate_limit(request: Request, *, limit: int | None = None, window: float | None = None) -> None:
+    lim = RATE_LIMIT if limit is None else limit
+    win = RATE_WINDOW_SECONDS if window is None else window
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
     ip = ip or (request.client.host if request.client else "unknown")
     now = datetime.now(UTC).timestamp()
-    bucket = [t for t in _RATE.get(ip, []) if now - t < window]
-    if len(bucket) >= limit:
+    bucket = [t for t in _RATE.get(ip, []) if now - t < win]
+    if len(bucket) >= lim:
         raise ApiError(429, "RATE_LIMITED", "יותר מדי בקשות")
     bucket.append(now)
     _RATE[ip] = bucket

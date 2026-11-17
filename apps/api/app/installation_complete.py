@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from uuid import UUID
 
 from .errors import ApiError
 from .installed_assets_from_planned import (
@@ -446,6 +446,101 @@ def mint_handover_link(
     return token, str(row["id"]), expires
 
 
+def _load_job_row(svc: ServiceClient, workspace_id: str, job_id: str) -> dict[str, Any] | None:
+    rows = as_list(
+        svc.get(
+            "jobs",
+            params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}", "select": "*", "limit": "1"},
+        )
+    )
+    return rows[0] if rows else None
+
+
+def _replay_if_ready(
+    svc: ServiceClient,
+    workspace_id: str,
+    job_id: str,
+    idempotency_key: str,
+    *,
+    waits: int = 20,
+) -> dict[str, Any] | None:
+    """Return a replay payload when another worker finished the same idempotency key."""
+    for _ in range(max(waits, 1)):
+        row = _load_job_row(svc, workspace_id, job_id)
+        if not row:
+            return None
+        if row.get("status") == "completed" and row.get("completion_idempotency_key") == idempotency_key:
+            result = row.get("completion_result") if isinstance(row.get("completion_result"), dict) else {}
+            if result.get("handover_url") or result.get("warranty_id") is not None:
+                return {"job": row, "replay": True, **result}
+        elif row.get("status") == "completed":
+            raise ApiError(409, "JOB_ALREADY_COMPLETED", "העבודה כבר הושלמה")
+        time.sleep(0.05)
+    row = _load_job_row(svc, workspace_id, job_id) or {}
+    if row.get("status") == "completed" and row.get("completion_idempotency_key") == idempotency_key:
+        result = row.get("completion_result") if isinstance(row.get("completion_result"), dict) else {}
+        return {"job": row, "replay": True, **result}
+    return None
+
+
+def _rollback_partial_completion(
+    svc: ServiceClient,
+    *,
+    workspace_id: str,
+    job_id: str,
+    previous_status: str,
+    equipment_ids: list[str],
+) -> None:
+    """Undo side effects when the completion chain fails after claiming the job."""
+    svc.delete(
+        "outbound_messages",
+        params={"workspace_id": f"eq.{workspace_id}", "job_id": f"eq.{job_id}"},
+    )
+    svc.delete(
+        "notifications",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "entity_type": "eq.job",
+            "entity_id": f"eq.{job_id}",
+            "type": "eq.job.completed",
+        },
+    )
+    svc.patch(
+        "handover_public_access",
+        {"revoked_at": datetime.now(UTC).isoformat()},
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "job_id": f"eq.{job_id}",
+            "revoked_at": "is.null",
+        },
+    )
+    svc.delete(
+        "billing_pending_items",
+        params={"workspace_id": f"eq.{workspace_id}", "job_id": f"eq.{job_id}"},
+    )
+    svc.delete(
+        "warranties",
+        params={"workspace_id": f"eq.{workspace_id}", "job_id": f"eq.{job_id}"},
+    )
+    for eid in equipment_ids:
+        svc.delete(
+            "equipment",
+            params={"workspace_id": f"eq.{workspace_id}", "id": f"eq.{eid}"},
+        )
+    svc.patch(
+        "jobs",
+        {
+            "status": previous_status or "in_progress",
+            "completed_at": None,
+            "completed_by": None,
+            "completion_idempotency_key": None,
+            "completion_result": None,
+            "completion_notes": None,
+        },
+        params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"},
+    )
+
+
 def complete_installation(
     svc: ServiceClient,
     *,
@@ -458,11 +553,16 @@ def complete_installation(
 ) -> dict[str, Any]:
     """Run the DEMO-5 completion chain. Caller already authorized jobs.complete."""
     job_id = str(job["id"])
+    previous_status = str(job.get("status") or "in_progress")
 
     # Idempotent replay
     if job.get("status") == "completed" and job.get("completion_idempotency_key") == idempotency_key:
         result = job.get("completion_result") if isinstance(job.get("completion_result"), dict) else {}
-        return {"job": job, "replay": True, **result}
+        if result.get("handover_url") or result.get("warranty_id") is not None:
+            return {"job": job, "replay": True, **result}
+        replay = _replay_if_ready(svc, workspace_id, job_id, idempotency_key)
+        if replay:
+            return replay
 
     if job.get("status") == "completed":
         raise ApiError(409, "JOB_ALREADY_COMPLETED", "העבודה כבר הושלמה")
@@ -492,185 +592,215 @@ def complete_installation(
     if completion_notes is not None:
         patch["completion_notes"] = completion_notes
 
+    # Claim the job only while still in_progress — parallel callers lose and replay.
     patched = as_list(
         svc.patch(
             "jobs",
             patch,
-            params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}", "select": "*"},
+            params={
+                "id": f"eq.{job_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "status": "eq.in_progress",
+                "select": "*",
+            },
             prefer="return=representation",
         )
     )
     if not patched:
+        replay = _replay_if_ready(svc, workspace_id, job_id, idempotency_key)
+        if replay:
+            return replay
         raise ApiError(409, "RESOURCE_STATE", "לא ניתן לעדכן את העבודה")
     job_row = patched[0]
 
     equipment_ids: list[str] = []
     project_status = None
-    project_id = job.get("project_id")
-    if project_id and job.get("site_id"):
-        equipment_ids = _install_equipment(
-            svc,
-            workspace_id=workspace_id,
-            project_id=str(project_id),
-            site_id=str(job["site_id"]),
-            customer_id=str(job["customer_id"]) if job.get("customer_id") else None,
-        )
-        project_status = _update_project_status(svc, workspace_id, str(project_id))
-
-    warranty = _create_warranty(svc, workspace_id=workspace_id, job=job_row, months=months, actor=actor)
-
-    project_completed = project_status == "completed" or (
-        project_id is None
-    )
-    # For project jobs: billing only when project completed
+    warranty: dict[str, Any] = {}
     billing_id = None
-    if project_id:
-        if project_status == "completed":
+    token = ""
+    handover_url = ""
+    notification_ids: list[str] = []
+    outbound: dict[str, Any] = {}
+
+    try:
+        project_id = job.get("project_id")
+        if project_id and job.get("site_id"):
+            equipment_ids = _install_equipment(
+                svc,
+                workspace_id=workspace_id,
+                project_id=str(project_id),
+                site_id=str(job["site_id"]),
+                customer_id=str(job["customer_id"]) if job.get("customer_id") else None,
+            )
+            project_status = _update_project_status(svc, workspace_id, str(project_id))
+
+        warranty = _create_warranty(svc, workspace_id=workspace_id, job=job_row, months=months, actor=actor)
+
+        if project_id:
+            if project_status == "completed":
+                billing_id = _maybe_billing_item(
+                    svc, workspace_id=workspace_id, job=job_row, project_completed=True
+                )
+        else:
             billing_id = _maybe_billing_item(
                 svc, workspace_id=workspace_id, job=job_row, project_completed=True
             )
-    else:
-        billing_id = _maybe_billing_item(
-            svc, workspace_id=workspace_id, job=job_row, project_completed=True
+
+        token, _access_id, _expires = mint_handover_link(
+            svc,
+            workspace_id=workspace_id,
+            job_id=job_id,
+            actor=actor,
+            warranty=warranty,
         )
+        base = web_public_url.rstrip("/")
+        handover_url = f"{base}/h/{token}"
 
-    token, _access_id, _expires = mint_handover_link(
-        svc,
-        workspace_id=workspace_id,
-        job_id=job_id,
-        actor=actor,
-        warranty=warranty,
-    )
-    base = web_public_url.rstrip("/")
-    handover_url = f"{base}/h/{token}"
-
-    # Notifications — jobs.assign holders
-    notification_ids: list[str] = []
-    recipients = users_with_jobs_manage(svc, workspace_id)
-    title = "עבודה הושלמה"
-    body = f"העבודה {job_row.get('number') or ''} הושלמה"
-    if months is None:
-        body += " · האחריות ממתינה להגדרת תקופה"
-    for uid in recipients:
-        if uid == actor:
-            continue
-        if not in_app_allowed(svc, workspace_id, uid, "job.completed"):
-            continue
-        try:
-            rows = as_list(
-                svc.post(
-                    "notifications",
-                    {
-                        "workspace_id": workspace_id,
-                        "recipient_user_id": uid,
-                        "type": "job.completed",
-                        "title": title,
-                        "body": body,
-                        "entity_type": "job",
-                        "entity_id": job_id,
-                        "payload": {
-                            "job_id": job_id,
-                            "warranty_pending_period": months is None,
-                            "handover_url": handover_url,
+        recipients = users_with_jobs_manage(svc, workspace_id)
+        title = "עבודה הושלמה"
+        body = f"העבודה {job_row.get('number') or ''} הושלמה"
+        if months is None:
+            body += " · האחריות ממתינה להגדרת תקופה"
+        for uid in recipients:
+            if uid == actor:
+                continue
+            if not in_app_allowed(svc, workspace_id, uid, "job.completed"):
+                continue
+            try:
+                rows = as_list(
+                    svc.post(
+                        "notifications",
+                        {
+                            "workspace_id": workspace_id,
+                            "recipient_user_id": uid,
+                            "type": "job.completed",
+                            "title": title,
+                            "body": body,
+                            "entity_type": "job",
+                            "entity_id": job_id,
+                            "payload": {
+                                "job_id": job_id,
+                                "warranty_pending_period": months is None,
+                                "handover_url": handover_url,
+                            },
                         },
-                    },
+                    )
                 )
-            )
-            if rows:
-                notification_ids.append(str(rows[0].get("id") or ""))
-            else:
+                if rows:
+                    notification_ids.append(str(rows[0].get("id") or ""))
+            except Exception:
+                existing = as_list(
+                    svc.get(
+                        "notifications",
+                        params={
+                            "workspace_id": f"eq.{workspace_id}",
+                            "recipient_user_id": f"eq.{uid}",
+                            "type": "eq.job.completed",
+                            "entity_id": f"eq.{job_id}",
+                            "select": "id",
+                            "limit": "1",
+                        },
+                    )
+                )
+                if existing:
+                    notification_ids.append(str(existing[0]["id"]))
+
+        if months is None:
+            for uid in recipients:
+                if uid == actor:
+                    continue
                 emit_notification(
                     svc,
                     workspace_id=workspace_id,
                     recipient_user_id=uid,
                     event_type="job.completed",
-                    title=title,
-                    body=body,
-                    entity_type="job",
-                    entity_id=job_id,
+                    title="אחריות ממתינה להגדרת תקופה",
+                    body=(
+                        f"לעבודה {job_row.get('number') or ''} נוצרה אחריות ללא תקופה — "
+                        "יש להגדיר חודשי אחריות בסביבה"
+                    ),
+                    entity_type="warranty",
+                    entity_id=str(warranty.get("id") or ""),
                     actor_user_id=actor,
-                    payload={"warranty_pending_period": months is None},
                 )
-        except Exception:
-            continue
 
-    # Also notify managers when warranty period missing (explicit)
-    if months is None:
-        for uid in recipients:
-            if uid == actor:
-                continue
-            emit_notification(
-                svc,
-                workspace_id=workspace_id,
-                recipient_user_id=uid,
-                event_type="job.completed",
-                title="אחריות ממתינה להגדרת תקופה",
-                body=f"לעבודה {job_row.get('number') or ''} נוצרה אחריות ללא תקופה — יש להגדיר חודשי אחריות בסביבה",
-                entity_type="warranty",
-                entity_id=str(warranty.get("id") or ""),
-                actor_user_id=actor,
-            )
-
-    customer_email = None
-    if job.get("customer_id"):
-        cust = as_list(
-            svc.get(
-                "customers",
-                params={
-                    "id": f"eq.{job['customer_id']}",
-                    "workspace_id": f"eq.{workspace_id}",
-                    "select": "email,display_name",
-                    "limit": "1",
-                },
-            )
-        )
-        if cust:
-            customer_email = cust[0].get("email")
-            cname = cust[0].get("display_name") or ""
-        else:
-            cname = ""
-    else:
+        customer_email = None
         cname = ""
+        if job.get("customer_id"):
+            cust = as_list(
+                svc.get(
+                    "customers",
+                    params={
+                        "id": f"eq.{job['customer_id']}",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "email,display_name",
+                        "limit": "1",
+                    },
+                )
+            )
+            if cust:
+                customer_email = cust[0].get("email")
+                cname = cust[0].get("display_name") or ""
 
-    outbound = created_or_403(
-        svc.post(
-            "outbound_messages",
-            {
-                "workspace_id": workspace_id,
-                "job_id": job_id,
-                "channel": "email",
-                "status": "preview",
-                "recipient": customer_email,
-                "subject": "תעודת מסירה",
-                "body": f"שלום{(' ' + cname) if cname else ''},\nההתקנה הושלמה. תעודת המסירה:\n{handover_url}",
-            },
-        )
-    )
+        try:
+            outbound = created_or_403(
+                svc.post(
+                    "outbound_messages",
+                    {
+                        "workspace_id": workspace_id,
+                        "job_id": job_id,
+                        "channel": "email",
+                        "status": "preview",
+                        "recipient": customer_email,
+                        "subject": "תעודת מסירה",
+                        "body": (
+                            f"שלום{(' ' + cname) if cname else ''},\n"
+                            f"ההתקנה הושלמה. תעודת המסירה:\n{handover_url}"
+                        ),
+                    },
+                )
+            )
+        except ApiError:
+            existing_out = as_list(
+                svc.get(
+                    "outbound_messages",
+                    params={
+                        "workspace_id": f"eq.{workspace_id}",
+                        "job_id": f"eq.{job_id}",
+                        "select": "id",
+                        "limit": "1",
+                    },
+                )
+            )
+            outbound = existing_out[0] if existing_out else {}
 
-    result = {
-        "warranty_id": str(warranty.get("id") or ""),
-        "equipment_ids": equipment_ids,
-        "billing_item_id": billing_id,
-        "notification_ids": [n for n in notification_ids if n],
-        "outbound_message_id": str(outbound.get("id") or ""),
-        "handover_url": handover_url,
-        "handover_token": token,
-        "project_status": project_status,
-        "warranty_pending_period": months is None,
-    }
-    svc.patch(
-        "jobs",
-        {"completion_result": {k: v for k, v in result.items() if k != "handover_token"}},
-        params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"},
-    )
-    # Refresh job
-    refreshed = as_list(
-        svc.get(
+        result = {
+            "warranty_id": str(warranty.get("id") or ""),
+            "equipment_ids": equipment_ids,
+            "billing_item_id": billing_id,
+            "notification_ids": [n for n in notification_ids if n],
+            "outbound_message_id": str(outbound.get("id") or ""),
+            "handover_url": handover_url,
+            "handover_token": token,
+            "project_status": project_status,
+            "warranty_pending_period": months is None,
+        }
+        svc.patch(
             "jobs",
-            params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}", "select": "*", "limit": "1"},
+            {"completion_result": {k: v for k, v in result.items() if k != "handover_token"}},
+            params={"id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"},
         )
-    )
-    return {"job": refreshed[0] if refreshed else job_row, "replay": False, **result}
+        refreshed = _load_job_row(svc, workspace_id, job_id)
+        return {"job": refreshed if refreshed else job_row, "replay": False, **result}
+    except Exception:
+        _rollback_partial_completion(
+            svc,
+            workspace_id=workspace_id,
+            job_id=job_id,
+            previous_status=previous_status,
+            equipment_ids=equipment_ids,
+        )
+        raise
 
 
 def assemble_handover_document(svc: ServiceClient, access: dict) -> dict[str, Any]:

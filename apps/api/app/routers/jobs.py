@@ -25,7 +25,8 @@ router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["jobs"])
 JOB_SELECT = (
     "id,workspace_id,number,title,kind,status,priority,project_id,service_call_id,"
     "customer_id,site_id,scheduled_for,scheduled_end,started_at,arrived_at,completed_at,"
-    "completion_notes,created_by,created_at,updated_at,"
+    "completion_notes,completed_by,completion_idempotency_key,completion_result,"
+    "created_by,created_at,updated_at,"
     "customer_signature_document_id,customer_signer_name,customer_signed_at,customer_signed_by"
 )
 

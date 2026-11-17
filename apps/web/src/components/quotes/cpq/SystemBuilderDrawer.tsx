@@ -855,13 +855,12 @@ export function SystemBuilderDrawer({
         {systemType === "cctv" ? (
           <Button
             type="button"
-            disabled={conflict || calculating}
+            disabled={conflict || calculating || !(calcState === "fresh" && recommendation)}
             onClick={() => {
               if (calcState === "fresh" && recommendation) setStep("review");
-              else void calculate();
             }}
           >
-            {calcState === "fresh" && recommendation ? he.cpqCctvContinueToEquipment : he.cpqCctvCalculate}
+            {he.cpqCctvContinueToEquipment}
           </Button>
         ) : null}
       </div>

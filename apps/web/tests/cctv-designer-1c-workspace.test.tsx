@@ -54,8 +54,8 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
     expect(root).toHaveAttribute("data-tech", "ip");
     expect(root).toHaveAttribute("data-mode", "quick");
     expect(screen.getByLabelText("מצלמות IP")).toBeInTheDocument();
-    // Q2: quick mode shows the PoE assumption instead of the full network section.
-    expect(screen.getByLabelText(he.cpqCctvAssumptionPoe)).toBeInTheDocument();
+    // Sprint B.1: quick mode shows PoE as a read-only הנחה, not a labeled control.
+    expect(screen.getByTestId("cctv-assumption-poe")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "רשת ו-PoE" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("תמונות לשנייה")).not.toBeInTheDocument();
     expect(screen.queryByText("ארון תקשורת")).not.toBeInTheDocument();
@@ -121,7 +121,7 @@ describe("SYSTEM-DESIGNER-1 Slice C workspace", () => {
     expect(screen.getByTestId("cctv-requirements-workspace")).toHaveAttribute("data-tech", "hybrid");
     expect(screen.getByLabelText("מצלמות IP")).toBeInTheDocument();
     expect(screen.getByLabelText("מצלמות אנלוגיות")).toBeInTheDocument();
-    expect(screen.getByLabelText(he.cpqCctvAssumptionPoe)).toBeInTheDocument();
+    expect(screen.getByTestId("cctv-assumption-poe")).toBeInTheDocument();
   });
 
   it("F. Hybrid Professional — IP subset PoE hint + pro fields", () => {

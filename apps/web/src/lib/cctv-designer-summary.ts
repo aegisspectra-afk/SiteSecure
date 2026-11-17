@@ -382,14 +382,14 @@ export function buildValidationCenter(opts: {
     items.push({
       id: "stale",
       severity: "warning",
-      message: "הדרישות השתנו — יש לחשב מחדש",
+      message: "הדרישות השתנו — החישוב יתעדכן אוטומטית.",
       code: "STALE_REQUIREMENTS",
     });
   } else if (opts.calcState === "draft") {
     items.push({
       id: "need-calc",
       severity: "info",
-      message: "לא בוצע חישוב מערכת עדיין — לחצו «חשב מערכת» לקבלת מדדים מהשרת.",
+      message: "החישוב ירוץ אוטומטית אחרי עדכון הדרישות.",
       code: "CALC_PENDING",
     });
   }

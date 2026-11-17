@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { CctvRequirementsWorkspace } from "../src/components/quotes/cpq/CctvRequirementsWorkspace";
@@ -59,23 +59,18 @@ describe("Q2.2 quick mode shows only the four fields plus assumptions", () => {
     expect(container.querySelector(".cpq-cctv-ws-rail")).toBeNull();
   });
 
-  it("marks each default as 'הנחה' and lets the user change it", () => {
+  it("marks every non-field default as read-only 'הנחה' (no editors in quick mode)", () => {
     render(<Harness />);
     const panel = screen.getByTestId("cctv-assumptions");
-    for (const key of ["cable", "poe", "recording"]) {
+    for (const key of ["cable", "poe", "recording", "labor"]) {
       expect(within(panel).getByTestId(`cctv-assumption-${key}-badge`)).toHaveTextContent(he.cpqCctvAssumptionBadge);
     }
     expect(within(panel).getByText(he.cpqCctvCableTotalHint(120))).toBeInTheDocument();
-
-    fireEvent.change(within(panel).getByLabelText(he.cpqCctvAssumptionCable), { target: { value: "40" } });
-    expect(within(panel).getByTestId("cctv-assumption-cable-badge")).toHaveTextContent(he.cpqCctvAssumptionChanged);
-    expect(within(panel).getByText(he.cpqCctvCableTotalHint(160))).toBeInTheDocument();
-
-    fireEvent.change(within(panel).getByLabelText(he.cpqCctvAssumptionPoe), { target: { value: "external" } });
-    expect(within(panel).getByTestId("cctv-assumption-poe-badge")).toHaveTextContent(he.cpqCctvAssumptionChanged);
-
-    fireEvent.change(within(panel).getByLabelText(he.cpqCctvAssumptionRecording), { target: { value: "motion" } });
-    expect(within(panel).getByTestId("cctv-assumption-recording-badge")).toHaveTextContent(he.cpqCctvAssumptionChanged);
+    // Sprint B.1: quick mode shows assumptions as labels only — edits live in professional mode.
+    expect(panel.querySelector("input, select, textarea")).toBeNull();
+    expect(within(panel).queryByLabelText(he.cpqCctvAssumptionCable)).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(he.cpqCctvAssumptionPoe)).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(he.cpqCctvAssumptionRecording)).not.toBeInTheDocument();
   });
 
   it("professional mode still has every field, including total and per-camera cable", () => {

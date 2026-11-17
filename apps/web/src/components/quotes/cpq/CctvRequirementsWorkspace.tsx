@@ -7,6 +7,7 @@ import { Input, Select } from "@site-secure/ui";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { he } from "../../../i18n/he";
 import {
+  CCTV_QUICK_ASSUMPTIONS,
   effectiveCableMeters,
   isAssumed,
   type CctvAssumptionKey,
@@ -294,9 +295,36 @@ function poeChoiceOf(req: CctvBuildRequirements): PoeChoice {
 }
 
 /**
- * Q2 quick mode: only cameras, indoor/outdoor, resolution and retention, plus the
- * assumptions the engine uses (each marked "הנחה" and editable in place).
+ * Sprint B.1 / Q2 quick mode: only cameras, indoor/outdoor, resolution and retention.
+ * Everything else is a read-only default marked "הנחה" (edit in professional mode).
  */
+function QuickAssumptionRow({
+  testId,
+  label,
+  value,
+  badge,
+  hint,
+}: {
+  testId: string;
+  label: string;
+  value: string;
+  badge: ReactNode;
+  hint?: string | null;
+}) {
+  return (
+    <div className="cpq-cctv-ws-assumption is-readonly" data-testid={testId}>
+      <div className="cpq-cctv-ws-assumption-row">
+        <div>
+          <p className="cpq-cctv-ws-assumption-label">{label}</p>
+          <p className="cpq-cctv-ws-assumption-value">{value}</p>
+        </div>
+        {badge}
+      </div>
+      {hint ? <p className="cpq-cctv-ws-hint">{hint}</p> : null}
+    </div>
+  );
+}
+
 function QuickRequirements({
   req,
   setReq,
@@ -312,6 +340,18 @@ function QuickRequirements({
 }) {
   const tech = req.cctvTechnology;
   const totalCable = effectiveCableMeters(req);
+  const recordingLabel =
+    req.recordingMode === "scheduled"
+      ? he.cpqCctvModeScheduled
+      : req.recordingMode === "motion"
+        ? he.cpqCctvModeMotion
+        : he.cpqCctvModeContinuous;
+  const poeLabel =
+    poeChoiceOf(req) === "external"
+      ? he.cpqCctvAssumptionPoeExternal
+      : poeChoiceOf(req) === "none"
+        ? he.cpqCctvAssumptionPoeNone
+        : he.cpqCctvAssumptionPoeIntegrated;
   return (
     <div className="cpq-cctv-ws-quick" data-testid="cctv-quick-fields">
       <section className="cpq-cctv-ws-section is-active" aria-label={he.cpqCctvQuickFieldsLabel}>
@@ -393,74 +433,43 @@ function QuickRequirements({
         </h3>
         <p className="cpq-cctv-ws-hint">{he.cpqCctvAssumptionsLead}</p>
         <div className="cpq-cctv-ws-section-body">
-          <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-cable">
-            <UnitInput
-              id="cpq-cable-per-camera"
-              label={he.cpqCctvAssumptionCable}
-              value={req.cableMetersPerCamera}
-              unit={he.cpqCctvUnitMeters}
-              disabled={disabled || Boolean(req.cableDistanceMeters.trim())}
-              onChange={(v) => patch({ cableMetersPerCamera: v })}
-            />
-            <AssumptionBadge req={req} which="cable" />
-            <p className="cpq-cctv-ws-hint">
-              {req.cableDistanceMeters.trim()
+          <QuickAssumptionRow
+            testId="cctv-assumption-cable"
+            label={he.cpqCctvAssumptionCable}
+            value={he.cpqCctvAssumptionCableValue(req.cableMetersPerCamera || CCTV_QUICK_ASSUMPTIONS.cableMetersPerCamera)}
+            badge={<AssumptionBadge req={req} which="cable" />}
+            hint={
+              req.cableDistanceMeters.trim()
                 ? he.cpqCctvCableTotalOverrides
                 : totalCable != null
                   ? he.cpqCctvCableTotalHint(totalCable)
-                  : null}
-            </p>
-          </div>
+                  : null
+            }
+          />
           {tech !== "analog_hd" ? (
-            <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-poe">
-              <Select
-                id="cpq-assumption-poe"
-                label={he.cpqCctvAssumptionPoe}
-                value={poeChoiceOf(req)}
-                disabled={disabled}
-                onChange={(ev) => {
-                  const v = ev.target.value as PoeChoice;
-                  patch(
-                    v === "none"
-                      ? { poeRequired: false }
-                      : {
-                          poeRequired: true,
-                          architectureIntent: v === "external" ? "prefer_external_switch" : "prefer_nvr_integrated",
-                        },
-                  );
-                }}
-              >
-                <option value="integrated">{he.cpqCctvAssumptionPoeIntegrated}</option>
-                <option value="external">{he.cpqCctvAssumptionPoeExternal}</option>
-                <option value="none">{he.cpqCctvAssumptionPoeNone}</option>
-              </Select>
-              <AssumptionBadge req={req} which="poe" />
-            </div>
+            <QuickAssumptionRow
+              testId="cctv-assumption-poe"
+              label={he.cpqCctvAssumptionPoe}
+              value={poeLabel}
+              badge={<AssumptionBadge req={req} which="poe" />}
+            />
           ) : null}
-          <div className="cpq-cctv-ws-assumption" data-testid="cctv-assumption-recording">
-            <Select
-              id="cpq-recording-mode"
-              label={he.cpqCctvAssumptionRecording}
-              value={req.recordingMode}
-              disabled={disabled}
-              onChange={(ev) => patch({ recordingMode: ev.target.value as CctvBuildRequirements["recordingMode"] })}
-            >
-              <option value="continuous">{he.cpqCctvModeContinuous}</option>
-              <option value="scheduled">{he.cpqCctvModeScheduled}</option>
-              <option value="motion">{he.cpqCctvModeMotion}</option>
-            </Select>
-            <AssumptionBadge req={req} which="recording" />
-            {req.recordingMode === "scheduled" ? (
-              <UnitInput
-                id="cpq-hours"
-                label={he.cpqCctvRecordingHours}
-                value={req.recordingHoursPerDay}
-                unit={he.cpqCctvUnitHours}
-                disabled={disabled}
-                onChange={(v) => patch({ recordingHoursPerDay: v })}
-              />
-            ) : null}
-          </div>
+          <QuickAssumptionRow
+            testId="cctv-assumption-recording"
+            label={he.cpqCctvAssumptionRecording}
+            value={recordingLabel}
+            badge={<AssumptionBadge req={req} which="recording" />}
+          />
+          <QuickAssumptionRow
+            testId="cctv-assumption-labor"
+            label={he.cpqCctvAssumptionLabor}
+            value={he.cpqCctvAssumptionLaborValue}
+            badge={
+              <span className="cpq-cctv-ws-assumption-badge is-assumed" data-testid="cctv-assumption-labor-badge">
+                {he.cpqCctvAssumptionBadge}
+              </span>
+            }
+          />
         </div>
       </section>
 

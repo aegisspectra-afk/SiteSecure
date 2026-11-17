@@ -101,6 +101,18 @@ describe("Q2.3 automatic calculation", () => {
     expect(recommendCctv).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("cctv-designer-requirements-shell")).not.toBeInTheDocument();
   });
+
+  it("never shows a «חשב מערכת» button — only continue after auto-calc", async () => {
+    renderDrawer();
+    expect(screen.queryByRole("button", { name: he.cpqCctvCalculate })).not.toBeInTheDocument();
+    await advance(AUTO_CALC_DEBOUNCE_MS - 50);
+    expect(screen.queryByRole("button", { name: he.cpqCctvCalculate })).not.toBeInTheDocument();
+    const continueBtn = screen.getByRole("button", { name: he.cpqCctvContinueToEquipment });
+    expect(continueBtn).toBeDisabled();
+    await advance(100);
+    expect(screen.queryByRole("button", { name: he.cpqCctvCalculate })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: he.cpqCctvContinueToEquipment })).toBeEnabled();
+  });
 });
 
 describe("Q2.3 / DEMO-2.3 first save on a new quote", () => {

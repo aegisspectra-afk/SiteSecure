@@ -61,8 +61,8 @@ export type LeadPrefillSource = {
 };
 
 /**
- * Q2 quick-mode assumptions. Each is shown as "הנחה" until the user changes it, and stays
- * editable. They feed the same server engine; no formula changes.
+ * Quick-mode assumptions. Shown read-only as "הנחה" in quick mode; editable in professional.
+ * They feed the same server engine; no formula changes.
  */
 export const CCTV_QUICK_ASSUMPTIONS = {
   cableMetersPerCamera: "30",

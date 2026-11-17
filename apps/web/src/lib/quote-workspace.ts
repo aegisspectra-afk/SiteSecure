@@ -1,17 +1,19 @@
 import type { QuoteListCounts, QuoteOut } from "@site-secure/api-client";
 import { quoteConversion } from "./ux-metrics";
 
-export type QuoteTab = "all" | "draft" | "open" | "approved" | "rejected" | "expired";
+export type QuoteTab = "all" | "draft" | "open" | "approved" | "rejected" | "expired" | "archived";
 export type QuoteDraftGap = "empty" | "no_customer" | "no_items";
 
-/** Active commercial pipeline — approved quotes live in archive, not here. */
-export const PIPELINE_STATUSES = ["draft", "sent", "viewed", "rejected", "expired", "cancelled"] as const;
+/** Active commercial pipeline — archived quotes are a separate tab. */
+export const PIPELINE_STATUSES = ["draft", "sent", "viewed", "approved", "rejected", "expired", "cancelled"] as const;
 export const OPEN_STATUSES = new Set(["draft", "sent", "viewed"]);
 export const AWAITING_STATUSES = new Set(["sent", "viewed"]);
-export const DELETABLE_QUOTE_STATUSES = new Set([
-  "draft",
+/** Q4: only drafts may be deleted; everything else is archived. */
+export const DELETABLE_QUOTE_STATUSES = new Set(["draft"]);
+export const ARCHIVABLE_QUOTE_STATUSES = new Set([
   "sent",
   "viewed",
+  "approved",
   "rejected",
   "expired",
   "cancelled",
@@ -29,8 +31,18 @@ const EMPTY_COUNTS: QuoteListCounts = {
   open_value: 0,
 };
 
-export function quoteIsDeletable(status: string): boolean {
+export function quoteIsDeletable(status: string, archivedAt?: string | null): boolean {
+  if (archivedAt) return false;
   return DELETABLE_QUOTE_STATUSES.has(status);
+}
+
+export function quoteIsArchivable(status: string, archivedAt?: string | null): boolean {
+  if (archivedAt) return false;
+  return ARCHIVABLE_QUOTE_STATUSES.has(status);
+}
+
+export function quoteIsArchived(quote: Pick<QuoteOut, "archived_at">): boolean {
+  return Boolean(quote.archived_at);
 }
 
 export function quoteTabStatuses(tab: QuoteTab): string[] | null {
@@ -39,6 +51,7 @@ export function quoteTabStatuses(tab: QuoteTab): string[] | null {
   if (tab === "open") return ["sent", "viewed"];
   if (tab === "approved") return ["approved"];
   if (tab === "rejected") return ["rejected"];
+  if (tab === "archived") return null; // server filters via archived=true
   return ["expired"];
 }
 
@@ -47,16 +60,22 @@ export function listStatusParam(tab: QuoteTab): string | undefined {
   return filter.status;
 }
 
-export function listQuotesFilter(tab: QuoteTab): { status?: string; exclude_status?: string } {
-  // Active pipeline excludes approved (archive). "open" is filtered client-side
-  // from the same pipeline payload (sent + viewed).
-  if (tab === "all" || tab === "open") return { exclude_status: "approved" };
+export function listQuotesFilter(tab: QuoteTab): {
+  status?: string;
+  exclude_status?: string;
+  archived?: boolean;
+} {
+  if (tab === "archived") return { archived: true };
+  // Active pipeline; archived rows are excluded server-side (archived_at is null).
+  if (tab === "all") return {};
+  if (tab === "open") return { status: "sent,viewed" };
   const statuses = quoteTabStatuses(tab);
   if (!statuses?.length) return {};
   return { status: statuses[0] };
 }
 
-export function pipelineTabForStatus(status: string): QuoteTab | null {
+export function pipelineTabForStatus(status: string, archivedAt?: string | null): QuoteTab | null {
+  if (archivedAt) return "archived";
   if (status === "draft") return "draft";
   if (status === "sent" || status === "viewed") return "open";
   if (status === "approved") return "approved";
@@ -69,6 +88,11 @@ export function filterQuotes(quotes: QuoteOut[], tab: QuoteTab, search: string):
   const statuses = quoteTabStatuses(tab);
   const query = search.trim().toLowerCase();
   return quotes.filter((quote) => {
+    if (tab === "archived") {
+      if (!quote.archived_at) return false;
+    } else if (quote.archived_at) {
+      return false;
+    }
     if (statuses && !statuses.includes(quote.status)) return false;
     if (!query) return true;
     const haystack = [

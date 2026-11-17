@@ -22,6 +22,7 @@ import {
   filterQuotes,
   pipelineTabForStatus,
   quoteDraftGap,
+  quoteIsArchivable,
   quoteIsDeletable,
   quotesMarginTotals,
   quotesWorkspaceKpis,
@@ -34,9 +35,10 @@ const TABS: { id: QuoteTab; label: string }[] = [
   { id: "all", label: he.quotesTabAll },
   { id: "draft", label: he.quoteStatuses.draft },
   { id: "open", label: he.quotesTabOpen },
-  { id: "approved", label: he.quotesTabArchive },
+  { id: "approved", label: he.quotesTabApproved },
   { id: "rejected", label: he.quotesTabRejected },
   { id: "expired", label: he.quoteStatuses.expired },
+  { id: "archived", label: he.quotesTabArchive },
 ];
 
 function draftGapLabel(gap: ReturnType<typeof quoteDraftGap>): string | null {
@@ -63,6 +65,8 @@ export function QuotesWorkspace({
   onPreviewQuote,
   onLoadMore,
   onDelete,
+  onArchive,
+  onRestore,
   onDuplicate,
   canExport = false,
   onExport,
@@ -83,6 +87,8 @@ export function QuotesWorkspace({
   onPreviewQuote?: (quoteId: string) => void;
   onLoadMore?: () => void;
   onDelete?: (quoteIds: string[]) => Promise<void>;
+  onArchive?: (quoteIds: string[]) => Promise<void>;
+  onRestore?: (quoteIds: string[]) => Promise<void>;
   onDuplicate?: (quoteIds: string[]) => Promise<void>;
   canExport?: boolean;
   onExport?: () => Promise<void>;
@@ -91,18 +97,25 @@ export function QuotesWorkspace({
   const visible = filterQuotes(quotes, tab, search);
   const hasQuotes = quotes.length > 0 || kpis.total > 0;
   const margin = canViewCost ? quotesMarginTotals(quotes) : null;
-  const canSelect = canDelete || Boolean(onDuplicate);
+  const canSelect = canDelete || Boolean(onDuplicate) || Boolean(onArchive) || Boolean(onRestore);
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
+  const [pendingArchive, setPendingArchive] = useState<string[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [exportBusy, setExportBusy] = useState(false);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const selectedRows = visible.filter((row) => selectedSet.has(row.id));
-  const deleteIds = pendingDelete ?? selectedRows.filter((row) => quoteIsDeletable(row.status)).map((row) => row.id);
+  const deleteIds =
+    pendingDelete ??
+    selectedRows.filter((row) => quoteIsDeletable(row.status, row.archived_at)).map((row) => row.id);
+  const archiveIds =
+    pendingArchive ??
+    selectedRows.filter((row) => quoteIsArchivable(row.status, row.archived_at)).map((row) => row.id);
+  const restoreIds = selectedRows.filter((row) => Boolean(row.archived_at)).map((row) => row.id);
   const blockedCount = pendingDelete
     ? pendingDelete.filter((id) => {
         const row = quotes.find((quote) => quote.id === id);
-        return row ? !quoteIsDeletable(row.status) : false;
+        return row ? !quoteIsDeletable(row.status, row.archived_at) : false;
       }).length
     : selectedRows.length - deleteIds.length;
   const deleteIsDraftOnly =
@@ -111,6 +124,7 @@ export function QuotesWorkspace({
   useEffect(() => {
     setSelected([]);
     setPendingDelete(null);
+    setPendingArchive(null);
     setActionError(null);
   }, [tab, search]);
 
@@ -223,9 +237,12 @@ export function QuotesWorkspace({
                 />
               </div>
             </div>
+            {tab === "archived" ? (
+              <p className="mt-3 px-2 text-sm text-fg-muted">{he.quotesArchiveLead}</p>
+            ) : null}
             {visible.length === 0 ? (
               <p className="mt-6 px-2 pb-4 text-sm text-fg-muted">
-                {tab === "approved" ? he.quotesArchiveEmpty : he.quotesFilterEmpty}
+                {tab === "archived" ? he.quotesArchiveEmpty : he.quotesFilterEmpty}
               </p>
             ) : (
               <div className="mt-4">
@@ -247,7 +264,27 @@ export function QuotesWorkspace({
                         {he.quotesDuplicate}
                       </Button>
                     ) : null}
-                    {canDelete && onDelete ? (
+                    {canDelete && onArchive && archiveIds.length ? (
+                      <Button variant="secondary" disabled={busy} onClick={() => setPendingArchive(archiveIds)}>
+                        {he.quotesArchive}
+                      </Button>
+                    ) : null}
+                    {canDelete && onRestore && restoreIds.length ? (
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        loading={busy}
+                        onClick={() => {
+                          setActionError(null);
+                          void onRestore(restoreIds)
+                            .then(() => setSelected([]))
+                            .catch(() => setActionError(he.quotesRestoreError));
+                        }}
+                      >
+                        {he.quotesRestore}
+                      </Button>
+                    ) : null}
+                    {canDelete && onDelete && deleteIds.length ? (
                       <Button variant="danger" disabled={busy} onClick={() => setPendingDelete(deleteIds)}>
                         {he.quotesDelete}
                       </Button>
@@ -270,6 +307,15 @@ export function QuotesWorkspace({
                   onPreviewQuote={onPreviewQuote}
                   onDuplicate={onDuplicate}
                   onDeleteRow={canDelete && onDelete ? (id) => setPendingDelete([id]) : undefined}
+                  onArchiveRow={canDelete && onArchive ? (id) => setPendingArchive([id]) : undefined}
+                  onRestoreRow={
+                    canDelete && onRestore
+                      ? (id) => {
+                          setActionError(null);
+                          void onRestore([id]).catch(() => setActionError(he.quotesRestoreError));
+                        }
+                      : undefined
+                  }
                 />
                 {hasMore && onLoadMore ? (
                   <div className="mt-4 flex justify-center">
@@ -310,6 +356,31 @@ export function QuotesWorkspace({
             }}
           >
             {he.quotesDeleteConfirm}
+          </Button>
+        </div>
+      </Modal>
+      <Modal open={Boolean(pendingArchive)} onClose={() => setPendingArchive(null)} title={he.quotesArchiveTitle}>
+        <p className="text-sm text-fg">{he.quotesArchiveBody}</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="secondary" disabled={busy} onClick={() => setPendingArchive(null)}>
+            {he.quotesCancel}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={busy || !archiveIds.length}
+            loading={busy}
+            onClick={() => {
+              if (!onArchive || !archiveIds.length) return;
+              setActionError(null);
+              void onArchive(archiveIds)
+                .then(() => {
+                  setPendingArchive(null);
+                  setSelected([]);
+                })
+                .catch(() => setActionError(he.quotesArchiveError));
+            }}
+          >
+            {he.quotesArchiveConfirm}
           </Button>
         </div>
       </Modal>
@@ -461,6 +532,8 @@ function QuotesTable({
   onPreviewQuote,
   onDuplicate,
   onDeleteRow,
+  onArchiveRow,
+  onRestoreRow,
 }: {
   quotes: QuoteOut[];
   canSelect: boolean;
@@ -473,6 +546,8 @@ function QuotesTable({
   onPreviewQuote?: (quoteId: string) => void;
   onDuplicate?: (quoteIds: string[]) => Promise<void>;
   onDeleteRow?: (quoteId: string) => void;
+  onArchiveRow?: (quoteId: string) => void;
+  onRestoreRow?: (quoteId: string) => void;
 }) {
   const selectedCount = quotes.filter((row) => selected.has(row.id)).length;
   const allVisibleSelected = quotes.length > 0 && selectedCount === quotes.length;
@@ -552,8 +627,11 @@ function QuotesTable({
               <TD>{formatMoney(row.total_gross, row.currency)}</TD>
               <TD>
                 <div className="flex flex-col gap-0.5">
-                  <Status label={quoteStatusLabel(row.status)} tone={quoteStatusTone(row.status)} />
-                  {gapText ? <span className="text-xs text-fg-muted">{gapText}</span> : null}
+                  <Status
+                    label={quoteStatusLabel(row.status, row.archived_at)}
+                    tone={quoteStatusTone(row.status, row.archived_at)}
+                  />
+                  {gapText && !row.archived_at ? <span className="text-xs text-fg-muted">{gapText}</span> : null}
                 </div>
               </TD>
               <TD className="hidden text-fg-muted sm:table-cell">{formatRelativeDay(row.updated_at)}</TD>
@@ -570,7 +648,13 @@ function QuotesTable({
                     {onDuplicate ? (
                       <DropdownItem onClick={() => void onDuplicate([row.id])}>{he.quotesDuplicate}</DropdownItem>
                     ) : null}
-                    {onDeleteRow && quoteIsDeletable(row.status) ? (
+                    {onArchiveRow && quoteIsArchivable(row.status, row.archived_at) ? (
+                      <DropdownItem onClick={() => onArchiveRow(row.id)}>{he.quotesArchive}</DropdownItem>
+                    ) : null}
+                    {onRestoreRow && row.archived_at ? (
+                      <DropdownItem onClick={() => onRestoreRow(row.id)}>{he.quotesRestore}</DropdownItem>
+                    ) : null}
+                    {onDeleteRow && quoteIsDeletable(row.status, row.archived_at) ? (
                       <DropdownItem onClick={() => onDeleteRow(row.id)}>{he.quotesDelete}</DropdownItem>
                     ) : null}
                   </Dropdown>

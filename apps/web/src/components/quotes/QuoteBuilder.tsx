@@ -862,8 +862,16 @@ export function QuoteBuilder({
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
   });
   const cancelQuote = useMutation({
-    mutationFn: () => api.deleteQuote(workspaceId, live.id),
+    mutationFn: async () => {
+      if (live.status === "draft") {
+        await api.deleteQuote(workspaceId, live.id);
+        return;
+      }
+      await api.archiveQuote(workspaceId, live.id);
+    },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
       void navigate({ to: "/app/quotes" });
     },
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.quotesError),
@@ -1966,22 +1974,38 @@ export function QuoteBuilder({
           >
             {he.quoteRedo}
           </button>
-          {live.id &&
-          canDelete &&
-          live.status !== "cancelled" &&
-          live.status !== "superseded" ? (
+          {live.id && canDelete && !live.archived_at && live.status !== "superseded" ? (
             <button
               type="button"
               role="menuitem"
-              className="is-danger"
+              className={live.status === "draft" ? "is-danger" : undefined}
               disabled={cancelQuote.isPending}
               onClick={() => {
                 setMoreOpen(false);
-                if (!window.confirm(he.cpqCancelQuoteConfirm)) return;
+                const confirmMsg =
+                  live.status === "draft" ? he.cpqCancelQuoteConfirm : he.quotesArchiveBody;
+                if (!window.confirm(confirmMsg)) return;
                 cancelQuote.mutate();
               }}
             >
-              {he.cpqCancelQuote}
+              {live.status === "draft" ? he.cpqCancelQuote : he.quotesArchive}
+            </button>
+          ) : null}
+          {live.id && canDelete && live.archived_at ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={cancelQuote.isPending}
+              onClick={() => {
+                setMoreOpen(false);
+                void api.restoreQuote(workspaceId, live.id).then(() => {
+                  void queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
+                  void queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
+                  void queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+                });
+              }}
+            >
+              {he.quotesRestore}
             </button>
           ) : null}
         </div>

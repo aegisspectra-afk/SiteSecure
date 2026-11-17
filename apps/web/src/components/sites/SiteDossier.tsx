@@ -123,7 +123,10 @@ function buildHistory(
     ...quotes.map((quote) => ({
       id: `quote-${quote.id}`,
       at: quote.updated_at || quote.created_at || "",
-      title: he.siteHistoryQuote(quote.number || quote.id, quoteStatusLabel(quote.status)),
+      title: he.siteHistoryQuote(
+        quote.number || quote.id,
+        quoteStatusLabel(quote.status, quote.archived_at),
+      ),
       kind: "quote" as const,
       status: quote.status,
       href: { to: "/app/quotes/$quoteId" as const, params: { quoteId: quote.id } },
@@ -237,7 +240,8 @@ export function SiteDossier({ siteId }: { siteId: string }) {
   const quotesQuery = useQuery({
     queryKey: ["site-quotes", workspaceId, siteId],
     enabled: Boolean(workspaceId) && canViewQuotes,
-    queryFn: () => api.listQuotes(workspaceId!, { site_id: siteId, limit: 100 }),
+    queryFn: () =>
+      api.listQuotes(workspaceId!, { site_id: siteId, limit: 100, include_archived: true }),
   });
 
   const save = useMutation({
@@ -909,7 +913,10 @@ export function SiteDossier({ siteId }: { siteId: string }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Status label={quoteStatusLabel(row.status)} tone={quoteStatusTone(row.status)} />
+                    <Status
+                      label={quoteStatusLabel(row.status, row.archived_at)}
+                      tone={quoteStatusTone(row.status, row.archived_at)}
+                    />
                     <Button
                       type="button"
                       variant="ghost"

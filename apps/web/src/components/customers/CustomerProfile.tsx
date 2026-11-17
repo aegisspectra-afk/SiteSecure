@@ -239,7 +239,8 @@ export function CustomerProfile({
 
   const quotesQuery = useQuery({
     queryKey: ["customer-quotes", workspaceId, customerId],
-    queryFn: () => api.listQuotes(workspaceId, { customer_id: customerId, limit: 100 }),
+    queryFn: () =>
+      api.listQuotes(workspaceId, { customer_id: customerId, limit: 100, include_archived: true }),
   });
 
   const projectsQuery = useQuery({
@@ -1692,7 +1693,10 @@ function QuotesPanel({
                 <span className="customer-360-entity-id">#{quote.number}</span>
                 <span className="customer-360-entity-title">{quote.title || quote.project_name || quote.customer_notes || "—"}</span>
                 <span className="customer-360-entity-amount">{formatMoney(quote.total_gross, quote.currency)}</span>
-                <Status label={quoteStatusLabel(quote.status)} tone={quoteStatusTone(quote.status)} />
+                <Status
+                  label={quoteStatusLabel(quote.status, quote.archived_at)}
+                  tone={quoteStatusTone(quote.status, quote.archived_at)}
+                />
               </Link>
             </li>
           ))}

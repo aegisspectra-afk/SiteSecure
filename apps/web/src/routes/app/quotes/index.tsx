@@ -14,7 +14,7 @@ import { useSession } from "../../../lib/session";
 export const Route = createFileRoute("/app/quotes/")({
   validateSearch: (search: Record<string, unknown>): { tab?: QuoteTab } => {
     const tab = typeof search.tab === "string" ? search.tab : undefined;
-    const allowed = new Set(["all", "draft", "open", "approved", "rejected", "expired"]);
+    const allowed = new Set(["all", "draft", "open", "approved", "rejected", "expired", "archived"]);
     if (tab && allowed.has(tab) && tab !== "all") return { tab: tab as QuoteTab };
     return {};
   },
@@ -76,6 +76,7 @@ function QuotesBody() {
       debouncedSearch,
       listFilter.status ?? null,
       listFilter.exclude_status ?? null,
+      listFilter.archived ?? false,
     ],
     enabled: Boolean(workspaceId),
     staleTime: 30_000,
@@ -86,11 +87,18 @@ function QuotesBody() {
         q: debouncedSearch,
         status: listFilter.status,
         exclude_status: listFilter.exclude_status,
+        archived: listFilter.archived,
         limit: 50,
         cursor: pageParam,
       }),
     getNextPageParam: (lastPage) => lastPage.next_cursor,
   });
+
+  async function refreshQuotesAndDashboard() {
+    await queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
+    await queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+  }
+
   const remove = useMutation({
     mutationFn: async (ids: string[]) => {
       if (!workspaceId || !ids.length) return { deleted: 0, failed: 0 };
@@ -105,7 +113,7 @@ function QuotesBody() {
           return;
         }
         const err = result.reason;
-        if (err instanceof ApiClientError && err.code === "RESOURCE_STATE") return;
+        if (err instanceof ApiClientError && (err.code === "RESOURCE_STATE" || err.status === 409)) return;
         failed += 1;
       });
       if (deletedIds.length) {
@@ -118,10 +126,24 @@ function QuotesBody() {
           return { ...(prev as object), pages };
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ["quotes", workspaceId] });
+      await refreshQuotesAndDashboard();
       if (failed) throw new Error("delete-failed");
       if (!deleted && ids.length) throw new Error("delete-blocked");
       return { deleted, failed };
+    },
+  });
+  const archiveMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!workspaceId || !ids.length) return;
+      for (const id of ids) await api.archiveQuote(workspaceId, id);
+      await refreshQuotesAndDashboard();
+    },
+  });
+  const restoreMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!workspaceId || !ids.length) return;
+      for (const id of ids) await api.restoreQuote(workspaceId, id);
+      await refreshQuotesAndDashboard();
     },
   });
   const duplicate = useMutation({
@@ -178,7 +200,13 @@ function QuotesBody() {
       canDelete={canDelete}
       canViewCost={canViewCost}
       loading={quotesQuery.isLoading}
-      busy={remove.isPending || duplicate.isPending || quotesQuery.isFetchingNextPage}
+      busy={
+        remove.isPending ||
+        archiveMut.isPending ||
+        restoreMut.isPending ||
+        duplicate.isPending ||
+        quotesQuery.isFetchingNextPage
+      }
       hasMore={Boolean(quotesQuery.hasNextPage)}
       onSearch={setQuery}
       onTab={onTab}
@@ -190,6 +218,8 @@ function QuotesBody() {
       }
       onLoadMore={() => void quotesQuery.fetchNextPage()}
       onDelete={canDelete ? (ids) => remove.mutateAsync(ids).then(() => undefined) : undefined}
+      onArchive={canDelete ? (ids) => archiveMut.mutateAsync(ids).then(() => undefined) : undefined}
+      onRestore={canDelete ? (ids) => restoreMut.mutateAsync(ids).then(() => undefined) : undefined}
       onDuplicate={canCreate ? (ids) => duplicate.mutateAsync(ids).then(() => undefined) : undefined}
       canExport={canExport}
       onExport={
@@ -199,6 +229,7 @@ function QuotesBody() {
                 q: debouncedSearch,
                 status: listFilter.status,
                 exclude_status: listFilter.exclude_status,
+                archived: listFilter.archived,
               });
               downloadCsv(blob, filename);
             }

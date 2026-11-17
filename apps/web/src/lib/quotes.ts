@@ -1,11 +1,13 @@
 import type { StatusTone } from "@site-secure/ui";
 import { he } from "../i18n/he";
 
-export function quoteStatusLabel(status: string): string {
+export function quoteStatusLabel(status: string, archivedAt?: string | null): string {
+  if (archivedAt) return he.quoteStatuses.archived;
   return he.quoteStatuses[status as keyof typeof he.quoteStatuses] ?? status;
 }
 
-export function quoteStatusTone(status: string): StatusTone {
+export function quoteStatusTone(status: string, archivedAt?: string | null): StatusTone {
+  if (archivedAt) return "neutral";
   if (status === "approved") return "success";
   if (status === "sent" || status === "viewed") return "info";
   if (status === "rejected" || status === "expired" || status === "cancelled" || status === "superseded") return "danger";

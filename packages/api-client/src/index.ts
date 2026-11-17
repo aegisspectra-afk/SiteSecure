@@ -627,6 +627,9 @@ export type QuoteOut = {
   public_url?: string | null;
   public_token?: string | null;
   validation?: { can_send: boolean; gaps: QuoteGap[] };
+  archived_at?: string | null;
+  archived_by?: string | null;
+  deleted_at?: string | null;
   updated_at?: string;
   created_at?: string;
   items?: QuoteItemOut[];
@@ -2412,6 +2415,8 @@ export function createApiClient(opts: {
         customer_id?: string;
         lead_id?: string;
         site_id?: string;
+        archived?: boolean;
+        include_archived?: boolean;
         limit?: number;
         cursor?: string | null;
       } = {},
@@ -2423,6 +2428,8 @@ export function createApiClient(opts: {
       if (opts.customer_id) params.set("customer_id", opts.customer_id);
       if (opts.lead_id) params.set("lead_id", opts.lead_id);
       if (opts.site_id) params.set("site_id", opts.site_id);
+      if (opts.archived) params.set("archived", "true");
+      if (opts.include_archived) params.set("include_archived", "true");
       if (opts.cursor) params.set("cursor", opts.cursor);
       return request<QuotePage>(`/api/v1/workspaces/${workspaceId}/quotes?${params.toString()}`);
     },
@@ -2435,6 +2442,8 @@ export function createApiClient(opts: {
         customer_id?: string;
         lead_id?: string;
         site_id?: string;
+        archived?: boolean;
+        include_archived?: boolean;
       } = {},
     ) => {
       const params = new URLSearchParams();
@@ -2444,6 +2453,8 @@ export function createApiClient(opts: {
       if (opts.customer_id) params.set("customer_id", opts.customer_id);
       if (opts.lead_id) params.set("lead_id", opts.lead_id);
       if (opts.site_id) params.set("site_id", opts.site_id);
+      if (opts.archived) params.set("archived", "true");
+      if (opts.include_archived) params.set("include_archived", "true");
       const qs = params.toString();
       return requestCsv(`/api/v1/workspaces/${workspaceId}/quotes/export${qs ? `?${qs}` : ""}`);
     },
@@ -2484,6 +2495,15 @@ export function createApiClient(opts: {
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/send`, { method: "POST" }),
     deleteQuote: (workspaceId: string, quoteId: string) =>
       request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`, { method: "DELETE" }),
+    archiveQuote: (workspaceId: string, quoteId: string) =>
+      request<{ ok: true; archived_at: string }>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/archive`,
+        { method: "POST" },
+      ),
+    restoreQuote: (workspaceId: string, quoteId: string) =>
+      request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/restore`, {
+        method: "POST",
+      }),
     duplicateQuote: (workspaceId: string, quoteId: string) =>
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/duplicate`, { method: "POST" }),
     applyQuoteTemplate: (workspaceId: string, quoteId: string, body: { template_id?: string } = {}) =>

@@ -456,12 +456,25 @@ def _load_job_row(svc: ServiceClient, workspace_id: str, job_id: str) -> dict[st
     return rows[0] if rows else None
 
 
+def _completion_notes_match(job: dict[str, Any], result: dict[str, Any], notes: str | None) -> bool:
+    """True when a replay uses the same body that created the completion."""
+    req = result.get("request") if isinstance(result.get("request"), dict) else None
+    if isinstance(req, dict) and "completion_notes" in req:
+        return req.get("completion_notes") == notes
+    return job.get("completion_notes") == notes
+
+
+def _idempotency_conflict() -> ApiError:
+    return ApiError(409, "IDEMPOTENCY_CONFLICT", "מפתח הבקשה כבר שימש עם תוכן אחר")
+
+
 def _replay_if_ready(
     svc: ServiceClient,
     workspace_id: str,
     job_id: str,
     idempotency_key: str,
     *,
+    completion_notes: str | None = None,
     waits: int = 20,
 ) -> dict[str, Any] | None:
     """Return a replay payload when another worker finished the same idempotency key."""
@@ -471,6 +484,8 @@ def _replay_if_ready(
             return None
         if row.get("status") == "completed" and row.get("completion_idempotency_key") == idempotency_key:
             result = row.get("completion_result") if isinstance(row.get("completion_result"), dict) else {}
+            if not _completion_notes_match(row, result, completion_notes):
+                raise _idempotency_conflict()
             if result.get("handover_url") or result.get("warranty_id") is not None:
                 return {"job": row, "replay": True, **result}
         elif row.get("status") == "completed":
@@ -479,6 +494,8 @@ def _replay_if_ready(
     row = _load_job_row(svc, workspace_id, job_id) or {}
     if row.get("status") == "completed" and row.get("completion_idempotency_key") == idempotency_key:
         result = row.get("completion_result") if isinstance(row.get("completion_result"), dict) else {}
+        if not _completion_notes_match(row, result, completion_notes):
+            raise _idempotency_conflict()
         return {"job": row, "replay": True, **result}
     return None
 
@@ -555,12 +572,16 @@ def complete_installation(
     job_id = str(job["id"])
     previous_status = str(job.get("status") or "in_progress")
 
-    # Idempotent replay
+    # Idempotent replay — same key + same body only; different body is a conflict.
     if job.get("status") == "completed" and job.get("completion_idempotency_key") == idempotency_key:
         result = job.get("completion_result") if isinstance(job.get("completion_result"), dict) else {}
+        if not _completion_notes_match(job, result, completion_notes):
+            raise _idempotency_conflict()
         if result.get("handover_url") or result.get("warranty_id") is not None:
             return {"job": job, "replay": True, **result}
-        replay = _replay_if_ready(svc, workspace_id, job_id, idempotency_key)
+        replay = _replay_if_ready(
+            svc, workspace_id, job_id, idempotency_key, completion_notes=completion_notes
+        )
         if replay:
             return replay
 
@@ -607,7 +628,9 @@ def complete_installation(
         )
     )
     if not patched:
-        replay = _replay_if_ready(svc, workspace_id, job_id, idempotency_key)
+        replay = _replay_if_ready(
+            svc, workspace_id, job_id, idempotency_key, completion_notes=completion_notes
+        )
         if replay:
             return replay
         raise ApiError(409, "RESOURCE_STATE", "לא ניתן לעדכן את העבודה")
@@ -784,6 +807,7 @@ def complete_installation(
             "handover_token": token,
             "project_status": project_status,
             "warranty_pending_period": months is None,
+            "request": {"completion_notes": completion_notes},
         }
         svc.patch(
             "jobs",

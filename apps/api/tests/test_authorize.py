@@ -174,6 +174,37 @@ def test_technician_cannot_complete_from_scheduled():
     assert d.code == "RESOURCE_STATE"
 
 
+def test_technician_may_complete_completed_job_for_idempotent_replay():
+    """Authz allows completed so Idempotency-Key replay reaches the handler.
+    Without this, replay is RESOURCE_STATE 403 before JOB_ALREADY_COMPLETED / replay."""
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.complete",
+        resource=ResourceRef(type="job", id="job-9", state="completed"),
+    )
+    assert d.allowed is True
+
+
+def test_technician_cannot_complete_cancelled_job():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-9",)),
+        action="jobs.complete",
+        resource=ResourceRef(type="job", id="job-9", state="cancelled"),
+    )
+    assert d.allowed is False
+    assert d.code == "RESOURCE_STATE"
+
+
+def test_other_technician_still_scope_denied_on_completed_job():
+    d = authorize(
+        ctx=_ctx("technician", assigned=("job-other",)),
+        action="jobs.complete",
+        resource=ResourceRef(type="job", id="job-9", state="completed"),
+    )
+    assert d.allowed is False
+    assert d.code == "SCOPE_DENIED"
+
+
 def test_technician_cannot_assign():
     d = authorize(
         ctx=_ctx("technician", assigned=("job-9",)),

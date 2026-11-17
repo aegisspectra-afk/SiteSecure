@@ -11,7 +11,7 @@
 | 4 | N/A = בוצע; רשות לא חוסם | gates: `completed \|\| not_applicable`; required בלבד | חלקי |
 | 5 | Idempotency אותו מפתח → אותה תשובה, בלי כפילויות | `completion_idempotency_key` + `completion_result` + `test_demo5_complete_idempotency_live` | **כן** |
 | 6 | בקשות במקביל אותו מפתח | claim `status=eq.in_progress` + uniques + `test_demo5_complete_idempotency_live` (2 מקבילים) | **כן** |
-| 7 | מפתח אחר אחרי סיום → 409 `JOB_ALREADY_COMPLETED` | `complete_installation` | חלקי — קוד קיים, אין pytest ייעודי |
+| 7 | מפתח אחר אחרי סיום → 409 `JOB_ALREADY_COMPLETED`; אותו מפתח+payload שונה → `IDEMPOTENCY_CONFLICT`; טכנאי אחר/לא משובץ → 404 | `complete_installation` + authz completed-for-replay + `test_demo5_complete_authz_live` | **כן** |
 | 8 | כשל באמצע → rollback מלא | `_rollback_partial_completion` + `test_demo5_complete_rollback_live` (inject על mint) | **כן** |
 | 9 | טכנאי אחר → 404 | authz + RLS (קיים מדמו-1) | לא רץ ספציפית ל־DEMO-5 |
 | 10 | טכנאי לא קורא billing/outbound; מנהל כן; workspace אחר לא קורא/כותב | RLS + `test_demo5_billing_outbound_rls_live` | **כן** |
@@ -33,14 +33,15 @@
 
 ## סיכום פערים (לכתיבה)
 
-נסגרו: **6, 8, 10, 18–20, 25** (ייחודיות צד־אפקטים).  
-עדיין חסר/חלקי: **1–4, 7, 9, 11–12, 15, 21–23**, ו־revoke UI ב־24/25.  
-כיסוי טוב בפועל: **5–6, 8, 10, 13–14, 16–20, 24–25** (+ שרשרת e2e).
+נסגרו: **6–8, 10, 18–20, 25** (ייחודיות + authz/idempotency אחרי completed).  
+עדיין חסר/חלקי: **1–4, 9, 11–12, 15, 21–23**, ו־revoke UI ב־24/25.  
+כיסוי טוב בפועל: **5–8, 10, 13–14, 16–20, 24–25** (+ שרשרת e2e).
 
-Unit קיים: `apps/api/tests/test_installation_complete_unit.py` (TTL קישור) + `test_dispatch_ops` ל־complete/assign.
+Unit קיים: `apps/api/tests/test_installation_complete_unit.py` (TTL + idempotency notes) + `test_dispatch_ops` + `test_authorize` (completed replay / scope).
 
-Live חדשים:
+Live:
 - `apps/api/tests/test_demo5_billing_outbound_rls_live.py`
 - `apps/api/tests/test_demo5_handover_token_live.py`
 - `apps/api/tests/test_demo5_complete_idempotency_live.py`
 - `apps/api/tests/test_demo5_complete_rollback_live.py`
+- `apps/api/tests/test_demo5_complete_authz_live.py`

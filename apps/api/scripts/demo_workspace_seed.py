@@ -318,6 +318,8 @@ def require_demo_workspace(workspace_id: str) -> dict:
 def wipe_demo_entities(workspace_id: str) -> None:
     """Delete transactional demo rows (keeps memberships/products overrides)."""
     require_demo_workspace(workspace_id)
+    # Soft-delete gate: only draft quotes may be deleted — force draft first.
+    _patch("quotes", {"workspace_id": f"eq.{workspace_id}"}, {"status": "draft"})
     # Order matters for FKs — best-effort.
     tables = [
         "handover_public_access",
@@ -350,6 +352,32 @@ def wipe_demo_entities(workspace_id: str) -> None:
             print(f"warn wipe {table}: {r.status_code} {r.text[:160]}", flush=True)
 
 
+def ensure_demo_branding(workspace_id: str) -> None:
+    """Company block for public quote: phone, ח.פ, email (Q6A מאת)."""
+    branding = {
+        "displayName": DEMO_NAME,
+        "legalName": DEMO_NAME,
+        "phone": "03-5550100",
+        "email": "office@demo.co.il",
+        "businessNumber": "514000001",
+        "businessNumberType": "company_number",
+        "taxStatus": "licensed_dealer",
+        "countryCode": "IL",
+        "documentLocale": "he-IL",
+        "documentCurrency": "ILS",
+        "addressLine1": "דרך בגין 132",
+        "city": "תל אביב",
+    }
+    existing = _get(
+        "workspace_settings",
+        {"workspace_id": f"eq.{workspace_id}", "select": "workspace_id", "limit": "1"},
+    )
+    if existing:
+        _patch("workspace_settings", {"workspace_id": f"eq.{workspace_id}"}, {"branding": branding})
+    else:
+        _post("workspace_settings", {"workspace_id": workspace_id, "branding": branding})
+
+
 def seed_customers_sites(workspace_id: str) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     for i, (name, street, city) in enumerate(CUSTOMERS, start=1):
@@ -360,7 +388,7 @@ def seed_customers_sites(workspace_id: str) -> list[tuple[str, str]]:
                 "display_name": name,
                 "type": "business",
                 "status": "active",
-                "email": f"contact{i}@example.invalid",
+                "email": f"contact{i}@demo.co.il",
                 "phone": f"050{1000000 + i}",
                 "notes": "לקוח דמו — פרטים פיקטיביים",
             },
@@ -382,9 +410,23 @@ def seed_customers_sites(workspace_id: str) -> list[tuple[str, str]]:
 
 def seed_quotes(workspace_id: str, owner_id: str, pairs: list[tuple[str, str]]) -> list[str]:
     statuses = ["draft", "sent", "viewed", "approved", "rejected"]
+    titles = [
+        "מערכת מצלמות — אולם כניסה",
+        "שדרוג מקליט ומצלמות חוץ",
+        "השלמת כיסוי חצר",
+        "חבילת התקנה מלאה",
+        "הצעת גיבוי — נדחתה",
+    ]
     ids: list[str] = []
+    today = datetime.now(timezone.utc).date()
     for i, status in enumerate(statuses):
         cust_id, site_id = pairs[i]
+        # One billable line so totals are never empty/zero (Q6A).
+        qty = 4 + i
+        unit = 2500.0
+        subtotal = qty * unit
+        vat = round(subtotal * 0.17, 2)
+        total = round(subtotal + vat, 2)
         q = _post(
             "quotes",
             {
@@ -394,11 +436,31 @@ def seed_quotes(workspace_id: str, owner_id: str, pairs: list[tuple[str, str]]) 
                 "owner_user_id": owner_id,
                 "status": status,
                 "currency": "ILS",
-                "title": f"הצעת מחיר דמו — {status}",
+                "title": titles[i],
                 "project_name": f"פרויקט דמו {i + 1}",
-                "subtotal_net": 10000 + i * 500,
-                "total_gross": 11700 + i * 585,
+                "payment_terms": "שוטף +30",
+                "warranty": "12 חודשי אחריות על ציוד והתקנה",
+                "valid_until": (today + timedelta(days=30)).isoformat(),
+                "subtotal_net": subtotal,
+                "vat_percent": 17,
+                "vat_amount": vat,
+                "total_gross": total,
                 "version": 1,
+            },
+        )
+        _post(
+            "quote_items",
+            {
+                "workspace_id": workspace_id,
+                "quote_id": q["id"],
+                "item_type": "free",
+                "description": "מצלמת רשת 4 מגה־פיקסל כולל התקנה",
+                "sku": "DEMO-CAM-4MP",
+                "qty": qty,
+                "unit_price": unit,
+                "discount": 0,
+                "line_net": subtotal,
+                "sort_order": 1,
             },
         )
         ids.append(str(q["id"]))
@@ -588,6 +650,7 @@ def main() -> int:
 
     for email, role, _name in USERS:
         ensure_membership(ws_id, uids[email], role)
+    ensure_demo_branding(ws_id)
     disable_extra_products(ws_id)
     ensure_field_ops(ws_id)
     product_ids = seed_catalog(ws_id)

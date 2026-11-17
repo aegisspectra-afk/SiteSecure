@@ -41,3 +41,17 @@ export function isValidIsraeliMobile(raw?: string | null): boolean {
 export function canWhatsAppRecipientPhone(source: QuotePhoneSource): boolean {
   return isValidIsraeliMobile(resolveQuoteRecipientPhone(source));
 }
+
+/** Display formatting for Israeli phones (05X-XXX-XXXX / 0X-XXX-XXXX). */
+export function formatIsraeliPhoneDisplay(raw?: string | null): string {
+  const digits = digitsOnly(raw);
+  if (!digits) return "";
+  let local = digits;
+  if (local.startsWith("972")) local = `0${local.slice(3)}`;
+  if (/^05\d{8}$/.test(local)) return `${local.slice(0, 3)}-${local.slice(3, 6)}-${local.slice(6)}`;
+  if (/^0\d{8,9}$/.test(local)) {
+    const split = local.length === 9 ? 2 : 3;
+    return `${local.slice(0, split)}-${local.slice(split, split + 3)}-${local.slice(split + 3)}`;
+  }
+  return String(raw || "").trim();
+}

@@ -28533,6 +28533,101 @@ html.dark .ssp-site-tone.is-officer {
   display: grid;
   gap: 1rem;
 }
+/* Q6A — public quote: light document theme independent of office theme */
+.cqx-document.cqx-portal {
+  --cqx-doc-bg: #f7f7f4;
+  --cqx-doc-paper: #ffffff;
+  --cqx-doc-fg: #1a1a1a;
+  --cqx-doc-muted: #5c5c5c;
+  --cqx-doc-border: #d8d8d2;
+  background: var(--cqx-doc-bg);
+  color: var(--cqx-doc-fg);
+}
+.cqx-document .cqx-main {
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: 1rem 1rem 6rem;
+}
+.cqx-document .quote-doc-public {
+  background: var(--cqx-doc-paper);
+  color: var(--cqx-doc-fg);
+  border: 1px solid var(--cqx-doc-border);
+  border-radius: 0.5rem;
+  padding: 1.25rem 1rem 1.5rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+.cqx-document .quote-doc-public-summary {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--cqx-doc-bg) 70%, #e8eee9);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.cqx-document .quote-doc-parties {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem 1.25rem;
+}
+.cqx-document .quote-doc-party {
+  border: 1px solid var(--cqx-doc-border);
+  border-radius: 0.4rem;
+  padding: 0.75rem 0.85rem;
+}
+.cqx-document .quote-doc-party-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--cqx-doc-muted);
+}
+.cqx-document .quote-doc-party-name {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.cqx-document .quote-doc-party-site {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  color: var(--cqx-doc-muted);
+}
+.cqx-document .quote-doc-header-title {
+  margin: 0.15rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+@media (min-width: 768px) {
+  .cqx-document .cqx-main {
+    padding: 1.5rem 1.5rem 6.5rem;
+  }
+  .cqx-document .quote-doc-public {
+    padding: 1.75rem 1.5rem 2rem;
+  }
+  .cqx-document .quote-doc-parties {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1440px) {
+  .cqx-document .cqx-main {
+    max-width: 56rem;
+    padding-block-start: 2rem;
+  }
+}
+@media print {
+  .cqx-document.cqx-portal {
+    background: #fff;
+  }
+  .cqx-document .quote-doc-public {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+  .cqx-document .cqx-sticky,
+  .cqx-document .no-print {
+    display: none !important;
+  }
+}
+
 .cpq-cctv-ws-assumptions .cpq-cctv-ws-section-body {
   display: grid;
   gap: 0.75rem;

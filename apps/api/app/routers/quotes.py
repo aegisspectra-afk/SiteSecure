@@ -1891,6 +1891,9 @@ def _transition_to_sent(
     gaps = validate_for_send(existing, items, workspace, settings)
     if gaps:
         raise ApiError(400, "QUOTE_INCOMPLETE", MESSAGES["QUOTE_INCOMPLETE"], {"gaps": gaps})
+    from ..quote_value_guard import assert_quote_has_billable_value
+
+    assert_quote_has_billable_value(existing, items)
     soft = advisory_checks(existing, items, workspace, settings)
     _ = soft  # advisory only — never blocks send
     now = datetime.now(UTC).isoformat()

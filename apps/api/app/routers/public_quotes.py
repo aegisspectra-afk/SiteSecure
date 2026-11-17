@@ -270,6 +270,10 @@ def approve_public_quote(
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": "superseded"})
     if quote.get("status") not in DECISION_STATES:
         raise ApiError(403, "RESOURCE_STATE", MESSAGES["RESOURCE_STATE"], {"state": quote.get("status")})
+    from ..quote_value_guard import assert_quote_has_billable_value
+
+    public_pre = _public_from_version(_load_version(svc, access))
+    assert_quote_has_billable_value(public_pre, public_pre.get("items") if isinstance(public_pre.get("items"), list) else [])
     if not body.terms_accepted:
         raise ApiError(400, "VALIDATION_ERROR", "יש לאשר את תנאי ההצעה לפני החתימה")
     name = (body.name or "").strip() or None

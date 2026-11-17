@@ -1,6 +1,7 @@
 import type { PublicQuote } from "@site-secure/api-client";
 import type { ReactNode } from "react";
 import { he } from "../../../i18n/he";
+import { formatIsraeliPhoneDisplay } from "../../../lib/quote-recipient-phone";
 import { formatDay, formatMoney, quoteStatusLabel } from "../../../lib/quotes";
 
 function headerDiscountLabel(quote: PublicQuote): string | null {
@@ -97,12 +98,16 @@ export function QuoteDocument({
   actions,
   showStatus = true,
   hideSignatureBlock = false,
+  /** Customer-facing public page: light document layout, no SKU, מאת/עבור. */
+  presentation = "staff",
 }: {
   quote: PublicQuote;
   actions?: ReactNode;
   showStatus?: boolean;
   hideSignatureBlock?: boolean;
+  presentation?: "staff" | "public";
 }) {
+  const isPublic = presentation === "public";
   const currency = quote.currency || "ILS";
   const brand = quote.company?.brand_name || quote.company?.name || he.brand;
   const legal = quote.company?.legal_name || quote.company?.name;
@@ -129,7 +134,8 @@ export function QuoteDocument({
   const quoteDiscountTotal = Number(quote.quote_discount_amount || 0);
   const showLinesTotal = hasBreakdown && (sectionDiscountTotal > 0 || quoteDiscountTotal > 0);
   const optionalTotal = Number(quote.optional_subtotal || 0);
-  const colCount = showLineDiscount ? 7 : 6;
+  const showSku = !isPublic;
+  const colCount = (showLineDiscount ? 7 : 6) - (showSku ? 0 : 1);
   const statusLabel =
     quote.superseded || quote.status === "superseded"
       ? he.quoteDocSupersededBadge
@@ -152,60 +158,110 @@ export function QuoteDocument({
   const metaBits = [
     issued,
     until ? `${he.quoteValidUntil} ${until}` : null,
-    quote.version ? he.quotesVersion(quote.version) : null,
+    !isPublic && quote.version ? he.quotesVersion(quote.version) : null,
   ].filter(Boolean);
   const digitallyApproved = Boolean(quote.approved_at && quote.approved_name);
+  const companyPhone = formatIsraeliPhoneDisplay(quote.company?.phone) || quote.company?.phone || "";
+  const customerPhone = formatIsraeliPhoneDisplay(quote.customer?.phone) || quote.customer?.phone || "";
+  const businessNumber = (quote.company as { business_number?: string | null; business_number_label?: string | null } | undefined);
+  const bnLabel = businessNumber?.business_number_label || he.quoteDocBusinessNumber;
+  const bnValue = businessNumber?.business_number || null;
+  const summaryLine = [
+    `${he.quoteTotalDue} ${formatMoney(quote.total_gross, currency)} ${he.quoteDocIncludingVat}`,
+    until ? `${he.quoteValidUntil} ${until}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <article id="quote-document-print-root" className="quote-doc" dir="rtl">
+    <article
+      id="quote-document-print-root"
+      className={isPublic ? "quote-doc quote-doc-public" : "quote-doc"}
+      dir="rtl"
+      data-presentation={presentation}
+    >
       <header className="quote-doc-header">
         <div className="quote-doc-brand">
           {quote.company?.logo_url ? (
             <img className="quote-doc-logo" src={quote.company.logo_url} alt="" />
           ) : (
             <div className="quote-doc-logo-fallback" aria-hidden>
-              {(brand || "S").slice(0, 1)}
+              {(brand || "א").slice(0, 1)}
             </div>
           )}
           <div className="quote-doc-brand-text">
             <p className="quote-doc-company">{brand}</p>
-            {legal && legal !== brand ? <p className="quote-doc-company-legal">{legal}</p> : null}
-            {(quote.company?.phone || quote.company?.email) && (
+            {isPublic ? (
+              <h1 className="quote-doc-title quote-doc-header-title">{he.quoteDocHeroQuote(quote.number)}</h1>
+            ) : null}
+            {!isPublic && legal && legal !== brand ? <p className="quote-doc-company-legal">{legal}</p> : null}
+            {!isPublic && (quote.company?.phone || quote.company?.email) ? (
               <p className="quote-doc-company-meta">
-                {[quote.company.phone, quote.company.email].filter(Boolean).join(" · ")}
+                {[companyPhone || quote.company?.phone, quote.company?.email].filter(Boolean).join(" · ")}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="quote-doc-header-meta">
-          {showStatus ? <span className="quote-doc-status">{statusLabel}</span> : null}
+          {showStatus && !isPublic ? <span className="quote-doc-status">{statusLabel}</span> : null}
         </div>
       </header>
 
       {actions ? <div className="quote-doc-actions no-print">{actions}</div> : null}
 
+      {isPublic ? (
+        <p className="quote-doc-public-summary" data-testid="quote-public-summary">
+          {summaryLine}
+        </p>
+      ) : null}
+
       <section className="quote-doc-hero">
-        <p className="quote-doc-hero-kicker ltr-meta">{he.quoteDocHeroQuote(quote.number)}</p>
-        {quote.title ? <h1 className="quote-doc-title">{quote.title}</h1> : null}
-        {whoCustomer || whoSite ? (
+        {!isPublic ? <p className="quote-doc-hero-kicker ltr-meta">{he.quoteDocHeroQuote(quote.number)}</p> : null}
+        {quote.title ? (
+          isPublic ? (
+            <h2 className="quote-doc-title">{quote.title}</h2>
+          ) : (
+            <h1 className="quote-doc-title">{quote.title}</h1>
+          )
+        ) : null}
+        {!isPublic && (whoCustomer || whoSite) ? (
           <p className="quote-doc-hero-who">
             {whoCustomer ? <span>{whoCustomer}</span> : null}
             {whoCustomer && whoSite ? <span> · </span> : null}
             {whoSite ? <span>{whoSite}</span> : null}
           </p>
         ) : null}
-        {metaBits.length ? <p className="quote-doc-hero-meta">{metaBits.join(" · ")}</p> : null}
+        {!isPublic && metaBits.length ? <p className="quote-doc-hero-meta">{metaBits.join(" · ")}</p> : null}
         {lead ? <p className="quote-doc-summary">{lead}</p> : null}
       </section>
 
-      <section className="quote-doc-attention">
-        <div className="quote-doc-attention-grid">
-          <MetaLine label={he.quotePublicPhone} value={quote.customer?.phone} />
-          <MetaLine label={he.quotePublicEmail} value={quote.customer?.email} />
-          <MetaLine label={he.quoteProjectAddress} value={siteAddress} />
-          <MetaLine label={he.quoteDocCustomerAddress} value={quote.customer?.address_line} />
-        </div>
-      </section>
+      {isPublic ? (
+        <section className="quote-doc-parties" aria-label={he.quoteDocParties}>
+          <div className="quote-doc-party" data-testid="quote-doc-from">
+            <h2 className="quote-doc-party-title">{he.quoteDocFrom}</h2>
+            <p className="quote-doc-party-name">{brand}</p>
+            <MetaLine label={he.quotePublicPhone} value={companyPhone} />
+            {bnValue ? <MetaLine label={bnLabel} value={bnValue} /> : null}
+            <MetaLine label={he.quotePublicEmail} value={quote.company?.email} />
+          </div>
+          <div className="quote-doc-party" data-testid="quote-doc-to">
+            <h2 className="quote-doc-party-title">{he.quoteDocTo}</h2>
+            <p className="quote-doc-party-name">{whoCustomer || "—"}</p>
+            {whoSite ? <p className="quote-doc-party-site">{whoSite}</p> : null}
+            <MetaLine label={he.quotePublicPhone} value={customerPhone} />
+            <MetaLine label={he.quoteProjectAddress} value={siteAddress} />
+          </div>
+        </section>
+      ) : (
+        <section className="quote-doc-attention">
+          <div className="quote-doc-attention-grid">
+            <MetaLine label={he.quotePublicPhone} value={customerPhone} />
+            <MetaLine label={he.quotePublicEmail} value={quote.customer?.email} />
+            <MetaLine label={he.quoteProjectAddress} value={siteAddress} />
+            <MetaLine label={he.quoteDocCustomerAddress} value={quote.customer?.address_line} />
+          </div>
+        </section>
+      )}
 
       <section className="quote-doc-lines">
         <h2 className="quote-doc-section-heading">{he.quoteDocLinesHeading}</h2>
@@ -213,7 +269,7 @@ export function QuoteDocument({
           <thead>
             <tr>
               <th className="quote-doc-col-num">#</th>
-              <th className="quote-doc-col-sku">{he.quoteProductSku}</th>
+              {showSku ? <th className="quote-doc-col-sku">{he.quoteProductSku}</th> : null}
               <th>{he.quoteItemDescription}</th>
               <th>{he.quoteQty}</th>
               <th>{he.quoteUnitPrice}</th>
@@ -246,6 +302,7 @@ export function QuoteDocument({
                   currency={currency}
                   index={row.index}
                   showDiscount={showLineDiscount}
+                  showSku={showSku}
                 />
               );
             })}
@@ -390,12 +447,10 @@ export function QuoteDocument({
       <footer className="quote-doc-footer">
         <span>
           {brand}
-          {legal && legal !== brand ? ` · ${legal}` : ""} · SITE SECURE
+          {legal && legal !== brand ? ` · ${legal}` : ""}
+          {!isPublic ? ` · ${he.brand}` : ""}
         </span>
-        <span className="ltr-meta">
-          {quote.number}
-          {quote.version ? ` · v${quote.version}` : ""}
-        </span>
+        <span className="ltr-meta">{quote.number}</span>
       </footer>
     </article>
   );
@@ -406,11 +461,13 @@ function LineRow({
   currency,
   index,
   showDiscount,
+  showSku = true,
 }: {
   item: PublicQuote["items"][number];
   currency: string;
   index: number | null;
   showDiscount: boolean;
+  showSku?: boolean;
 }) {
   const isNote = item.item_type === "note";
   const primary = item.description || item.name || (isNote ? he.quoteAddNote : "—");
@@ -418,7 +475,7 @@ function LineRow({
   return (
     <tr className={item.is_optional && !isNote ? "quote-doc-line-row is-optional" : "quote-doc-line-row"}>
       <td className="quote-doc-col-num ltr-meta">{isNote ? "—" : index}</td>
-      <td className="quote-doc-col-sku ltr-meta">{isNote ? "" : sku || "—"}</td>
+      {showSku ? <td className="quote-doc-col-sku ltr-meta">{isNote ? "" : sku || "—"}</td> : null}
       <td>
         <div className="quote-doc-line-desc">
           <span>{primary}</span>

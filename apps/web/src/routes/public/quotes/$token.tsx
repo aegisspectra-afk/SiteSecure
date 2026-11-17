@@ -7,6 +7,7 @@ import { LottieAnimation } from "../../../components/lottie";
 import { QuoteDocument } from "../../../components/quotes/document/QuoteDocument";
 import { SignaturePad } from "../../../components/quotes/SignaturePad";
 import { he } from "../../../i18n/he";
+import { useDocumentMeta } from "../../../lib/document-meta";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
 import { formatDay, formatMoney } from "../../../lib/quotes";
 import { useSession } from "../../../lib/session";
@@ -38,6 +39,15 @@ function CustomerQuoteExperience() {
 
   const quote = query.data;
   const isApproved = quote?.status === "approved";
+  const pageTitle = quote?.title?.trim() || he.quotePublicTitle;
+
+  useDocumentMeta({
+    title: pageTitle,
+    description: quote
+      ? `${he.quoteDocHeroQuote(quote.number)} · ${formatMoney(quote.total_gross, quote.currency || "ILS")}`
+      : he.quotePublicTitle,
+    robots: "noindex, nofollow",
+  });
 
   const approve = useMutation({
     mutationFn: () =>
@@ -91,25 +101,16 @@ function CustomerQuoteExperience() {
   if (query.isLoading) return <LoadingBlock />;
   if (query.isError || !quote) {
     return (
-      <div className="cqx-portal public-root min-h-dvh p-6" dir="rtl">
+      <div className="cqx-portal cqx-document public-root min-h-dvh p-6" dir="rtl">
         <ErrorState title={he.quotePublicError} />
       </div>
     );
   }
 
   const showSuccess = isApproved || step === "done";
-  const brand = quote.company?.brand_name || quote.company?.name || he.brand;
 
   return (
-    <div className="cqx-portal public-root min-h-dvh" dir="rtl">
-      <header className="cqx-topbar">
-        <div>
-          <p className="cqx-brand">{brand}</p>
-          <p className="cqx-kicker">{he.quotePublicTitle}</p>
-        </div>
-        <p className="cqx-number ltr-meta">#{quote.number}</p>
-      </header>
-
+    <div className="cqx-portal cqx-document public-root min-h-dvh" dir="rtl" data-testid="public-quote-page">
       {showSuccess ? (
         <SuccessPanel quote={quote} onDownloadPdf={() => void downloadPdf()} pdfBusy={pdfBusy} />
       ) : (
@@ -124,7 +125,7 @@ function CustomerQuoteExperience() {
             ) : null}
             {actionError ? <p className="cqx-banner is-danger">{actionError}</p> : null}
 
-            <QuoteDocument quote={quote} showStatus={false} hideSignatureBlock />
+            <QuoteDocument quote={quote} showStatus={false} hideSignatureBlock presentation="public" />
 
             {step === "sign" && quote.can_approve ? (
               <section className="cqx-sign-card" id="cqx-sign">
@@ -184,14 +185,14 @@ function CustomerQuoteExperience() {
           </main>
 
           {quote.can_approve && step === "review" ? (
-            <div className="cqx-sticky">
+            <div className="cqx-sticky no-print">
               <div className="cqx-sticky-total">
                 <span>{he.quoteTotalDue}</span>
                 <strong>{formatMoney(quote.total_gross, quote.currency || "ILS")}</strong>
               </div>
               <div className="cqx-sticky-actions">
                 <Button variant="secondary" loading={pdfBusy} onClick={() => void downloadPdf()}>
-                  {he.quoteDocPrintPdf}
+                  {he.quotePublicDownload}
                 </Button>
                 <Button
                   onClick={() => {
@@ -213,9 +214,9 @@ function CustomerQuoteExperience() {
           ) : null}
 
           {!quote.can_approve && !showSuccess ? (
-            <div className="cqx-sticky is-simple">
+            <div className="cqx-sticky is-simple no-print">
               <Button variant="secondary" loading={pdfBusy} onClick={() => void downloadPdf()}>
-                {he.quoteDocPrintPdf}
+                {he.quotePublicDownload}
               </Button>
             </div>
           ) : null}

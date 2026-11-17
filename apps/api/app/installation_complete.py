@@ -203,19 +203,17 @@ def _install_equipment(
             payload = {
                 "workspace_id": workspace_id,
                 "site_id": site_id,
-                "customer_id": customer_id,
                 "project_id": project_id,
                 "project_planned_item_id": entry["planned_item_id"],
                 "category": category,
-                "status": "active",
+                "status": "installed",
                 "name": display_name_for_asset(item, index=existing + i + 1, total=total),
                 "asset_code": code,
-                "sku": item.get("sku"),
                 "manufacturer": item.get("manufacturer"),
                 "model": item.get("model"),
                 "installed_at": today,
             }
-            row = created_or_403(svc.post("equipment", payload), "יצירת ציוד נחסמה")
+            row = created_or_403(svc.post("equipment", payload))
             created_ids.append(str(row["id"]))
     return created_ids
 
@@ -314,7 +312,7 @@ def _create_warranty(
         "title": title,
         "policy": {"source": "installation_complete", "warranty_months": months},
     }
-    row = created_or_403(svc.post("warranties", payload), "יצירת אחריות נחסמה")
+    row = created_or_403(svc.post("warranties", payload))
     return row
 
 
@@ -401,7 +399,7 @@ def _maybe_billing_item(
         "currency": currency,
         "status": "pending",
     }
-    row = created_or_403(svc.post("billing_pending_items", payload), "יצירת פריט חיוב נחסמה")
+    row = created_or_403(svc.post("billing_pending_items", payload))
     return str(row["id"])
 
 
@@ -443,8 +441,7 @@ def mint_handover_link(
                 "expires_at": expires.isoformat(),
                 "created_by": actor,
             },
-        ),
-        "יצירת קישור מסירה נחסמה",
+        )
     )
     return token, str(row["id"]), expires
 
@@ -647,8 +644,7 @@ def complete_installation(
                 "subject": "תעודת מסירה",
                 "body": f"שלום{(' ' + cname) if cname else ''},\nההתקנה הושלמה. תעודת המסירה:\n{handover_url}",
             },
-        ),
-        "יצירת הודעה נחסמה",
+        )
     )
 
     result = {
@@ -699,10 +695,20 @@ def assemble_handover_document(svc: ServiceClient, access: dict) -> dict[str, An
     ws = as_list(
         svc.get(
             "workspaces",
-            params={"id": f"eq.{workspace_id}", "select": "id,name,branding,field_ops", "limit": "1"},
+            params={"id": f"eq.{workspace_id}", "select": "id,name,field_ops", "limit": "1"},
         )
     )
-    branding = (ws[0].get("branding") if ws else None) or {}
+    settings_rows = as_list(
+        svc.get(
+            "workspace_settings",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "branding",
+                "limit": "1",
+            },
+        )
+    )
+    branding = (settings_rows[0].get("branding") if settings_rows else None) or {}
     if not isinstance(branding, dict):
         branding = {}
 
@@ -729,7 +735,7 @@ def assemble_handover_document(svc: ServiceClient, access: dict) -> dict[str, An
                 params={
                     "id": f"eq.{job['site_id']}",
                     "workspace_id": f"eq.{workspace_id}",
-                    "select": "name,address_line,city",
+                    "select": "name,address",
                     "limit": "1",
                 },
             )
@@ -828,8 +834,16 @@ def assemble_handover_document(svc: ServiceClient, access: dict) -> dict[str, An
     na = sum(1 for c in checklist if c.get("not_applicable"))
     total = len(checklist)
 
-    addr_parts = [site.get("address_line"), site.get("city")]
-    site_address = ", ".join(p for p in addr_parts if p)
+    site_address = ""
+    raw_addr = site.get("address")
+    if isinstance(raw_addr, dict):
+        addr_parts = [
+            raw_addr.get("line") or raw_addr.get("street") or raw_addr.get("formatted"),
+            raw_addr.get("city"),
+        ]
+        site_address = ", ".join(str(p).strip() for p in addr_parts if p)
+    elif isinstance(raw_addr, str):
+        site_address = raw_addr.strip()
 
     company = {
         "brand_name": branding.get("display_name") or branding.get("brand_name") or (ws[0].get("name") if ws else None),

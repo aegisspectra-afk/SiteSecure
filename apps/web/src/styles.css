@@ -28613,6 +28613,77 @@ html.dark .ssp-site-tone.is-officer {
     padding-block-start: 2rem;
   }
 }
+.cqx-document .quote-doc-system-summary {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.4rem;
+  background: #f0f4f8;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.cqx-document .quote-doc-system-summary-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--cqx-doc-muted, #5c5c5c);
+  margin-bottom: 0.2rem;
+}
+.cqx-document .quote-doc-line-desc {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.cqx-document .quote-doc-line-thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  border: 1px solid var(--cqx-doc-border, #d8d8d2);
+  flex-shrink: 0;
+}
+.cqx-wa-row {
+  margin: 1rem 0 0;
+  text-align: center;
+}
+.cqx-wa-btn,
+.cqx-wa-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.45rem;
+  background: #128c7e;
+  color: #fff !important;
+  font-weight: 600;
+  text-decoration: none;
+}
+.cqx-wa-link {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+}
+.cqx-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.cqx-reason-chip {
+  border: 1px solid var(--cqx-doc-border, #d8d8d2);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.cqx-reason-chip.is-active {
+  border-color: #1a56a0;
+  background: #e8f0fa;
+  color: #1a56a0;
+  font-weight: 600;
+}
 @media print {
   .cqx-document.cqx-portal {
     background: #fff;

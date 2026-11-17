@@ -233,6 +233,12 @@ export function QuoteDocument({
         ) : null}
         {!isPublic && metaBits.length ? <p className="quote-doc-hero-meta">{metaBits.join(" · ")}</p> : null}
         {lead ? <p className="quote-doc-summary">{lead}</p> : null}
+        {isPublic && quote.system_summary ? (
+          <p className="quote-doc-system-summary" data-testid="quote-system-summary">
+            <span className="quote-doc-system-summary-label">{he.quotePublicSystemSummary}</span>
+            {quote.system_summary}
+          </p>
+        ) : null}
       </section>
 
       {isPublic ? (
@@ -303,6 +309,7 @@ export function QuoteDocument({
                   index={row.index}
                   showDiscount={showLineDiscount}
                   showSku={showSku}
+                  showThumb={isPublic}
                 />
               );
             })}
@@ -456,28 +463,45 @@ export function QuoteDocument({
   );
 }
 
+function lineThumbUrl(item: PublicQuote["items"][number]): string | null {
+  const direct = item.thumbnail_url || item.image_url;
+  if (typeof direct === "string" && direct) return direct;
+  const snap = item.catalog_snapshot;
+  if (snap && typeof snap === "object") {
+    for (const key of ["thumbnail_url", "image_url", "thumbnailUrl", "imageUrl", "photo_url"] as const) {
+      const v = snap[key];
+      if (typeof v === "string" && v) return v;
+    }
+  }
+  return null;
+}
+
 function LineRow({
   item,
   currency,
   index,
   showDiscount,
   showSku = true,
+  showThumb = false,
 }: {
   item: PublicQuote["items"][number];
   currency: string;
   index: number | null;
   showDiscount: boolean;
   showSku?: boolean;
+  showThumb?: boolean;
 }) {
   const isNote = item.item_type === "note";
   const primary = item.description || item.name || (isNote ? he.quoteAddNote : "—");
   const sku = item.sku?.trim() || "";
+  const thumb = showThumb && !isNote ? lineThumbUrl(item) : null;
   return (
     <tr className={item.is_optional && !isNote ? "quote-doc-line-row is-optional" : "quote-doc-line-row"}>
       <td className="quote-doc-col-num ltr-meta">{isNote ? "—" : index}</td>
       {showSku ? <td className="quote-doc-col-sku ltr-meta">{isNote ? "" : sku || "—"}</td> : null}
       <td>
         <div className="quote-doc-line-desc">
+          {thumb ? <img className="quote-doc-line-thumb" src={thumb} alt="" loading="lazy" /> : null}
           <span>{primary}</span>
           {item.is_optional && !isNote ? (
             <span className="quote-doc-optional-badge" data-testid="quote-doc-optional-badge">

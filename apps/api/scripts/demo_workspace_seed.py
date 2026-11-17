@@ -357,7 +357,7 @@ def ensure_demo_branding(workspace_id: str) -> None:
     branding = {
         "displayName": DEMO_NAME,
         "legalName": DEMO_NAME,
-        "phone": "03-5550100",
+        "phone": "052-5550100",
         "email": "office@demo.co.il",
         "businessNumber": "514000001",
         "businessNumberType": "company_number",

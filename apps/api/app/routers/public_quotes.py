@@ -215,6 +215,8 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     public["superseded"] = superseded
     public["can_approve"] = can_decide
     public["can_reject"] = can_decide
+    public["live_version"] = live_version
+    public["access_version"] = access_version
     public["viewed_at"] = quote.get("viewed_at")
     public["approved_at"] = quote.get("approved_at")
     public["rejected_at"] = quote.get("rejected_at")
@@ -224,6 +226,12 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     public["signature_captured"] = bool(captured) or bool(
         quote.get("approved_at") and quote.get("approved_name")
     )
+    from ..public_quote_extras import attach_item_thumbnails, load_cctv_system_summary
+
+    attach_item_thumbnails(public)
+    summary_he = load_cctv_system_summary(svc, quote.get("workspace_id"), quote.get("id"))
+    if summary_he:
+        public["system_summary"] = summary_he
     return public
 
 

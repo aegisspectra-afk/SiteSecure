@@ -660,6 +660,8 @@ export type QuoteItemOut = {
   package_id?: string | null;
   package_name?: string | null;
   is_optional?: boolean;
+  thumbnail_url?: string | null;
+  image_url?: string | null;
 };
 
 export type QuotePatchBody = {
@@ -1648,6 +1650,10 @@ export type PublicQuote = {
   title?: string | null;
   summary?: string | null;
   key_points?: string | null;
+  /** Plain-Hebrew CCTV system line when a design exists (Q6B). */
+  system_summary?: string | null;
+  live_version?: number;
+  access_version?: number;
   project_name?: string | null;
   project_address?: string | null;
   valid_until?: string | null;

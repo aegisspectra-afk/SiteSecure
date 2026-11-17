@@ -10,7 +10,15 @@ import { he } from "../../../i18n/he";
 import { useDocumentMeta } from "../../../lib/document-meta";
 import { downloadAndOpenPdf } from "../../../lib/download-blob";
 import { formatDay, formatMoney } from "../../../lib/quotes";
+import { digitsOnly, toWhatsAppPhone } from "../../../lib/quote-recipient-phone";
 import { useSession } from "../../../lib/session";
+
+function companyWhatsAppHref(quote: PublicQuote, text: string): string | null {
+  const raw = quote.company?.phone || "";
+  const intl = toWhatsAppPhone(digitsOnly(raw));
+  if (!intl) return null;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+}
 
 export const Route = createFileRoute("/public/quotes/$token")({
   component: CustomerQuoteExperience,
@@ -108,6 +116,16 @@ function CustomerQuoteExperience() {
   }
 
   const showSuccess = isApproved || step === "done";
+  const waAskHref = companyWhatsAppHref(
+    quote,
+    `שלום, יש לי שאלה לגבי הצעת מחיר #${quote.number}`,
+  );
+  const waUpdateHref = companyWhatsAppHref(
+    quote,
+    `שלום, אשמח לקבל הצעה מעודכנת עבור #${quote.number}`,
+  );
+  const isExpired = quote.status === "expired";
+  const isSuperseded = Boolean(quote.superseded) || quote.status === "superseded";
 
   return (
     <div className="cqx-portal cqx-document public-root min-h-dvh" dir="rtl" data-testid="public-quote-page">
@@ -116,16 +134,42 @@ function CustomerQuoteExperience() {
       ) : (
         <>
           <main className="cqx-main">
-            {quote.superseded ? <p className="cqx-banner is-danger">{he.quotePublicSuperseded}</p> : null}
+            {isSuperseded ? (
+              <div className="cqx-banner is-danger" data-testid="quote-superseded-banner">
+                <p>{he.quotePublicSuperseded}</p>
+                <p>{he.quotePublicSupersededLead(quote.live_version || quote.version + 1)}</p>
+                {waUpdateHref ? (
+                  <a className="cqx-wa-link" href={waUpdateHref} target="_blank" rel="noopener noreferrer">
+                    {he.quotePublicRequestUpdated}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             {quote.status === "rejected" ? (
               <p className="cqx-banner is-muted">{he.quotePublicRejected}</p>
             ) : null}
-            {quote.status === "expired" ? (
-              <p className="cqx-banner is-muted">{he.quotePublicExpired}</p>
+            {isExpired ? (
+              <div className="cqx-banner is-muted" data-testid="quote-expired-banner">
+                <p>{he.quotePublicExpired}</p>
+                <p>{he.quotePublicExpiredLead}</p>
+                {waUpdateHref ? (
+                  <a className="cqx-wa-link" href={waUpdateHref} target="_blank" rel="noopener noreferrer">
+                    {he.quotePublicRequestUpdated}
+                  </a>
+                ) : null}
+              </div>
             ) : null}
             {actionError ? <p className="cqx-banner is-danger">{actionError}</p> : null}
 
             <QuoteDocument quote={quote} showStatus={false} hideSignatureBlock presentation="public" />
+
+            {waAskHref && !isExpired && !isSuperseded ? (
+              <p className="cqx-wa-row no-print">
+                <a className="cqx-wa-btn" href={waAskHref} target="_blank" rel="noopener noreferrer">
+                  {he.quotePublicWhatsApp}
+                </a>
+              </p>
+            ) : null}
 
             {step === "sign" && quote.can_approve ? (
               <section className="cqx-sign-card" id="cqx-sign">
@@ -166,6 +210,18 @@ function CustomerQuoteExperience() {
             {showReject && quote.can_reject ? (
               <section className="cqx-sign-card">
                 <h2>{he.quotePublicReject}</h2>
+                <div className="cqx-reason-chips" role="group" aria-label={he.quotePublicReason}>
+                  {he.quotePublicRejectReasons.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={reason === label ? "cqx-reason-chip is-active" : "cqx-reason-chip"}
+                      onClick={() => setReason(label === "אחר" ? "" : label)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <Textarea
                   id="cqx-reason"
                   label={he.quotePublicReason}
@@ -215,6 +271,11 @@ function CustomerQuoteExperience() {
 
           {!quote.can_approve && !showSuccess ? (
             <div className="cqx-sticky is-simple no-print">
+              {isExpired && waUpdateHref ? (
+                <a className="cqx-wa-btn" href={waUpdateHref} target="_blank" rel="noopener noreferrer">
+                  {he.quotePublicRequestUpdated}
+                </a>
+              ) : null}
               <Button variant="secondary" loading={pdfBusy} onClick={() => void downloadPdf()}>
                 {he.quotePublicDownload}
               </Button>

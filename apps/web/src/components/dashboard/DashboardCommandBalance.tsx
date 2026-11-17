@@ -1,7 +1,8 @@
 import type { BusinessChart, DashboardSummary } from "@site-secure/api-client";
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
+import { formatDashboardMoney } from "../../lib/quotes";
+import { DashboardMoney } from "./DashboardMoney";
 
 /**
  * A sparkline needs a real series. One positive bucket on a zero baseline
@@ -72,25 +73,23 @@ export function DashboardCommandBalance({
   const openCount = summary.quotes_open ?? 0;
   const approvedValue = summary.quotes_approved_value ?? 0;
   const sparkValues = chart?.revenue?.length ? chart.revenue : null;
+  const openLabel = formatDashboardMoney(openValue);
 
   return (
     <Link
       to="/app/analytics"
       className="ops-command-balance"
-      aria-label={`${he.snapshotOpenValue}: ${formatMoney(openValue)}`}
+      aria-label={`${he.snapshotOpenValue}: ${openLabel.title}`}
     >
       <div className="ops-command-balance-main">
         <p className="ops-command-balance-kicker">{he.snapshotOpenValue}</p>
-        <p className="ops-command-balance-value tabular-nums ltr-meta" dir="ltr">
-          {formatMoney(openValue)}
+        <p className="ops-command-balance-value">
+          <DashboardMoney value={openValue} />
         </p>
         <p className="ops-command-balance-meta">
-          <span>{he.dashBalanceOpenCount(openCount)}</span>
-          <span className="ops-command-balance-meta-sep" aria-hidden>
-            ·
-          </span>
-          <span>
-            {he.snapshotApprovedValue} {formatMoney(approvedValue)}
+          <span className="ops-command-balance-meta-open">{he.dashBalanceOpenCount(openCount)}</span>
+          <span className="ops-command-balance-meta-approved">
+            {he.snapshotApprovedValue} <DashboardMoney value={approvedValue} />
           </span>
         </p>
       </div>

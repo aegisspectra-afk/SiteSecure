@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
+import { DashboardMoney } from "./DashboardMoney";
 
 export function DashboardSignalStrip({
   attentionCount,
@@ -40,8 +40,8 @@ export function DashboardSignalStrip({
           </Link>
           <Link to="/app/quotes" className="ops-signal is-pipeline">
             <span className="ops-signal-label">{he.dashSignalPipeline}</span>
-            <span className="ops-signal-value tabular-nums ltr-meta" dir="ltr">
-              {formatMoney(pipelineValue ?? 0)}
+            <span className="ops-signal-value tabular-nums">
+              <DashboardMoney value={pipelineValue ?? 0} />
             </span>
           </Link>
         </>

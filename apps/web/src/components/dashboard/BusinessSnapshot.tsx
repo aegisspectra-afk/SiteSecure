@@ -1,8 +1,8 @@
 import type { BusinessChart, DashboardSummary } from "@site-secure/api-client";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
 import { quoteConversion } from "../../lib/ux-metrics";
+import { DashboardMoney } from "./DashboardMoney";
 
 const STATUS_KEYS = ["draft", "sent", "viewed", "approved", "rejected"] as const;
 
@@ -127,13 +127,13 @@ export function BusinessSnapshot({
         <div className="ops-metric-tile">
           <dt className="text-xs text-fg-muted">{he.snapshotOpenValue}</dt>
           <dd className="mt-1 text-lg font-semibold tracking-tight text-fg tabular-nums">
-            {formatMoney(summary.quotes_open_value ?? 0)}
+            <DashboardMoney value={summary.quotes_open_value ?? 0} />
           </dd>
         </div>
         <div className="ops-metric-tile">
           <dt className="text-xs text-fg-muted">{he.snapshotApprovedValue}</dt>
           <dd className="mt-1 text-lg font-semibold tracking-tight text-fg tabular-nums">
-            {formatMoney(summary.quotes_approved_value ?? 0)}
+            <DashboardMoney value={summary.quotes_approved_value ?? 0} />
           </dd>
         </div>
         <div className="ops-metric-tile">

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { he } from "../../i18n/he";
 import { dayGreeting } from "../../lib/greeting";
-import { formatMoney } from "../../lib/quotes";
+import { formatDashboardMoney } from "../../lib/quotes";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
 
 function formatOpsDateHeader(now = new Date()): string {
@@ -64,7 +64,7 @@ export function OpsDashHero({
               </li>
               <li>
                 <Link to="/app/quotes" className="ops-cmd-chip is-pipeline">
-                  {he.commandHeaderPipeline(formatMoney(pipelineValue ?? 0))}
+                  {he.commandHeaderPipeline(formatDashboardMoney(pipelineValue ?? 0).text)}
                 </Link>
               </li>
             </>

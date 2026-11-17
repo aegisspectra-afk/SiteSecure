@@ -1,7 +1,7 @@
 import type { DashboardSummary } from "@site-secure/api-client";
 import { Clock, FileText, type LucideIcon } from "lucide-react";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
+import { formatDashboardMoney } from "../../lib/quotes";
 
 type KpiCard = {
   label: string;
@@ -18,7 +18,7 @@ export function DashboardKpiRow({
   summary: DashboardSummary;
   showOpenQuotes?: boolean;
 }) {
-  const openValue = formatMoney(summary.quotes_open_value ?? 0);
+  const openValue = formatDashboardMoney(summary.quotes_open_value ?? 0).text;
   const cards: KpiCard[] = [];
 
   if (showOpenQuotes && summary.quotes_open > 0) {

@@ -154,7 +154,7 @@ describe("dashboard premium command center", () => {
     const balance = document.querySelector(".ops-command-balance");
     expect(balance).toBeTruthy();
     expect(document.querySelector(".ops-command-hero.has-balance")).toBeTruthy();
-    expect(document.querySelector(".ops-command-balance-value.ltr-meta")).toBeTruthy();
+    expect(document.querySelector(".ops-command-balance-value .ss-dashboard-money")).toBeTruthy();
     expect(balance?.getAttribute("href")).toContain("/app/analytics");
     // Greeting + signals share one lead cell so signals never sit in the balance column.
     const lead = document.querySelector(".ops-command-hero-lead");

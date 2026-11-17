@@ -79,6 +79,25 @@ describe("hero sparkline", () => {
     expect(container.querySelector(".ops-command-balance-spark")).toBeNull();
     expect(screen.getByText(/4,?800|4800/)).toBeTruthy();
   });
+
+  it("compacts a 9,999,999 pipeline amount with full tooltip and no orphan sep", () => {
+    const { container } = render(
+      <DashboardCommandBalance
+        summary={{
+          ...summary,
+          quotes_open: 11,
+          quotes_open_value: 9_999_999,
+          quotes_approved_value: 250_000,
+        }}
+      />,
+    );
+    const money = container.querySelector(".ops-command-balance-value .ss-dashboard-money");
+    expect(money?.textContent).toMatch(/מיליון/);
+    expect(money?.getAttribute("title")).toMatch(/9,999,999/);
+    expect(container.querySelector(".ops-command-balance-meta-sep")).toBeNull();
+    expect(container.textContent).toMatch(/11 הצעות פתוחות/);
+    expect(container.textContent).not.toMatch(/·/);
+  });
 });
 
 describe("recent quotes long titles", () => {

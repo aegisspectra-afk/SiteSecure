@@ -28,6 +28,7 @@ import {
   type QuoteTab,
 } from "../../lib/quote-workspace";
 import { formatMoney, formatRelativeDay, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
+import { DashboardMoney } from "../dashboard/DashboardMoney";
 
 const TABS: { id: QuoteTab; label: string }[] = [
   { id: "all", label: he.quotesTabAll },
@@ -357,11 +358,11 @@ function QuotesKpiStrip({
 }) {
   return (
     <section className="ops-card px-5 py-4" aria-label={he.quotesTitle}>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+      <dl className="quotes-kpi-metrics">
         <Kpi label={he.quotesKpiDraft} value={String(draft)} />
         <Kpi label={he.quotesKpiAwaiting} value={String(awaiting)} />
         <Kpi label={he.quotesKpiApproved} value={String(approved)} />
-        <Kpi label={he.quotesKpiOpenValue} value={formatMoney(openValue)} />
+        <Kpi label={he.quotesKpiOpenValue} value={openValue} money />
       </dl>
       {conversion.percent != null ? (
         <p className="mt-3 text-sm text-fg-muted">
@@ -380,11 +381,13 @@ function QuotesKpiStrip({
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, money = false }: { label: string; value: string | number; money?: boolean }) {
   return (
-    <div>
-      <dt className="text-xs text-fg-muted">{label}</dt>
-      <dd className="mt-0.5 text-lg font-semibold tracking-tight text-fg">{value}</dd>
+    <div className="quotes-kpi-card min-w-0">
+      <dt className="text-xs text-fg-muted whitespace-nowrap">{label}</dt>
+      <dd className="mt-0.5 text-lg font-semibold tracking-tight text-fg min-w-0">
+        {money && typeof value === "number" ? <DashboardMoney value={value} /> : value}
+      </dd>
     </div>
   );
 }

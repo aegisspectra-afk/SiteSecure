@@ -5,6 +5,7 @@ import { formatMoney, quoteStatusLabel } from "../../lib/quotes";
 import { relativeAgeLabel } from "../../lib/relative-age";
 import { quoteConversion } from "../../lib/ux-metrics";
 import { CommercialPulseChart } from "./CommercialPulseChart";
+import { DashboardMoney } from "./DashboardMoney";
 
 function attentionCount(groups: AttentionGroup[], kind: string): number {
   const group = groups.find((g) => g.kind === kind);
@@ -58,7 +59,9 @@ export function AnalyticsWorkspace({
         <dl className="ss-analytics-snapshot">
           <div className="ss-analytics-metric">
             <dt>{he.snapshotOpenValue}</dt>
-            <dd className="tabular-nums">{formatMoney(summary.quotes_open_value ?? 0)}</dd>
+            <dd className="tabular-nums">
+              <DashboardMoney value={summary.quotes_open_value ?? 0} />
+            </dd>
           </div>
           <div className="ss-analytics-metric">
             <dt>{he.kpiQuotesOpen}</dt>
@@ -66,7 +69,9 @@ export function AnalyticsWorkspace({
           </div>
           <div className="ss-analytics-metric">
             <dt>{he.snapshotApprovedValue}</dt>
-            <dd className="tabular-nums">{formatMoney(summary.quotes_approved_value ?? 0)}</dd>
+            <dd className="tabular-nums">
+              <DashboardMoney value={summary.quotes_approved_value ?? 0} />
+            </dd>
           </div>
           <div className="ss-analytics-metric">
             <dt>{he.kpiConversionLabel}</dt>

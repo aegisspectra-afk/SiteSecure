@@ -8,7 +8,7 @@ import { QuotesWorkspace } from "../src/components/quotes/QuotesWorkspace";
 import { QuoteCustomerView } from "../src/components/quotes/QuoteCustomerView";
 import { SendQuoteConfirm } from "../src/components/quotes/SendQuoteConfirm";
 import { he } from "../src/i18n/he";
-import { formatMoney } from "../src/lib/quotes";
+import { formatDashboardMoney, formatMoney } from "../src/lib/quotes";
 import {
   filterQuotes,
   listQuotesFilter,
@@ -409,6 +409,26 @@ describe("quote workspace helpers", () => {
 describe("quote money helper used in KPIs", () => {
   it("formats open value in ILS", () => {
     expect(formatMoney(48250)).toMatch(/48,250/);
+  });
+});
+
+describe("dashboard money helper", () => {
+  it("formats whole shekels with he-IL currency", () => {
+    const parts = formatDashboardMoney(48250);
+    expect(parts.text).toMatch(/48,250/);
+    expect(parts.compact).toBe(false);
+  });
+
+  it("abbreviates above 100,000 and keeps full amount in title", () => {
+    const mid = formatDashboardMoney(250_000);
+    expect(mid.compact).toBe(true);
+    expect(mid.text).toMatch(/אלף/);
+    expect(mid.title).toMatch(/250,000/);
+
+    const big = formatDashboardMoney(9_999_999);
+    expect(big.compact).toBe(true);
+    expect(big.text).toMatch(/מיליון/);
+    expect(big.title).toMatch(/9,999,999/);
   });
 });
 

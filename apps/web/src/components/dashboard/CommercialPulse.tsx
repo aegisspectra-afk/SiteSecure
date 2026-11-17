@@ -1,8 +1,8 @@
 import type { BusinessChart, DashboardSummary } from "@site-secure/api-client";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
 import { quoteConversion } from "../../lib/ux-metrics";
 import { CommercialPulseChart } from "./CommercialPulseChart";
+import { DashboardMoney } from "./DashboardMoney";
 
 export function CommercialPulse({
   summary,
@@ -31,7 +31,9 @@ export function CommercialPulse({
       <dl className="ops-commercial-strip">
         <div className="ops-commercial-strip-item">
           <dt>{he.snapshotOpenValue}</dt>
-          <dd className="tabular-nums">{formatMoney(summary.quotes_open_value ?? 0)}</dd>
+          <dd className="tabular-nums">
+            <DashboardMoney value={summary.quotes_open_value ?? 0} />
+          </dd>
         </div>
         <div className="ops-commercial-strip-item">
           <dt>{he.kpiQuotesOpen}</dt>
@@ -39,7 +41,9 @@ export function CommercialPulse({
         </div>
         <div className="ops-commercial-strip-item">
           <dt>{he.snapshotApprovedValue}</dt>
-          <dd className="tabular-nums">{formatMoney(summary.quotes_approved_value ?? 0)}</dd>
+          <dd className="tabular-nums">
+            <DashboardMoney value={summary.quotes_approved_value ?? 0} />
+          </dd>
         </div>
         <div className="ops-commercial-strip-item">
           <dt>{he.kpiConversionLabel}</dt>

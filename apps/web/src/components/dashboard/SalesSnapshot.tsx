@@ -1,6 +1,6 @@
 import type { DashboardSummary, RecentQuote } from "@site-secure/api-client";
 import { he } from "../../i18n/he";
-import { formatMoney } from "../../lib/quotes";
+import { formatDashboardMoney } from "../../lib/quotes";
 import { hasQuoteRecords, quoteConversion, quotesInPlay } from "../../lib/ux-metrics";
 import { NewQuoteButton } from "../quotes/NewQuoteButton";
 import { RecentQuotes } from "./RecentQuotes";
@@ -47,7 +47,7 @@ export function SalesSnapshot({
         ) : null}
       </dl>
       {hasQuotes && openValue != null ? (
-        <p className="mt-3 text-sm text-fg">{he.salesOpenValueLine(formatMoney(openValue))}</p>
+        <p className="mt-3 text-sm text-fg">{he.salesOpenValueLine(formatDashboardMoney(openValue).text)}</p>
       ) : null}
       {hasQuotes ? (
         <div className="mt-5 border-t border-border pt-4">

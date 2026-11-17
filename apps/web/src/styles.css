@@ -7717,6 +7717,8 @@ html.theme-revealing::view-transition-new(root) {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow-x: clip;
+  max-width: 100vw;
 }
 
 .quote-flow-backdrop {
@@ -12093,6 +12095,10 @@ html.theme-revealing::view-transition-new(root) {
 }
 
 .cpq-cctv-designer-pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 0.35rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-action);
@@ -12401,6 +12407,7 @@ html.theme-revealing::view-transition-new(root) {
 
 .cpq-cctv-picker-item {
   width: 100%;
+  min-height: 44px;
   text-align: start;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control, 6px);
@@ -12510,6 +12517,17 @@ html.theme-revealing::view-transition-new(root) {
   min-width: 0;
   max-width: 100%;
   overflow-x: clip;
+}
+
+/* Tablet + phone: never let the wizard widen the page. */
+@media (max-width: 768px) {
+  .cpq-cctv-designer-shell,
+  .cpq-cctv-designer-shell-body,
+  .cpq-cctv-ws-header-row {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
 }
 
 .cpq-cctv-designer-shell > .cpq-cctv-ws-header {
@@ -12813,14 +12831,14 @@ html.theme-revealing::view-transition-new(root) {
 
 .cpq-cctv-ws-header-row .cpq-cctv-ws-seg {
   flex: 1 1 auto;
-  min-height: 36px;
+  min-height: 44px;
   min-width: 4.5rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.45rem 0.7rem;
   font-size: 0.78rem;
 }
 
 .cpq-cctv-ws-header .cpq-cctv-ws-calc-state {
-  min-height: 36px;
+  min-height: 44px;
   flex-shrink: 0;
 }
 
@@ -28666,4 +28684,102 @@ html.dark .ssp-site-tone.is-officer {
   gap: 0.35rem;
   margin-top: 0.4rem;
   margin-inline-start: 2rem;
+}
+
+/* Public platform credit + handover certificate */
+.public-platform-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  text-align: center;
+}
+
+.public-platform-footer-link {
+  font-size: 0.6875rem;
+  color: var(--color-fg-muted);
+  text-decoration: none;
+}
+
+.public-platform-footer-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.handover-doc {
+  --handover-accent: var(--color-action);
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
+  color: var(--color-fg);
+}
+
+.handover-doc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.handover-doc-logo {
+  width: 3.25rem;
+  height: 3.25rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.handover-doc-brand {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--handover-accent);
+}
+
+.handover-doc-kicker {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+}
+
+.handover-doc-phone {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.handover-doc-meta {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0 0 1.25rem;
+}
+
+.handover-doc-meta dt {
+  font-size: 0.6875rem;
+  color: var(--color-fg-muted);
+}
+
+.handover-doc-meta dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 550;
+}
+
+.handover-doc-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.handover-doc-equipment ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.handover-doc-equipment li {
+  font-size: 0.875rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-bg-0, var(--color-bg)) 55%, transparent);
 }

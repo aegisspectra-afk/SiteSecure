@@ -137,8 +137,13 @@ class ChecklistItemCreate(BaseModel):
 
 
 class ChecklistItemPatch(BaseModel):
+    """DEMO-4.3: any of done / not applicable / notes / photo (who and when are set by the DB)."""
+
     model_config = ConfigDict(extra="forbid")
-    completed: bool
+    completed: bool | None = None
+    not_applicable: bool | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+    photo_document_id: str | None = None
 
 
 class JobAssigneeOut(BaseModel):
@@ -381,6 +386,112 @@ INSTALLATION_CHECKLIST = (
     "חתימה",
 )
 
+CCTV_TEMPLATE_KEY = "cctv_installation_v1"
+
+# DEMO-4.3: CCTV installation checklist. Copied into job_checklist_items when an installation
+# job comes from a CCTV quote. required = must be done (or N/A where allowed) before the job
+# is completed; photo_required = a photo of this job must be attached to complete the item.
+CCTV_INSTALLATION_TEMPLATE: tuple[dict[str, Any], ...] = (
+    {"key": "site_walkthrough", "label_he": "סיור באתר ואישור נקודות ההתקנה עם הלקוח",
+     "help_he": "מיקום כל מצלמה, המקליט ונתיבי הכבילה מאושרים לפני קידוח.",
+     "required": True, "photo_required": False, "allow_na": False},
+    {"key": "cabling", "label_he": "פריסת כבילה ותשתית",
+     "help_he": "צלמו את התוואי לפני סגירת תעלות / תקרה.",
+     "required": True, "photo_required": True, "allow_na": False},
+    {"key": "cameras_mounted", "label_he": "התקנת המצלמות במיקום הסופי",
+     "help_he": "צילום אחד לפחות של מצלמה מותקנת.",
+     "required": True, "photo_required": True, "allow_na": False},
+    {"key": "recorder_installed", "label_he": "התקנת המקליט והכונן",
+     "help_he": "צלמו את המקליט במקומו, כולל חיבורים.",
+     "required": True, "photo_required": True, "allow_na": False},
+    {"key": "poe_switch", "label_he": "חיבור מתג PoE ובדיקת הספק",
+     "help_he": "לא רלוונטי כשהמקליט מזין את המצלמות ישירות.",
+     "required": True, "photo_required": False, "allow_na": True},
+    {"key": "power_ups", "label_he": "חיבור חשמל / UPS",
+     "help_he": "לא רלוונטי כשאין UPS בהצעה.",
+     "required": True, "photo_required": False, "allow_na": True},
+    {"key": "recording_check", "label_he": "בדיקת הקלטה בכל הערוצים",
+     "help_he": "וידוא שכל מצלמה מקליטה ושמירת הימים מוגדרת.",
+     "required": True, "photo_required": False, "allow_na": False},
+    {"key": "image_quality", "label_he": "בדיקת זווית ואיכות תמונה (יום / לילה)",
+     "help_he": "צילום מסך של תצוגת כל המצלמות.",
+     "required": True, "photo_required": True, "allow_na": False},
+    {"key": "remote_view", "label_he": "הגדרת צפייה מרחוק אצל הלקוח",
+     "help_he": "לא רלוונטי כשהלקוח לא ביקש גישה מרחוק.",
+     "required": True, "photo_required": False, "allow_na": True},
+    {"key": "labeling", "label_he": "סימון כבלים וציוד",
+     "help_he": None, "required": False, "photo_required": False, "allow_na": True},
+    {"key": "customer_training", "label_he": "הדרכת לקוח ומסירת סיסמאות",
+     "help_he": "שינוי סיסמת ברירת המחדל ומסירתה ללקוח בלבד.",
+     "required": True, "photo_required": False, "allow_na": False},
+    {"key": "cleanup", "label_he": "ניקיון האתר בסיום",
+     "help_he": None, "required": True, "photo_required": False, "allow_na": False},
+)
+
+
+def _is_cctv_project(client: UserClient, workspace_id: UUID, project_id: str | None) -> bool:
+    """A project whose source quote has CCTV lines (wizard package) or a CCTV system design."""
+    if not project_id:
+        return False
+    rows = as_list(
+        client.get(
+            "projects",
+            params={"id": f"eq.{project_id}", "workspace_id": f"eq.{workspace_id}", "select": "source_quote_id"},
+        )
+    )
+    quote_id = rows[0].get("source_quote_id") if rows else None
+    if not quote_id:
+        return False
+    lines = as_list(
+        client.get(
+            "quote_items",
+            params={
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "package_name": "like.cctv-*",
+                "select": "id",
+                "limit": "1",
+            },
+        )
+    )
+    if lines:
+        return True
+    try:
+        designs = as_list(
+            client.get(
+                "system_designs",
+                params={"quote_id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": "id", "limit": "1"},
+            )
+        )
+    except Exception:
+        designs = []
+    return bool(designs)
+
+
+def _checklist_rows(workspace_id: UUID, job_id: str, kind: str, cctv: bool) -> list[dict[str, Any]]:
+    if kind == "installation" and cctv:
+        return [
+            {
+                "workspace_id": str(workspace_id),
+                "job_id": job_id,
+                "label_he": item["label_he"],
+                "help_he": item["help_he"],
+                "required": item["required"],
+                "photo_required": item["photo_required"],
+                "allow_na": item["allow_na"],
+                "item_key": item["key"],
+                "template_key": CCTV_TEMPLATE_KEY,
+                "sort_order": index,
+            }
+            for index, item in enumerate(CCTV_INSTALLATION_TEMPLATE)
+        ]
+    labels = INSTALLATION_CHECKLIST if kind == "installation" else SERVICE_CHECKLIST if kind == "service" else ()
+    return [
+        {"workspace_id": str(workspace_id), "job_id": job_id, "label_he": label, "required": True, "sort_order": index}
+        for index, label in enumerate(labels)
+    ]
+
+
 SERVICE_CHECKLIST = (
     "אבחון תקלה",
     "תיקון / טיפול",
@@ -436,21 +547,13 @@ def create_job(
         if earlier:
             return _out(client, workspace_id, earlier)
     row = created_or_403(res)
-    checklist = INSTALLATION_CHECKLIST if body.kind == "installation" else SERVICE_CHECKLIST if body.kind == "service" else ()
-    for index, label in enumerate(checklist):
+    cctv = body.kind == "installation" and _is_cctv_project(client, workspace_id, body.project_id)
+    checklist_rows = _checklist_rows(workspace_id, str(row["id"]), body.kind, cctv)
+    if checklist_rows:
         try:
-            client.post(
-                "job_checklist_items",
-                {
-                    "workspace_id": str(workspace_id),
-                    "job_id": row["id"],
-                    "label_he": label,
-                    "required": True,
-                    "sort_order": index,
-                },
-            )
+            client.post("job_checklist_items", checklist_rows)
         except Exception:
-            break
+            pass
     actor = actor_id(user)
     write_audit(
         client,
@@ -850,6 +953,26 @@ def sign_job(
     }
 
 
+CHECKLIST_SELECT = (
+    "id,label_he,help_he,required,photo_required,allow_na,item_key,template_key,completed,"
+    "not_applicable,notes,photo_document_id,completed_at,completed_by,sort_order"
+)
+
+
+def _with_marker_names(client: UserClient, rows: list[dict]) -> list[dict]:
+    """Who marked each item: profile name, else email (visible to the workspace's members)."""
+    ids = sorted({str(r.get("completed_by")) for r in rows if r.get("completed_by")})
+    names: dict[str, str] = {}
+    if ids:
+        for prof in as_list(client.get("profiles", params={"id": f"in.({','.join(ids)})", "select": "id,full_name,email"})):
+            label = (prof.get("full_name") or "").strip() or (prof.get("email") or "").strip()
+            if label:
+                names[str(prof["id"])] = label
+    for r in rows:
+        r["completed_by_name"] = names.get(str(r.get("completed_by"))) if r.get("completed_by") else None
+    return rows
+
+
 @router.get("/jobs/{job_id}/checklist")
 def list_checklist(
     workspace_id: UUID,
@@ -860,17 +983,17 @@ def list_checklist(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.view", resource=_ref(existing))
-    return as_list(
+    return _with_marker_names(client, as_list(
         client.get(
             "job_checklist_items",
             params={
                 "job_id": f"eq.{job_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,label_he,required,completed,completed_at,completed_by,sort_order",
+                "select": CHECKLIST_SELECT,
                 "order": "sort_order.asc",
             },
         )
-    )
+    ))
 
 
 @router.post("/jobs/{job_id}/checklist")
@@ -909,17 +1032,51 @@ def patch_checklist_item(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.start", resource=_ref(existing))
-    patch: dict = {"completed": body.completed}
-    if body.completed:
-        patch["completed_at"] = datetime.now(UTC).isoformat()
-        patch["completed_by"] = actor_id(user)
-    else:
-        patch["completed_at"] = None
-        patch["completed_by"] = None
-    return patched_or_403(
+    if existing.get("status") in {"completed", "cancelled"}:
+        raise ApiError(409, "BUSINESS_RULE", "העבודה סגורה: הצ'קליסט נעול")
+    item = one_or_404(
+        client.get(
+            "job_checklist_items",
+            params={"id": f"eq.{item_id}", "job_id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}",
+                    "select": CHECKLIST_SELECT},
+        )
+    )
+    patch = body.model_dump(exclude_unset=True)
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", "אין מה לעדכן")
+    if patch.get("completed"):
+        patch["not_applicable"] = False
+    if patch.get("not_applicable"):
+        if not item.get("allow_na"):
+            raise ApiError(400, "VALIDATION_ERROR", "הסעיף הזה חייב להתבצע: אי אפשר לסמן 'לא רלוונטי'")
+        patch["completed"] = False
+    if "notes" in patch and patch["notes"] is not None:
+        patch["notes"] = patch["notes"].strip() or None
+    photo = patch.get("photo_document_id", item.get("photo_document_id"))
+    if patch.get("photo_document_id"):
+        docs = as_list(
+            client.get(
+                "documents",
+                params={
+                    "id": f"eq.{patch['photo_document_id']}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "entity_type": "eq.job",
+                    "entity_id": f"eq.{job_id}",
+                    "select": "id",
+                },
+            )
+        )
+        if not docs:
+            raise ApiError(400, "VALIDATION_ERROR", "התמונה לא שייכת לעבודה הזו")
+    completing = patch.get("completed", item.get("completed"))
+    if completing and item.get("photo_required") and not photo:
+        raise ApiError(400, "VALIDATION_ERROR", "יש לצרף תמונה לסעיף הזה לפני סימון")
+    # who marked and when are set by the database trigger from the signed-in user.
+    row = patched_or_403(
         client.patch(
             "job_checklist_items",
             patch,
             params={"id": f"eq.{item_id}", "job_id": f"eq.{job_id}", "workspace_id": f"eq.{workspace_id}"},
         )
     )
+    return _with_marker_names(client, [row])[0]

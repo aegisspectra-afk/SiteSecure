@@ -2008,6 +2008,17 @@ export type JobChecklistItem = {
   completed?: boolean;
   completed_at?: string | null;
   sort_order?: number;
+  /** DEMO-4.3: template fields and per-item evidence. */
+  help_he?: string | null;
+  photo_required?: boolean;
+  allow_na?: boolean;
+  not_applicable?: boolean;
+  notes?: string | null;
+  photo_document_id?: string | null;
+  item_key?: string | null;
+  template_key?: string | null;
+  completed_by?: string | null;
+  completed_by_name?: string | null;
 };
 
 export type SystemOut = {
@@ -3344,7 +3355,7 @@ export function createApiClient(opts: {
       workspaceId: string,
       jobId: string,
       itemId: string,
-      body: { completed: boolean },
+      body: { completed?: boolean; not_applicable?: boolean; notes?: string | null; photo_document_id?: string | null },
     ) =>
       request<JobChecklistItem>(`/api/v1/workspaces/${workspaceId}/jobs/${jobId}/checklist/${itemId}`, {
         method: "PATCH",

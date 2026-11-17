@@ -28610,3 +28610,43 @@ html.dark .ssp-site-tone.is-officer {
     padding-bottom: calc(var(--ops-bottom-nav-offset, 5.5rem) + 6.5rem);
   }
 }
+
+/* DEMO-4.3 - checklist rows with evidence (photo, notes, N/A, who marked). */
+.field-check-item {
+  padding-block: 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+.field-check-item:last-child {
+  border-bottom: 0;
+}
+.field-check-item .field-check-row {
+  align-items: flex-start;
+}
+.checklist-badge {
+  display: inline-block;
+  margin-inline-start: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.4rem;
+  background: color-mix(in srgb, var(--color-action) 12%, transparent);
+  color: var(--color-fg);
+  vertical-align: middle;
+}
+.checklist-badge.is-muted {
+  background: var(--color-bg-subtle);
+  color: var(--color-fg-muted);
+}
+.checklist-help {
+  margin-top: 0.25rem;
+  margin-inline-start: 2rem;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+.checklist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  margin-inline-start: 2rem;
+}

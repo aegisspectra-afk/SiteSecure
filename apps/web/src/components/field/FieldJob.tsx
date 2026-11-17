@@ -28,6 +28,8 @@ import { FieldActionSheet } from "./FieldActionSheet";
 import { JobAssignForm } from "../jobs/JobAssignForm";
 import { formatScheduleHe } from "../../lib/job-schedule";
 import { JobSignatureSection } from "../jobs/JobSignatureSection";
+import { JobChecklist } from "../jobs/JobChecklist";
+import { uploadJobFile } from "../../lib/job-upload";
 
 function jobStatusLabel(status: string): string {
   return he.jobStatuses[status as keyof typeof he.jobStatuses] ?? status;
@@ -164,36 +166,23 @@ export function FieldJob({ jobId }: { jobId: string }) {
     onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
   });
 
-  const toggleItem = useMutation({
-    mutationFn: (input: { itemId: string; completed: boolean }) =>
-      api.patchJobChecklistItem(workspaceId!, jobId, input.itemId, { completed: input.completed }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["job-checklist", workspaceId, jobId] });
-    },
-    onError: (err) => setError(err instanceof ApiClientError ? err.message : he.jobLoadError),
-  });
+  // DEMO-4.3: one item update (done / N/A / notes / photo); errors show on the row.
+  const patchItem = async (
+    itemId: string,
+    body: { completed?: boolean; not_applicable?: boolean; notes?: string | null; photo_document_id?: string | null },
+  ) => {
+    await api.patchJobChecklistItem(workspaceId!, jobId, itemId, body);
+    await queryClient.invalidateQueries({ queryKey: ["job-checklist", workspaceId, jobId] });
+  };
+  const uploadItemPhoto = async (file: File) => {
+    const documentId = await uploadJobFile(api, workspaceId!, jobId, file);
+    void queryClient.invalidateQueries({ queryKey: ["job-docs", workspaceId, jobId] });
+    return documentId;
+  };
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const isPhoto = (file.type || "").startsWith("image/");
-      const intent = await api.createDocumentUpload(workspaceId!, {
-        entity_type: "job",
-        entity_id: jobId,
-        kind: isPhoto ? "photo" : "document",
-        mime_type: file.type || undefined,
-        original_filename: file.name,
-        byte_size: Math.max(file.size, 1),
-      });
-      const put = await fetch(intent.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!put.ok) throw new Error(he.sitesError);
-      await api.completeDocumentUpload(workspaceId!, intent.document_id, {
-        byte_size: file.size,
-        mime_type: file.type || undefined,
-      });
+      await uploadJobFile(api, workspaceId!, jobId, file);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["job-docs", workspaceId, jobId] });
@@ -211,7 +200,6 @@ export function FieldJob({ jobId }: { jobId: string }) {
 
   const job = jobQuery.data;
   const items = checklistQuery.data ?? [];
-  const done = items.filter((item) => item.completed).length;
   const equipment = equipmentQuery.data?.items ?? [];
   const photos = docsQuery.data?.items ?? [];
   // DEMO-3.1: date and time window, e.g. "ה׳ 20.11 · 08:00–10:00".
@@ -457,12 +445,14 @@ export function FieldJob({ jobId }: { jobId: string }) {
             </section>
           ) : null}
 
-          <ChecklistSection
+          <JobChecklist
+            api={api}
+            workspaceId={workspaceId!}
             items={items}
-            done={done}
-            locked={jobDone || !online}
-            pending={toggleItem.isPending}
-            onToggle={(itemId, completed) => toggleItem.mutate({ itemId, completed })}
+            locked={jobDone || !canStart}
+            online={online}
+            onPatch={patchItem}
+            onUploadPhoto={uploadItemPhoto}
           />
 
           <EquipmentSection items={equipment} loading={equipmentQuery.isLoading} />
@@ -594,55 +584,6 @@ export function FieldJob({ jobId }: { jobId: string }) {
         </ul>
       </FieldActionSheet>
     </div>
-  );
-}
-
-function ChecklistSection({
-  items,
-  done,
-  locked,
-  pending,
-  onToggle,
-}: {
-  items: JobChecklistItem[];
-  done: number;
-  locked: boolean;
-  pending: boolean;
-  onToggle: (itemId: string, completed: boolean) => void;
-}) {
-  return (
-    <section className="field-section" aria-labelledby="field-checklist">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.fieldDoKicker}</p>
-          <h2 id="field-checklist" className="mt-1 text-base font-semibold text-fg">
-            {he.installationChecklist}
-          </h2>
-        </div>
-        {items.length ? (
-          <p className="public-mono text-xs text-fg-muted" dir="ltr">
-            {done}/{items.length}
-          </p>
-        ) : null}
-      </div>
-      <ul className="field-row-list mt-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <label className="field-check-row">
-              <input
-                type="checkbox"
-                className="size-5 shrink-0"
-                checked={Boolean(item.completed)}
-                disabled={pending || locked}
-                onChange={(event) => onToggle(item.id, event.target.checked)}
-              />
-              <span className={item.completed ? "text-fg-muted line-through" : "text-fg"}>{item.label_he}</span>
-            </label>
-          </li>
-        ))}
-        {!items.length ? <li className="field-row-empty">{he.installationChecklistEmpty}</li> : null}
-      </ul>
-    </section>
   );
 }
 

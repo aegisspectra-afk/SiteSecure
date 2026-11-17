@@ -8,7 +8,8 @@ QUOTE_EDITABLE = frozenset({"draft"})
 QUOTE_SENDABLE = frozenset({"draft"})
 # Approved quotes are final: a change after approval is a new quote, not a revision.
 QUOTE_REVISABLE = frozenset({"sent", "viewed", "rejected", "expired"})
-QUOTE_DELETABLE = frozenset({"draft", "sent", "viewed", "rejected", "expired", "cancelled"})
+# Q4: only drafts may be deleted; sent/viewed/approved/rejected/expired must be archived.
+QUOTE_DELETABLE = frozenset({"draft"})
 
 
 def _deny(code: str, **details: object) -> Decision:

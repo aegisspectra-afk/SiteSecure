@@ -280,6 +280,15 @@ def test_quote_approved_cannot_be_deleted():
     )
     assert d.allowed is False
     assert d.code == "RESOURCE_STATE"
+    # Q4: sent/viewed also blocked — archive instead.
+    for state in ("sent", "viewed", "rejected", "expired", "cancelled"):
+        denied = authorize(
+            ctx=_ctx("owner"),
+            action="quotes.delete",
+            resource=ResourceRef(type="quote", id="q1", owner_user_id="user-1", state=state),
+        )
+        assert denied.allowed is False, state
+        assert denied.code == "RESOURCE_STATE", state
     d = authorize(
         ctx=_ctx("owner"),
         action="quotes.delete",

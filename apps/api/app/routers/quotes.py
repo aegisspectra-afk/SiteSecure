@@ -35,6 +35,7 @@ from ..csv_export import (
     build_csv,
     csv_response,
 )
+from ..quote_visibility import VisibilityMode, quote_visibility_filters
 from ..search_query import sanitize_search_q
 from ..supabase_service import ServiceClient
 
@@ -51,6 +52,7 @@ QUOTE_SELECT = (
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
     "approved_at,rejected_at,approved_name,rejection_reason,"
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "archived_at,archived_by,deleted_at,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
 # Authenticated RETURNING/select must omit cost columns (Q4-S column lockdown).
@@ -62,12 +64,13 @@ QUOTE_SELECT_SAFE = (
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
     "approved_at,rejected_at,approved_name,rejection_reason,"
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "archived_at,archived_by,deleted_at,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
 QUOTE_LIST_SELECT = (
     "id,workspace_id,number,status,customer_id,contact_id,site_id,lead_id,owner_user_id,currency,"
     "subtotal_net,total_gross,valid_until,title,"
-    "project_name,version,created_at,updated_at,"
+    "project_name,version,archived_at,archived_by,created_at,updated_at,"
     "customers(display_name),sites(name)"
 )
 QUOTE_LIST_COST_SELECT = "id,cost_total,margin_amount,margin_percent"
@@ -1223,10 +1226,11 @@ def _quote_list_filter_params(
     customer_id: str | None,
     lead_id: str | None,
     site_id: str | None,
+    visibility: VisibilityMode = "active",
 ) -> dict[str, str]:
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
-        "deleted_at": "is.null",
+        **quote_visibility_filters(visibility),
         "select": QUOTE_LIST_SELECT,
         "order": "created_at.desc",
     }
@@ -1282,6 +1286,18 @@ def _quote_list_filter_params(
     return params
 
 
+def _resolve_visibility(
+    *,
+    archived: bool | None,
+    include_archived: bool | None,
+) -> VisibilityMode:
+    if archived:
+        return "archived"
+    if include_archived:
+        return "all_alive"
+    return "active"
+
+
 @router.get("/quotes")
 def list_quotes(
     workspace_id: UUID,
@@ -1295,10 +1311,13 @@ def list_quotes(
     customer_id: str | None = Query(default=None),
     lead_id: str | None = Query(default=None),
     site_id: str | None = Query(default=None),
+    archived: bool | None = Query(default=None),
+    include_archived: bool | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "quotes.view")
     page_size = parse_limit(limit)
+    visibility = _resolve_visibility(archived=archived, include_archived=include_archived)
     params = _quote_list_filter_params(
         workspace_id=workspace_id,
         client=client,
@@ -1308,6 +1327,7 @@ def list_quotes(
         customer_id=customer_id,
         lead_id=lead_id,
         site_id=site_id,
+        visibility=visibility,
     )
     params["limit"] = str(page_size + 1)
     before = decode_cursor(cursor)
@@ -1337,12 +1357,13 @@ def list_quotes(
                     row["margin_amount"] = extra.get("margin_amount")
                     row["margin_percent"] = extra.get("margin_percent")
     items = [_strip_cost(_flatten_quote(row), [], show_cost=show_cost) for row in page.items]
+    # KPI strip always reflects the active (non-archived) pipeline.
     count_rows = as_list(
         client.get(
             "quotes",
             params={
                 "workspace_id": f"eq.{workspace_id}",
-                "deleted_at": "is.null",
+                **quote_visibility_filters("active"),
                 "select": "status,total_gross",
             },
         )
@@ -1365,10 +1386,13 @@ def export_quotes_csv(
     customer_id: str | None = Query(default=None),
     lead_id: str | None = Query(default=None),
     site_id: str | None = Query(default=None),
+    archived: bool | None = Query(default=None),
+    include_archived: bool | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "quotes.export")
     show_cost = _can_view_cost(ctx)
+    visibility = _resolve_visibility(archived=archived, include_archived=include_archived)
     params = _quote_list_filter_params(
         workspace_id=workspace_id,
         client=client,
@@ -1378,6 +1402,7 @@ def export_quotes_csv(
         customer_id=customer_id,
         lead_id=lead_id,
         site_id=site_id,
+        visibility=visibility,
     )
     collected: list[dict] = []
     cursor: str | None = None
@@ -2104,6 +2129,9 @@ def revoke_quote_link(
     return {"ok": True}
 
 
+_NON_DRAFT_DELETE_MSG = "לא ניתן למחוק הצעה שאינה טיוטה — יש לארכב אותה"
+
+
 @router.delete("/quotes/{quote_id}")
 def delete_quote(
     workspace_id: UUID,
@@ -2114,23 +2142,30 @@ def delete_quote(
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
     existing = _load_quote(client, workspace_id, quote_id)
+    status = str(existing.get("status") or "")
+    if status != "draft":
+        raise ApiError(
+            409,
+            "RESOURCE_STATE",
+            _NON_DRAFT_DELETE_MSG,
+            {"state": status, "hint": "archive"},
+        )
     require(ctx, "quotes.delete", resource=_ref(existing))
     now = datetime.now(UTC).isoformat()
     patch: dict = {"deleted_at": now}
-    if existing.get("status") in {"sent", "viewed"}:
-        patch["status"] = "cancelled"
-    _record_event(client, workspace_id, quote_id, "deleted", actor_id(user), {"from_status": existing.get("status")})
+    _record_event(client, workspace_id, quote_id, "deleted", actor_id(user), {"from_status": status})
     write_audit(
         client,
         str(workspace_id),
         "quotes.delete",
         entity_type="quote",
         entity_id=str(quote_id),
-        metadata={"from_status": existing.get("status")},
+        metadata={"from_status": status},
     )
     # SELECT RLS is `deleted_at IS NULL`. A user-JWT PATCH that stamps deleted_at
     # cannot RETURN the row; PostgREST answers 404 and the API used to surface 403.
     # authorize() already ran against the live row. Service role only stamps that id.
+    # DB trigger quotes_enforce_delete_policy also blocks soft-delete of non-drafts.
     acked_or_403(
         svc.patch(
             "quotes",
@@ -2147,6 +2182,110 @@ def delete_quote(
         _revoke_public_access(svc, workspace_id, quote_id)
     except Exception:
         pass
+    return {"ok": True}
+
+
+@router.post("/quotes/{quote_id}/archive")
+def archive_quote(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    # Archive is allowed for non-draft; skip QUOTE_DELETABLE state gate via state=None.
+    require(
+        ctx,
+        "quotes.delete",
+        resource=ResourceRef(
+            type="quote",
+            id=str(existing["id"]),
+            owner_user_id=existing.get("owner_user_id"),
+            site_id=existing.get("site_id"),
+        ),
+    )
+    if existing.get("archived_at"):
+        raise ApiError(409, "RESOURCE_STATE", "ההצעה כבר בארכיון", {"state": "archived"})
+    if str(existing.get("status") or "") == "draft":
+        raise ApiError(
+            409,
+            "RESOURCE_STATE",
+            "טיוטה נמחקת, לא מארכבת",
+            {"state": "draft", "hint": "delete"},
+        )
+    now = datetime.now(UTC).isoformat()
+    uid = actor_id(user)
+    acked_or_403(
+        svc.patch(
+            "quotes",
+            {"archived_at": now, "archived_by": uid},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "archived_at": "is.null",
+            },
+            prefer="return=minimal",
+        )
+    )
+    _record_event(client, workspace_id, quote_id, "archived", uid, {"from_status": existing.get("status")})
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.archive",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"from_status": existing.get("status")},
+    )
+    return {"ok": True, "archived_at": now}
+
+
+@router.post("/quotes/{quote_id}/restore")
+def restore_quote(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    # Archived rows are still SELECT-visible under RLS (unlike soft-deleted).
+    existing = _load_quote(client, workspace_id, quote_id)
+    require(
+        ctx,
+        "quotes.delete",
+        resource=ResourceRef(
+            type="quote",
+            id=str(existing["id"]),
+            owner_user_id=existing.get("owner_user_id"),
+            site_id=existing.get("site_id"),
+        ),
+    )
+    if not existing.get("archived_at"):
+        raise ApiError(409, "RESOURCE_STATE", "ההצעה אינה בארכיון", {"state": existing.get("status")})
+    uid = actor_id(user)
+    acked_or_403(
+        svc.patch(
+            "quotes",
+            {"archived_at": None, "archived_by": None},
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "archived_at": "not.is.null",
+            },
+            prefer="return=minimal",
+        )
+    )
+    _record_event(client, workspace_id, quote_id, "restored", uid, {"from_status": existing.get("status")})
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.restore",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"from_status": existing.get("status")},
+    )
     return {"ok": True}
 
 

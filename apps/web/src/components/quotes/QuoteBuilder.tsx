@@ -54,6 +54,7 @@ import { TemplateApplyModal } from "./cpq/TemplateApplyModal";
 import { QuoteContextCard } from "./quote-creation/QuoteContextCard";
 import { CustomerSelector } from "./quote-creation/CustomerSelector";
 import { QuoteShareDialog } from "./QuoteShareDialog";
+import { QuoteSentHonesty } from "./QuoteSentHonesty";
 import { SendQuoteConfirm, type SendChannel } from "./SendQuoteConfirm";
 import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
 import { QuoteDocument } from "./document/QuoteDocument";
@@ -1199,6 +1200,22 @@ export function QuoteBuilder({
     leadPhone: linkedLead?.phone,
   });
 
+  // Sent/viewed quotes: mint the public link so the delivery card (link + WhatsApp) can show.
+  useEffect(() => {
+    if (!live.id || publicUrl) return;
+    if (live.status !== "sent" && live.status !== "viewed") return;
+    let cancelled = false;
+    void api
+      .shareQuote(workspaceId, live.id)
+      .then((shared) => {
+        if (!cancelled && shared.public_url) setPublicUrl(shared.public_url);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, live.id, live.status, publicUrl, workspaceId]);
+
   async function openWhatsApp(forcePicker = false) {
     if (actionLock.current) return;
     if (!forcePicker && !whatsappPhoneOk) {
@@ -2283,17 +2300,8 @@ export function QuoteBuilder({
             <p className="text-xs text-fg-muted">{he.quoteShareOutcomeNotSent}</p>
           </section>
         ) : null}
-        {justSent && publicUrl ? (
-          <section className="ops-card flex items-center gap-4 p-4" data-testid="quote-sent-honesty">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{he.quoteSentTitle}</p>
-              <p className="text-xs text-fg-muted">{he.quoteSentNoEmail}</p>
-              <p className="text-xs text-fg-muted">{he.quoteSentLockedHint}</p>
-              <a className="break-all text-sm text-action" href={publicUrl} target="_blank" rel="noreferrer">
-                {publicUrl}
-              </a>
-            </div>
-          </section>
+        {(justSent || live.status === "sent" || live.status === "viewed") && publicUrl ? (
+          <QuoteSentHonesty publicUrl={publicUrl} customerName={selectedName} phoneDigits={customerPhone} />
         ) : null}
         {quoteLifecycleShowsBanner(live.status) ? (
           <QuoteLifecycleBanner

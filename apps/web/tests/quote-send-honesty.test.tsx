@@ -64,6 +64,15 @@ describe("T2-3 quote send honesty", () => {
     );
   });
 
+  it("post-send honesty card includes שלח בוואטסאפ next to the public link", async () => {
+    const { QuoteSentHonesty } = await import("../src/components/quotes/QuoteSentHonesty");
+    const { render, screen } = await import("@testing-library/react");
+    render(<QuoteSentHonesty publicUrl="https://app.example/q/y" customerName="לקוח" phoneDigits="0501112233" />);
+    const card = screen.getByTestId("quote-sent-honesty");
+    expect(card.querySelector("a")?.getAttribute("href")).toBe("https://app.example/q/y");
+    expect(screen.getByRole("button", { name: he.jobWhatsApp })).toBeEnabled();
+  });
+
   it("does not use the outbound-email animation for quote send", () => {
     expect(LOTTIE_ANIMATIONS.sentEmail.usage.where.toLowerCase()).not.toContain("quotebuilder");
     expect(LOTTIE_ANIMATIONS.sentEmail.usage.where.toLowerCase()).toContain("forgot-password");

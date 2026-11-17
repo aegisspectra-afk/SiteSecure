@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.demo.local.example
 apps/api/.env
 apps/web/.env
 apps/WorkForce/.env
@@ -58,7 +59,7 @@ pnpm-lock.yaml
 
 .env*
 !.env.example
-
+!.env.demo.local.example
 # Durability / Gate 10B backup vault (never commit)
 _backup_vault/
 apps/api/scripts/durability/.vault/

@@ -28582,3 +28582,31 @@ html.dark .ssp-site-tone.is-officer {
   background: var(--color-bg-subtle);
   color: var(--color-fg-muted);
 }
+
+/* DEMO-4.2 - checklist visible at 390px. The job page scrolls inside .ops-main and the
+   primary action stays pinned above the bottom nav (~4.5rem band). Scrolling to an item
+   (tap, focus, find) must leave it above that band, and the last rows must be able to
+   scroll clear of it. */
+@media (max-width: 1023px) {
+  /* A sticky bar is bounded by its parent box: on scroll it rode up mid-screen and covered
+     checklist rows. On mobile it is a fixed bar right above the bottom nav instead. */
+  .field-job-primary-cta {
+    position: fixed;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--ops-bottom-nav-offset, 4.25rem) + 18px + env(safe-area-inset-bottom, 0px));
+    max-width: 32rem;
+    margin-inline: auto;
+    margin-block: 0;
+    z-index: 30;
+  }
+
+  .ops-main:has(.field-job-primary-cta) {
+    scroll-padding-bottom: calc(var(--ops-bottom-nav-offset, 4.25rem) + 5.5rem);
+  }
+
+  .field-job:has(.field-job-primary-cta) {
+    padding-bottom: calc(var(--ops-bottom-nav-offset, 5.5rem) + 6.5rem);
+  }
+}

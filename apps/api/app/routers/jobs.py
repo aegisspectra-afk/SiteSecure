@@ -696,74 +696,147 @@ def start_job(
     return _out(client, workspace_id, row)
 
 
-@router.post("/jobs/{job_id}/complete", response_model=JobOut)
+@router.post("/jobs/{job_id}/complete")
 def complete_job(
     workspace_id: UUID,
     job_id: UUID,
     body: JobComplete,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
-) -> JobOut:
+    idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> dict[str, Any]:
+    """DEMO-5: complete installation with warranty, assets, billing, handover link."""
+    from ..config import get_settings
+    from ..installation_complete import complete_installation
+
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.complete", resource=_ref(existing))
-    assert_transition("complete", str(existing.get("status") or ""))
-    items = as_list(
-        client.get(
-            "job_checklist_items",
+    key = _idempotency_key(idempotency_key_header)
+    if not key:
+        raise ApiError(400, "VALIDATION_ERROR", "חסר מפתח בקשה", {"field": "Idempotency-Key"})
+    if existing.get("status") != "completed":
+        assert_transition("complete", str(existing.get("status") or ""))
+
+    actor = actor_id(user)
+    settings = get_settings()
+    outcome = complete_installation(
+        svc,
+        workspace_id=str(workspace_id),
+        job=existing,
+        actor=str(actor),
+        completion_notes=body.completion_notes,
+        idempotency_key=key,
+        web_public_url=settings.web_public_url,
+    )
+    row = outcome["job"]
+    if not outcome.get("replay"):
+        write_audit(
+            client,
+            str(workspace_id),
+            "jobs.complete",
+            entity_type="job",
+            entity_id=str(job_id),
+            metadata={"notes": bool(body.completion_notes), "handover": True},
+        )
+        _timeline_job(
+            client,
+            workspace_id=str(workspace_id),
+            job=row,
+            actor=actor,
+            title=f"{row.get('number') or 'עבודה'} — הושלמה",
+            body=body.completion_notes,
+        )
+        if existing.get("service_call_id"):
+            try:
+                client.patch(
+                    "service_calls",
+                    {"status": "closed"},
+                    params={
+                        "id": f"eq.{existing['service_call_id']}",
+                        "workspace_id": f"eq.{workspace_id}",
+                    },
+                )
+            except Exception:
+                pass
+    job_out = _out(client, workspace_id, row)
+    return {
+        "job": job_out.model_dump() if hasattr(job_out, "model_dump") else job_out,
+        "warranty_id": outcome.get("warranty_id"),
+        "equipment_ids": outcome.get("equipment_ids") or [],
+        "billing_item_id": outcome.get("billing_item_id"),
+        "notification_ids": outcome.get("notification_ids") or [],
+        "outbound_message_id": outcome.get("outbound_message_id"),
+        "handover_url": outcome.get("handover_url"),
+        "warranty_pending_period": outcome.get("warranty_pending_period"),
+        "project_status": outcome.get("project_status"),
+        "replay": bool(outcome.get("replay")),
+    }
+
+
+@router.post("/jobs/{job_id}/handover/link")
+def create_handover_link(
+    workspace_id: UUID,
+    job_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict[str, Any]:
+    from ..config import get_settings
+    from ..installation_complete import mint_handover_link
+
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_job(client, workspace_id, job_id)
+    require(ctx, "jobs.assign", resource=_ref(existing))
+    if str(existing.get("status") or "") != "completed":
+        raise ApiError(409, "RESOURCE_STATE", "ניתן להנפיק קישור מסירה רק לעבודה שהושלמה")
+    warranties = as_list(
+        svc.get(
+            "warranties",
             params={
-                "job_id": f"eq.{job_id}",
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,label_he,required,completed",
+                "job_id": f"eq.{job_id}",
+                "select": "id,ends_on,status",
+                "limit": "1",
             },
         )
     )
-    missing = [i for i in items if i.get("required") and not i.get("completed")]
-    if missing:
-        raise ApiError(
-            400,
-            "BUSINESS_RULE",
-            "יש להשלים פריטי צ׳קליסט חובה לפני סיום",
-            details={"missing": [m.get("label_he") for m in missing]},
-        )
-    payload: dict[str, Any] = {
-        "status": "completed",
-        "completed_at": datetime.now(UTC).isoformat(),
-    }
-    if body.completion_notes is not None:
-        payload["completion_notes"] = body.completion_notes
-    row = _patch_status(client, workspace_id, job_id, payload=payload)
-    actor = actor_id(user)
-    write_audit(
-        client,
-        str(workspace_id),
-        "jobs.complete",
-        entity_type="job",
-        entity_id=str(job_id),
-        metadata={"notes": bool(body.completion_notes)},
-    )
-    _timeline_job(
-        client,
+    token, _aid, expires = mint_handover_link(
+        svc,
         workspace_id=str(workspace_id),
-        job=row,
-        actor=actor,
-        title=f"{row.get('number') or 'עבודה'} — הושלמה",
-        body=body.completion_notes,
+        job_id=str(job_id),
+        actor=str(actor_id(user)),
+        warranty=warranties[0] if warranties else None,
     )
-    # Keep assignments for history — do not delete.
-    if existing.get("service_call_id"):
-        try:
-            client.patch(
-                "service_calls",
-                {"status": "closed"},
-                params={
-                    "id": f"eq.{existing['service_call_id']}",
-                    "workspace_id": f"eq.{workspace_id}",
-                },
-            )
-        except Exception:
-            pass
-    return _out(client, workspace_id, row)
+    base = get_settings().web_public_url.rstrip("/")
+    write_audit(client, str(workspace_id), "jobs.handover_link", entity_type="job", entity_id=str(job_id))
+    return {"handover_url": f"{base}/h/{token}", "expires_at": expires.isoformat()}
+
+
+@router.post("/jobs/{job_id}/handover/revoke")
+def revoke_handover_link(
+    workspace_id: UUID,
+    job_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict[str, str]:
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_job(client, workspace_id, job_id)
+    require(ctx, "jobs.assign", resource=_ref(existing))
+    now = datetime.now(UTC).isoformat()
+    svc.patch(
+        "handover_public_access",
+        {"revoked_at": now},
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "job_id": f"eq.{job_id}",
+            "revoked_at": "is.null",
+        },
+    )
+    write_audit(client, str(workspace_id), "jobs.handover_revoke", entity_type="job", entity_id=str(job_id))
+    return {"status": "revoked"}
 
 
 @router.post("/jobs/{job_id}/assign")
@@ -772,6 +845,7 @@ def assign_job(
     job_id: UUID,
     body: JobAssign,
     client: Annotated[UserClient, Depends(user_client)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
     user: Annotated[dict, Depends(current_user)],
 ) -> dict:
     ctx = _ctx(client, user, workspace_id)
@@ -796,6 +870,9 @@ def assign_job(
     )
     previous = _job_assignees(client, workspace_id, str(job_id))
     previous_ids = {a.user_id for a in previous}
+    from ..installation_complete import workspace_missing_warranty_months
+
+    warranty_warning = workspace_missing_warranty_months(svc, str(workspace_id))
     now = datetime.now(UTC).isoformat()
     actor = actor_id(user)
     # Close other active assignees — do not delete rows (operational history).
@@ -874,6 +951,12 @@ def assign_job(
         "assigned_by": primary.assigned_by if primary else actor,
         "assignees": [a.model_dump() for a in assignees],
         "reassigned": action == "jobs.reassign",
+        "warranty_months_missing": warranty_warning,
+        "warranty_months_warning": (
+            "לסביבת העבודה אין תקופת אחריות מוגדרת — בסיום תיווצר אחריות במצב ממתין להגדרת תקופה"
+            if warranty_warning
+            else None
+        ),
     }
 
 

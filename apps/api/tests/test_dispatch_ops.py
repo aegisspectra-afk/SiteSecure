@@ -204,12 +204,26 @@ def _patch_auth(monkeypatch, ctx: AuthzContext) -> None:
     monkeypatch.setattr(jobs_mod, "require", lambda *a, **k: None)
 
 
+class FakeSvc:
+    """Minimal service client for DEMO-5 assign warranty warning."""
+
+    def __init__(self, *, warranty_months: int | None = 12) -> None:
+        self.warranty_months = warranty_months
+
+    def get(self, table: str, params: dict | None = None):
+        if table == "workspaces":
+            field_ops = {} if self.warranty_months is None else {"warranty_months": self.warranty_months}
+            return _ok([{"id": str(WS), "field_ops": field_ops}])
+        return _ok([])
+
+
 def test_assign_creates_active_assignment(monkeypatch):
     client = FakeClient()
     _patch_auth(monkeypatch, _manager_ctx())
-    out = jobs_mod.assign_job(WS, JOB, JobAssign(user_id=TECH_A), client, {"id": MANAGER})
+    out = jobs_mod.assign_job(WS, JOB, JobAssign(user_id=TECH_A), client, FakeSvc(), {"id": MANAGER})
     assert out["user_id"] == TECH_A
     assert out["reassigned"] is False
+    assert out["warranty_months_missing"] is False
     assert client.deletes == []
     assert any(table == "assignments" for table, _ in client.posts)
 
@@ -226,7 +240,7 @@ def test_reassign_closes_previous_without_delete(monkeypatch):
         }
     )
     _patch_auth(monkeypatch, _manager_ctx())
-    out = jobs_mod.assign_job(WS, JOB, JobAssign(user_id=TECH_B), client, {"id": MANAGER})
+    out = jobs_mod.assign_job(WS, JOB, JobAssign(user_id=TECH_B), client, FakeSvc(), {"id": MANAGER})
     assert out["reassigned"] is True
     assert client.deletes == []
     assert any("unassigned_at" in payload for _, payload, _ in client.patches)
@@ -279,17 +293,49 @@ def test_cross_workspace_technician_cannot_use_foreign_job_id():
 def test_complete_requires_in_progress_and_checklist(monkeypatch):
     client = FakeClient()
     client.job["status"] = "in_progress"
-    client.checklist = [{"id": "c1", "label_he": "אבחון", "required": True, "completed": False}]
     _patch_auth(monkeypatch, _tech_ctx((str(JOB),)))
-    with pytest.raises(ApiError) as exc:
-        jobs_mod.complete_job(WS, JOB, JobComplete(completion_notes="done"), client, {"id": TECH_A})
-    assert exc.value.code == "BUSINESS_RULE"
 
-    client.checklist[0]["completed"] = True
-    out = jobs_mod.complete_job(WS, JOB, JobComplete(completion_notes="תוקן"), client, {"id": TECH_A})
-    assert out.status == "completed"
-    assert out.completed_at
-    assert out.completion_notes == "תוקן"
+    def blocked(*_a, **_k):
+        raise ApiError(409, "COMPLETION_BLOCKED", "לא ניתן לסיים — חסרים פריטים", details={"missing": ["אבחון"]})
+
+    monkeypatch.setattr("app.installation_complete.complete_installation", blocked)
+    with pytest.raises(ApiError) as exc:
+        jobs_mod.complete_job(
+            WS, JOB, JobComplete(completion_notes="done"), client, FakeSvc(), {"id": TECH_A}, "complete-key-1"
+        )
+    assert exc.value.code == "COMPLETION_BLOCKED"
+
+    now = datetime.now(UTC).isoformat()
+
+    def ok(_svc, **kwargs):
+        client.job = {
+            **client.job,
+            "status": "completed",
+            "completed_at": now,
+            "completion_notes": kwargs.get("completion_notes"),
+            "completion_idempotency_key": kwargs.get("idempotency_key"),
+        }
+        return {
+            "job": client.job,
+            "warranty_id": "w1",
+            "equipment_ids": [],
+            "billing_item_id": None,
+            "notification_ids": [],
+            "outbound_message_id": "m1",
+            "handover_url": "http://127.0.0.1:5173/h/tok",
+            "warranty_pending_period": False,
+            "project_status": None,
+            "replay": False,
+        }
+
+    monkeypatch.setattr("app.installation_complete.complete_installation", ok)
+    out = jobs_mod.complete_job(
+        WS, JOB, JobComplete(completion_notes="תוקן"), client, FakeSvc(), {"id": TECH_A}, "complete-key-2"
+    )
+    assert out["job"]["status"] == "completed"
+    assert out["job"]["completed_at"]
+    assert out["job"]["completion_notes"] == "תוקן"
+    assert out["handover_url"]
     assert client.deletes == []
 
 
@@ -298,7 +344,7 @@ def test_invalid_complete_transition_blocked(monkeypatch):
     client.job["status"] = "scheduled"
     _patch_auth(monkeypatch, _tech_ctx((str(JOB),)))
     with pytest.raises(ApiError) as exc:
-        jobs_mod.complete_job(WS, JOB, JobComplete(), client, {"id": TECH_A})
+        jobs_mod.complete_job(WS, JOB, JobComplete(), client, FakeSvc(), {"id": TECH_A}, "complete-key-3")
     assert exc.value.code == "BUSINESS_RULE"
 
 

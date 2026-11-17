@@ -16,9 +16,11 @@
 | `src/routes/portal/index.tsx` | בית פורטל: פרופיל, אתרים, התקנות, ציוד, אחריות, הצעות, שירות, מסמכים | קיים — UI רזה, דורש עיצוב מחדש לדפי MVP |
 | `src/routes/portal/choose.tsx` | בחירת grant כשיש כמה לקוחות | קיים — לשמר לוגיקה |
 | `src/routes/portal/invite/$token.tsx` | קבלת הזמנה אחרי login/register באימייל | קיים — **לא מתאים** לזרימת OTP בלי סיסמה |
-| `src/components/customers/CustomerPortalAccess.tsx` + `portal-build.ts` | סטודיו staff: הזמנה, העתקת קישור, שליחה מחדש, ביטול | קיים ופעיל במסך לקוח (מוסתר כש־`is_demo`) |
+| `src/components/customers/CustomerPortalAccess.tsx` + `portal-build.ts` | סטודיו staff: הזמנה, העתקת קישור, שליחה מחדש, ביטול | **קיים אבל יתום** — לא מחובר ל־Customer 360 / `CustomerProfile` (רק טסטים); מוסתר כש־`is_demo` |
+| `src/lib/portal-entry.ts` (`hasPortalAccess`) | בדיקת grants אחרי login | קיים — **לא בשימוש** ב־login/register |
+| `src/lib/auth-routes.ts` | `sanitizeNextPath` / `landingPathForSession` | מאפשר רק `/invite/...` — **לא** `/portal/invite/...`; אין `resolveAuthDestination` |
 
-**מסקנה UI:** מעטפת הפורטל + מודל ה־grants + הסטודיו למשרד — **לשימוש מחדש**. דפי MVP (בית עשיר, הצעות, התקנות/ביקורים, תיק אתר, אחריות, קריאת שירות) וזרימת התחברות — **לבנייה מחדש / הרחבה משמעותית**.
+**מסקנה UI:** מעטפת `/portal` + choose + invite — **scaffold לשימוש מחדש**. סטודיו staff — **reuse אחרי חיבור למסך לקוח**. דפי MVP וזרימת OTP — **בנייה מחדש**. Public Quote (`/q`, `/public/quotes`) נשאר **נפרד** — לא לבלוע לפורטל.
 
 ### 1.2 API (`apps/api`)
 
@@ -34,7 +36,9 @@ Endpoints קיימים (לא מחוברים ל־app כרגע):
 - Staff: `GET/POST …/customers/{id}/portal`, `…/link`, `…/resend`, `…/revoke`
 - Customer: `GET /portal/invites/peek`, `POST /portal/invites/accept`, `GET /portal/session`, `GET /portal/access/{access_id}`, `POST …/documents/{id}/url`
 
-**מסקנה API:** לוגיקת הרשאות, home projection, ו־document signing — **לשימוש מחדש** אחרי חיבור ה־router. Auth באימייל+סיסמה דרך Supabase users — **להחלפה / שכבה נוספת** ל־OTP לפי טלפון.
+**פערי הרשאות staff:** מפתחות `customer_portal.view|create|manage|revoke` קיימים ב־DB (מיגרציה) אבל **חסרים** מ־`packages/authz/catalog.json` (מופיע רק `workforce.portal.view`). Owner עם `*` עובד; תפקידים אחרים תלויים ב־`workspace_roles.grants` מהמיגרציה — לסנכרן לקטלוג לפני MVP.
+
+**מסקנה API:** לוגיקת הרשאות, home projection, ו־document signing — **לשימוש מחדש** אחרי חיבור ה־router + סנכרון catalog. Auth באימייל+סיסמה דרך Supabase users — **להחלפה / שכבה נוספת** ל־OTP לפי טלפון.
 
 ### 1.3 סכמה ו־RLS
 
@@ -54,6 +58,7 @@ Capabilities מוגדרות:
 - Portal user = `auth.users` רגיל (אימייל+סיסמה / register).
 - Invite דורש שהמשתמש המחובר תואם לאימייל בהזמנה (`wrong_account`).
 - אין OTP SMS/WhatsApp, אין principal type נפרד מ־workspace member ברמת Supabase (ההפרדה היא בטבלת grant בלבד).
+- **Drift בניווט אחרי login:** משתמש portal-only בלי membership נוחת ב־`/onboarding` (לא `/portal`); `?next=/portal/invite/...` נזרק ע״י `sanitizeNextPath`. חובה לתקן לפני ש־invite/OTP יעבדו end-to-end.
 
 ---
 
@@ -65,13 +70,15 @@ Capabilities מוגדרות:
 | `peek` / `accept` RPC | **Reuse כבסיס** | לשמור לקישורי אימייל; OTP יהיה מסלול נפרד |
 | `portal_access.py` + `FORBIDDEN_PORTAL_KEYS` | **Reuse** | להרחיב רשימת איסורים לפי MVP |
 | `_build_home` / document URL | **Reuse + refine** | לפצל לדפי משנה; לסנן לפי `site_id` |
-| Staff `CustomerPortalAccess` | **Reuse** | להוסיף הזמנת טלפון / ערוץ OTP |
+| Staff `CustomerPortalAccess` | **Reuse + mount** | לחבר ל־Customer 360; להוסיף הזמנת טלפון / OTP |
 | `/portal` shell + choose | **Reuse מבנה** | עיצוב עברית־ראשון, light |
 | Invite email+password flow | **Rebuild UX** | נשאר כגיבוי; הכניסה הראשית = OTP |
+| Auth redirects (`auth-routes` / `portal-entry`) | **Fix חובה** | לאפשר `/portal/invite/...`; לנחות ב־`/portal` ל־portal-only |
 | חיבור router ב־`main.py` | **חובה לפני כל פיתוח** | בלי זה הפורטל מת מול API |
+| `customer_portal.*` ב־authz catalog | **Fix חובה** | סנכרון מול DB grants |
 | Site-scoped grants | **Build חדש (מיגרציה)** | שינוי constraint + RLS/API filters |
-| OTP session (SMS/WA) | **Build חדש** | טבלאות challenge + provider adapter |
-| דפי MVP מעוצבים | **Build חדש על בסיס home** | לא להמשיך את רשימות ה־`<p>` הנוכחיות כ־UX סופי |
+| OTP session (SMS/WA) | **Build חדש** | טבלאות challenge + provider adapter — אין ספק משולב היום |
+| דפי MVP מעוצבים | **Build חדש על בסיס home** | לא staff `SiteDossier`; לא לבלוע Public Quote |
 | קריאת שירות (יצירה) | **Build חדש** | היום רק `service` לקריאה ברשימה |
 
 ---
@@ -172,13 +179,15 @@ Capabilities מוגדרות:
 
 ## 7. תוכנית מימוש מומלצת (אחרי אישור — לא בפריט זה)
 
-1. לחבר `customer_portal` ב־`main.py` + בדיקות smoke.  
-2. מיגרציית scope לפי אתר + OTP challenges.  
-3. Adapter ספק SMS (ואחר כך WA).  
-4. מסך כניסת OTP + חסימת `/app` ל־portal principals.  
-5. דפי MVP על בסיס home API מפורק.  
-6. טופס קריאת שירות + התראת משרד.  
-7. עדכון staff studio להזמנת טלפון ול־site scope.
+1. לחבר `customer_portal` ב־`main.py` + סנכרון `customer_portal.*` ל־authz catalog + smoke.  
+2. לתקן auth redirects: `sanitizeNextPath` ל־`/portal/invite/...`, `hasPortalAccess` / נחיתה ל־`/portal` ל־portal-only (לא onboarding).  
+3. לחבר `CustomerPortalAccess` למסך לקוח (Customer 360).  
+4. מיגרציית scope לפי אתר + OTP challenges.  
+5. Adapter ספק SMS (ואחר כך WA).  
+6. מסך כניסת OTP + חסימת `/app` ל־portal principals.  
+7. דפי MVP על בסיס home API מפורק (Public Quote נשאר נפרד).  
+8. טופס קריאת שירות + התראת משרד.  
+9. עדכון staff studio להזמנת טלפון ול־site scope.
 
 ---
 
@@ -209,15 +218,17 @@ Capabilities מוגדרות:
 - [ ] `noindex` על דפי פורטל.
 - [ ] OTP ו־invite tokens לא נכתבים ללוגים ב־plaintext.
 
-### רגרסיה staff
-- [ ] `CustomerPortalAccess`: יצירה, העתקת קישור, resend, revoke עדיין עובדים.
+### רגרסיה staff / wiring
+- [ ] `CustomerPortalAccess` מחובר ל־Customer 360: יצירה, העתקת קישור, resend, revoke.
 - [ ] Peek/accept אימייל נשארים תקינים כמסלול גיבוי.
+- [ ] אחרי login עם `?next=/portal/invite/…` חוזרים להזמנה (לא onboarding).
+- [ ] Portal-only user נוחת ב־`/portal`, לא ב־`/app` ולא ב־onboarding.
 
 ---
 
 ## 9. סיכום החלטה
 
-הבסיס (טבלאות, grants, capabilities, home projection, staff studio, דפי `/portal`) **שווה שימוש מחדש**, אבל הפורטל החי **לא מחובר ל־API** והכניסה מבוססת אימייל+סיסמה.  
-ל־MVP: חיבור router → OTP טלפון נפרד מחברי workspace → scope לפי איש קשר/אתר → דפי MVP + קריאת שירות → ספק SMS ישראלי (וואטסאפ בהמשך).
+הבסיס (טבלאות, grants, capabilities, home projection, scaffold `/portal`, סטודיו staff) **שווה שימוש מחדש**, אבל המוצר **לא חי**: router לא מחובר, סטודיו יתום, auth redirects שבורים לפורטל, catalog לא מסונכרן, והכניסה מבוססת אימייל+סיסמה.  
+ל־MVP: wire+catalog+redirects → OTP טלפון נפרד מחברי workspace → scope לפי איש קשר/אתר → דפי MVP + קריאת שירות → ספק SMS ישראלי (וואטסאפ בהמשך). Public Quote נשאר נפרד.
 
 **עצירה כאן — תכנון בלבד, בלי קוד.**

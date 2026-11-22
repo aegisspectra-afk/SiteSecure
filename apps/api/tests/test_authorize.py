@@ -54,7 +54,7 @@ def test_sales_quotes():
     d = authorize(ctx=_ctx("sales"), action="quotes.send")
     assert d.allowed is True
     d = authorize(ctx=_ctx("sales"), action="quotes.view_cost")
-    assert d.allowed is False
+    assert d.allowed is True
 
 
 def test_technician_cannot_admin():
@@ -451,7 +451,7 @@ P0_ACTIONS = {
         "quotes.edit": True,
         "quotes.delete": False,
         "quotes.send": True,
-        "quotes.view_cost": False,
+        "quotes.view_cost": True,
         "catalog.view": True,
         "catalog.edit": False,
     },

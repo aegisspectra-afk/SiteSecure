@@ -179,14 +179,14 @@ export function QuoteSummaryAside({
 }
 
 function marginToneClass(status?: string | null) {
-  if (status === "critical") return "text-danger";
-  if (status === "warning") return "text-warning";
+  // B2: below-minimum is a yellow office warning, not a hard block / danger.
+  if (status === "critical" || status === "warning") return "text-warning";
   if (status === "healthy") return "text-success";
   return "";
 }
 
 function marginStatusLabel(status: string) {
-  if (status === "critical") return he.cpqMarginCritical;
+  if (status === "critical") return he.cpqMarginBelowMinimum;
   if (status === "warning") return he.cpqMarginWarning;
   return he.cpqMarginHealthy;
 }

@@ -177,20 +177,14 @@ def test_quote_search_uses_one_customer_query_not_n_plus_one():
     assert params["display_name"] == "ilike.*אלפא*"
 
 
-def test_margin_below_minimum_blocks_send_without_override_price():
+def test_margin_below_minimum_does_not_block_send_b2():
+    """B2: below-minimum margin is yellow advisory only — send is never blocked here."""
     ctx = SimpleNamespace()
     quote = {"margin_percent": 5, "margin_override_reason": None, "margin_override_at": None}
     settings = {"quotes": {"margin_minimum": 15, "margin_target": 30}}
     denied = SimpleNamespace(allowed=False)
-    with (
-        patch.object(quotes_router, "authorize", return_value=denied),
-        pytest.raises(ApiError) as err,
-    ):
+    with patch.object(quotes_router, "authorize", return_value=denied):
         quotes_router._assert_margin_allows_send(ctx, quote, settings)
-    assert err.value.status_code == 403
-    assert err.value.code == "MARGIN_BELOW_MINIMUM"
-    assert err.value.message == MESSAGES["MARGIN_BELOW_MINIMUM"]
-    assert "מרווח" in err.value.message
 
 
 def test_margin_below_minimum_allows_override_price_or_recorded_reason():

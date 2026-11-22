@@ -267,20 +267,51 @@ describe("CPQ builder", () => {
     await waitFor(() => expect(document.getElementById("customer_id")).toBeTruthy());
   });
 
-  it("hides cost until quotes.view_cost is granted", () => {
+  it("hides cost from technician (no quotes.view_cost)", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
         <QuoteBuilder
           quote={quote({ cost_total: 80, margin_amount: 20, margin_percent: 20 })}
           workspaceId="ws"
-          roleKey="sales"
+          roleKey="technician"
           features={FEATURES}
         />
       </QueryClientProvider>,
     );
     expect(screen.queryByText(he.quoteCost)).not.toBeInTheDocument();
     expect(screen.queryByText(he.quoteMargin)).not.toBeInTheDocument();
+  });
+
+  it("sales can view cost after B2 grant", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <QuoteBuilder
+          quote={quote({
+            cost_total: 80,
+            margin_amount: 20,
+            margin_percent: 20,
+            items: [
+              {
+                id: "i1",
+                quote_id: "q1",
+                description: "מצלמה",
+                qty: 1,
+                unit_price: 100,
+                cost: 80,
+                line_net: 100,
+                item_type: "catalog",
+              },
+            ],
+          })}
+          workspaceId="ws"
+          roleKey="sales"
+          features={FEATURES}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getAllByText(he.quoteCost).length).toBeGreaterThan(0);
   });
 
   it("shows create project CTA on approved quote without linked project", async () => {

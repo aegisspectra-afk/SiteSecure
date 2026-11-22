@@ -307,7 +307,7 @@
       "settings.view",
       "crm.view", "crm.create", "crm.edit", "crm.export",
       "leads.view", "leads.create", "leads.edit", "leads.assign",
-      "quotes.view", "quotes.create", "quotes.edit", "quotes.send", "quotes.export",
+      "quotes.view", "quotes.create", "quotes.edit", "quotes.send", "quotes.export", "quotes.view_cost",
       "catalog.view",
       "projects.view",
       "jobs.view",

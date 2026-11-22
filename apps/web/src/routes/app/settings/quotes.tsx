@@ -59,6 +59,8 @@ function QuotesSettingsBody() {
       prefs.paymentTerms !== baseline.paymentTerms ||
       prefs.showVatOnQuotes !== baseline.showVatOnQuotes ||
       prefs.pdfNotes !== baseline.pdfNotes ||
+      prefs.marginMinimumPercent !== baseline.marginMinimumPercent ||
+      prefs.marginTargetPercent !== baseline.marginTargetPercent ||
       laborRate.trim() !== laborBaseline);
 
   const save = useMutation({
@@ -69,6 +71,8 @@ function QuotesSettingsBody() {
           show_vat: prefs.showVatOnQuotes,
           payment_terms: prefs.paymentTerms,
           pdf_notes: prefs.pdfNotes,
+          margin_minimum: prefs.marginMinimumPercent,
+          margin_target: prefs.marginTargetPercent,
         },
       });
       if (laborRate.trim() !== laborBaseline) {
@@ -111,6 +115,31 @@ function QuotesSettingsBody() {
             max={365}
             value={String(prefs.quoteValidityDays)}
             onChange={(ev) => setPrefs({ ...prefs, quoteValidityDays: Number(ev.target.value) || 14 })}
+            className="ltr-meta"
+          />
+          <Input
+            id="quote-margin-minimum"
+            label={he.settingsMarginMinimum}
+            type="number"
+            min={0}
+            max={100}
+            value={String(prefs.marginMinimumPercent)}
+            onChange={(ev) =>
+              setPrefs({ ...prefs, marginMinimumPercent: Math.max(0, Number(ev.target.value) || 0) })
+            }
+            className="ltr-meta"
+          />
+          <p className="settings-field-hint col-span-full text-xs text-fg-muted">{he.settingsMarginMinimumHint}</p>
+          <Input
+            id="quote-margin-target"
+            label={he.settingsMarginTarget}
+            type="number"
+            min={0}
+            max={100}
+            value={String(prefs.marginTargetPercent)}
+            onChange={(ev) =>
+              setPrefs({ ...prefs, marginTargetPercent: Math.max(0, Number(ev.target.value) || 0) })
+            }
             className="ltr-meta"
           />
           <Input

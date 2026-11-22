@@ -16,6 +16,7 @@ import {
   type QuoteLineField,
   type QuoteLinePatch,
 } from "../../../lib/quote-line-edit";
+import { lineProfitability } from "../../../lib/quote-pricing";
 import { formatMoney } from "../../../lib/quotes";
 
 const PERSIST_DEBOUNCE_MS = 450;
@@ -24,6 +25,8 @@ export const QuoteLineRow = memo(function QuoteLineRow({
   item,
   currency,
   canEdit,
+  canViewCost = false,
+  marginMinimum = 15,
   globalIndex,
   rowCount,
   onPersist,
@@ -33,6 +36,8 @@ export const QuoteLineRow = memo(function QuoteLineRow({
   item: QuoteItemOut;
   currency: string;
   canEdit: boolean;
+  canViewCost?: boolean;
+  marginMinimum?: number;
   globalIndex: number;
   rowCount: number;
   onPersist: (itemId: string, body: QuoteLinePatch) => Promise<void>;
@@ -172,6 +177,21 @@ export const QuoteLineRow = memo(function QuoteLineRow({
   const listPrice = catalogListPrice(item);
   // Server line_net only; while this row has unsaved edits the value is marked as updating.
   const lineTotal = Number(item.line_net ?? 0);
+  const officeProfit =
+    canViewCost && (item.item_type || "catalog") !== "note"
+      ? lineProfitability({
+          qty: draft.qty,
+          unit_price: draft.unit_price,
+          cost: item.cost,
+          discount: draft.discount,
+          discount_type: lineDiscountType(item),
+          item_type: item.item_type,
+        })
+      : null;
+  const lineBelowMinimum =
+    officeProfit != null &&
+    Number(item.cost ?? 0) > 0 &&
+    officeProfit.margin_percent < Number(marginMinimum ?? 15);
   const linePending = String(item.id).startsWith("optimistic-") || lineDraftToPatch(draft, item) !== null;
   const isNote = item.item_type === "note";
   const isLabor = item.item_type === "labor";
@@ -300,6 +320,31 @@ export const QuoteLineRow = memo(function QuoteLineRow({
         onBlur={() => handleBlur("unit_price")}
         onChange={(e) => updateField("unit_price", e.target.value)}
       />
+      {officeProfit ? (
+        <div className={`cpq-line-office-profit${lineBelowMinimum ? " is-warning" : ""}`}>
+          <div className="cpq-line-total-stack">
+            <span className="cpq-line-total-label">{he.quoteCost}</span>
+            <span className="ltr-meta text-sm" dir="ltr">
+              {formatMoney(officeProfit.line_cost, currency)}
+            </span>
+          </div>
+          <div className="cpq-line-total-stack">
+            <span className="cpq-line-total-label">{he.quoteGrossProfit}</span>
+            <span className="ltr-meta text-sm" dir="ltr">
+              {formatMoney(officeProfit.gross_profit, currency)}
+            </span>
+          </div>
+          <div className="cpq-line-total-stack">
+            <span className="cpq-line-total-label">{he.quoteMargin}</span>
+            <span className={`text-sm font-semibold${lineBelowMinimum ? " text-warning" : ""}`}>
+              {officeProfit.margin_percent}%
+            </span>
+          </div>
+          {lineBelowMinimum ? (
+            <p className="text-[0.65rem] text-warning">{he.cpqLineMarginBelowMinimum}</p>
+          ) : null}
+        </div>
+      ) : null}
       <Input
         id={`item-discount-${item.id}`}
         label={lineDiscountType(item) === "amount" ? he.quoteDiscountAmountIls : he.quoteDiscountPercentLabel}

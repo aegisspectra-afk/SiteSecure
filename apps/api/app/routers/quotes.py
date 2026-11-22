@@ -275,24 +275,12 @@ def _customer_ids_matching_name(client: UserClient, workspace_id: UUID, safe: st
 
 
 def _assert_margin_allows_send(ctx, quote: dict, settings: dict | None) -> None:
-    quotes_cfg = settings.get("quotes") if isinstance(settings, dict) and isinstance(settings.get("quotes"), dict) else {}
-    target = quotes_cfg.get("margin_target", 30)
-    minimum = quotes_cfg.get("margin_minimum", 15)
-    pct = quote.get("margin_percent")
-    if pct is None:
-        return
-    if pricing.margin_status(pct, target=target, minimum=minimum) != "critical":
-        return
-    if str(quote.get("margin_override_reason") or "").strip() and quote.get("margin_override_at"):
-        return
-    if authorize(ctx=ctx, action="quotes.override_price").allowed:
-        return
-    raise ApiError(
-        403,
-        "MARGIN_BELOW_MINIMUM",
-        MESSAGES["MARGIN_BELOW_MINIMUM"],
-        {"margin_percent": pct, "minimum": minimum},
-    )
+    """B2: below-minimum margin is advisory only (yellow warning) — never blocks send.
+
+    Kept as a no-op hook so call sites and older tests remain stable; profitability
+    warnings continue via quote_rules.margin_rule advisory gaps.
+    """
+    return
 
 
 def _service() -> ServiceClient:

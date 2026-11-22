@@ -13442,6 +13442,26 @@ html.theme-revealing::view-transition-new(root) {
   opacity: 0.55;
 }
 
+.cpq-line-office-profit {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-bg-2) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.cpq-line-office-profit.is-warning {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-bg-1));
+}
+
+.cpq-line-office-profit > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .cpq-quick-add-row.is-emphasis {
   border: 1px solid color-mix(in srgb, var(--color-action) 28%, var(--color-border));
   background: color-mix(in srgb, var(--color-action) 7%, var(--color-bg-1));

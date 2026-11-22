@@ -2747,6 +2747,8 @@ export function QuoteBuilder({
           sectionsBreakdown={live.sections_breakdown ?? []}
           currency={currency}
           canEdit={canEdit}
+          canViewCost={canViewCost}
+          marginMinimum={Number(live.margin_minimum ?? 15)}
           canCatalog={canCatalog}
           catalogQ={catalogQ}
           onCatalogQ={setCatalogQ}

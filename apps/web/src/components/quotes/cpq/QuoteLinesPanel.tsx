@@ -63,6 +63,8 @@ export function QuoteLinesPanel({
   onValidUntil,
   plannedEngineeringByPackage,
   onResolvePlanned,
+  canViewCost = false,
+  marginMinimum = 15,
 }: {
   items: QuoteItemOut[];
   sections?: QuoteSection[];
@@ -70,6 +72,8 @@ export function QuoteLinesPanel({
   sectionsBreakdown?: QuoteSectionBreakdown[];
   currency: string;
   canEdit: boolean;
+  canViewCost?: boolean;
+  marginMinimum?: number;
   canCatalog: boolean;
   catalogQ: string;
   onCatalogQ: (value: string) => void;
@@ -397,6 +401,8 @@ export function QuoteLinesPanel({
                             item={item}
                             currency={currency}
                             canEdit={canEdit}
+                            canViewCost={canViewCost}
+                            marginMinimum={marginMinimum}
                             globalIndex={globalIndex}
                             rowCount={rows.length}
                             onPersist={onPersistLine}

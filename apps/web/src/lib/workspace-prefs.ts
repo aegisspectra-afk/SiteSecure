@@ -11,6 +11,9 @@ export type WorkspacePrefs = {
   showVatOnQuotes: boolean;
   paymentTerms: string;
   pdfNotes: string;
+  /** Office-only: yellow warning when quote/line margin % is below this. Does not block send. */
+  marginMinimumPercent: number;
+  marginTargetPercent: number;
   siteRequireAddress: boolean;
   siteRequireContact: boolean;
   siteRequireAccessNotes: boolean;
@@ -29,6 +32,8 @@ export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
   showVatOnQuotes: true,
   paymentTerms: "שוטף + 30",
   pdfNotes: "",
+  marginMinimumPercent: 15,
+  marginTargetPercent: 30,
   // Explicit True only — matches server enforcement (missing = not required).
   siteRequireAddress: false,
   siteRequireContact: false,
@@ -53,6 +58,10 @@ export function prefsFromSettings(settings: WorkspaceSettingsOut): WorkspacePref
     showVatOnQuotes: quotes.show_vat !== false,
     paymentTerms: String(quotes.payment_terms ?? DEFAULT_WORKSPACE_PREFS.paymentTerms),
     pdfNotes: String(quotes.pdf_notes ?? ""),
+    marginMinimumPercent:
+      Number(quotes.margin_minimum ?? DEFAULT_WORKSPACE_PREFS.marginMinimumPercent) || 15,
+    marginTargetPercent:
+      Number(quotes.margin_target ?? DEFAULT_WORKSPACE_PREFS.marginTargetPercent) || 30,
     siteRequireAddress: sites.require_address === true,
     siteRequireContact: sites.require_contact === true,
     siteRequireAccessNotes: sites.require_access_notes === true,
@@ -77,6 +86,8 @@ export function prefsToSettingsPatch(prefs: WorkspacePrefs): Partial<WorkspaceSe
       show_vat: prefs.showVatOnQuotes,
       payment_terms: prefs.paymentTerms,
       pdf_notes: prefs.pdfNotes,
+      margin_minimum: prefs.marginMinimumPercent,
+      margin_target: prefs.marginTargetPercent,
     },
     scheduling: {
       sites: {

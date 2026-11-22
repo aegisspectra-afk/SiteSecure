@@ -13,7 +13,14 @@ export const Route = createFileRoute("/admin")({
 
 type NavItem = {
   to: string;
-  labelKey: "adminTitle" | "adminOrgs" | "adminUsers" | "adminFeedback" | "adminAudit" | "adminBeta";
+  labelKey:
+    | "adminTitle"
+    | "adminOrgs"
+    | "adminUsers"
+    | "adminFeedback"
+    | "adminBillingUpgradeRequests"
+    | "adminAudit"
+    | "adminBeta";
   exact?: boolean;
 };
 
@@ -28,6 +35,7 @@ const NAV_GROUPS: Array<{
       { to: "/admin/organizations", labelKey: "adminOrgs" },
       { to: "/admin/users", labelKey: "adminUsers" },
       { to: "/admin/feedback", labelKey: "adminFeedback" },
+      { to: "/admin/billing-requests", labelKey: "adminBillingUpgradeRequests" },
       { to: "/admin/audit", labelKey: "adminAudit" },
     ],
   },

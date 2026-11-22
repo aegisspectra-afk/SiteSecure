@@ -7,19 +7,13 @@ import {
   isNavSelected,
   mobileCommandSections,
   mobileQuickActions,
-  planLabel,
+  workspacePlanMetaLine,
   type AppNavLink,
   type MobileCommandSection,
 } from "../lib/app-nav";
 import { MobileNavSheet } from "./MobileNavSheet";
 import { NavIcon } from "./NavIcon";
 import { BetaBadge } from "./BetaBadge";
-
-function workspaceMetaLine(planKey?: string, active?: boolean): string {
-  const plan = planLabel(planKey);
-  const status = active === false ? he.workspaceMetaInactive : he.workspaceMetaActive;
-  return [plan, status].filter(Boolean).join(" · ");
-}
 
 function filterSections(sections: MobileCommandSection[], q: string): MobileCommandSection[] {
   const needle = q.trim().toLowerCase();
@@ -151,7 +145,7 @@ export function MobileMoreSheet({
   const filtered = useMemo(() => filterSections(sections, query), [sections, query]);
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
 
-  const meta = workspaceMetaLine(planKey, workspaceActive);
+  const meta = workspacePlanMetaLine(planKey, workspaceActive);
   const searching = query.trim().length > 0;
 
   const isSectionOpen = (section: MobileCommandSection) => {

@@ -12,10 +12,9 @@ describe("Hebrew chrome leftovers", () => {
     expect(screen.queryByText("Not Found")).not.toBeInTheDocument();
   });
 
-  it("labels the solo plan and workspace status in Hebrew", () => {
+  it("labels the solo plan in Hebrew (header shows plan only when active)", () => {
     expect(he.planSolo).toBe("חינם");
-    expect(planLabel("solo")).toBe("חינם");
+    expect(planLabel("solo")).toBe(planLabel("free"));
     expect(he.workspaceMetaActive).toBe("פעיל");
-    expect(`${planLabel("solo")} · ${he.workspaceMetaActive}`).toBe("חינם · פעיל");
   });
 });

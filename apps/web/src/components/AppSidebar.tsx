@@ -6,17 +6,11 @@ import { he } from "../i18n/he";
 import {
   isNavSelected,
   nextSidebarIndex,
-  planLabel,
+  workspacePlanMetaLine,
   type AppNavGroup,
 } from "../lib/app-nav";
 import { NavIcon } from "./NavIcon";
 import { UserAccountMenu } from "./UserAccountMenu";
-
-function workspaceMetaLine(planKey?: string, active?: boolean): string {
-  const plan = planLabel(planKey);
-  const status = active === false ? he.workspaceMetaInactive : he.workspaceMetaActive;
-  return [plan, status].filter(Boolean).join(" · ");
-}
 
 function BrandMark({ className }: { className?: string }) {
   return (
@@ -51,7 +45,7 @@ export function SidebarBrand({
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
-  const meta = workspaceMetaLine(planKey, workspaceActive);
+  const meta = workspacePlanMetaLine(planKey, workspaceActive);
   const primary = workspaceName?.trim() || he.brand;
 
   return (

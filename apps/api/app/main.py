@@ -14,6 +14,7 @@ from .config import get_settings
 from .errors import ApiError, error_response
 from .routers import (
     admin,
+    billing,
     auth,
     catalog,
     catalog_import,
@@ -162,6 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(feedback.router)
     app.include_router(telemetry.router)
     app.include_router(admin.router)
+    app.include_router(billing.router)
     app.include_router(team.router)
     app.include_router(customers.router)
     app.include_router(sites.router)

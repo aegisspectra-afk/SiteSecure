@@ -187,9 +187,9 @@ export function useSettingsNavItems(): NavItem[] {
       visible: true,
     },
     {
-      id: "plan",
-      to: "/app/settings/plan",
-      label: he.settingsNavPlan,
+      id: "billing",
+      to: "/app/settings/billing",
+      label: he.settingsNavBilling,
       group: "workspace",
       icon: Gauge,
       visible: allowAny(["settings.view", "users.view", "workspace.billing", "workspace.edit"]),

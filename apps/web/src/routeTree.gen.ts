@@ -26,6 +26,7 @@ import { Route as AdminArchiveRouteImport } from "./routes/admin/archive"
 import { Route as AdminAuditRouteImport } from "./routes/admin/audit"
 import { Route as AdminBadgesRouteImport } from "./routes/admin/badges"
 import { Route as AdminBetaRouteImport } from "./routes/admin/beta"
+import { Route as AdminBillingRequestsRouteImport } from "./routes/admin/billing-requests"
 import { Route as AdminFeedbackRouteImport } from "./routes/admin/feedback"
 import { Route as AdminFlagsRouteImport } from "./routes/admin/flags"
 import { Route as AdminInvitationsRouteImport } from "./routes/admin/invitations"
@@ -86,6 +87,7 @@ import { Route as AppQuotesNewRouteImport } from "./routes/app/quotes/new"
 import { Route as AppServiceIndexRouteImport } from "./routes/app/service/index"
 import { Route as AppSettingsIndexRouteImport } from "./routes/app/settings/index"
 import { Route as AppSettingsAuditRouteImport } from "./routes/app/settings/audit"
+import { Route as AppSettingsBillingRouteImport } from "./routes/app/settings/billing"
 import { Route as AppSettingsCompanyRouteImport } from "./routes/app/settings/company"
 import { Route as AppSettingsGeneralRouteImport } from "./routes/app/settings/general"
 import { Route as AppSettingsNotificationsRouteImport } from "./routes/app/settings/notifications"
@@ -137,6 +139,7 @@ import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$t
 import { Route as AppFleetVehiclesVehicleIdRouteImport } from "./routes/app/fleet/vehicles.$vehicleId"
 import { Route as AppQuotesQuoteIdIndexRouteImport } from "./routes/app/quotes/$quoteId/index"
 import { Route as AppQuotesQuoteIdPreviewRouteImport } from "./routes/app/quotes/$quoteId/preview"
+import { Route as AppSettingsBillingUsageRouteImport } from "./routes/app/settings/billing.usage"
 import { Route as AppSspEventsIndexRouteImport } from "./routes/app/ssp/events.index"
 import { Route as AppSspEventsEventIdRouteImport } from "./routes/app/ssp/events.$eventId"
 import { Route as AppSspFormsIndexRouteImport } from "./routes/app/ssp/forms.index"
@@ -232,6 +235,11 @@ const AdminBadgesRoute = AdminBadgesRouteImport.update({
 const AdminBetaRoute = AdminBetaRouteImport.update({
   id: "/beta",
   path: "/beta",
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBillingRequestsRoute = AdminBillingRequestsRouteImport.update({
+  id: "/billing-requests",
+  path: "/billing-requests",
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
@@ -534,6 +542,11 @@ const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
   path: "/audit",
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
+  id: "/billing",
+  path: "/billing",
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   id: "/company",
   path: "/company",
@@ -791,6 +804,11 @@ const AppQuotesQuoteIdPreviewRoute = AppQuotesQuoteIdPreviewRouteImport.update({
   path: "/preview",
   getParentRoute: () => AppQuotesQuoteIdRouteRoute,
 } as any)
+const AppSettingsBillingUsageRoute = AppSettingsBillingUsageRouteImport.update({
+  id: "/usage",
+  path: "/usage",
+  getParentRoute: () => AppSettingsBillingRoute,
+} as any)
 const AppSspEventsIndexRoute = AppSspEventsIndexRouteImport.update({
   id: "/events/",
   path: "/events/",
@@ -871,6 +889,7 @@ export interface FileRoutesByFullPath {
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
+  "/admin/billing-requests": typeof AdminBillingRequestsRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
   "/admin/invitations": typeof AdminInvitationsRoute
@@ -917,6 +936,7 @@ export interface FileRoutesByFullPath {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/billing": typeof AppSettingsBillingRouteWithChildren
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
@@ -977,6 +997,7 @@ export interface FileRoutesByFullPath {
   "/app/workforce/": typeof AppWorkforceIndexRoute
   "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/settings/billing/usage": typeof AppSettingsBillingUsageRoute
   "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
   "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
@@ -1002,6 +1023,7 @@ export interface FileRoutesByTo {
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
+  "/admin/billing-requests": typeof AdminBillingRequestsRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
   "/admin/invitations": typeof AdminInvitationsRoute
@@ -1047,6 +1069,7 @@ export interface FileRoutesByTo {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/billing": typeof AppSettingsBillingRouteWithChildren
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
@@ -1107,6 +1130,7 @@ export interface FileRoutesByTo {
   "/app/workforce": typeof AppWorkforceIndexRoute
   "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/settings/billing/usage": typeof AppSettingsBillingUsageRoute
   "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
   "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
@@ -1143,6 +1167,7 @@ export interface FileRoutesById {
   "/admin/audit": typeof AdminAuditRoute
   "/admin/badges": typeof AdminBadgesRoute
   "/admin/beta": typeof AdminBetaRoute
+  "/admin/billing-requests": typeof AdminBillingRequestsRoute
   "/admin/feedback": typeof AdminFeedbackRoute
   "/admin/flags": typeof AdminFlagsRoute
   "/admin/invitations": typeof AdminInvitationsRoute
@@ -1189,6 +1214,7 @@ export interface FileRoutesById {
   "/app/projects/$projectId": typeof AppProjectsProjectIdRoute
   "/app/quotes/new": typeof AppQuotesNewRoute
   "/app/settings/audit": typeof AppSettingsAuditRoute
+  "/app/settings/billing": typeof AppSettingsBillingRouteWithChildren
   "/app/settings/company": typeof AppSettingsCompanyRoute
   "/app/settings/general": typeof AppSettingsGeneralRoute
   "/app/settings/notifications": typeof AppSettingsNotificationsRoute
@@ -1249,6 +1275,7 @@ export interface FileRoutesById {
   "/app/workforce/": typeof AppWorkforceIndexRoute
   "/app/fleet/vehicles/$vehicleId": typeof AppFleetVehiclesVehicleIdRoute
   "/app/quotes/$quoteId/preview": typeof AppQuotesQuoteIdPreviewRoute
+  "/app/settings/billing/usage": typeof AppSettingsBillingUsageRoute
   "/app/ssp/events/$eventId": typeof AppSspEventsEventIdRoute
   "/app/ssp/forms/$formId": typeof AppSspFormsFormIdRoute
   "/app/ssp/sites/$siteId": typeof AppSspSitesSiteIdRoute
@@ -1286,6 +1313,7 @@ export interface FileRouteTypes {
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
+    | "/admin/billing-requests"
     | "/admin/feedback"
     | "/admin/flags"
     | "/admin/invitations"
@@ -1332,6 +1360,7 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/new"
     | "/app/settings/audit"
+    | "/app/settings/billing"
     | "/app/settings/company"
     | "/app/settings/general"
     | "/app/settings/notifications"
@@ -1392,6 +1421,7 @@ export interface FileRouteTypes {
     | "/app/workforce/"
     | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/settings/billing/usage"
     | "/app/ssp/events/$eventId"
     | "/app/ssp/forms/$formId"
     | "/app/ssp/sites/$siteId"
@@ -1417,6 +1447,7 @@ export interface FileRouteTypes {
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
+    | "/admin/billing-requests"
     | "/admin/feedback"
     | "/admin/flags"
     | "/admin/invitations"
@@ -1462,6 +1493,7 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/new"
     | "/app/settings/audit"
+    | "/app/settings/billing"
     | "/app/settings/company"
     | "/app/settings/general"
     | "/app/settings/notifications"
@@ -1522,6 +1554,7 @@ export interface FileRouteTypes {
     | "/app/workforce"
     | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/settings/billing/usage"
     | "/app/ssp/events/$eventId"
     | "/app/ssp/forms/$formId"
     | "/app/ssp/sites/$siteId"
@@ -1557,6 +1590,7 @@ export interface FileRouteTypes {
     | "/admin/audit"
     | "/admin/badges"
     | "/admin/beta"
+    | "/admin/billing-requests"
     | "/admin/feedback"
     | "/admin/flags"
     | "/admin/invitations"
@@ -1603,6 +1637,7 @@ export interface FileRouteTypes {
     | "/app/projects/$projectId"
     | "/app/quotes/new"
     | "/app/settings/audit"
+    | "/app/settings/billing"
     | "/app/settings/company"
     | "/app/settings/general"
     | "/app/settings/notifications"
@@ -1663,6 +1698,7 @@ export interface FileRouteTypes {
     | "/app/workforce/"
     | "/app/fleet/vehicles/$vehicleId"
     | "/app/quotes/$quoteId/preview"
+    | "/app/settings/billing/usage"
     | "/app/ssp/events/$eventId"
     | "/app/ssp/forms/$formId"
     | "/app/ssp/sites/$siteId"
@@ -1821,6 +1857,13 @@ declare module "@tanstack/react-router" {
       path: "/beta"
       fullPath: "/admin/beta"
       preLoaderRoute: typeof AdminBetaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    "/admin/billing-requests": {
+      id: "/admin/billing-requests"
+      path: "/billing-requests"
+      fullPath: "/admin/billing-requests"
+      preLoaderRoute: typeof AdminBillingRequestsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     "/admin/feedback": {
@@ -2243,6 +2286,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsAuditRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    "/app/settings/billing": {
+      id: "/app/settings/billing"
+      path: "/billing"
+      fullPath: "/app/settings/billing"
+      preLoaderRoute: typeof AppSettingsBillingRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     "/app/settings/company": {
       id: "/app/settings/company"
       path: "/company"
@@ -2600,6 +2650,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppQuotesQuoteIdPreviewRouteImport
       parentRoute: typeof AppQuotesQuoteIdRouteRoute
     }
+    "/app/settings/billing/usage": {
+      id: "/app/settings/billing/usage"
+      path: "/usage"
+      fullPath: "/app/settings/billing/usage"
+      preLoaderRoute: typeof AppSettingsBillingUsageRouteImport
+      parentRoute: typeof AppSettingsBillingRoute
+    }
     "/app/ssp/events/": {
       id: "/app/ssp/events/"
       path: "/events"
@@ -2685,6 +2742,7 @@ interface AdminRouteRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
   AdminBadgesRoute: typeof AdminBadgesRoute
   AdminBetaRoute: typeof AdminBetaRoute
+  AdminBillingRequestsRoute: typeof AdminBillingRequestsRoute
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminFlagsRoute: typeof AdminFlagsRoute
   AdminInvitationsRoute: typeof AdminInvitationsRoute
@@ -2698,6 +2756,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
   AdminBadgesRoute: AdminBadgesRoute,
   AdminBetaRoute: AdminBetaRoute,
+  AdminBillingRequestsRoute: AdminBillingRequestsRoute,
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminFlagsRoute: AdminFlagsRoute,
   AdminInvitationsRoute: AdminInvitationsRoute,
@@ -2774,8 +2833,20 @@ const AppPlatformPathRouteRouteChildren: AppPlatformPathRouteRouteChildren = {
 const AppPlatformPathRouteRouteWithChildren =
   AppPlatformPathRouteRoute._addFileChildren(AppPlatformPathRouteRouteChildren)
 
+interface AppSettingsBillingRouteChildren {
+  AppSettingsBillingUsageRoute: typeof AppSettingsBillingUsageRoute
+}
+
+const AppSettingsBillingRouteChildren: AppSettingsBillingRouteChildren = {
+  AppSettingsBillingUsageRoute: AppSettingsBillingUsageRoute,
+}
+
+const AppSettingsBillingRouteWithChildren =
+  AppSettingsBillingRoute._addFileChildren(AppSettingsBillingRouteChildren)
+
 interface AppSettingsRouteRouteChildren {
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
+  AppSettingsBillingRoute: typeof AppSettingsBillingRouteWithChildren
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsGeneralRoute: typeof AppSettingsGeneralRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
@@ -2795,6 +2866,7 @@ interface AppSettingsRouteRouteChildren {
 
 const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAuditRoute: AppSettingsAuditRoute,
+  AppSettingsBillingRoute: AppSettingsBillingRouteWithChildren,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsGeneralRoute: AppSettingsGeneralRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,

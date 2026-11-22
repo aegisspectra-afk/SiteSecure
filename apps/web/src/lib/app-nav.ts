@@ -159,6 +159,13 @@ export function planLabel(planKey: string | undefined): string {
   return catalogPlanLabel(planKey);
 }
 
+/** App chrome: plan name only (C3); inactive workspaces still show status. */
+export function workspacePlanMetaLine(planKey?: string, workspaceActive?: boolean): string {
+  const plan = planLabel(planKey);
+  if (workspaceActive === false) return `${plan} · ${he.workspaceMetaInactive}`;
+  return plan;
+}
+
 export function isNavSelected(to: AppNavTo, pathname: string): boolean {
   if (to === "/app/settings") {
     return pathname === "/app/settings" || pathname.startsWith("/app/settings/");

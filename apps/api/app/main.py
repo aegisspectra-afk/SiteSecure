@@ -19,6 +19,7 @@ from .routers import (
     catalog,
     catalog_import,
     cctv,
+    customer_portal,
     customers,
     dashboard,
     documents,
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
     app.include_router(billing.router)
     app.include_router(team.router)
     app.include_router(customers.router)
+    app.include_router(customer_portal.router)
     app.include_router(sites.router)
     app.include_router(systems.router)
     app.include_router(search.router)

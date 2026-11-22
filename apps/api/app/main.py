@@ -83,8 +83,9 @@ def _redact_validation_errors(errors: list) -> list:
 
 
 def http_rate_limit_burst(app_env: str) -> int:
-    """Per-IP requests in a 60s window. Development allows a local UI walk."""
-    return 1200 if (app_env or "").strip().lower() == "development" else 120
+    """Per-IP requests in a 60s window. Development/test allow local UI + live pytest."""
+    env = (app_env or "").strip().lower()
+    return 1200 if env in {"development", "test", "dev"} else 120
 
 
 def create_app() -> FastAPI:

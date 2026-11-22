@@ -131,9 +131,7 @@ def test_b8_quote_engine_golden_path_live(settings):
         json={
             "customer_id": customer_id,
             "name": "אתר B8",
-            "code": f"B8-{uuid.uuid4().hex[:6]}",
-            "address_line1": "רחוב הבדיקה 1",
-            "city": "תל אביב",
+            "address": {"line": "רחוב הבדיקה 1", "city": "תל אביב"},
         },
     )
     assert site.status_code == 200, _snippet(site)
@@ -158,7 +156,8 @@ def test_b8_quote_engine_golden_path_live(settings):
 
     # 2) CCTV fast-path equivalent: starter BOM on the quote
     cam = _starter_product(s, ws, "SS-CAM-4MP-DOME")
-    nvr = _starter_product(s, ws, "SS-NVR-8CH-POE")
+    # 16ch covers 3× resolution tiers that may each expand camera lines in generate-alternatives.
+    nvr = _starter_product(s, ws, "SS-NVR-16CH-POE")
     for prod, qty in ((cam, 4), (nvr, 1)):
         added = api.post(
             f"{base}/quotes/{qid}/items",
@@ -281,25 +280,53 @@ def test_b8_quote_engine_golden_path_live(settings):
     assert approved_quote["status"] == "approved"
     assert str(approved_quote.get("approved_alternative_id")) == chosen_id
 
-    # 9) Project + installation job from approved quote (chosen alternative scope)
+    # 9) Project + installation job — D2 may already provision on public approve.
     proj = api.post(f"{base}/projects/from-quote", headers=tok, json={"source_quote_id": qid})
-    assert proj.status_code == 200, _snippet(proj)
-    project_id = proj.json()["id"]
-    assert proj.json().get("source_quote_id") == qid
+    if proj.status_code == 409:
+        listed = api.get(
+            f"{base}/projects",
+            headers=tok,
+            params={"source_quote_id": f"eq.{qid}"},
+        )
+        # Fallback: dashboard-style list then filter
+        if listed.status_code != 200 or not isinstance(listed.json(), (list, dict)):
+            listed = api.get(f"{base}/projects", headers=tok)
+        rows = listed.json()
+        if isinstance(rows, dict):
+            rows = rows.get("items") or rows.get("data") or []
+        match = next((r for r in rows if str(r.get("source_quote_id")) == qid), None)
+        assert match, _snippet(proj)
+        project_id = match["id"]
+    else:
+        assert proj.status_code == 200, _snippet(proj)
+        project_id = proj.json()["id"]
+        assert proj.json().get("source_quote_id") == qid
 
-    job = api.post(
-        f"{base}/jobs",
-        headers=tok,
-        json={
-            "title": "התקנת CCTV B8",
-            "customer_id": customer_id,
-            "site_id": site_id,
-            "project_id": project_id,
-            "kind": "installation",
-        },
+    jobs = api.get(f"{base}/jobs", headers=tok, params={"project_id": project_id})
+    job_rows = jobs.json() if jobs.status_code == 200 else []
+    if isinstance(job_rows, dict):
+        job_rows = job_rows.get("items") or job_rows.get("data") or []
+    existing_install = next(
+        (j for j in job_rows if j.get("kind") == "installation" and str(j.get("project_id")) == project_id),
+        None,
     )
-    assert job.status_code == 200, _snippet(job)
-    assert job.json().get("project_id") == project_id
+    if existing_install:
+        assert existing_install.get("status") in {"awaiting_dispatch", "scheduled"}
+        assert existing_install.get("project_id") == project_id
+    else:
+        job = api.post(
+            f"{base}/jobs",
+            headers=tok,
+            json={
+                "title": "התקנת CCTV B8",
+                "customer_id": customer_id,
+                "site_id": site_id,
+                "project_id": project_id,
+                "kind": "installation",
+            },
+        )
+        assert job.status_code == 200, _snippet(job)
+        assert job.json().get("project_id") == project_id
 
     version = int(approved_quote.get("version") or 1)
     snap = _load_version_snapshot(s, qid, version)

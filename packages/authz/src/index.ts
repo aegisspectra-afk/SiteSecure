@@ -1,5 +1,16 @@
 import catalog from "../catalog.json";
 
+export {
+  billingPublic,
+  catalogPlansOrdered,
+  annualMonthlyIls,
+  formatIls,
+  comparisonCell,
+  publicPricingPayload,
+  PRICING_CAPABILITY_ROWS,
+} from "./public-pricing";
+export type { BillingPublic, PlanCommercial } from "./public-pricing";
+
 export type SeatLimitKey = "seats_operator" | "seats_field";
 export type ResourceLimitKey = SeatLimitKey | "storage_gb";
 

@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from "./routes/login"
 import { Route as OnboardingRouteImport } from "./routes/onboarding"
 import { Route as PlatformRouteRouteImport } from "./routes/platform/route"
 import { Route as PortalRouteRouteImport } from "./routes/portal/route"
+import { Route as PricingRouteImport } from "./routes/pricing"
 import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as UnitRouteRouteImport } from "./routes/unit/route"
@@ -54,6 +55,7 @@ import { Route as PortalIndexRouteImport } from "./routes/portal/index"
 import { Route as PortalChooseRouteImport } from "./routes/portal/choose"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
 import { Route as SspTokenRouteImport } from "./routes/ssp/$token"
+import { Route as ToolsCctvStorageRouteImport } from "./routes/tools/cctv-storage"
 import { Route as UnitIndexRouteImport } from "./routes/unit/index"
 import { Route as AppCustomersIndexRouteImport } from "./routes/app/customers/index"
 import { Route as AppCustomersCustomerIdRouteImport } from "./routes/app/customers/$customerId"
@@ -190,6 +192,11 @@ const PlatformRouteRoute = PlatformRouteRouteImport.update({
 const PortalRouteRoute = PortalRouteRouteImport.update({
   id: "/portal",
   path: "/portal",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: "/pricing",
+  path: "/pricing",
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -375,6 +382,11 @@ const QTokenRoute = QTokenRouteImport.update({
 const SspTokenRoute = SspTokenRouteImport.update({
   id: "/ssp/$token",
   path: "/ssp/$token",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsCctvStorageRoute = ToolsCctvStorageRouteImport.update({
+  id: "/tools/cctv-storage",
+  path: "/tools/cctv-storage",
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnitIndexRoute = UnitIndexRouteImport.update({
@@ -877,6 +889,7 @@ export interface FileRoutesByFullPath {
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
+  "/pricing": typeof PricingRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -908,6 +921,7 @@ export interface FileRoutesByFullPath {
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
+  "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
@@ -1016,6 +1030,7 @@ export interface FileRoutesByTo {
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
+  "/pricing": typeof PricingRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -1042,6 +1057,7 @@ export interface FileRoutesByTo {
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
+  "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
   "/legal": typeof LegalIndexRoute
@@ -1155,6 +1171,7 @@ export interface FileRoutesById {
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
+  "/pricing": typeof PricingRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -1186,6 +1203,7 @@ export interface FileRoutesById {
   "/portal/choose": typeof PortalChooseRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
+  "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
   "/legal/": typeof LegalIndexRoute
@@ -1301,6 +1319,7 @@ export interface FileRouteTypes {
     | "/forgot-password"
     | "/login"
     | "/onboarding"
+    | "/pricing"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1332,6 +1351,7 @@ export interface FileRouteTypes {
     | "/portal/choose"
     | "/q/$token"
     | "/ssp/$token"
+    | "/tools/cctv-storage"
     | "/admin/"
     | "/app/"
     | "/legal/"
@@ -1440,6 +1460,7 @@ export interface FileRouteTypes {
     | "/forgot-password"
     | "/login"
     | "/onboarding"
+    | "/pricing"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1466,6 +1487,7 @@ export interface FileRouteTypes {
     | "/portal/choose"
     | "/q/$token"
     | "/ssp/$token"
+    | "/tools/cctv-storage"
     | "/admin"
     | "/app"
     | "/legal"
@@ -1578,6 +1600,7 @@ export interface FileRouteTypes {
     | "/forgot-password"
     | "/login"
     | "/onboarding"
+    | "/pricing"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1609,6 +1632,7 @@ export interface FileRouteTypes {
     | "/portal/choose"
     | "/q/$token"
     | "/ssp/$token"
+    | "/tools/cctv-storage"
     | "/admin/"
     | "/app/"
     | "/legal/"
@@ -1723,6 +1747,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  PricingRoute: typeof PricingRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -1733,6 +1758,7 @@ export interface RootRouteChildren {
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
   SspTokenRoute: typeof SspTokenRoute
+  ToolsCctvStorageRoute: typeof ToolsCctvStorageRoute
   LegalIndexRoute: typeof LegalIndexRoute
   PublicHandoverTokenRoute: typeof PublicHandoverTokenRoute
   PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
@@ -1794,6 +1820,13 @@ declare module "@tanstack/react-router" {
       path: "/portal"
       fullPath: "/portal"
       preLoaderRoute: typeof PortalRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/pricing": {
+      id: "/pricing"
+      path: "/pricing"
+      fullPath: "/pricing"
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/register": {
@@ -2053,6 +2086,13 @@ declare module "@tanstack/react-router" {
       path: "/ssp/$token"
       fullPath: "/ssp/$token"
       preLoaderRoute: typeof SspTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/tools/cctv-storage": {
+      id: "/tools/cctv-storage"
+      path: "/tools/cctv-storage"
+      fullPath: "/tools/cctv-storage"
+      preLoaderRoute: typeof ToolsCctvStorageRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/unit/": {
@@ -3113,6 +3153,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  PricingRoute: PricingRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
@@ -3123,6 +3164,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
   SspTokenRoute: SspTokenRoute,
+  ToolsCctvStorageRoute: ToolsCctvStorageRoute,
   LegalIndexRoute: LegalIndexRoute,
   PublicHandoverTokenRoute: PublicHandoverTokenRoute,
   PublicQuotesTokenRoute: PublicQuotesTokenRoute,

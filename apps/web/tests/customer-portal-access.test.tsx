@@ -81,6 +81,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn(),
     };
     render(
       wrap(
@@ -110,6 +111,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn(),
     };
     render(
       wrap(
@@ -138,6 +140,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn(),
     };
     const { container } = render(
       wrap(
@@ -172,6 +175,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn(),
     };
     render(
       wrap(
@@ -218,6 +222,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn(),
     };
     render(
       wrap(
@@ -260,6 +265,7 @@ describe("CustomerPortalAccess", () => {
       copyCustomerPortalLink: vi.fn(),
       resendCustomerPortal: vi.fn(),
       revokeCustomerPortal: vi.fn().mockResolvedValue({ id: "access-1", email: "a@example.com", status: "revoked" }),
+      updateCustomerPortalScope: vi.fn(),
     };
     render(
       wrap(
@@ -284,5 +290,59 @@ describe("CustomerPortalAccess", () => {
     await user.click(await within(dialog).findByRole("button", { name: he.portalReplaceEmail }, { timeout: 3000 }));
     expect(api.revokeCustomerPortal).toHaveBeenCalledWith("ws", "cu", "access-1");
     expect(await within(dialog).findByRole("button", { name: he.portalEnable })).toBeInTheDocument();
+  });
+
+  it("saves site-scoped portal access when manager selects sites", async () => {
+    const user = userEvent.setup();
+    const api = {
+      listCustomerPortal: vi.fn().mockResolvedValue({
+        access: [
+          {
+            id: "access-1",
+            email: "a@example.com",
+            status: "active",
+            scope: "customer",
+            site_ids: [],
+          },
+        ],
+      }),
+      enableCustomerPortal: vi.fn(),
+      copyCustomerPortalLink: vi.fn(),
+      resendCustomerPortal: vi.fn(),
+      revokeCustomerPortal: vi.fn(),
+      updateCustomerPortalScope: vi.fn().mockResolvedValue({
+        id: "access-1",
+        email: "a@example.com",
+        status: "active",
+        scope: "sites",
+        site_ids: ["site-1"],
+      }),
+    };
+    render(
+      wrap(
+        <CustomerPortalAccess
+          workspaceId="ws"
+          customerId="cu"
+          api={api}
+          defaultEmail="a@example.com"
+          canView
+          canCreate
+          canManage
+          canRevoke
+          sites={[
+            { id: "site-1", name: "אתר ראשי" },
+            { id: "site-2", name: "אתר משני" },
+          ]}
+        />,
+      ),
+    );
+    await user.click(await screen.findByRole("radio", { name: he.portalScopeSites }));
+    await user.click(await screen.findByRole("checkbox", { name: "אתר ראשי" }));
+    await user.click(await screen.findByRole("button", { name: he.portalScopeSave }));
+    expect(api.updateCustomerPortalScope).toHaveBeenCalledWith("ws", "cu", "access-1", {
+      scope: "sites",
+      site_ids: ["site-1"],
+    });
+    expect(await screen.findByText(he.portalScopeSaved)).toBeInTheDocument();
   });
 });

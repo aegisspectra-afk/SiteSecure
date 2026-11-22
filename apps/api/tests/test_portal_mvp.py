@@ -94,6 +94,33 @@ def test_portal_quote_open_route_registered():
   assert res.status_code in {401, 404}, res.text
 
 
+def test_validate_customer_site_ids_rejects_foreign_site():
+  from uuid import uuid4
+
+  from app.routers import customer_portal as cp
+
+  class _ValidateService:
+    def get(self, table: str, *, params: dict | None = None, **_kwargs):
+      if table == "sites":
+        return _Resp([{"id": "s1"}])
+      return _Resp([])
+
+  ws = uuid4()
+  cu = uuid4()
+  with pytest.raises(ApiError):
+    cp._validate_customer_site_ids(_ValidateService(), ws, cu, ["s1", "s2"])
+
+
+def test_portal_scope_route_registered():
+  api = TestClient(app)
+  fake = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+  res = api.patch(
+    f"/api/v1/workspaces/{fake}/customers/{fake}/portal/{fake}/scope",
+    json={"scope": "customer", "site_ids": []},
+  )
+  assert res.status_code in {401, 403}, res.text
+
+
 def test_portal_create_service_call_rejects_foreign_site_scope():
   from app.routers import customer_portal as cp
 

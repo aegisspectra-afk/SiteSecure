@@ -801,6 +801,7 @@ export function CustomerProfile({
                     service: serviceCalls.length,
                     documents: portalVisibleDocumentCount(documents),
                   }}
+                  sites={siteOptions}
                 />
               ) : null
             }

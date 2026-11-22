@@ -57,6 +57,12 @@ class PortalEnableIn(BaseModel):
     email: str = Field(min_length=3, max_length=320)
 
 
+class PortalScopeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scope: str = Field(pattern=r"^(customer|sites)$")
+    site_ids: list[str] = Field(default_factory=list, max_length=200)
+
+
 class PortalTokenIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(min_length=16, max_length=512)
@@ -185,17 +191,71 @@ def _latest_invites(service: ServiceClient, access_ids: list[str]) -> dict[str, 
     return found
 
 
-def _public_access(row: dict, invite: dict | None) -> dict:
+def _site_grants_by_access(service: ServiceClient, access_ids: list[str]) -> dict[str, list[str]]:
+    if not access_ids:
+        return {}
+    joined = ",".join(access_ids)
+    res = service.get(
+        "customer_portal_site_grants",
+        params={"access_id": f"in.({joined})", "select": "access_id,site_id"},
+    )
+    found: dict[str, list[str]] = {}
+    for row in as_list(res):
+        key = str(row["access_id"])
+        found.setdefault(key, []).append(str(row["site_id"]))
+    return found
+
+
+def _validate_customer_site_ids(
+    service: ServiceClient, workspace_id: UUID, customer_id: UUID, site_ids: list[str]
+) -> list[str]:
+    unique = list(dict.fromkeys(str(s).strip() for s in site_ids if str(s).strip()))
+    if not unique:
+        return []
+    joined = ",".join(unique)
+    res = service.get(
+        "sites",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "customer_id": f"eq.{customer_id}",
+            "deleted_at": "is.null",
+            "id": f"in.({joined})",
+            "select": "id",
+        },
+    )
+    found = {str(row["id"]) for row in as_list(res)}
+    if len(found) != len(unique):
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    return unique
+
+
+def _sync_site_grants(service: ServiceClient, access_id: str, site_ids: list[str]) -> None:
+    service.delete("customer_portal_site_grants", params={"access_id": f"eq.{access_id}"})
+    for site_id in site_ids:
+        created_or_403(
+            service.post(
+                "customer_portal_site_grants",
+                {"access_id": access_id, "site_id": site_id},
+            )
+        )
+
+
+def _public_access(row: dict, invite: dict | None, *, site_ids: list[str] | None = None) -> dict:
     status = portal_ui_status(row, invite)
     expires = (invite or {}).get("expires_at")
-    return {
+    scope = str(row.get("scope") or "customer")
+    payload = {
         "id": row["id"],
         "email": row["email"],
         "status": status,
         "contact_id": row.get("contact_id"),
         "last_login_at": row.get("last_login_at"),
         "expires_at": expires if status in {"invited", "expired"} else None,
+        "scope": scope,
     }
+    if scope == "sites":
+        payload["site_ids"] = list(site_ids) if site_ids is not None else []
+    return payload
 
 
 def _mint_invite(
@@ -254,13 +314,20 @@ def list_customer_portal(
         params={
             "workspace_id": f"eq.{workspace_id}",
             "customer_id": f"eq.{customer_id}",
-            "select": "id,email,status,contact_id,last_login_at,created_at",
+            "select": "id,email,status,contact_id,last_login_at,created_at,scope",
             "order": "created_at.desc",
         },
     )
     rows = as_list(res)
-    invites = _latest_invites(service, [str(row["id"]) for row in rows])
-    return {"access": [_public_access(row, invites.get(str(row["id"]))) for row in rows]}
+    access_ids = [str(row["id"]) for row in rows]
+    invites = _latest_invites(service, access_ids)
+    site_grants = _site_grants_by_access(service, access_ids)
+    return {
+        "access": [
+            _public_access(row, invites.get(str(row["id"])), site_ids=site_grants.get(str(row["id"]), []))
+            for row in rows
+        ]
+    }
 
 
 @router.post("/workspaces/{workspace_id}/customers/{customer_id}/portal")
@@ -437,6 +504,60 @@ def revoke_customer_portal(
     )
     current = rows[0] if rows else {**access, "status": "revoked", "last_login_at": access.get("last_login_at")}
     return _public_access(current, None)
+
+
+@router.patch("/workspaces/{workspace_id}/customers/{customer_id}/portal/{access_id}/scope")
+def patch_customer_portal_scope(
+    workspace_id: UUID,
+    customer_id: UUID,
+    access_id: UUID,
+    body: PortalScopeIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    ctx = load_authz_context(client, user["id"], str(workspace_id))
+    _raise_decision(authorize(ctx=ctx, action="customer_portal.manage"))
+    _require_customer(client, workspace_id, customer_id)
+    access = _access_or_404(service, workspace_id, customer_id, access_id)
+    if access.get("status") == "revoked":
+        raise ApiError(409, "PORTAL_REVOKED", MESSAGES["NOT_FOUND"])
+    scope = body.scope
+    if scope == "sites" and not body.site_ids:
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    validated_ids: list[str] = []
+    if scope == "sites":
+        validated_ids = _validate_customer_site_ids(service, workspace_id, customer_id, body.site_ids)
+    patched = patched_or_403(
+        service.patch(
+            "customer_portal_access",
+            {"scope": scope},
+            params={"id": f"eq.{access_id}"},
+        )
+    )
+    rows = as_list(patched)
+    current = rows[0] if rows else {**access, "scope": scope}
+    if scope == "sites":
+        _sync_site_grants(service, str(access_id), validated_ids)
+    else:
+        service.delete("customer_portal_site_grants", params={"access_id": f"eq.{access_id}"})
+    invites = _latest_invites(service, [str(access_id)])
+    invite = invites.get(str(access_id))
+    site_ids = validated_ids if scope == "sites" else []
+    write_audit(
+        client,
+        str(workspace_id),
+        "customer_portal.scope_update",
+        entity_type="customer_portal_access",
+        entity_id=str(access_id),
+        metadata={
+            "result": "success",
+            "customer_id": str(customer_id),
+            "scope": scope,
+            "site_count": len(site_ids),
+        },
+    )
+    return _public_access(current, invite, site_ids=site_ids)
 
 
 @router.get("/portal/invites/peek")

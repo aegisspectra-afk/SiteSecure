@@ -1,4 +1,9 @@
-import { ApiClientError, type PortalAccess, type PortalAccessStatus } from "@site-secure/api-client";
+import {
+  ApiClientError,
+  type PortalAccess,
+  type PortalAccessScope,
+  type PortalAccessStatus,
+} from "@site-secure/api-client";
 import { Button, Input } from "@site-secure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -28,7 +33,15 @@ type PortalApi = {
   copyCustomerPortalLink: (workspaceId: string, customerId: string, accessId: string) => Promise<PortalAccess>;
   resendCustomerPortal: (workspaceId: string, customerId: string, accessId: string) => Promise<PortalAccess>;
   revokeCustomerPortal: (workspaceId: string, customerId: string, accessId: string) => Promise<PortalAccess>;
+  updateCustomerPortalScope: (
+    workspaceId: string,
+    customerId: string,
+    accessId: string,
+    body: { scope: PortalAccessScope; site_ids: string[] },
+  ) => Promise<PortalAccess>;
 };
+
+type PortalSiteOption = { id: string; name: string };
 
 const STATUS_LABEL: Record<PortalAccessStatus, string> = {
   not_enabled: he.portalStatusNotEnabled,
@@ -69,6 +82,148 @@ function PortalQr({ value }: { value: string }) {
 
 function canNativeShare(): boolean {
   return typeof navigator !== "undefined" && typeof navigator.share === "function";
+}
+
+function PortalAccessScopePanel({
+  row,
+  sites,
+  canManage,
+  workspaceId,
+  customerId,
+  api,
+  onSaved,
+}: {
+  row: PortalAccess;
+  sites: PortalSiteOption[];
+  canManage: boolean;
+  workspaceId: string;
+  customerId: string;
+  api: PortalApi;
+  onSaved: () => void;
+}) {
+  const scope = row.scope ?? "customer";
+  const [mode, setMode] = useState<PortalAccessScope>(scope === "sites" ? "sites" : "customer");
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(row.site_ids ?? []));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [scopeError, setScopeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMode(scope === "sites" ? "sites" : "customer");
+    setPicked(new Set(row.site_ids ?? []));
+    setSaved(false);
+  }, [row.id, row.scope, row.site_ids, scope]);
+
+  if (!canManage || row.status === "revoked") {
+    const label =
+      scope === "sites"
+        ? he.portalScopeSitesLabel(row.site_ids?.length ?? 0)
+        : he.portalScopeCustomer;
+    return (
+      <p className="mt-2 text-xs text-fg-muted">
+        {he.portalScopeTitle}: {label}
+      </p>
+    );
+  }
+
+  const dirty =
+    mode !== (scope === "sites" ? "sites" : "customer") ||
+    (mode === "sites" &&
+      (picked.size !== (row.site_ids?.length ?? 0) ||
+        [...picked].some((id) => !(row.site_ids ?? []).includes(id))));
+
+  async function saveScope() {
+    if (mode === "sites" && picked.size === 0) {
+      setScopeError(he.portalScopePickSites);
+      return;
+    }
+    setSaving(true);
+    setScopeError(null);
+    setSaved(false);
+    try {
+      await api.updateCustomerPortalScope(workspaceId, customerId, row.id, {
+        scope: mode,
+        site_ids: mode === "sites" ? [...picked] : [],
+      });
+      setSaved(true);
+      onSaved();
+    } catch (err) {
+      setScopeError(err instanceof ApiClientError ? err.message : he.customersError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="text-xs font-medium text-fg">{he.portalScopeTitle}</p>
+      <fieldset className="portal-email-choices mt-2">
+        <legend className="sr-only">{he.portalScopeTitle}</legend>
+        <label className="portal-email-choice">
+          <input
+            type="radio"
+            name={`portal-scope-${row.id}`}
+            checked={mode === "customer"}
+            onChange={() => {
+              setMode("customer");
+              setSaved(false);
+            }}
+          />
+          <span className="text-sm text-fg">{he.portalScopeCustomer}</span>
+        </label>
+        <label className="portal-email-choice">
+          <input
+            type="radio"
+            name={`portal-scope-${row.id}`}
+            checked={mode === "sites"}
+            onChange={() => {
+              setMode("sites");
+              setSaved(false);
+            }}
+            disabled={sites.length === 0}
+          />
+          <span className="text-sm text-fg">{he.portalScopeSites}</span>
+        </label>
+      </fieldset>
+      {mode === "sites" ? (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-fg-muted">{he.portalScopeSitesHint}</p>
+          <ul className="space-y-1">
+            {sites.map((site) => (
+              <li key={site.id}>
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-border px-3 py-2 text-sm text-fg">
+                  <input
+                    type="checkbox"
+                    className="size-5 shrink-0"
+                    checked={picked.has(site.id)}
+                    onChange={() => {
+                      setPicked((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(site.id)) next.delete(site.id);
+                        else next.add(site.id);
+                        return next;
+                      });
+                      setSaved(false);
+                    }}
+                  />
+                  <span className="min-w-0">{site.name}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {(dirty || saved) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" loading={saving} disabled={!dirty} onClick={() => void saveScope()}>
+            {he.portalScopeSave}
+          </Button>
+          {saved ? <span className="text-xs text-fg-muted">{he.portalScopeSaved}</span> : null}
+        </div>
+      )}
+      {scopeError ? <p className="mt-2 text-xs text-danger">{scopeError}</p> : null}
+    </div>
+  );
 }
 
 function PortalBuildMeter({ plan, percent }: { plan: PortalBuildSegment[]; percent: number }) {
@@ -126,6 +281,7 @@ export function CustomerPortalAccess({
   customerName = "",
   workspaceName = "",
   contacts = [],
+  sites = [],
 }: {
   workspaceId: string;
   customerId: string;
@@ -141,6 +297,7 @@ export function CustomerPortalAccess({
   customerName?: string;
   workspaceName?: string;
   contacts?: { name: string; email: string }[];
+  sites?: PortalSiteOption[];
 }) {
   const { session } = useSession();
   const isDemo = Boolean(activeMembership(session)?.is_demo);
@@ -461,6 +618,15 @@ export function CustomerPortalAccess({
                 {he.portalLastLogin}: {new Date(row.last_login_at).toLocaleString("he-IL")}
               </p>
             ) : null}
+            <PortalAccessScopePanel
+              row={row}
+              sites={sites}
+              canManage={canManage}
+              workspaceId={workspaceId}
+              customerId={customerId}
+              api={api}
+              onSaved={() => void queryClient.invalidateQueries({ queryKey: ["customer-portal", workspaceId, customerId] })}
+            />
             <div className="mt-3 flex flex-wrap gap-2">
               {canManage && !building && (row.status === "invited" || row.status === "expired") ? (
                 <Button type="button" variant="secondary" loading={rotate.isPending} onClick={() => beginShareLink(row)}>

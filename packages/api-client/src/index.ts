@@ -1951,6 +1951,8 @@ export type InviteAcceptResult = {
 
 export type PortalAccessStatus = "not_enabled" | "invited" | "active" | "expired" | "revoked";
 
+export type PortalAccessScope = "customer" | "sites";
+
 export type PortalAccess = {
   id: string;
   email: string;
@@ -1959,6 +1961,8 @@ export type PortalAccess = {
   last_login_at?: string | null;
   expires_at?: string | null;
   token?: string;
+  scope?: PortalAccessScope;
+  site_ids?: string[];
 };
 
 export type PortalInvitePreview = {
@@ -4093,6 +4097,16 @@ export function createApiClient(opts: {
     revokeCustomerPortal: (workspaceId: string, customerId: string, accessId: string) =>
       request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal/${accessId}/revoke`, {
         method: "POST",
+      }),
+    updateCustomerPortalScope: (
+      workspaceId: string,
+      customerId: string,
+      accessId: string,
+      body: { scope: PortalAccessScope; site_ids: string[] },
+    ) =>
+      request<PortalAccess>(`/api/v1/workspaces/${workspaceId}/customers/${customerId}/portal/${accessId}/scope`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
       }),
     peekPortalInvite: (token: string) => {
       const params = new URLSearchParams({ token });

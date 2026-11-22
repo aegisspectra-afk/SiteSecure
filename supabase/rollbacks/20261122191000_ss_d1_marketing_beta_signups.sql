@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.marketing_beta_signups;

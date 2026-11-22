@@ -649,6 +649,58 @@ def list_billing_upgrade_requests(
     return out
 
 
+class AdminMarketingBetaPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["new", "contacted", "closed"] | None = None
+    internal_note: str | None = Field(default=None, max_length=8000)
+
+
+@router.get("/marketing-beta-signups")
+def list_marketing_beta_signups(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    status: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=500),
+):
+    require_platform_admin(service, user["id"])
+    params: dict[str, str] = {
+        "select": "id,full_name,phone,business_name,technician_count,trade_focus,source,status,internal_note,created_at,updated_at",
+        "order": "created_at.desc",
+        "limit": str(limit),
+    }
+    if status:
+        params["status"] = f"eq.{status}"
+    return as_list(service.get("marketing_beta_signups", params=params))
+
+
+@router.patch("/marketing-beta-signups/{signup_id}")
+def patch_marketing_beta_signup(
+    signup_id: UUID,
+    body: AdminMarketingBetaPatch,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    patch = body.model_dump(exclude_none=True)
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    row = patched_or_403(
+        service.patch(
+            "marketing_beta_signups",
+            patch,
+            params={"id": f"eq.{signup_id}", "select": "id,status,internal_note"},
+        )
+    )
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="marketing_beta_signup_updated",
+        target_workspace_id=None,
+        metadata={"signup_id": str(signup_id), "patch": patch},
+    )
+    return row
+
+
 @router.patch("/billing-upgrade-requests/{request_id}")
 def patch_billing_upgrade_request(
     request_id: UUID,

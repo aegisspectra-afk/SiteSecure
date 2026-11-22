@@ -23,20 +23,28 @@ function usePublicThemeLabels(): ThemePickerLabels {
   );
 }
 
-export function PublicHeader() {
+export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean }) {
   const { user, session, error, signOut } = useSession();
   const { t, dir } = usePublicLocale();
   const themeLabels = usePublicThemeLabels();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const nav = [
-    { href: "#platform", label: t.navPlatform },
-    { href: "#products", label: t.navProducts },
-    { href: "#solutions", label: t.navSolutions },
-    { href: "#security", label: t.navSecurity },
-    { href: "#contact", label: t.navContact },
-  ] as const;
+  const nav = marketingNav
+    ? ([
+        { href: "/#how", label: "איך זה עובד" },
+        { href: "/pricing", label: "מחירון", isRoute: true },
+        { href: "/#faq", label: "שאלות" },
+        { href: "/#beta", label: "בטא" },
+        { href: "/tools/cctv-storage", label: "מחשבון אחסון", isRoute: true },
+      ] as const)
+    : ([
+        { href: "#platform", label: t.navPlatform },
+        { href: "#products", label: t.navProducts },
+        { href: "#solutions", label: t.navSolutions },
+        { href: "#security", label: t.navSecurity },
+        { href: "#contact", label: t.navContact },
+      ] as const);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -56,16 +64,27 @@ export function PublicHeader() {
 
   const links = (
     <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-3 xl:gap-5" dir={dir}>
-      {nav.map((item) => (
-        <a
-          key={item.href}
-          href={`/${item.href}`}
-          className="rounded-[var(--radius-control)] px-1 py-2 text-[13px] tracking-[0.04em] text-fg-muted transition-colors duration-200 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          onClick={() => setOpen(false)}
-        >
-          {item.label}
-        </a>
-      ))}
+      {nav.map((item) =>
+        "isRoute" in item && item.isRoute ? (
+          <Link
+            key={item.href}
+            to={item.href}
+            className="rounded-[var(--radius-control)] px-1 py-2 text-[13px] tracking-[0.04em] text-fg-muted transition-colors duration-200 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            onClick={() => setOpen(false)}
+          >
+            {item.label}
+          </Link>
+        ) : (
+          <a
+            key={item.href}
+            href={item.href.startsWith("/") ? item.href : `/${item.href}`}
+            className="rounded-[var(--radius-control)] px-1 py-2 text-[13px] tracking-[0.04em] text-fg-muted transition-colors duration-200 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            onClick={() => setOpen(false)}
+          >
+            {item.label}
+          </a>
+        ),
+      )}
     </div>
   );
 
@@ -147,7 +166,7 @@ export function PublicHeader() {
           to="/"
           className="public-nav-brand shrink-0 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
-          {t.platformBrand}
+          {marketingNav ? "SITE SECURE" : t.platformBrand}
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center lg:flex" aria-label={t.navAria}>

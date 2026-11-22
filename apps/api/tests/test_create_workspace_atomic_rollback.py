@@ -332,9 +332,11 @@ def isolated_conn() -> Iterator:
         with conn.cursor() as cur:
             cur.execute("SELECT current_database(), inet_server_addr(), inet_server_port()")
             db, addr, port = cur.fetchone()
-            # Extra belt: server address should be local when reported
-            if addr is not None and str(addr) not in {"127.0.0.1", "::1"} and not str(addr).startswith("127."):
-                pytest.fail(f"Server address not local: {addr!r} db={db} port={port}")
+            # Docker Desktop: client uses 127.0.0.1 while inet_server_addr may be a bridge IP.
+            connect_host = (urlparse(url).hostname or "").lower()
+            if connect_host not in {"127.0.0.1", "localhost", "::1"}:
+                if addr is not None and str(addr) not in {"127.0.0.1", "::1"} and not str(addr).startswith("127."):
+                    pytest.fail(f"Server address not local: {addr!r} db={db} port={port}")
             cur.execute(
                 """
                 SELECT 1 FROM pg_proc p
@@ -362,8 +364,8 @@ def harness(isolated_conn) -> Iterator[dict]:
         actor = _create_test_actor(cur, marker)
         # Baseline plan rows used by tests (do not assume SSP exists).
         _ensure_feature(cur, "fleet")
-        _ensure_plan_feature(cur, "solo", "fleet")
-        _delete_plan_feature(cur, "solo", "ssp")  # default: SSP absent from Solo eligibility
+        _ensure_plan_feature(cur, "free", "fleet")
+        _delete_plan_feature(cur, "free", "ssp")  # default: SSP absent from Solo eligibility
         # Ensure business plan exists for non-solo coverage.
         cur.execute("SELECT 1 FROM public.plans WHERE key = 'business'")
         if cur.fetchone() is None:
@@ -401,7 +403,7 @@ def harness(isolated_conn) -> Iterator[dict]:
                     pass
             _cleanup_actor(cur, state["actor"], state["names"])
             # Restore solo ssp absence preference is fine; re-ensure fleet for other local work.
-            _ensure_plan_feature(cur, "solo", "fleet")
+            _ensure_plan_feature(cur, "free", "fleet")
 
 
 def test_second_override_failure_rolls_back_fully(harness):
@@ -415,8 +417,8 @@ def test_second_override_failure_rolls_back_fully(harness):
         # Need TWO eligible registered keys so the 2nd insert is reached.
         _ensure_feature(cur, "fleet")
         _ensure_feature(cur, "ssp")
-        _ensure_plan_feature(cur, "solo", "fleet")
-        _ensure_plan_feature(cur, "solo", "ssp")
+        _ensure_plan_feature(cur, "free", "fleet")
+        _ensure_plan_feature(cur, "free", "ssp")
 
         cur.execute(
             "UPDATE public.profiles SET last_workspace_id = NULL WHERE id = %s",
@@ -428,7 +430,7 @@ def test_second_override_failure_rolls_back_fully(harness):
         _install_fail_on_second_override(cur)
 
         with pytest.raises(Exception) as exc:
-            _call_create_workspace(cur, actor, ws_name, "solo")
+            _call_create_workspace(cur, actor, ws_name, "free")
         assert "TEST_FORCE_FAIL_SECOND_OVERRIDE" in str(exc.value)
 
         _assert_no_residue_for_name(cur, ws_name)
@@ -450,10 +452,10 @@ def test_success_solo_seeds_eligible_overrides_enabled_false(harness):
         cur.execute(harness["original_def"])
         _ensure_feature(cur, "fleet")
         _ensure_feature(cur, "ssp")
-        _ensure_plan_feature(cur, "solo", "fleet")
-        _ensure_plan_feature(cur, "solo", "ssp")
+        _ensure_plan_feature(cur, "free", "fleet")
+        _ensure_plan_feature(cur, "free", "ssp")
 
-        ws_id = _call_create_workspace(cur, actor, ws_name, "solo")
+        ws_id = _call_create_workspace(cur, actor, ws_name, "free")
 
         cur.execute(
             """
@@ -483,13 +485,13 @@ def test_success_without_ssp_in_plan_features(harness):
     with conn.cursor() as cur:
         cur.execute(harness["original_def"])
         _ensure_feature(cur, "fleet")
-        _ensure_plan_feature(cur, "solo", "fleet")
-        _delete_plan_feature(cur, "solo", "ssp")
+        _ensure_plan_feature(cur, "free", "fleet")
+        _delete_plan_feature(cur, "free", "ssp")
         # ssp may or may not exist in features registry — must not matter when not plan-eligible.
-        cur.execute("SELECT 1 FROM public.plan_features WHERE plan_key='solo' AND feature_key='ssp'")
+        cur.execute("SELECT 1 FROM public.plan_features WHERE plan_key='free' AND feature_key='ssp'")
         assert cur.fetchone() is None
 
-        ws_id = _call_create_workspace(cur, actor, ws_name, "solo")
+        ws_id = _call_create_workspace(cur, actor, ws_name, "free")
 
         cur.execute(
             """
@@ -518,8 +520,8 @@ def test_plan_eligible_missing_registry_rolls_back(harness):
     with conn.cursor() as cur:
         cur.execute(harness["original_def"])
         _ensure_feature(cur, "fleet")
-        _ensure_plan_feature(cur, "solo", "fleet")
-        _delete_plan_feature(cur, "solo", "ssp")
+        _ensure_plan_feature(cur, "free", "fleet")
+        _delete_plan_feature(cur, "free", "ssp")
 
         cur.execute(
             """
@@ -538,7 +540,7 @@ def test_plan_eligible_missing_registry_rolls_back(harness):
         # Keep plan_features.fleet, remove features.fleet
         cur.execute("DELETE FROM public.features WHERE key = 'fleet'")
         cur.execute(
-            "SELECT 1 FROM public.plan_features WHERE plan_key='solo' AND feature_key='fleet'"
+            "SELECT 1 FROM public.plan_features WHERE plan_key='free' AND feature_key='fleet'"
         )
         assert cur.fetchone() is not None
         cur.execute("SELECT 1 FROM public.features WHERE key='fleet'")
@@ -551,7 +553,7 @@ def test_plan_eligible_missing_registry_rolls_back(harness):
         before = _get_last_workspace_id(cur, actor)
 
         with pytest.raises(Exception) as exc:
-            _call_create_workspace(cur, actor, ws_name, "solo")
+            _call_create_workspace(cur, actor, ws_name, "free")
         assert "PRODUCT_DEFAULTS_UNAVAILABLE" in str(exc.value)
 
         _assert_no_residue_for_name(cur, ws_name)
@@ -559,7 +561,7 @@ def test_plan_eligible_missing_registry_rolls_back(harness):
 
         # Repair registry + FK for cleanup / other tests
         _ensure_feature(cur, "fleet")
-        _ensure_plan_feature(cur, "solo", "fleet")
+        _ensure_plan_feature(cur, "free", "fleet")
         cur.execute(
             f"""
             ALTER TABLE public.plan_features

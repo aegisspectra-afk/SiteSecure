@@ -454,6 +454,7 @@ def reissue_invitation(
     invitation_id: UUID,
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
+    service: Annotated[ServiceClient, Depends(service_client)],
 ) -> InviteOut:
     """Revoke pending/expired invite and create a replacement token for the same email/role."""
     ctx = load_authz_context(client, user["id"], str(workspace_id))
@@ -492,6 +493,7 @@ def reissue_invitation(
         InviteCreate(email=str(row["email"]), role_key=str(row["role_key"])),
         client,
         user,
+        service,
     )
 
 

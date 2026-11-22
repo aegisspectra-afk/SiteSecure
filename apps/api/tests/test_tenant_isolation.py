@@ -95,8 +95,8 @@ def two_tenants(settings):
     token_a = _password_grant(settings, email_a, password)
     token_b = _password_grant(settings, email_b, password)
 
-    ws_a = _rpc(settings, token_a, "create_workspace", {"p_name": "Workspace A Phase3", "p_plan_key": "solo"})
-    ws_b = _rpc(settings, token_b, "create_workspace", {"p_name": "Workspace B Phase3", "p_plan_key": "solo"})
+    ws_a = _rpc(settings, token_a, "create_workspace", {"p_name": "Workspace A Phase3", "p_plan_key": "free"})
+    ws_b = _rpc(settings, token_b, "create_workspace", {"p_name": "Workspace B Phase3", "p_plan_key": "free"})
     assert ws_a.status_code == 200, ws_a.text
     assert ws_b.status_code == 200, ws_b.text
     return {

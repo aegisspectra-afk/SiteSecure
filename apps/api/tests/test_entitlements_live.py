@@ -225,7 +225,7 @@ def test_plan_downgrade_recalculates_with_override(settings):
     workspace_id = ws.json()["id"]
     _set_plan(settings, workspace_id, "business")
     assert "audit" in _rpc_features(settings, token, workspace_id)
-    _set_plan(settings, workspace_id, "solo")
+    _set_plan(settings, workspace_id, "free")
     assert "audit" not in _rpc_features(settings, token, workspace_id)
     # Enable override still wins after downgrade (schema supports enable).
     _set_override(settings, workspace_id, "audit", True)
@@ -261,7 +261,7 @@ def test_inactive_subscription_denies_plan_features_unless_override(settings):
         assert "quotes" in _rpc_features(settings, token, workspace_id)
     finally:
         _clear_override(settings, workspace_id, "quotes")
-        _set_plan(settings, workspace_id, "solo")
+        _set_plan(settings, workspace_id, "free")
 
 
 def test_cross_tenant_cannot_read_other_workspace_entitlements(settings):

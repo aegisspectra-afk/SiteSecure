@@ -45,6 +45,26 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _set_plan(settings, workspace_id: str, plan_key: str = "business") -> None:
+    """Self-serve POST /workspaces always creates Free; tests patch subscription via service role."""
+    service_key = getattr(settings, "supabase_service_role_key", None) or ""
+    if not service_key or service_key.startswith("test-"):
+        pytest.skip("service role required")
+    with httpx.Client(timeout=30) as client:
+        res = client.patch(
+            f"{settings.supabase_url}/rest/v1/subscriptions",
+            headers={
+                "apikey": service_key,
+                "Authorization": f"Bearer {service_key}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+            params={"workspace_id": f"eq.{workspace_id}"},
+            json={"plan_key": plan_key, "status": "active"},
+        )
+    assert res.status_code in {200, 204}, res.text
+
+
 def _signup(settings, email: str, password: str) -> str:
     service_key = getattr(settings, "supabase_service_role_key", None) or ""
     if not service_key or service_key.startswith("test-"):
@@ -98,6 +118,7 @@ def test_owner_can_invite_technician_and_revoke_reissue(settings):
     )
     assert ws.status_code == 200, ws.text
     workspace_id = ws.json()["id"]
+    _set_plan(settings, workspace_id, "business")
 
     # Owner invite blocked
     blocked_owner = api.post(
@@ -186,6 +207,7 @@ def test_manager_cannot_invite_technician(settings):
     )
     assert ws.status_code == 200, ws.text
     workspace_id = ws.json()["id"]
+    _set_plan(settings, workspace_id, "business")
 
     # Invite OTHER as manager via owner
     mgr_email = OTHER[0]
@@ -241,6 +263,7 @@ def test_technician_cannot_invite(settings):
     )
     assert ws.status_code == 200, ws.text
     workspace_id = ws.json()["id"]
+    _set_plan(settings, workspace_id, "business")
 
     tech_email = f"ss.deny.tech.{uuid.uuid4().hex[:10]}@sitesecure.test"
     invite = api.post(

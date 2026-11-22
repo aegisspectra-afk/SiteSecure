@@ -21,7 +21,8 @@
     "workforce:build": "npm run build -w @aegis/workforce",
     "workforce:typecheck": "npm run typecheck -w @aegis/workforce",
     "workforce:test": "npm run test -w @aegis/workforce",
-    "vercel:build": "node scripts/vercel-build.mjs"
+    "vercel:build": "node scripts/vercel-build.mjs",
+    "db:seed-local-auth": "python apps/api/scripts/seed_local_pytest_auth.py"
   },
   "engines": {
     "node": ">=20"

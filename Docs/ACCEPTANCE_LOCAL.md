@@ -16,17 +16,19 @@
 | `supabase db reset` | עבר | כל מיגרציות עד `20261122230000_portal_site_grants_*` · `tmp` / CLI log |
 | reminders / awaiting_dispatch / portal OTP | הוחלו | `warranty_reminder_events` · enum `awaiting_dispatch` · `portal_otp_*` |
 | מפתחות בדיקה | חובה | `SUPABASE_URL=http://127.0.0.1:54321` + ANON/SERVICE demo מ-`supabase status` (לא cloud `.env`) |
-| pytest מלא (כולל live) | **0 כשלונות** | **1188 passed · 105 skipped** · `tmp/_accept_pytest_live.txt` / `-rs` |
-| השוואה לסבב קודם | +33 | קודם 1155; עכשיו 1188 (בדיקות חדשות: portal/D2/Q4/reminders) |
+| pytest מלא (כולל live) | **seed+env** | אחרי `db:seed-local-auth` + `SITESECURE_ISOLATED_DB_URL`: **5 skipped** (לפני seed: **105**) · `tmp/_pytest_skips_after.txt` |
+| השוואה לסבב קודם | — | דילוגים: 105→5; חלק מ-live שהיה מוסתר ב-skips דורש C1 plan `free` |
 | vitest | ≤13 | 11 כשלונות אחרון ידוע (`tmp/_accept_vitest.json`) |
 
-### דילוגים (105) — סיבות עיקריות
+### דילוגים (5) — מוצדקים בלבד
 
 | סיבה | דוגמה |
 |------|--------|
-| `SITESECURE_ISOLATED_DB_URL` חסר | `test_workforce_rls_isolated.py` (רוב הדילוגים) |
-| password grant 400 אחרי reset | חלק מ-`test_tenant_isolation.py`, `test_workspace_team_invitations_live.py` |
-| Phase / optional skips | כפי שסומן ב-pytest `-rs` |
+| אין platform admin ב-seed | `test_platform_admin_live.py::test_existing_seeded_admin_still_authorized_if_present` |
+| C5 gate / browser | `test_ssp_c5_local_gate.py` (3) |
+| SSP activation migrations | `test_ssp_site_activation.py` |
+
+**אחרי reset:** `supabase db reset` → `npm run db:seed-local-auth` — ראה `Docs/ops/LOCAL_DB_RESET.md`.
 
 ---
 

@@ -39,8 +39,8 @@ def tenants(settings):
     password = "Test-Pass-2026!"
     token_a = _password_grant(settings, "ss.phase3.a@sitesecure.test", password)
     token_b = _password_grant(settings, "ss.phase3.b@sitesecure.test", password)
-    ws_a = _rpc(settings, token_a, "create_workspace", {"p_name": f"Import A {uuid.uuid4().hex[:6]}", "p_plan_key": "solo"})
-    ws_b = _rpc(settings, token_b, "create_workspace", {"p_name": f"Import B {uuid.uuid4().hex[:6]}", "p_plan_key": "solo"})
+    ws_a = _rpc(settings, token_a, "create_workspace", {"p_name": f"Import A {uuid.uuid4().hex[:6]}", "p_plan_key": "free"})
+    ws_b = _rpc(settings, token_b, "create_workspace", {"p_name": f"Import B {uuid.uuid4().hex[:6]}", "p_plan_key": "free"})
     assert ws_a.status_code == 200, ws_a.text
     assert ws_b.status_code == 200, ws_b.text
     return {
@@ -528,7 +528,7 @@ def test_fresh_workspace_golden_rule_empty_products(settings, tenants):
         settings,
         tenants["token_a"],
         "create_workspace",
-        {"p_name": name, "p_plan_key": "solo"},
+        {"p_name": name, "p_plan_key": "free"},
     )
     assert created.status_code == 200, created.text
     ws = created.json()

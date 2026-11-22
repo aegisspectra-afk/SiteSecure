@@ -707,6 +707,8 @@ export type QuoteItemIn = {
   package_id?: string | null;
   package_name?: string | null;
   is_optional?: boolean;
+  /** B3: bind new lines to the active ועד-בית alternative. */
+  alternative_id?: string | null;
 };
 
 export type CatalogAttributeField = {
@@ -2642,6 +2644,20 @@ export function createApiClient(opts: {
         `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/alternatives/${alternativeId}`,
         { method: "PATCH", body: JSON.stringify(body) },
       ),
+    generateCctvAlternatives: (
+      workspaceId: string,
+      quoteId: string,
+      body?: { variant_axis?: "resolution" | "retention" },
+    ) =>
+      request<{
+        presentation_mode: string;
+        approved_alternative_id?: string | null;
+        items: QuoteAlternativeOut[];
+        cloned_line_count?: number;
+      }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/cctv/generate-alternatives`, {
+        method: "POST",
+        body: JSON.stringify(body ?? {}),
+      }),
     listQuotePackages: (workspaceId: string) =>
       request<{ items: QuotePackage[] }>(`/api/v1/workspaces/${workspaceId}/catalog/packages`),
     applyQuotePackage: (

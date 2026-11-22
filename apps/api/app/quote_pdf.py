@@ -185,6 +185,13 @@ def _scrub_internal(document: dict) -> dict:
             continue
         items.append({k: v for k, v in item.items() if k not in banned})
     out["items"] = items
+    alts = []
+    for alt in out.get("alternatives") or []:
+        if not isinstance(alt, dict):
+            continue
+        alts.append({k: v for k, v in alt.items() if k not in banned})
+    if "alternatives" in out:
+        out["alternatives"] = alts
     return out
 
 
@@ -612,6 +619,45 @@ def render_quote_pdf(document: dict) -> tuple[bytes, str]:
     y = pdf.get_y()
     pdf.line(pdf.l_margin, y, pdf.l_margin + pdf.epw, y)
     pdf.ln(4)
+
+    # B3: comparison table for ועד-בית alternatives (customer-safe totals only).
+    alternatives = [
+        a for a in (document.get("alternatives") or []) if isinstance(a, dict) and a.get("id")
+    ]
+    if alternatives and (document.get("presentation_mode") == "alternatives" or len(alternatives) > 1):
+        _section_label(pdf, "השוואת חלופות")
+        alt_headers = ["סה״כ כולל מע״מ", "חלופה", "#"]
+        alt_widths = [pdf.epw * 0.34, pdf.epw * 0.54, pdf.epw * 0.12]
+        _ensure_space(pdf, 18)
+        heading = FontFace(emphasis="BOLD", size_pt=8, color=WHITE, fill_color=accent)
+        with pdf.table(
+            width=pdf.epw,
+            col_widths=alt_widths,
+            text_align=["R", "R", "C"],
+            line_height=5.2,
+            borders_layout="HORIZONTAL_LINES",
+            cell_fill_mode=TableCellFillMode.ROWS,
+            cell_fill_color=SURFACE,
+            first_row_as_headings=True,
+            headings_style=heading,
+        ) as table:
+            head = table.row()
+            for label in alt_headers:
+                head.cell(label)
+            pdf.set_text_color(*INK)
+            for idx, alt in enumerate(
+                sorted(alternatives, key=lambda r: int(r.get("sort_order") or 0)),
+                start=1,
+            ):
+                row = table.row()
+                row.cell(_money(alt.get("total_gross"), currency))
+                label = _txt(alt.get("label")) or f"חלופה {idx}"
+                if alt.get("is_recommended"):
+                    label = f"{label} · מומלץ"
+                summary = _txt(alt.get("customer_summary"))
+                row.cell(f"{label}\n{summary}".strip() if summary else label)
+                row.cell(str(idx))
+        pdf.ln(3)
 
     _section_label(pdf, "פירוט ההצעה")
 

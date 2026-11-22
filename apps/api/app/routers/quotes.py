@@ -171,6 +171,7 @@ class QuoteItemIn(BaseModel):
     package_id: str | None = None
     package_name: str | None = None
     is_optional: bool = False
+    alternative_id: str | None = None
 
 
 class QuoteItemPatch(BaseModel):
@@ -187,6 +188,7 @@ class QuoteItemPatch(BaseModel):
     name: str | None = None
     section_id: str | None = None
     is_optional: bool | None = None
+    alternative_id: str | None = None
 
 
 class ApplyTemplateIn(BaseModel):
@@ -745,6 +747,7 @@ def _insert_line(
         "package_id": body.package_id,
         "package_name": body.package_name,
         "is_optional": bool(body.is_optional),
+        "alternative_id": body.alternative_id,
         "line_net": float(
             pricing.line_net(
                 qty=body.qty,
@@ -1232,6 +1235,45 @@ def _document_payload(
         pdf_template = {}
         merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config={})
     quote_doc = {**quote, **_pricing_breakdown(quote, items, sections)}
+    # B3: live draft PDF/document also carries ועד-בית comparison totals (no cost).
+    alternatives_for_doc: list[dict] | None = None
+    try:
+        alt_rows = as_list(
+            client.get(
+                "quote_alternatives",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "quote_id": f"eq.{quote['id']}",
+                    "select": "id,label,sort_order,is_recommended,customer_summary",
+                    "order": "sort_order.asc",
+                },
+            )
+        )
+    except Exception:
+        alt_rows = []
+    if alt_rows:
+        breakdown = pricing.recalculate_alternatives(
+            items,
+            alt_rows,
+            vat_percent=quote.get("vat_percent") or 17,
+            discount_type=quote.get("discount_type"),
+            discount_value=quote.get("discount_value") or 0,
+            sections=sections,
+        )
+        by_id = {str(row["alternative_id"]): row for row in breakdown}
+        alternatives_for_doc = []
+        for alt in alt_rows:
+            totals = by_id.get(str(alt["id"]), {})
+            alternatives_for_doc.append(
+                {
+                    **alt,
+                    "subtotal_net": totals.get("subtotal_net", 0),
+                    "vat_amount": totals.get("vat_amount", 0),
+                    "total_gross": totals.get("total_gross", 0),
+                }
+            )
+        if alternatives_for_doc and not quote_doc.get("presentation_mode"):
+            quote_doc = {**quote_doc, "presentation_mode": "alternatives"}
     return public_payload(
         quote_doc,
         items,
@@ -1239,6 +1281,7 @@ def _document_payload(
         customer=customer,
         site=site,
         sections=sections,
+        alternatives=alternatives_for_doc,
         branding=branding,
         company_snapshot=company_snapshot,
         pdf_template=pdf_template,

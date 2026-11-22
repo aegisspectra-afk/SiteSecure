@@ -10,7 +10,9 @@ export function QuoteAlternativesBar({
   canEdit,
   canViewCost,
   enabling,
+  generating,
   onEnable,
+  onGenerateCctv,
   onSelect,
   onMarkRecommended,
 }: {
@@ -20,7 +22,9 @@ export function QuoteAlternativesBar({
   canEdit: boolean;
   canViewCost?: boolean;
   enabling?: boolean;
+  generating?: boolean;
   onEnable: () => void;
+  onGenerateCctv?: () => void;
   onSelect: (alternativeId: string) => void;
   onMarkRecommended?: (alternativeId: string) => void;
 }) {
@@ -32,9 +36,16 @@ export function QuoteAlternativesBar({
           <p className="text-sm font-semibold text-fg">{he.quoteAlternativesTitle}</p>
           <p className="text-xs text-fg-muted">{he.quoteAlternativesEnableHint}</p>
         </div>
-        <Button type="button" variant="secondary" disabled={enabling} onClick={onEnable}>
-          {he.quoteAlternativesEnable}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onGenerateCctv ? (
+            <Button type="button" variant="secondary" disabled={generating || enabling} onClick={onGenerateCctv}>
+              {he.quoteAlternativesGenerateCctv}
+            </Button>
+          ) : null}
+          <Button type="button" variant="secondary" disabled={enabling || generating} onClick={onEnable}>
+            {he.quoteAlternativesEnable}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -71,6 +82,11 @@ export function QuoteAlternativesBar({
           );
         })}
       </div>
+      {canEdit && onGenerateCctv ? (
+        <Button type="button" variant="ghost" disabled={generating} onClick={onGenerateCctv}>
+          {he.quoteAlternativesGenerateCctv}
+        </Button>
+      ) : null}
       {canEdit && activeAlternativeId && onMarkRecommended ? (
         <Button type="button" variant="ghost" onClick={() => onMarkRecommended(activeAlternativeId)}>
           {he.quoteAlternativeMarkRecommended}

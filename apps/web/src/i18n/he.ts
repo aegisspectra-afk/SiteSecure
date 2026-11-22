@@ -3630,6 +3630,8 @@ export const he = {
   quoteAlternativesEnableHint: "בסיסי · מומלץ · מתקדם — הלקוח בוחר אחת ומאשר.",
   quoteAlternativeRecommended: "מומלץ",
   quoteAlternativeMarkRecommended: "סמן כמומלץ",
+  quoteAlternativesGenerateCctv: "צור 3 חלופות מ־CCTV",
+  quoteAlternativesGenerateCctvHint: "2MP · 4MP · 8MP — משכפל שורות לפי חלופה לעריכה.",
   quotePublicChooseAlternative: "בחרו חלופה",
   quotePublicChooseAlternativeHint: "השוו בין החלופות ובחרו אחת לפני החתימה.",
   quotePublicAlternativeRequired: "יש לבחור חלופה לפני האישור.",

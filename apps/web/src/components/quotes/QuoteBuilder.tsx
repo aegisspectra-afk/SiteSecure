@@ -265,6 +265,8 @@ export function QuoteBuilder({
   const [quickCatalogQ, setQuickCatalogQ] = useState("");
   const [quickCatalogKind, setQuickCatalogKind] = useState<string | null>(null);
   const [activeAlternativeId, setActiveAlternativeId] = useState<string | null>(null);
+  const activeAlternativeIdRef = useRef<string | null>(null);
+  activeAlternativeIdRef.current = activeAlternativeId;
   const [savedAt, setSavedAt] = useState<number | null>(() => {
     if (!quote.id) return null;
     const at = quote.updated_at ? Date.parse(quote.updated_at) : Number.NaN;
@@ -455,6 +457,13 @@ export function QuoteBuilder({
       await queryClient.invalidateQueries({ queryKey: ["quote-alternatives", workspaceId, live.id] });
     },
   });
+  const generateCctvAlternatives = useMutation({
+    mutationFn: () => api.generateCctvAlternatives(workspaceId, live.id, { variant_axis: "resolution" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quote-alternatives", workspaceId, live.id] });
+      await queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
+    },
+  });
   const itemsForActiveAlternative = useMemo(() => {
     if (!activeAlternativeId || !alternatives.length) return items;
     return items.filter((item) => {
@@ -601,7 +610,12 @@ export function QuoteBuilder({
   const addItem = useMutation({
     mutationFn: async (body: Parameters<typeof api.addQuoteItem>[2]) => {
       const current = await createOnce();
-      const row = await api.addQuoteItem(workspaceId, current.id, body);
+      const altId = body.alternative_id ?? activeAlternativeIdRef.current;
+      const payload =
+        altId && !(body.item_type === "note")
+          ? { ...body, alternative_id: altId }
+          : body;
+      const row = await api.addQuoteItem(workspaceId, current.id, payload);
       applyRow(row);
       commitRoute(row.id);
       return row;
@@ -613,6 +627,7 @@ export function QuoteBuilder({
       const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const qty = Number(body.qty ?? 1) || 1;
       const unitPrice = Number(body.unit_price ?? 0) || 0;
+      const altId = body.alternative_id ?? activeAlternativeIdRef.current;
       const optimistic = {
         id: tempId,
         quote_id: prev.id,
@@ -626,6 +641,7 @@ export function QuoteBuilder({
         line_net: qty * unitPrice,
         item_type: body.item_type ?? (body.product_id ? "catalog" : "free"),
         section_id: body.section_id ?? null,
+        alternative_id: body.item_type === "note" ? null : altId ?? null,
         sort_order: ((prev.items?.length ?? 0) + 1) * 10,
       };
       const next = {
@@ -2790,7 +2806,9 @@ export function QuoteBuilder({
           canEdit={canEdit}
           canViewCost={canViewCost}
           enabling={enableAlternatives.isPending}
+          generating={generateCctvAlternatives.isPending}
           onEnable={() => enableAlternatives.mutate()}
+          onGenerateCctv={() => generateCctvAlternatives.mutate()}
           onSelect={setActiveAlternativeId}
           onMarkRecommended={(id) => markRecommendedAlternative.mutate(id)}
         />

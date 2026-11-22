@@ -1088,14 +1088,14 @@ def enable_alternatives(
         raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
     existing = _load_alternatives(client, workspace_id, quote_id)
     if len(existing) >= 3:
-        _quote_writer(client).patch(
+        _quote_writer().patch(
             "quotes",
             {"presentation_mode": "alternatives"},
             params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
         )
         return list_alternatives(workspace_id, quote_id, client, user)
 
-    writer = _quote_writer(client)
+    writer = _quote_writer()
     for idx, label in enumerate(DEFAULT_ALTERNATIVE_LABELS, start=1):
         if any(int(a.get("sort_order") or 0) == idx for a in existing):
             continue
@@ -1142,7 +1142,7 @@ def create_alternative(
     if any(int(a.get("sort_order") or 0) == body.sort_order for a in existing):
         raise ApiError(400, "VALIDATION_ERROR", "סדר החלופה כבר תפוס")
     if body.is_recommended:
-        writer = _quote_writer(client)
+        writer = _quote_writer()
         for alt in existing:
             if alt.get("is_recommended"):
                 writer.patch(
@@ -1151,7 +1151,7 @@ def create_alternative(
                     params={"id": f"eq.{alt['id']}", "workspace_id": f"eq.{workspace_id}"},
                 )
     row = created_or_403(
-        _quote_writer(client).post(
+        _quote_writer().post(
             "quote_alternatives",
             {
                 "id": str(uuid4()),
@@ -1165,7 +1165,7 @@ def create_alternative(
             params={"select": ALTERNATIVE_SELECT},
         )
     )
-    _quote_writer(client).patch(
+    _quote_writer().patch(
         "quotes",
         {"presentation_mode": "alternatives"},
         params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
@@ -1193,7 +1193,7 @@ def patch_alternative(
     if patch.get("is_recommended") is True:
         for alt in _load_alternatives(client, workspace_id, quote_id):
             if str(alt["id"]) != str(alternative_id) and alt.get("is_recommended"):
-                _quote_writer(client).patch(
+                _quote_writer().patch(
                     "quote_alternatives",
                     {"is_recommended": False},
                     params={"id": f"eq.{alt['id']}", "workspace_id": f"eq.{workspace_id}"},
@@ -1202,7 +1202,7 @@ def patch_alternative(
         raise ApiError(400, "VALIDATION_ERROR", "אין שינויים")
     patch["updated_at"] = datetime.now(UTC).isoformat()
     return patched_or_403(
-        _quote_writer(client).patch(
+        _quote_writer().patch(
             "quote_alternatives",
             patch,
             params={
@@ -1213,3 +1213,148 @@ def patch_alternative(
             },
         )
     )
+
+
+class GenerateCctvAlternativesIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    variant_axis: str = "resolution"  # resolution | retention
+
+
+_CCTV_AXIS_SUMMARIES = {
+    "resolution": ("רזולוציה 2MP", "רזולוציה 4MP", "רזולוציה 8MP"),
+    "retention": ("הקלטה 7 ימים", "הקלטה 14 ימים", "הקלטה 30 ימים"),
+}
+
+
+@router.post("/quotes/{quote_id}/cctv/generate-alternatives")
+def generate_cctv_alternatives(
+    workspace_id: UUID,
+    quote_id: UUID,
+    body: GenerateCctvAlternativesIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """B3: seed 3 ועד-בית tiers from CCTV axis and clone base lines into each tier.
+
+    Starts from unscoped / recommended lines so the office can edit prices per tier.
+    Full re-recommend (catalog swap by MP) remains available via the CCTV wizard apply.
+    """
+    ctx = _ctx(client, user, workspace_id)
+    quote = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.edit", resource=_ref(quote))
+    if quote.get("status") != "draft":
+        raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
+    axis = (body.variant_axis or "resolution").strip().lower()
+    if axis not in _CCTV_AXIS_SUMMARIES:
+        raise ApiError(400, "VALIDATION_ERROR", "ציר חלופה לא תקין (resolution / retention)")
+
+    # Ensure three tiers exist.
+    enable_alternatives(workspace_id, quote_id, client, user)
+    alts = _load_alternatives(client, workspace_id, quote_id)
+    alts_sorted = sorted(alts, key=lambda a: int(a.get("sort_order") or 0))
+    summaries = _CCTV_AXIS_SUMMARIES[axis]
+    writer = _quote_writer()
+    for alt, summary in zip(alts_sorted[:3], summaries, strict=False):
+        writer.patch(
+            "quote_alternatives",
+            {"customer_summary": summary, "updated_at": datetime.now(UTC).isoformat()},
+            params={
+                "id": f"eq.{alt['id']}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+            },
+        )
+
+    items = _load_items(client, workspace_id, quote_id)
+    recommended = next((a for a in alts_sorted if a.get("is_recommended")), alts_sorted[0] if alts_sorted else None)
+    if not recommended:
+        return list_alternatives(workspace_id, quote_id, client, user)
+
+    recommended_id = str(recommended["id"])
+    source_items = [
+        it
+        for it in items
+        if it.get("item_type") != "note"
+        and (
+            not it.get("alternative_id")
+            or str(it.get("alternative_id")) == recommended_id
+        )
+    ]
+
+    # Bind unscoped lines to the recommended tier.
+    for it in source_items:
+        if not it.get("alternative_id"):
+            writer.patch(
+                "quote_items",
+                {"alternative_id": recommended_id},
+                params={
+                    "id": f"eq.{it['id']}",
+                    "quote_id": f"eq.{quote_id}",
+                    "workspace_id": f"eq.{workspace_id}",
+                },
+            )
+            it["alternative_id"] = recommended_id
+
+    cloned = 0
+    target_alts = [a for a in alts_sorted if str(a["id"]) != recommended_id]
+    # Avoid double-cloning when target already has lines.
+    existing_by_alt: dict[str, set[str]] = {}
+    for it in items:
+        aid = str(it.get("alternative_id") or "")
+        if not aid:
+            continue
+        key = f"{it.get('product_id') or ''}|{it.get('description') or ''}|{it.get('qty')}"
+        existing_by_alt.setdefault(aid, set()).add(key)
+
+    for target in target_alts:
+        tid = str(target["id"])
+        for src in source_items:
+            key = f"{src.get('product_id') or ''}|{src.get('description') or ''}|{src.get('qty')}"
+            if key in existing_by_alt.get(tid, set()):
+                continue
+            ok = _insert_line(
+                client,
+                workspace_id,
+                quote_id,
+                QuoteItemIn(
+                    product_id=str(src["product_id"]) if src.get("product_id") else None,
+                    item_type=src.get("item_type") or "free",
+                    description=src.get("description") or "",
+                    sku=src.get("sku"),
+                    name=src.get("name"),
+                    qty=float(src.get("qty") or 1),
+                    unit_price=float(src.get("unit_price") or 0),
+                    cost=None,
+                    discount=float(src.get("discount") or 0),
+                    discount_type=src.get("discount_type") or "percent",
+                    sort_order=int(src.get("sort_order") or 0),
+                    section_id=str(src["section_id"]) if src.get("section_id") else None,
+                    package_instance_id=(
+                        str(src["package_instance_id"]) if src.get("package_instance_id") else None
+                    ),
+                    package_id=str(src["package_id"]) if src.get("package_id") else None,
+                    package_name=src.get("package_name"),
+                    is_optional=bool(src.get("is_optional")),
+                    alternative_id=tid,
+                ),
+                ctx,
+                allow_template_price=True,
+            )
+            if ok:
+                cloned += 1
+                existing_by_alt.setdefault(tid, set()).add(key)
+
+    quote = _load_quote(client, workspace_id, quote_id)
+    items = _load_items(client, workspace_id, quote_id)
+    _persist_totals(client, workspace_id, quote, items)
+    _record_event(
+        client,
+        workspace_id,
+        quote_id,
+        "cctv_alternatives_generated",
+        actor_id(user),
+        {"variant_axis": axis, "cloned_line_count": cloned},
+    )
+    out = list_alternatives(workspace_id, quote_id, client, user)
+    out["cloned_line_count"] = cloned
+    return out

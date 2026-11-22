@@ -300,3 +300,60 @@ def test_pdf_marks_optional_lines_and_shows_breakdown_in_order():
         assert amount in text, amount
     # Lines total precedes the net-before-VAT figure (discounts are applied, not appended).
     assert text.index("1,200") < text.index("1,050") < text.index("1,239")
+
+
+def test_pdf_alternatives_comparison_table_without_cost():
+    doc = _doc()
+    doc["presentation_mode"] = "alternatives"
+    doc["alternatives"] = [
+        {
+            "id": "a1",
+            "label": "בסיסי",
+            "sort_order": 1,
+            "is_recommended": False,
+            "customer_summary": "רזולוציה 2MP",
+            "subtotal_net": 8000,
+            "vat_amount": 1440,
+            "total_gross": 9440,
+            "cost_total": 1111,
+            "margin_percent": 42,
+        },
+        {
+            "id": "a2",
+            "label": "מומלץ",
+            "sort_order": 2,
+            "is_recommended": True,
+            "customer_summary": "רזולוציה 4MP",
+            "subtotal_net": 8500,
+            "vat_amount": 1530,
+            "total_gross": 10030,
+            "cost_total": 2222,
+            "margin_percent": 55,
+        },
+        {
+            "id": "a3",
+            "label": "מתקדם",
+            "sort_order": 3,
+            "is_recommended": False,
+            "customer_summary": "רזולוציה 8MP",
+            "subtotal_net": 9800,
+            "vat_amount": 1764,
+            "total_gross": 11564,
+            "cost_total": 3333,
+            "margin_percent": 60,
+        },
+    ]
+    text = _pdf_plain_text(render_quote_pdf(doc)[0])
+    assert "השוואת חלופות" in text
+    assert "בסיסי" in text
+    assert "מומלץ" in text
+    assert "מתקדם" in text
+    assert "2MP" in text or "רזולוציה" in text
+    assert "9,440" in text or "9440" in text
+    assert "10,030" in text or "10030" in text
+    assert "11,564" in text or "11564" in text
+    assert "1111" not in text
+    assert "2222" not in text
+    assert "3333" not in text
+    assert "margin" not in text.lower()
+    assert "עלות" not in text

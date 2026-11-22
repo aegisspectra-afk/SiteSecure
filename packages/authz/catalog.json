@@ -232,6 +232,10 @@
     "workforce.reports.costs": "workforce",
     "workforce.settings.manage": "workforce",
     "workforce.portal.view": "workforce",
+    "customer_portal.view": "crm",
+    "customer_portal.create": "crm",
+    "customer_portal.manage": "crm",
+    "customer_portal.revoke": "crm",
     "workforce.audit.view": "workforce",
     "finance.view": "finance",
     "finance.edit": "finance",
@@ -352,6 +356,10 @@
     { "key": "workforce.reports.costs", "group": "workforce" },
     { "key": "workforce.settings.manage", "group": "workforce" },
     { "key": "workforce.portal.view", "group": "workforce" },
+    { "key": "customer_portal.view", "group": "customer_portal" },
+    { "key": "customer_portal.create", "group": "customer_portal" },
+    { "key": "customer_portal.manage", "group": "customer_portal" },
+    { "key": "customer_portal.revoke", "group": "customer_portal" },
     { "key": "workforce.audit.view", "group": "workforce" },
     { "key": "finance.view", "group": "finance" },
     { "key": "finance.edit", "group": "finance" },
@@ -393,6 +401,7 @@
       "workforce.schedules.optimize", "workforce.schedules.approve", "workforce.schedules.publish",
       "workforce.swaps.manage", "workforce.reports.view", "workforce.reports.costs",
       "workforce.settings.manage", "workforce.portal.view", "workforce.audit.view",
+      "customer_portal.view", "customer_portal.create", "customer_portal.manage", "customer_portal.revoke",
       "finance.view", "finance.edit",
       "reports.view", "reports.financial",
       "warranties.view", "warranties.issue",
@@ -425,6 +434,7 @@
       "workforce.schedules.view", "workforce.schedules.edit",
       "workforce.schedules.optimize", "workforce.swaps.manage",
       "workforce.reports.view", "workforce.portal.view",
+      "customer_portal.view", "customer_portal.create", "customer_portal.manage", "customer_portal.revoke",
       "finance.view",
       "reports.view",
       "warranties.view", "warranties.issue",
@@ -444,6 +454,7 @@
       "systems.view",
       "documents.view", "documents.upload",
       "warranties.view",
+      "customer_portal.view",
       "knowledge.view"
     ],
     "technician": [
@@ -458,6 +469,7 @@
       "documents.view", "documents.upload",
       "fleet.view", "fleet.mileage", "fleet.mileage_history",
       "warranties.view", "warranties.issue",
+      "customer_portal.view",
       "knowledge.view"
     ],
     "viewer": [

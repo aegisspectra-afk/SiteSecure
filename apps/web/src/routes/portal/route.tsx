@@ -6,7 +6,7 @@ export const Route = createFileRoute("/portal")({
 
 function PortalLayout() {
   return (
-    <div className="min-h-dvh text-fg">
+    <div dir="rtl" lang="he" className="min-h-dvh bg-bg text-fg">
       <Outlet />
     </div>
   );

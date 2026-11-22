@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..audit import write_audit
 from ..authz.engine import authorize
 from ..deps import current_user, load_authz_context, service_client, user_client
+from ..portal_session_auth import PortalAuth, portal_auth_flexible, require_portal_grant
 from ..errors import MESSAGES, ApiError
 from ..portal_access import (
     INVITE_TTL,
@@ -53,6 +54,15 @@ class PortalEnableIn(BaseModel):
 class PortalTokenIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(min_length=16, max_length=512)
+
+
+class PortalServiceCallIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    site_id: str
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    priority: str = "normal"
+    equipment_id: str | None = None
 
 
 def _now() -> datetime:
@@ -460,18 +470,30 @@ def accept_portal_invite(
 
 @router.get("/portal/session")
 def portal_session(
-    user: Annotated[dict, Depends(current_user)],
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
     service: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
-    res = service.get(
-        "customer_portal_access",
-        params={
-            "portal_user_id": f"eq.{user['id']}",
-            "status": "eq.active",
-            "select": "id,customer_id,workspace_id,capabilities,customers(display_name)",
-            "order": "created_at.asc",
-        },
-    )
+    if auth.mode == "session":
+        joined = ",".join(sorted(auth.access_ids))
+        res = service.get(
+            "customer_portal_access",
+            params={
+                "id": f"in.({joined})",
+                "status": "eq.active",
+                "select": "id,customer_id,workspace_id,capabilities,customers(display_name)",
+                "order": "created_at.asc",
+            },
+        )
+    else:
+        res = service.get(
+            "customer_portal_access",
+            params={
+                "portal_user_id": f"eq.{auth.user_id}",
+                "status": "eq.active",
+                "select": "id,customer_id,workspace_id,capabilities,customers(display_name)",
+                "order": "created_at.asc",
+            },
+        )
     grants = []
     for row in as_list(res):
         nested = row.get("customers")
@@ -493,22 +515,25 @@ def portal_session(
 def portal_home(
     access_id: UUID,
     request: Request,
-    user: Annotated[dict, Depends(current_user)],
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
     service: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
-    grant = _require_active_grant(service, user["id"], access_id)
-    _touch_login(service, grant, user["id"], request)
-    return _build_home(service, grant)
+    grant = require_portal_grant(service, auth, access_id)
+    uid = auth.user_id or auth.session_id or "portal-session"
+    _touch_login(service, grant, uid, request)
+    payload = _build_home(service, grant)
+    payload["installer_brand"] = _workspace_brand(service, grant["workspace_id"])
+    return payload
 
 
 @router.post("/portal/access/{access_id}/documents/{document_id}/url")
 def portal_document_url(
     access_id: UUID,
     document_id: UUID,
-    user: Annotated[dict, Depends(current_user)],
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
     service: Annotated[ServiceClient, Depends(service_client)],
 ) -> dict:
-    grant = _require_active_grant(service, user["id"], access_id)
+    grant = require_portal_grant(service, auth, access_id)
     if not has_capability(grant, "portal.documents.view"):
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
     home_ids = _ownership_ids(service, grant)
@@ -530,6 +555,77 @@ def portal_document_url(
     if bucket not in PORTAL_DOCUMENT_BUCKETS or not path:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
     return {"url": service.storage_sign_download(bucket, path, expires_in=60)}
+
+
+@router.post("/portal/access/{access_id}/service-calls")
+def portal_create_service_call(
+    access_id: UUID,
+    body: PortalServiceCallIn,
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    grant = require_portal_grant(service, auth, access_id)
+    if not has_capability(grant, "portal.service.view"):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    workspace_id = grant["workspace_id"]
+    customer_id = grant["customer_id"]
+    site_rows = as_list(
+        service.get(
+            "sites",
+            params={
+                "id": f"eq.{body.site_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "customer_id": f"eq.{customer_id}",
+                "deleted_at": "is.null",
+                "select": "id",
+                "limit": "1",
+            },
+        )
+    )
+    if not site_rows:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    if body.equipment_id:
+        eq_rows = as_list(
+            service.get(
+                "equipment",
+                params={
+                    "id": f"eq.{body.equipment_id}",
+                    "workspace_id": f"eq.{workspace_id}",
+                    "site_id": f"eq.{body.site_id}",
+                    "select": "id,site_id",
+                    "limit": "1",
+                },
+            )
+        )
+        if not eq_rows:
+            raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    payload = {
+        "workspace_id": str(workspace_id),
+        "customer_id": str(customer_id),
+        "site_id": body.site_id,
+        "title": body.title.strip(),
+        "priority": body.priority,
+        "status": "open",
+        "description": (body.description or "").strip() or None,
+    }
+    if body.equipment_id:
+        payload["equipment_id"] = body.equipment_id
+    row = created_or_403(service.post("service_calls", payload))
+    return project_service_call(row)
+
+
+def _workspace_brand(service: ServiceClient, workspace_id: str) -> str:
+    res = service.get(
+        "workspace_settings",
+        params={"workspace_id": f"eq.{workspace_id}", "select": "branding", "limit": "1"},
+    )
+    rows = as_list(res)
+    if not rows:
+        return ""
+    branding = rows[0].get("branding")
+    if not isinstance(branding, dict):
+        return ""
+    return str(branding.get("company_name") or branding.get("name") or "").strip()
 
 
 def _require_active_grant(service: ServiceClient, user_id: str, access_id: UUID) -> dict:

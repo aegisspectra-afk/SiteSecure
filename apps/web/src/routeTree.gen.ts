@@ -53,6 +53,11 @@ import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
 import { Route as PlatformIndexRouteImport } from "./routes/platform/index"
 import { Route as PortalIndexRouteImport } from "./routes/portal/index"
 import { Route as PortalChooseRouteImport } from "./routes/portal/choose"
+import { Route as PortalInstallationsRouteImport } from "./routes/portal/installations"
+import { Route as PortalLoginRouteImport } from "./routes/portal/login"
+import { Route as PortalQuotesRouteImport } from "./routes/portal/quotes"
+import { Route as PortalServiceRouteImport } from "./routes/portal/service"
+import { Route as PortalWarrantiesRouteImport } from "./routes/portal/warranties"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
 import { Route as SspTokenRouteImport } from "./routes/ssp/$token"
 import { Route as ToolsCctvStorageRouteImport } from "./routes/tools/cctv-storage"
@@ -136,6 +141,7 @@ import { Route as AppWorkforcePositionsRouteImport } from "./routes/app/workforc
 import { Route as AppWorkforceSchedulesRouteImport } from "./routes/app/workforce/schedules"
 import { Route as AppWorkforceSitesRouteImport } from "./routes/app/workforce/sites"
 import { Route as PortalInviteTokenRouteImport } from "./routes/portal/invite/$token"
+import { Route as PortalSitesSiteIdRouteImport } from "./routes/portal/sites.$siteId"
 import { Route as PublicHandoverTokenRouteImport } from "./routes/public/handover/$token"
 import { Route as PublicQuotesTokenRouteImport } from "./routes/public/quotes/$token"
 import { Route as AppFleetVehiclesVehicleIdRouteImport } from "./routes/app/fleet/vehicles.$vehicleId"
@@ -372,6 +378,31 @@ const PortalIndexRoute = PortalIndexRouteImport.update({
 const PortalChooseRoute = PortalChooseRouteImport.update({
   id: "/choose",
   path: "/choose",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalInstallationsRoute = PortalInstallationsRouteImport.update({
+  id: "/installations",
+  path: "/installations",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalLoginRoute = PortalLoginRouteImport.update({
+  id: "/login",
+  path: "/login",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalQuotesRoute = PortalQuotesRouteImport.update({
+  id: "/quotes",
+  path: "/quotes",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalServiceRoute = PortalServiceRouteImport.update({
+  id: "/service",
+  path: "/service",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalWarrantiesRoute = PortalWarrantiesRouteImport.update({
+  id: "/warranties",
+  path: "/warranties",
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const QTokenRoute = QTokenRouteImport.update({
@@ -790,6 +821,11 @@ const PortalInviteTokenRoute = PortalInviteTokenRouteImport.update({
   path: "/invite/$token",
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalSitesSiteIdRoute = PortalSitesSiteIdRouteImport.update({
+  id: "/sites/$siteId",
+  path: "/sites/$siteId",
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PublicHandoverTokenRoute = PublicHandoverTokenRouteImport.update({
   id: "/public/handover/$token",
   path: "/public/handover/$token",
@@ -919,6 +955,11 @@ export interface FileRoutesByFullPath {
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
+  "/portal/installations": typeof PortalInstallationsRoute
+  "/portal/login": typeof PortalLoginRoute
+  "/portal/quotes": typeof PortalQuotesRoute
+  "/portal/service": typeof PortalServiceRoute
+  "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
@@ -992,6 +1033,7 @@ export interface FileRoutesByFullPath {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/portal/sites/$siteId": typeof PortalSitesSiteIdRoute
   "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
@@ -1055,6 +1097,11 @@ export interface FileRoutesByTo {
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
+  "/portal/installations": typeof PortalInstallationsRoute
+  "/portal/login": typeof PortalLoginRoute
+  "/portal/quotes": typeof PortalQuotesRoute
+  "/portal/service": typeof PortalServiceRoute
+  "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
@@ -1127,6 +1174,7 @@ export interface FileRoutesByTo {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/portal/sites/$siteId": typeof PortalSitesSiteIdRoute
   "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers": typeof AppCustomersIndexRoute
@@ -1201,6 +1249,11 @@ export interface FileRoutesById {
   "/invite/$token": typeof InviteTokenRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
+  "/portal/installations": typeof PortalInstallationsRoute
+  "/portal/login": typeof PortalLoginRoute
+  "/portal/quotes": typeof PortalQuotesRoute
+  "/portal/service": typeof PortalServiceRoute
+  "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
@@ -1274,6 +1327,7 @@ export interface FileRoutesById {
   "/app/workforce/schedules": typeof AppWorkforceSchedulesRoute
   "/app/workforce/sites": typeof AppWorkforceSitesRoute
   "/portal/invite/$token": typeof PortalInviteTokenRoute
+  "/portal/sites/$siteId": typeof PortalSitesSiteIdRoute
   "/public/handover/$token": typeof PublicHandoverTokenRoute
   "/public/quotes/$token": typeof PublicQuotesTokenRoute
   "/app/customers/": typeof AppCustomersIndexRoute
@@ -1349,6 +1403,11 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
+    | "/portal/installations"
+    | "/portal/login"
+    | "/portal/quotes"
+    | "/portal/service"
+    | "/portal/warranties"
     | "/q/$token"
     | "/ssp/$token"
     | "/tools/cctv-storage"
@@ -1422,6 +1481,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/portal/sites/$siteId"
     | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
@@ -1485,6 +1545,11 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
+    | "/portal/installations"
+    | "/portal/login"
+    | "/portal/quotes"
+    | "/portal/service"
+    | "/portal/warranties"
     | "/q/$token"
     | "/ssp/$token"
     | "/tools/cctv-storage"
@@ -1557,6 +1622,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/portal/sites/$siteId"
     | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers"
@@ -1630,6 +1696,11 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/legal/$slug"
     | "/portal/choose"
+    | "/portal/installations"
+    | "/portal/login"
+    | "/portal/quotes"
+    | "/portal/service"
+    | "/portal/warranties"
     | "/q/$token"
     | "/ssp/$token"
     | "/tools/cctv-storage"
@@ -1703,6 +1774,7 @@ export interface FileRouteTypes {
     | "/app/workforce/schedules"
     | "/app/workforce/sites"
     | "/portal/invite/$token"
+    | "/portal/sites/$siteId"
     | "/public/handover/$token"
     | "/public/quotes/$token"
     | "/app/customers/"
@@ -2072,6 +2144,41 @@ declare module "@tanstack/react-router" {
       path: "/choose"
       fullPath: "/portal/choose"
       preLoaderRoute: typeof PortalChooseRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/installations": {
+      id: "/portal/installations"
+      path: "/installations"
+      fullPath: "/portal/installations"
+      preLoaderRoute: typeof PortalInstallationsRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/login": {
+      id: "/portal/login"
+      path: "/login"
+      fullPath: "/portal/login"
+      preLoaderRoute: typeof PortalLoginRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/quotes": {
+      id: "/portal/quotes"
+      path: "/quotes"
+      fullPath: "/portal/quotes"
+      preLoaderRoute: typeof PortalQuotesRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/service": {
+      id: "/portal/service"
+      path: "/service"
+      fullPath: "/portal/service"
+      preLoaderRoute: typeof PortalServiceRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    "/portal/warranties": {
+      id: "/portal/warranties"
+      path: "/warranties"
+      fullPath: "/portal/warranties"
+      preLoaderRoute: typeof PortalWarrantiesRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     "/q/$token": {
@@ -2655,6 +2762,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof PortalInviteTokenRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    "/portal/sites/$siteId": {
+      id: "/portal/sites/$siteId"
+      path: "/sites/$siteId"
+      fullPath: "/portal/sites/$siteId"
+      preLoaderRoute: typeof PortalSitesSiteIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     "/public/handover/$token": {
       id: "/public/handover/$token"
       path: "/public/handover/$token"
@@ -3117,14 +3231,26 @@ const PlatformRouteRouteWithChildren = PlatformRouteRoute._addFileChildren(
 
 interface PortalRouteRouteChildren {
   PortalChooseRoute: typeof PortalChooseRoute
+  PortalInstallationsRoute: typeof PortalInstallationsRoute
+  PortalLoginRoute: typeof PortalLoginRoute
+  PortalQuotesRoute: typeof PortalQuotesRoute
+  PortalServiceRoute: typeof PortalServiceRoute
+  PortalWarrantiesRoute: typeof PortalWarrantiesRoute
   PortalIndexRoute: typeof PortalIndexRoute
   PortalInviteTokenRoute: typeof PortalInviteTokenRoute
+  PortalSitesSiteIdRoute: typeof PortalSitesSiteIdRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalChooseRoute: PortalChooseRoute,
+  PortalInstallationsRoute: PortalInstallationsRoute,
+  PortalLoginRoute: PortalLoginRoute,
+  PortalQuotesRoute: PortalQuotesRoute,
+  PortalServiceRoute: PortalServiceRoute,
+  PortalWarrantiesRoute: PortalWarrantiesRoute,
   PortalIndexRoute: PortalIndexRoute,
   PortalInviteTokenRoute: PortalInviteTokenRoute,
+  PortalSitesSiteIdRoute: PortalSitesSiteIdRoute,
 }
 
 const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(

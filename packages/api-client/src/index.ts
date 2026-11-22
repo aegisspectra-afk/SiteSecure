@@ -1983,6 +1983,7 @@ export type PortalSession = {
 export type PortalHome = {
   access_id: string;
   customer_name: string;
+  installer_brand?: string;
   profile: { display_name: string; type: string; phone?: string | null; email: string };
   sites: Array<{ id: string; name: string; code: string; installation_status: string; address: Record<string, string> }>;
   installations: Array<{ id: string; number: string; title: string; status: string; completed_at?: string | null; site_id?: string | null }>;
@@ -4094,11 +4095,40 @@ export function createApiClient(opts: {
         method: "POST",
         body: JSON.stringify({ token }),
       }),
+    requestPortalOtpCode: (phone: string) =>
+      request<{ status: string; debug_code?: string }>("/api/v1/portal/otp/request-code", {
+        method: "POST",
+        body: JSON.stringify({ phone }),
+      }),
+    verifyPortalOtp: (phone: string, code: string) =>
+      request<{
+        token: string;
+        expires_at?: string;
+        grants: Array<{ access_id: string; customer_id: string; workspace_id: string }>;
+        debug_code?: string;
+      }>("/api/v1/portal/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ phone, code }),
+      }),
     getPortalSession: () => request<PortalSession>("/api/v1/portal/session"),
     getPortalHome: (accessId: string) => request<PortalHome>(`/api/v1/portal/access/${accessId}`),
     getPortalDocumentUrl: (accessId: string, documentId: string) =>
       request<{ url: string }>(`/api/v1/portal/access/${accessId}/documents/${documentId}/url`, {
         method: "POST",
+      }),
+    createPortalServiceCall: (
+      accessId: string,
+      body: {
+        site_id: string;
+        title: string;
+        description?: string;
+        priority?: string;
+        equipment_id?: string;
+      },
+    ) =>
+      request<PortalHome["service"][number]>(`/api/v1/portal/access/${accessId}/service-calls`, {
+        method: "POST",
+        body: JSON.stringify(body),
       }),
     listAudit: (workspaceId: string) =>
       request<AuditItem[]>(`/api/v1/workspaces/${workspaceId}/audit`),

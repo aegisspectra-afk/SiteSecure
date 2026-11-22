@@ -49,6 +49,9 @@ import {
 import { leadDisplayTitle, leadPriorityLabel, leadPrimaryAction, leadRequirementsSummary, leadStatusLabel } from "../../lib/leads";
 import { formatMoney, quoteStatusLabel, quoteStatusTone } from "../../lib/quotes";
 import { CustomerActionMenu, customerMenuIcons } from "./CustomerActionMenu";
+import { CustomerPortalAccess } from "./CustomerPortalAccess";
+import { portalVisibleDocumentCount, portalVisibleQuoteCount } from "./portal-build";
+import { useSession } from "../../lib/session";
 
 const EMPTY_ADDRESS: StructuredAddress = {};
 
@@ -154,6 +157,10 @@ type CustomerProfileProps = {
   canCreateQuote: boolean;
   canCreateProject: boolean;
   canCreateService: boolean;
+  canPortalView: boolean;
+  canPortalCreate: boolean;
+  canPortalManage: boolean;
+  canPortalRevoke: boolean;
 };
 
 export function CustomerProfile({
@@ -166,8 +173,14 @@ export function CustomerProfile({
   canCreateQuote,
   canCreateProject,
   canCreateService,
+  canPortalView,
+  canPortalCreate,
+  canPortalManage,
+  canPortalRevoke,
 }: CustomerProfileProps) {
   const navigate = useNavigate();
+  const { session } = useSession();
+  const workspaceName = session?.memberships[0]?.workspace_name ?? "";
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -765,6 +778,32 @@ export function CustomerProfile({
             canDeleteContact={canDelete}
             addContactRef={addContactTriggerRef}
             contactToast={contactToast}
+            portalSlot={
+              customer ? (
+                <CustomerPortalAccess
+                  workspaceId={workspaceId}
+                  customerId={customerId}
+                  api={api}
+                  defaultEmail={customer.email ?? ""}
+                  canView={canPortalView}
+                  canCreate={canPortalCreate}
+                  canManage={canPortalManage}
+                  canRevoke={canPortalRevoke}
+                  customerName={customer.display_name}
+                  workspaceName={workspaceName}
+                  contacts={contacts.map((c) => ({ name: c.name, email: c.email ?? "" }))}
+                  buildCounts={{
+                    sites: sites.length,
+                    installations: projects.length,
+                    equipment: sites.length,
+                    warranties: warranties.length,
+                    quotes: portalVisibleQuoteCount(quotes),
+                    service: serviceCalls.length,
+                    documents: portalVisibleDocumentCount(documents),
+                  }}
+                />
+              ) : null
+            }
           />
         ) : null}
 
@@ -1176,6 +1215,7 @@ function OverviewPanel({
   canDeleteContact,
   addContactRef,
   contactToast,
+  portalSlot,
 }: {
   customer: CustomerOut;
   contacts: CustomerContact[];
@@ -1213,6 +1253,7 @@ function OverviewPanel({
   canDeleteContact: boolean;
   addContactRef: RefObject<HTMLButtonElement | null>;
   contactToast: string | null;
+  portalSlot?: ReactNode;
 }) {
   const siteById = new Map(sites.map((site) => [site.id, site]));
   const showKpis = kpi.sites + kpi.quotes + kpi.projects + kpi.service + kpi.leads > 0;
@@ -1330,6 +1371,8 @@ function OverviewPanel({
           </dl>
         )}
       </section>
+
+      {portalSlot}
 
       <section className="ops-card customer-360-panel">
         <SectionHeader

@@ -31,6 +31,10 @@ function CustomerDetailBody() {
   const canCreateQuote = can(membership?.role_key, "quotes.create", features);
   const canCreateProject = can(membership?.role_key, "projects.create", features);
   const canCreateService = can(membership?.role_key, "service.create", features);
+  const canPortalView = can(membership?.role_key, "customer_portal.view", features);
+  const canPortalCreate = can(membership?.role_key, "customer_portal.create", features);
+  const canPortalManage = can(membership?.role_key, "customer_portal.manage", features);
+  const canPortalRevoke = can(membership?.role_key, "customer_portal.revoke", features);
 
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, customerId],
@@ -53,6 +57,10 @@ function CustomerDetailBody() {
       canCreateQuote={canCreateQuote}
       canCreateProject={canCreateProject}
       canCreateService={canCreateService}
+      canPortalView={canPortalView}
+      canPortalCreate={canPortalCreate}
+      canPortalManage={canPortalManage}
+      canPortalRevoke={canPortalRevoke}
     />
   );
 }

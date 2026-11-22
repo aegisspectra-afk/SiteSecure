@@ -55,6 +55,26 @@ describe("DEMO-2.2 labor lines are work, not missing equipment", () => {
     ).toBe(false);
     expect(isCctvPlannedQuoteItem({ package_name: "cctv-planned:recorder_main", description: "מקליט", unit_price: 0 })).toBe(true);
   });
+
+  it("apply readiness never counts priced labor as missing equipment", async () => {
+    const { buildApplyReadinessPreview, deriveReviewCardStatus } = await import("../src/lib/cctv-designer-review");
+    const r = rec();
+    const labor = r.components[0]!;
+    const bogusPick = {
+      product: { id: "p-bogus", name: "שירות", sku: "", manufacturer: null, model: null, category_key: null, attributes: {} },
+      confidence: "STRUCTURED" as const,
+      compatibility: {},
+      reason_codes: [],
+    };
+    const selection = {
+      selectedByComponentId: { installation_camera: "p-bogus" },
+      removedComponentIds: new Set<string>(),
+    };
+    expect(deriveReviewCardStatus(labor, bogusPick, false)).toBe("labor");
+    const preview = buildApplyReadinessPreview(r, selection);
+    expect(preview.needsEquipment).toBe(0);
+    expect(preview.required).toBe(0);
+  });
 });
 
 describe("DEMO-2.2 review screen", () => {

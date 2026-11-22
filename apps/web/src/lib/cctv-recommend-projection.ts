@@ -14,6 +14,7 @@ import type {
   SystemRecommendation,
 } from "@site-secure/api-client";
 import {
+  CCTV_LABOR_PACKAGE_PREFIX,
   commercialLabelHe,
   componentKeyFromPlannedPackage,
   componentKeyOf,
@@ -371,8 +372,11 @@ export function isCctvPlannedQuoteItem(item: {
   package_name?: string | null;
   description?: string | null;
   unit_price?: number | string | null;
+  item_type?: string | null;
 }): boolean {
+  if (item.item_type === "labor") return false;
   const pkg = String(item.package_name || "");
+  if (pkg.startsWith(CCTV_LABOR_PACKAGE_PREFIX)) return false;
   if (pkg.startsWith(CCTV_PLANNED_PACKAGE_PREFIX)) {
     // DEMO-2.2: older quotes stored priced labor under cctv-planned:; that is work, not a gap.
     const key = pkg.slice(CCTV_PLANNED_PACKAGE_PREFIX.length);

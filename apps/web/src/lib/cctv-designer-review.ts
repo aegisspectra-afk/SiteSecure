@@ -148,6 +148,8 @@ export function deriveReviewCardStatus(
   needsReview: boolean,
   opts?: { userConfirmed?: boolean },
 ): ReviewCardStatus {
+  const key = componentKeyOf(component);
+  if (isLaborComponent(key)) return "labor";
   if (picked) {
     const compat = overallCompatibility(picked.compatibility);
     if (compat === "FAIL") return "incompatible";
@@ -163,7 +165,6 @@ export function deriveReviewCardStatus(
     }
     return "selected";
   }
-  if (isLaborComponent(componentKeyOf(component))) return "labor";
   if (component.optional) return "optional";
   return "needs";
 }
@@ -244,8 +245,8 @@ export function buildApplyReadinessPreview(
     const key = componentKeyOf(c);
     if (selection.removedComponentIds.has(key)) continue;
     const picked = resolveComponentProduct(c, selection);
-    // DEMO-2.2: services priced as hours x rate are work, not equipment to choose.
-    if (!picked && isLaborComponent(key)) continue;
+    // DEMO-2.2: services priced as hours × rate are work, never equipment gaps.
+    if (isLaborComponent(key)) continue;
     if (c.optional) {
       optional += 1;
       if (!picked) optionalUnresolved += 1;

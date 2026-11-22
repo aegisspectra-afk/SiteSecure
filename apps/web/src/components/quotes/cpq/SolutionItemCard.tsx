@@ -13,13 +13,20 @@ import {
   type QuoteLineField,
   type QuoteLinePatch,
 } from "../../../lib/quote-line-edit";
+import { CCTV_LABOR_PACKAGE_PREFIX, componentKeyFromPlannedPackage } from "../../../lib/cctv-component-keys";
+import { isLaborComponent } from "../../../lib/cctv-labor";
 import { isCctvPlannedQuoteItem } from "../../../lib/cctv-recommend-projection";
 
 const PERSIST_DEBOUNCE_MS = 450;
 const SOLUTION_FIELDS: QuoteLineField[] = ["description", "sku", "qty"];
 
 export function isSolutionServiceItem(item: QuoteItemOut): boolean {
-  return item.item_type === "labor";
+  if (item.item_type === "labor") return true;
+  const pkg = String(item.package_name || "");
+  if (pkg.startsWith(CCTV_LABOR_PACKAGE_PREFIX)) return true;
+  const laborKey = componentKeyFromPlannedPackage(pkg);
+  if (laborKey && isLaborComponent(laborKey) && Number(item.unit_price ?? 0) > 0) return true;
+  return false;
 }
 
 export function isSolutionNoteItem(item: QuoteItemOut): boolean {

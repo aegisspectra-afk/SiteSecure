@@ -1,7 +1,7 @@
 import { Analytics, type BeforeSendEvent } from "@vercel/analytics/react";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { mayLoadAnalytics, usesNonEssentialCookies } from "../lib/cookie-consent";
+import { mayLoadAnalytics, vercelWebAnalyticsEnabled } from "../lib/cookie-consent";
 
 /** Query keys that must never appear in Vercel Analytics URLs. */
 const REDACT_KEYS = new Set([
@@ -41,23 +41,20 @@ function beforeSend(event: BeforeSendEvent): BeforeSendEvent | null {
  */
 export function VercelAnalytics() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [allowed, setAllowed] = useState(() =>
-    !usesNonEssentialCookies() ? import.meta.env.VITE_ENABLE_VERCEL_ANALYTICS === "true" : mayLoadAnalytics(),
-  );
+  const [allowed, setAllowed] = useState(() => mayLoadAnalytics());
 
   useEffect(() => {
-    if (import.meta.env.DEV) return;
-    if (usesNonEssentialCookies()) {
-      setAllowed(mayLoadAnalytics());
-      const onConsent = () => setAllowed(mayLoadAnalytics());
-      window.addEventListener("ss-cookie-consent", onConsent);
-      return () => window.removeEventListener("ss-cookie-consent", onConsent);
+    if (!vercelWebAnalyticsEnabled()) {
+      setAllowed(false);
+      return;
     }
-    setAllowed(import.meta.env.VITE_ENABLE_VERCEL_ANALYTICS === "true");
+    setAllowed(mayLoadAnalytics());
+    const onConsent = () => setAllowed(mayLoadAnalytics());
+    window.addEventListener("ss-cookie-consent", onConsent);
+    return () => window.removeEventListener("ss-cookie-consent", onConsent);
   }, []);
 
-  if (import.meta.env.DEV) return null;
-  if (!allowed) return null;
+  if (!vercelWebAnalyticsEnabled() || !allowed) return null;
 
   return <Analytics route={pathname} path={pathname} beforeSend={beforeSend} />;
 }

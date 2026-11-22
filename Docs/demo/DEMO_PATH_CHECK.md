@@ -106,7 +106,7 @@
 | # | נושא | סטטוס | הוכחה |
 |---|------|--------|--------|
 | 1 | תיאור «מחיר לדוגמה – עדכן» ללקוח | **סגור** | `STARTER_SAMPLE_MARKER` מוחלף בשם מוצר ב-`quotes._insert_line`; מיגרציה `20261116130000`; `test_demo2_quote_customer_text_live` |
-| 2 | שליחה חסומה כי שירות = «נדרש ציוד» | **פתוח** | עדיין מנגנון gaps/ציוד חובה על שורות שירות מאשף CCTV — לא נסגר בסבב זה |
+| 2 | שליחה חסומה כי שירות = «נדרש ציוד» | **סגור** | `planned_equipment_rule` + `cctv-labor:`; UI: `deriveReviewCardStatus` / `isCctvPlannedQuoteItem` / `SolutionItemCard`; `demo2-labor-lines` |
 | 3 | אין תאריך/שעה לעבודה ב-UI | **סגור** | `NewInstallJobDialog` + `JobScheduleFields` (DEMO-3.1) |
 | 4 | טכנאי רואה עבודות של אחרים | **סגור** | `apply_assigned_job_list_filter` + מיגרציה `20261116120000` |
 | 5 | «היום» ריק בלי תאריך | **סגור** | דשבורד technician מציג assigned ללא תאריך (DEMO-3.2) + יצירת עבודה עם לו״ז |
@@ -114,13 +114,13 @@
 | 7 | סיום לא מעדכן תיק אתר / ציוד | **חלקי→סגור בנתיב complete** | `installation_complete._install_equipment`; B4 מוסיף `location_note` ממיקומים. עדיין דורש `project_planned_items` |
 | 8 | אין אחריות אוטומטית | **סגור** | `_create_warranty` ב-`installation_complete` |
 | 9 | אין התראת מנהל על סיום | **סגור** | `job.completed` notifications ב-`installation_complete` |
-| 10 | אין מסמך מסירה ללקוח | **פתוח / חלקי** | יש נתיב handover ב-complete; לא אומת e2e מול DEMO-0 — נשאר לבדיקת שדה |
+| 10 | אין מסמך מסירה ללקוח | **סגור** | `installation_complete` + `handover_public_access`; UI `FieldJob` + `/h/{token}`; `test_demo5_complete_idempotency_live`, `demo5-handover-path` |
 
 ### תקלות 🟡 שלא חוסמות — טריאז׳
-- נחיתה על `/platform` — **פתוח** (UX onboarding).
+- נחיתה על `/platform` — **סגור** (`landingPathForSession` → `/app` / `/app/today`; `demo3-login-landing`).
 - טיוטות ריקות מאשף CCTV / כפילות סעיפים — **פתוח** (לשפר ב-B8/אשף).
-- overflow כפתורי שליחה — **פתוח** (UI).
-- תוויות באנגלית במסכי עבודה/אתר — **פתוח** (i18n).
+- overflow כפתורי שליחה — **סגור** (`cpq-send-channel-grid` ב-`SendQuoteConfirm`).
+- תוויות באנגלית במסכי עבודה/אתר — **סגור** (`he.ts` תיק אתר + `demo4-rtl-labels`).
 - כותרת `installation_camera` בבוחר שירות — **פתוח**.
 
 ### תקלות שלא חוסמות (🟡), לפי סדר

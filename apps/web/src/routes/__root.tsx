@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { AppNotFound } from "../components/AppNotFound";
 import { EntitlementRevokeBridge } from "../components/EntitlementRevokeBridge";
+import { CookieConsentBanner } from "../components/public/CookieConsentBanner";
 import { VercelAnalytics } from "../components/VercelAnalytics";
 import { ThemeRuntime } from "../lib/use-theme";
 
@@ -15,6 +16,7 @@ function Root() {
       <ThemeRuntime />
       <EntitlementRevokeBridge />
       <Outlet />
+      <CookieConsentBanner />
       <VercelAnalytics />
     </>
   );

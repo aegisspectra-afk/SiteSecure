@@ -19,6 +19,19 @@ PUBLIC_ITEM_KEYS = (
     "package_instance_id",
     "package_name",
     "is_optional",
+    "alternative_id",
+)
+
+# Customer-facing alternative totals — never include cost / margin.
+PUBLIC_ALTERNATIVE_KEYS = (
+    "id",
+    "label",
+    "sort_order",
+    "is_recommended",
+    "customer_summary",
+    "subtotal_net",
+    "vat_amount",
+    "total_gross",
 )
 
 OPTIONAL_PUBLIC_TOTAL_KEYS = (
@@ -97,8 +110,26 @@ def public_sections(sections: list[dict] | None) -> list[dict]:
                 "id": sid,
                 "name": section.get("name"),
                 "sort_order": section.get("sort_order"),
+                "alternative_id": section.get("alternative_id"),
             }
         )
+    return rows
+
+
+def public_alternatives(alternatives: list[dict] | None) -> list[dict]:
+    """Freeze ועד-בית tiers for the customer document — money only, no office cost."""
+    rows: list[dict] = []
+    for alt in alternatives or []:
+        if not isinstance(alt, dict) or not alt.get("id"):
+            continue
+        row = {key: alt.get(key) for key in PUBLIC_ALTERNATIVE_KEYS}
+        row["id"] = str(alt["id"])
+        row["sort_order"] = int(alt.get("sort_order") or 0)
+        row["is_recommended"] = bool(alt.get("is_recommended"))
+        for money_key in ("subtotal_net", "vat_amount", "total_gross"):
+            row[money_key] = _num(alt.get(money_key))
+        rows.append(row)
+    rows.sort(key=lambda r: (int(r.get("sort_order") or 0), str(r.get("id"))))
     return rows
 
 
@@ -147,6 +178,7 @@ def public_payload(
     status: str | None = None,
     superseded: bool = False,
     sections: list[dict] | None = None,
+    alternatives: list[dict] | None = None,
     branding: dict | None = None,
     company_snapshot: dict | None = None,
     pdf_template: dict | None = None,
@@ -199,6 +231,8 @@ def public_payload(
         else {"name": site.get("name"), "address": site.get("address") or {}},
         "sections": public_sections(sections),
         "items": public_items(items),
+        "presentation_mode": quote.get("presentation_mode") or "single",
+        "alternatives": public_alternatives(alternatives),
         "signature": dict(SIGNATURE_BLOCK),
         "pdf_ready": True,
         "viewed_at": quote.get("viewed_at"),
@@ -238,16 +272,19 @@ def version_snapshot(
     site: dict | None,
     status: str,
     sections: list[dict] | None = None,
+    alternatives: list[dict] | None = None,
     branding: dict | None = None,
     pdf_template: dict | None = None,
 ) -> dict:
     """Freeze customer document at send/share time — company + template included."""
     freeze = status not in {"draft"}
+    public_alts = public_alternatives(alternatives)
     return {
         "status": status,
         "quote": dict(quote),
         "items": list(items),
         "sections": public_sections(sections),
+        "alternatives": public_alts,
         "public": public_payload(
             quote,
             items,
@@ -256,6 +293,7 @@ def version_snapshot(
             site=site,
             status=status,
             sections=sections,
+            alternatives=alternatives,
             branding=branding,
             pdf_template=pdf_template,
             freeze_company=freeze,

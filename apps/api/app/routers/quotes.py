@@ -959,6 +959,44 @@ def _upsert_version_snapshot(
     # The send/share row comes back with the safe select only; recompute the breakdown so
     # the frozen customer document carries option and discount totals.
     quote = {**quote, **_pricing_breakdown(quote, items, sections)}
+    # B3: freeze ועד-בית alternatives with server totals at send time (no cost in public).
+    alternatives_for_snapshot: list[dict] = []
+    try:
+        alt_rows = as_list(
+            client.get(
+                "quote_alternatives",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "quote_id": f"eq.{quote_id}",
+                    "select": "id,label,sort_order,is_recommended,customer_summary",
+                    "order": "sort_order.asc",
+                },
+            )
+        )
+    except Exception:
+        alt_rows = []
+    if alt_rows:
+        breakdown = pricing.recalculate_alternatives(
+            items,
+            alt_rows,
+            vat_percent=quote.get("vat_percent") or 17,
+            discount_type=quote.get("discount_type"),
+            discount_value=quote.get("discount_value") or 0,
+            sections=sections,
+        )
+        by_id = {str(row["alternative_id"]): row for row in breakdown}
+        for alt in alt_rows:
+            totals = by_id.get(str(alt["id"]), {})
+            alternatives_for_snapshot.append(
+                {
+                    **alt,
+                    "subtotal_net": totals.get("subtotal_net", 0),
+                    "vat_amount": totals.get("vat_amount", 0),
+                    "total_gross": totals.get("total_gross", 0),
+                }
+            )
+        if alternatives_for_snapshot and not quote.get("presentation_mode"):
+            quote = {**quote, "presentation_mode": "alternatives"}
     pdf_tpl_row = _load_default_pdf_template(client, workspace_id)
     pdf_template: dict | None = None
     if pdf_tpl_row:
@@ -980,6 +1018,7 @@ def _upsert_version_snapshot(
         site=site,
         status=snapshot_status,
         sections=sections,
+        alternatives=alternatives_for_snapshot or None,
         branding=branding,
         pdf_template=pdf_template,
     )

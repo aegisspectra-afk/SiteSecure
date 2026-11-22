@@ -417,6 +417,7 @@ def test_snapshot_public_has_no_cost_margin_keys():
             "number": "Q-1",
             "version": 1,
             "status": "sent",
+            "presentation_mode": "alternatives",
             "subtotal_net": 100,
             "vat_amount": 18,
             "total_gross": 118,
@@ -424,6 +425,7 @@ def test_snapshot_public_has_no_cost_margin_keys():
             "currency": "ILS",
             "cost_total": 40,
             "margin_percent": 60,
+            "margin_amount": 60,
             "internal_notes": "secret",
         },
         [
@@ -436,15 +438,33 @@ def test_snapshot_public_has_no_cost_margin_keys():
                 "line_net": 100,
                 "item_type": "catalog",
                 "cost": 40,
+                "alternative_id": "a1",
             }
         ],
         workspace={"name": "W"},
         customer={"display_name": "C"},
         site=None,
         status="sent",
+        alternatives=[
+            {
+                "id": "a1",
+                "label": "בסיסי",
+                "sort_order": 1,
+                "is_recommended": True,
+                "subtotal_net": 100,
+                "vat_amount": 18,
+                "total_gross": 118,
+                "cost_total": 40,
+                "margin_percent": 60,
+            }
+        ],
         freeze_company=True,
     )
     assert "cost_total" not in payload
     assert "margin_percent" not in payload
+    assert "margin_amount" not in payload
     assert "internal_notes" not in payload
     assert "cost" not in payload["items"][0]
+    assert payload["alternatives"][0]["total_gross"] == 118.0
+    assert "cost_total" not in payload["alternatives"][0]
+    assert "margin_percent" not in payload["alternatives"][0]

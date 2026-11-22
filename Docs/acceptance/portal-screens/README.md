@@ -1,7 +1,7 @@
 # צילומי מסך — פורטל לקוחות
 
-**מצב:** אוטומציית דפדפן לא הורצה בסבב זה (סביבת סוכן ללא שרת dev קבוע).  
-**דרוש ידנית** אחרי `pnpm --filter web dev` מקומי.
+**מצב:** נוצרו צילומי login/home/service ב־390/768/1440 (Playwright + mock ל־`/api/v1/portal/*`).  
+**להרצה חוזרת:** `npm run web:dev` ואז `node apps/web/scripts/portal_acceptance_screens.mjs` (נדרש `playwright` מקומי).
 
 ## רוחבי מסך
 

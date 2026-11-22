@@ -94,6 +94,21 @@ import {
 
 const HISTORY_LIMIT = 40;
 
+function catalogProductImageUrl(product: {
+  attributes?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+}): string | null {
+  const bags = [product.attributes, product.metadata];
+  for (const bag of bags) {
+    if (!bag || typeof bag !== "object") continue;
+    for (const key of ["image_url", "thumbnail_url", "photo_url", "imageUrl", "thumbnailUrl"] as const) {
+      const value = bag[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
 type Props = {
   quote: QuoteOut;
   workspaceId: string;
@@ -386,7 +401,7 @@ export function QuoteBuilder({
     enabled: canCatalog && debouncedCatalogQ.trim().length >= 1,
     queryFn: () => api.listCatalogProducts(workspaceId, { q: debouncedCatalogQ.trim(), limit: 20 }),
   });
-  const debouncedQuickCatalogQ = useDebouncedValue(quickCatalogQ, 280);
+  const debouncedQuickCatalogQ = useDebouncedValue(quickCatalogQ, 200);
   const quickCatalogQuery = useQuery({
     queryKey: ["cpq-catalog-quick", workspaceId, debouncedQuickCatalogQ, quickCatalogKind],
     enabled:
@@ -399,6 +414,12 @@ export function QuoteBuilder({
         kind: quickCatalogKind || undefined,
         limit: 12,
       }),
+  });
+  const quickRecentCatalogQuery = useQuery({
+    queryKey: ["cpq-catalog-recent", workspaceId],
+    enabled: canCatalog && quickAddOpen && debouncedQuickCatalogQ.trim().length < 1 && !quickCatalogKind,
+    queryFn: () => api.listCatalogProducts(workspaceId, { sort: "recent", limit: 5 }),
+    staleTime: 60_000,
   });
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
@@ -2952,12 +2973,25 @@ export function QuoteBuilder({
           category_path: p.category_path,
           manufacturer: p.manufacturer,
           kind: p.kind,
+          image_url: catalogProductImageUrl(p),
         }))}
-        catalogLoading={quickCatalogQuery.isFetching}
+        recentResults={(quickRecentCatalogQuery.data?.items ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          selling_price: p.selling_price ?? p.list_price,
+          category_path: p.category_path,
+          manufacturer: p.manufacturer,
+          kind: p.kind,
+          image_url: catalogProductImageUrl(p),
+        }))}
+        catalogLoading={quickCatalogQuery.isFetching || quickRecentCatalogQuery.isFetching}
         onCatalogQuery={setQuickCatalogQ}
         catalogKind={quickCatalogKind}
         onPickCatalog={(productId) => {
-          const product = quickCatalogQuery.data?.items.find((p) => p.id === productId);
+          const product =
+            quickCatalogQuery.data?.items.find((p) => p.id === productId) ??
+            quickRecentCatalogQuery.data?.items.find((p) => p.id === productId);
           const isService = product?.kind === "service" || quickCatalogKind === "service";
           goToStep("items");
           addItem.mutate({

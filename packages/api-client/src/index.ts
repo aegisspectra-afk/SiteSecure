@@ -3545,6 +3545,8 @@ export function createApiClient(opts: {
         cursor?: string | null;
         include_inactive?: boolean;
         active?: boolean;
+        /** `recent` = newest created_at first (quick-add «אחרונים»). */
+        sort?: "recent" | "name" | "default";
       } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 100) });
@@ -3554,6 +3556,7 @@ export function createApiClient(opts: {
       if (opts.cursor) params.set("cursor", opts.cursor);
       if (opts.include_inactive) params.set("include_inactive", "true");
       if (opts.active === false) params.set("active", "false");
+      if (opts.sort) params.set("sort", opts.sort);
       return request<{ items: CatalogProduct[]; next_cursor?: string | null }>(
         `/api/v1/workspaces/${workspaceId}/catalog/products?${params}`,
       );

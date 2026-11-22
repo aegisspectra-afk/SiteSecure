@@ -1,5 +1,6 @@
 import {
   Boxes,
+  ChevronLeft,
   FileStack,
   Layers,
   MessageSquareText,
@@ -24,20 +25,36 @@ export type QuickAddActionId =
   | "addSystem"
   | "template";
 
+export type QuickAddProduct = {
+  id: string;
+  name: string;
+  sku?: string | null;
+  selling_price?: number | null;
+  category_path?: string | null;
+  manufacturer?: string | null;
+  kind?: string | null;
+  image_url?: string | null;
+};
+
 type Action = {
   id: QuickAddActionId;
   label: string;
   hint: string;
   icon: LucideIcon;
-  keywords: string;
+  group: "planning" | "lines" | "document";
+  emphasis?: boolean;
+  extraHint?: string;
 };
 
-type Row =
+type FlatRow =
+  | { kind: "header"; id: string; label: string }
   | {
       kind: "product";
       id: string;
       label: string;
       hint: string;
+      price: string;
+      imageUrl: string | null;
       icon: LucideIcon;
     }
   | {
@@ -46,13 +63,44 @@ type Row =
       label: string;
       hint: string;
       icon: LucideIcon;
+      emphasis?: boolean;
+      extraHint?: string;
     };
+
+function formatPrice(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(Number(value))) return "";
+  return `₪${Number(value).toLocaleString("he-IL")}`;
+}
+
+function productLabel(p: QuickAddProduct): string {
+  const skuPart = (p.sku || "").trim();
+  return skuPart ? `${skuPart} · ${p.name}` : p.name;
+}
+
+function productHint(p: QuickAddProduct): string {
+  const kindHint = p.kind === "service" ? he.quoteLaborBadge : "";
+  const meta = [p.category_path, p.manufacturer].filter(Boolean).join(" · ");
+  return [kindHint, meta].filter(Boolean).join(" · ");
+}
+
+function toProductRow(p: QuickAddProduct): FlatRow {
+  return {
+    kind: "product",
+    id: p.id,
+    label: productLabel(p),
+    hint: productHint(p),
+    price: formatPrice(p.selling_price),
+    imageUrl: (p.image_url || "").trim() || null,
+    icon: (p.kind === "service" ? Wrench : Package) as LucideIcon,
+  };
+}
 
 export function QuoteQuickAdd({
   open,
   onClose,
   onAction,
   catalogResults,
+  recentResults = [],
   catalogLoading,
   onCatalogQuery,
   onPickCatalog,
@@ -63,15 +111,9 @@ export function QuoteQuickAdd({
   open: boolean;
   onClose: () => void;
   onAction: (id: QuickAddActionId) => void;
-  catalogResults: Array<{
-    id: string;
-    name: string;
-    sku?: string | null;
-    selling_price?: number | null;
-    category_path?: string | null;
-    manufacturer?: string | null;
-    kind?: string | null;
-  }>;
+  catalogResults: QuickAddProduct[];
+  /** Last products added in the workspace (empty-query strip). */
+  recentResults?: QuickAddProduct[];
   catalogLoading?: boolean;
   onCatalogQuery: (q: string) => void;
   onPickCatalog: (productId: string) => void;
@@ -87,50 +129,15 @@ export function QuoteQuickAdd({
   const [active, setActive] = useState(0);
 
   const actions = useMemo(() => {
-    const list: Action[] = [
-      {
-        id: "catalog",
-        label: he.cpqQuickAddCatalog,
-        hint: he.cpqQuickAddCatalogHint,
-        icon: Package,
-        keywords: "catalog קטלוג מוצר sku",
-      },
-      {
-        id: "free",
-        label: he.cpqQuickAddFree,
-        hint: he.cpqQuickAddFreeHint,
-        icon: Plus,
-        keywords: "free שורה חופשית פריט מותאם",
-      },
-      {
-        id: "service",
-        label: he.cpqQuickAddService,
-        hint: he.cpqQuickAddServiceHint,
-        icon: Wrench,
-        keywords: "service labor שירות עבודה התקנה",
-      },
-      {
-        id: "note",
-        label: he.cpqQuickAddNote,
-        hint: he.cpqQuickAddNoteHint,
-        icon: MessageSquareText,
-        keywords: "note הערה טקסט",
-      },
-      {
-        id: "section",
-        label: he.cpqQuickAddSection,
-        hint: he.cpqQuickAddSectionHint,
-        icon: Layers,
-        keywords: "section סעיף מקטע",
-      },
-    ];
+    const list: Action[] = [];
     if (canSystem) {
       list.push({
         id: "system",
         label: he.cpqQuickAddSystem,
         hint: he.cpqQuickAddSystemHint,
         icon: Sparkles,
-        keywords: "system מערכת cctv בנה תכנון",
+        group: "planning",
+        emphasis: true,
       });
     }
     if (canCatalog) {
@@ -140,62 +147,91 @@ export function QuoteQuickAdd({
           label: he.cpqQuickAddAddSystem,
           hint: he.cpqQuickAddAddSystemHint,
           icon: Boxes,
-          keywords: "package חבילה מערכת מוכנה",
+          group: "planning",
+          extraHint: he.cpqPackageVsTemplateHint,
         },
         {
           id: "template",
           label: he.cpqQuickAddTemplate,
           hint: he.cpqQuickAddTemplateHint,
           icon: FileStack,
-          keywords: "template תבנית הצעה",
+          group: "planning",
+          extraHint: he.cpqTemplateVsPackageHint,
         },
       );
     }
+    list.push(
+      {
+        id: "service",
+        label: he.cpqQuickAddService,
+        hint: he.cpqQuickAddServiceHint,
+        icon: Wrench,
+        group: "lines",
+      },
+      {
+        id: "free",
+        label: he.cpqQuickAddFree,
+        hint: he.cpqQuickAddFreeHint,
+        icon: Plus,
+        group: "lines",
+      },
+      {
+        id: "section",
+        label: he.cpqQuickAddSection,
+        hint: he.cpqQuickAddSectionHint,
+        icon: Layers,
+        group: "document",
+      },
+      {
+        id: "note",
+        label: he.cpqQuickAddNote,
+        hint: he.cpqQuickAddNoteHint,
+        icon: MessageSquareText,
+        group: "document",
+      },
+    );
     return list;
   }, [canCatalog, canSystem]);
 
-  const filteredActions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return actions;
-    return actions.filter((a) => `${a.label} ${a.hint} ${a.keywords}`.toLowerCase().includes(q));
-  }, [actions, query]);
+  const qTrim = query.trim();
+  const searching = qTrim.length >= 1 || catalogKind === "service";
+  const showRecent = Boolean(canCatalog && !searching && recentResults.length > 0);
 
-  const showCatalogHits = Boolean(canCatalog && (query.trim().length >= 1 || catalogKind === "service"));
-  const rows: Row[] = showCatalogHits
-    ? [
-        ...catalogResults.map((p) => {
-          const skuPart = (p.sku || "").trim();
-          const label = skuPart ? `${skuPart} · ${p.name}` : p.name;
-          const meta = [p.category_path, p.manufacturer].filter(Boolean).join(" · ");
-          const price =
-            p.selling_price != null && Number.isFinite(Number(p.selling_price))
-              ? `₪${Number(p.selling_price).toLocaleString("he-IL")}`
-              : "";
-          const kindHint = p.kind === "service" ? he.quoteLaborBadge : "";
-          const hint = [kindHint, meta, price].filter(Boolean).join(" · ");
-          return {
-            kind: "product" as const,
-            id: p.id,
-            label,
-            hint,
-            icon: (p.kind === "service" ? Wrench : Package) as LucideIcon,
-          };
-        }),
-        ...filteredActions.map((a) => ({
-          kind: "action" as const,
+  const rows: FlatRow[] = useMemo(() => {
+    const out: FlatRow[] = [];
+
+    if (searching && canCatalog) {
+      for (const p of catalogResults) out.push(toProductRow(p));
+    } else if (showRecent) {
+      out.push({ kind: "header", id: "hdr-recent", label: he.cpqQuickAddRecent });
+      for (const p of recentResults) out.push(toProductRow(p));
+    }
+
+    const groups: Array<{ id: Action["group"]; label: string }> = [
+      { id: "planning", label: he.cpqQuickAddGroupPlanning },
+      { id: "lines", label: he.cpqQuickAddGroupLines },
+      { id: "document", label: he.cpqQuickAddGroupDocument },
+    ];
+    for (const group of groups) {
+      const items = actions.filter((a) => a.group === group.id);
+      if (!items.length) continue;
+      out.push({ kind: "header", id: `hdr-${group.id}`, label: group.label });
+      for (const a of items) {
+        out.push({
+          kind: "action",
           id: a.id,
           label: a.label,
           hint: a.hint,
           icon: a.icon,
-        })),
-      ]
-    : filteredActions.map((a) => ({
-        kind: "action" as const,
-        id: a.id,
-        label: a.label,
-        hint: a.hint,
-        icon: a.icon,
-      }));
+          emphasis: a.emphasis,
+          extraHint: a.extraHint,
+        });
+      }
+    }
+    return out;
+  }, [actions, canCatalog, catalogResults, recentResults, searching, showRecent]);
+
+  const selectable = useMemo(() => rows.filter((r) => r.kind !== "header"), [rows]);
 
   useEffect(() => {
     if (!open) {
@@ -209,10 +245,14 @@ export function QuoteQuickAdd({
     window.setTimeout(() => inputRef.current?.focus(), 20);
   }, [open, onCatalogQuery]);
 
-  function selectRow(row: Row) {
+  useEffect(() => {
+    setActive(0);
+  }, [query, catalogKind, recentResults.length, catalogResults.length]);
+
+  function selectRow(row: FlatRow) {
+    if (row.kind === "header") return;
     if (selectLock.current) return;
     selectLock.current = true;
-    // Release quickly so multi-add catalog picks still work while dialog stays open.
     window.setTimeout(() => {
       selectLock.current = false;
     }, 250);
@@ -223,8 +263,7 @@ export function QuoteQuickAdd({
       return;
     }
     const actionId = row.id;
-    // Close first for instant feedback (catalog/service keep browse mode open).
-    if (actionId !== "catalog" && actionId !== "service") onClose();
+    if (actionId !== "service" && actionId !== "catalog") onClose();
     onAction(actionId);
   }
 
@@ -236,9 +275,10 @@ export function QuoteQuickAdd({
         onClose();
         return;
       }
+      if (!selectable.length) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActive((i) => Math.min(i + 1, Math.max(rows.length - 1, 0)));
+        setActive((i) => Math.min(i + 1, selectable.length - 1));
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
@@ -246,16 +286,18 @@ export function QuoteQuickAdd({
       }
       if (event.key === "Enter") {
         event.preventDefault();
-        const row = rows[active];
+        const row = selectable[active];
         if (!row) return;
         selectRow(row);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, rows, active, onClose, onAction, onPickCatalog]);
+  }, [open, selectable, active, onClose, onAction, onPickCatalog]);
 
   if (!open || typeof document === "undefined") return null;
+
+  let selectableIndex = -1;
 
   return createPortal(
     <div className="cpq-quick-add-overlay" role="presentation" onClick={onClose}>
@@ -263,7 +305,7 @@ export function QuoteQuickAdd({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="cpq-quick-add"
+        className="cpq-quick-add cpq-quick-add--sheet"
         onClick={(ev) => ev.stopPropagation()}
       >
         <p id={titleId} className="sr-only">
@@ -277,7 +319,6 @@ export function QuoteQuickAdd({
             onChange={(ev) => {
               const value = ev.target.value;
               setQuery(value);
-              setActive(0);
               onCatalogQuery(value);
             }}
             placeholder={
@@ -288,39 +329,68 @@ export function QuoteQuickAdd({
           />
         </div>
         <ul className="cpq-quick-add-list" role="listbox">
-          {catalogLoading && showCatalogHits ? (
+          {catalogLoading && searching ? (
             <li className="px-3 py-2 text-sm text-fg-muted">{he.loading}</li>
           ) : null}
-          {rows.map((row, index) => {
+          {rows.map((row) => {
+            if (row.kind === "header") {
+              return (
+                <li key={row.id} className="cpq-quick-add-group" role="presentation">
+                  {row.label}
+                </li>
+              );
+            }
+            selectableIndex += 1;
+            const index = selectableIndex;
             const Icon = row.icon;
+            const isActive = index === active;
+            const emphasisClass = row.kind === "action" && row.emphasis ? " is-emphasis" : "";
             return (
               <li key={`${row.kind}-${row.id}`}>
                 <button
                   type="button"
                   role="option"
-                  aria-selected={index === active}
-                  className={`cpq-quick-add-row${index === active ? " is-active" : ""}`}
+                  aria-selected={isActive}
+                  className={`cpq-quick-add-row${isActive ? " is-active" : ""}${emphasisClass}`}
                   onMouseEnter={() => setActive(index)}
                   onPointerDown={(ev) => {
                     if (ev.button !== 0) return;
-                    // Fire on pointerdown so the choice registers before overlay teardown.
                     ev.preventDefault();
                     setActive(index);
                     selectRow(row);
                   }}
                 >
-                  <span className="cpq-quick-add-icon" aria-hidden>
-                    <Icon className="size-4" />
-                  </span>
+                  {row.kind === "product" && row.imageUrl ? (
+                    <img
+                      src={row.imageUrl}
+                      alt={row.label}
+                      className="cpq-quick-add-thumb"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="cpq-quick-add-icon" aria-hidden>
+                      <Icon className="size-4" />
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1 text-start">
                     <span className="block text-sm font-medium text-fg">{row.label}</span>
                     {row.hint ? <span className="block text-xs text-fg-muted">{row.hint}</span> : null}
+                    {row.kind === "action" && row.extraHint ? (
+                      <span className="block text-[0.65rem] text-fg-subtle">{row.extraHint}</span>
+                    ) : null}
                   </span>
+                  {row.kind === "product" && row.price ? (
+                    <span className="cpq-quick-add-price">{row.price}</span>
+                  ) : (
+                    <ChevronLeft className="cpq-quick-add-chevron size-4 text-fg-subtle" aria-hidden />
+                  )}
                 </button>
               </li>
             );
           })}
-          {!rows.length ? <li className="px-3 py-4 text-center text-sm text-fg-muted">{he.cpqQuickAddEmpty}</li> : null}
+          {!selectable.length && !catalogLoading ? (
+            <li className="px-3 py-4 text-center text-sm text-fg-muted">{he.cpqQuickAddEmpty}</li>
+          ) : null}
         </ul>
         <p className="cpq-quick-add-hint">{he.cpqQuickAddKeys}</p>
       </div>

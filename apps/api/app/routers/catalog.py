@@ -290,6 +290,7 @@ def list_products(
     category_id: str | None = Query(default=None),
     active: bool | None = Query(default=True),
     include_inactive: bool = Query(default=False),
+    sort: str | None = Query(default=None),
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "catalog.view")
@@ -300,11 +301,16 @@ def list_products(
     if raw_limit < 1 or raw_limit > 500:
         raise ApiError(400, "VALIDATION_ERROR", "מגבלת עמוד לא תקינה")
     page_size = raw_limit
+    sort_key = (sort or "").strip().lower()
+    recent_sort = sort_key == "recent"
+    if sort_key and not recent_sort and sort_key not in {"name", "default"}:
+        raise ApiError(400, "VALIDATION_ERROR", "מיון לא תקין")
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
         "select": PRODUCT_SELECT,
         # Ascending keyset: next page is name/id *greater than* the cursor (not lt).
-        "order": "name.asc,id.asc",
+        # recent: newest products first (quick-add «אחרונים»); no name cursor.
+        "order": "created_at.desc,id.desc" if recent_sort else "name.asc,id.asc",
         "limit": str(page_size + 1),
     }
     if not include_inactive:
@@ -328,7 +334,7 @@ def list_products(
                 f"name.ilike.*{safe}*,sku.ilike.*{safe}*,"
                 f"manufacturer.ilike.*{safe}*,model.ilike.*{safe}*"
             )
-    marker = _decode_product_cursor(cursor)
+    marker = None if recent_sort else _decode_product_cursor(cursor)
     cursor_inner: str | None = None
     if marker:
         before_name, before_id = marker
@@ -349,7 +355,8 @@ def list_products(
     items = rows
     if len(rows) > page_size:
         items = rows[:page_size]
-        next_cursor = _encode_product_cursor(items[-1])
+        if not recent_sort:
+            next_cursor = _encode_product_cursor(items[-1])
     show_cost = _can_view_cost(ctx)
     if show_cost:
         items = _merge_product_costs(service, workspace_id, items)

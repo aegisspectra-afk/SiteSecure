@@ -18,7 +18,8 @@ router = APIRouter(prefix="/api/v1/public/quotes", tags=["public-quotes"])
 
 QUOTE_SELECT = (
     "id,workspace_id,owner_user_id,number,status,version,valid_until,sent_at,viewed_at,"
-    "approved_at,rejected_at,approved_name,rejection_reason,deleted_at"
+    "approved_at,rejected_at,approved_name,rejection_reason,deleted_at,"
+    "presentation_mode,approved_alternative_id"
 )
 DECISION_STATES = frozenset({"sent", "viewed"})
 
@@ -30,6 +31,8 @@ class PublicDecisionIn(BaseModel):
     user_agent: str | None = Field(default=None, max_length=500)
     terms_accepted: bool | None = None
     signature_data_url: str | None = Field(default=None, max_length=400_000)
+    # B3: required when the quote has multiple ועד-בית alternatives.
+    chosen_alternative_id: str | None = Field(default=None, max_length=64)
 
 
 def _client_meta(request: Request, body: PublicDecisionIn) -> dict:
@@ -292,6 +295,18 @@ def approve_public_quote(
         raise ApiError(400, "VALIDATION_ERROR", "יש לחתום דיגיטלית על ההצעה")
     if len(signature) > 350_000:
         raise ApiError(400, "VALIDATION_ERROR", "קובץ החתימה גדול מדי")
+
+    # B3: when the frozen public payload (or live quote) has alternatives, require a choice.
+    alts = public_pre.get("alternatives") if isinstance(public_pre.get("alternatives"), list) else []
+    mode = str(quote.get("presentation_mode") or public_pre.get("presentation_mode") or "single")
+    chosen_alt = (body.chosen_alternative_id or "").strip() or None
+    if mode == "alternatives" or len(alts) > 1:
+        if not chosen_alt:
+            raise ApiError(400, "VALIDATION_ERROR", "יש לבחור חלופה לפני האישור")
+        allowed_ids = {str(a.get("id")) for a in alts if isinstance(a, dict) and a.get("id")}
+        if allowed_ids and chosen_alt not in allowed_ids:
+            raise ApiError(400, "VALIDATION_ERROR", "החלופה שנבחרה אינה שייכת להצעה זו")
+
     now = datetime.now(UTC).isoformat()
     # Store signature artifact first so we never approve without a durable ink capture.
     captured = store_quote_signature_document(
@@ -302,9 +317,12 @@ def approve_public_quote(
         signed_at=now,
         signature_data_url=signature,
     )
+    approve_patch: dict = {"status": "approved", "approved_at": now, "approved_name": name}
+    if chosen_alt:
+        approve_patch["approved_alternative_id"] = chosen_alt
     patched = svc.patch(
         "quotes",
-        {"status": "approved", "approved_at": now, "approved_name": name},
+        approve_patch,
         params={
             "id": f"eq.{quote['id']}",
             "workspace_id": f"eq.{quote['workspace_id']}",
@@ -334,6 +352,7 @@ def approve_public_quote(
         "signature_document_id": captured.get("document_id"),
         "signature_storage_path": captured.get("storage_path"),
         "signature_checksum": captured.get("checksum"),
+        **({"chosen_alternative_id": chosen_alt} if chosen_alt else {}),
         **client_meta,
     }
     _event(svc, quote, "signed", {**event_meta, "signature_bytes": captured.get("byte_size")})

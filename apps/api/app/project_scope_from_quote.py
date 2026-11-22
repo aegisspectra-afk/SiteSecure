@@ -48,7 +48,12 @@ def classify_scope_kind(item: dict[str, Any]) -> str:
     return "equipment"
 
 
-def should_include_quote_item(item: dict[str, Any]) -> bool:
+def should_include_quote_item(
+    item: dict[str, Any],
+    *,
+    approved_alternative_id: str | None = None,
+    section_alt_by_id: dict[str, str] | None = None,
+) -> bool:
     item_type = _text(item.get("item_type")).lower()
     if item_type == "note":
         return False
@@ -56,6 +61,16 @@ def should_include_quote_item(item: dict[str, Any]) -> bool:
         return False
     if _num(item.get("qty")) <= 0:
         return False
+    # B3: when a customer chose a tier, keep only that tier's billable lines.
+    if approved_alternative_id:
+        item_alt = item.get("alternative_id")
+        if item_alt is None and section_alt_by_id:
+            sid = item.get("section_id")
+            item_alt = section_alt_by_id.get(str(sid)) if sid else None
+        if item_alt is None:
+            return False
+        if str(item_alt) != str(approved_alternative_id):
+            return False
     return True
 
 
@@ -66,6 +81,7 @@ def plan_project_scope_from_snapshot(
     project_id: str,
     source_quote_id: str,
     source_quote_version: int,
+    approved_alternative_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Pure mapping: frozen snapshot → insert payloads for project_planned_items."""
     if not isinstance(snapshot, dict):
@@ -77,12 +93,26 @@ def plan_project_scope_from_snapshot(
         items = public.get("items") if isinstance(public.get("items"), list) else []
     sections = snapshot.get("sections") if isinstance(snapshot.get("sections"), list) else []
     section_names = _section_name_map(sections)
+    section_alt_by_id = {
+        str(s.get("id")): str(s.get("alternative_id"))
+        for s in sections
+        if isinstance(s, dict) and s.get("id") and s.get("alternative_id")
+    }
+    chosen = (
+        approved_alternative_id
+        or _text(snapshot.get("approved_alternative_id"))
+        or None
+    )
 
     rows: list[dict[str, Any]] = []
     for index, raw in enumerate(items):
         if not isinstance(raw, dict):
             continue
-        if not should_include_quote_item(raw):
+        if not should_include_quote_item(
+            raw,
+            approved_alternative_id=chosen or None,
+            section_alt_by_id=section_alt_by_id,
+        ):
             continue
         item_type = _text(raw.get("item_type")) or "catalog"
         scope_kind = classify_scope_kind(raw)

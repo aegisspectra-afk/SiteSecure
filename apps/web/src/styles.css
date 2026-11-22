@@ -14192,6 +14192,31 @@ html.theme-revealing::view-transition-new(root) {
   border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
 }
 
+.cpq-send-channel-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.cpq-send-channel-btn {
+  width: 100%;
+  min-height: 2.75rem;
+  height: auto;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  padding-block: 0.55rem;
+}
+
+@media (min-width: 36rem) {
+  .cpq-send-channel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+}
+
 .cpq-live-preview-pane {
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: var(--radius-card);

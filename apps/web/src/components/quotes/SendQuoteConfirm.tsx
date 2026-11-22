@@ -84,18 +84,29 @@ export function SendQuoteConfirm({
         <section className="flex flex-col gap-2">
           <p className="text-sm font-medium text-fg">{he.cpqSendHowTitle}</p>
           <p className="text-xs text-fg-muted">{he.cpqSendHowLead}</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="cpq-send-channel-grid">
             <Button
               variant="secondary"
+              className="cpq-send-channel-btn"
               disabled={!canSend || pending}
               onClick={() => onChannel?.("whatsapp")}
             >
               {he.quoteWhatsApp}
             </Button>
-            <Button variant="secondary" disabled={!canSend || pending} onClick={() => onChannel?.("link")}>
+            <Button
+              variant="secondary"
+              className="cpq-send-channel-btn"
+              disabled={!canSend || pending}
+              onClick={() => onChannel?.("link")}
+            >
               {he.cpqCopySecureLink}
             </Button>
-            <Button variant="secondary" disabled={!canSend || pending} onClick={() => onChannel?.("email")}>
+            <Button
+              variant="secondary"
+              className="cpq-send-channel-btn"
+              disabled={!canSend || pending}
+              onClick={() => onChannel?.("email")}
+            >
               {he.quoteMailtoShare}
             </Button>
           </div>

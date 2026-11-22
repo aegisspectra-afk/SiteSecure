@@ -137,6 +137,7 @@ describe("Q7-A delivery UX", () => {
     expect(screen.getByRole("button", { name: he.quoteSendAction })).toBeTruthy();
     expect(screen.getByRole("button", { name: he.quoteWhatsApp })).toBeTruthy();
     expect(screen.getByRole("button", { name: he.quoteMailtoShare })).toBeTruthy();
+    expect(document.querySelector(".cpq-send-channel-grid")).toBeTruthy();
   });
 
   it("shows primary send and secondary delivery actions on review stage", async () => {

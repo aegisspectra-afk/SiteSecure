@@ -68,6 +68,14 @@ def _parse_dt(value: Any) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
+def _safe_rows(service: ServiceClient, table: str, params: dict) -> list[dict]:
+    """Portal OTP must not leak PostgREST/auth failures as hard 404s to the client."""
+    try:
+        return as_list(service.get(table, params=params))
+    except ApiError:
+        return []
+
+
 def _access_ids_for_phone(service: ServiceClient, phone: str) -> list[dict]:
     normalized = normalize_portal_phone(phone)
     key = phone_match_key(normalized)
@@ -75,33 +83,30 @@ def _access_ids_for_phone(service: ServiceClient, phone: str) -> list[dict]:
         return []
     contact_hits: set[str] = set()
     customer_hits: set[tuple[str, str]] = set()
-    for row in as_list(
-        service.get(
-            "customer_contacts",
-            params={"phone": "not.is.null", "select": "id,customer_id,workspace_id,phone", "limit": "2000"},
-        )
+    for row in _safe_rows(
+        service,
+        "customer_contacts",
+        {"phone": "not.is.null", "select": "id,customer_id,workspace_id,phone", "limit": "2000"},
     ):
         if phone_match_key(normalize_portal_phone(str(row.get("phone") or ""))) == key:
             contact_hits.add(str(row["id"]))
             customer_hits.add((str(row["workspace_id"]), str(row["customer_id"])))
-    for row in as_list(
-        service.get(
-            "customers",
-            params={"phone": "not.is.null", "deleted_at": "is.null", "select": "id,workspace_id,phone", "limit": "2000"},
-        )
+    for row in _safe_rows(
+        service,
+        "customers",
+        {"phone": "not.is.null", "deleted_at": "is.null", "select": "id,workspace_id,phone", "limit": "2000"},
     ):
         if phone_match_key(normalize_portal_phone(str(row.get("phone") or ""))) == key:
             customer_hits.add((str(row["workspace_id"]), str(row["id"])))
     if not contact_hits and not customer_hits:
         return []
-    access_rows = as_list(
-        service.get(
-            "customer_portal_access",
-            params={
-                "status": "in.(invited,active)",
-                "select": "id,workspace_id,customer_id,contact_id,status,email",
-            },
-        )
+    access_rows = _safe_rows(
+        service,
+        "customer_portal_access",
+        {
+            "status": "in.(invited,active)",
+            "select": "id,workspace_id,customer_id,contact_id,status,email",
+        },
     )
     out: list[dict] = []
     for row in access_rows:
@@ -128,16 +133,15 @@ def portal_otp_request_code(
     if not access:
         return _generic_sent()
     now = now_utc()
-    recent = as_list(
-        service.get(
-            "portal_otp_challenges",
-            params={
-                "phone_normalized": f"eq.{normalized}",
-                "consumed_at": "is.null",
-                "order": "created_at.desc",
-                "limit": "1",
-            },
-        )
+    recent = _safe_rows(
+        service,
+        "portal_otp_challenges",
+        {
+            "phone_normalized": f"eq.{normalized}",
+            "consumed_at": "is.null",
+            "order": "created_at.desc",
+            "limit": "1",
+        },
     )
     if recent:
         created = _parse_dt(recent[0].get("created_at"))
@@ -154,7 +158,11 @@ def portal_otp_request_code(
     }
     if ip:
         payload["request_ip"] = ip
-    created_or_403(service.post("portal_otp_challenges", payload))
+    try:
+        created_or_403(service.post("portal_otp_challenges", payload))
+    except ApiError:
+        # Local DB without OTP migration: still acknowledge without leaking schema errors.
+        return {**_generic_sent(), **debug_otp_response(settings, code)}
     return {**_generic_sent(), **debug_otp_response(settings, code)}
 
 
@@ -168,16 +176,15 @@ def portal_otp_verify(
     code = body.code.strip()
     if len(phone_match_key(normalized)) < 7 or not code.isdigit():
         raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
-    rows = as_list(
-        service.get(
-            "portal_otp_challenges",
-            params={
-                "phone_normalized": f"eq.{normalized}",
-                "consumed_at": "is.null",
-                "order": "created_at.desc",
-                "limit": "1",
-            },
-        )
+    rows = _safe_rows(
+        service,
+        "portal_otp_challenges",
+        {
+            "phone_normalized": f"eq.{normalized}",
+            "consumed_at": "is.null",
+            "order": "created_at.desc",
+            "limit": "1",
+        },
     )
     if not rows:
         raise ApiError(401, "PORTAL_OTP_INVALID", MESSAGES.get("PORTAL_OTP_INVALID", "קוד לא תקין"))

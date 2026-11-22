@@ -9,13 +9,14 @@ from app.portal_otp import normalize_portal_phone, otp_code_hash
 def test_portal_otp_request_route_registered():
     api = TestClient(app)
     res = api.post("/api/v1/portal/otp/request-code", json={"phone": "0501234567"})
-    assert res.status_code != 404, res.text
+    # Missing FastAPI route → {"detail":"Not Found"}. Mounted handler returns 200/400/401/503.
+    assert res.status_code in {200, 400, 401, 503}, res.text
 
 
 def test_portal_otp_verify_route_registered():
     api = TestClient(app)
     res = api.post("/api/v1/portal/otp/verify", json={"phone": "0501234567", "code": "123456"})
-    assert res.status_code != 404, res.text
+    assert res.status_code in {200, 400, 401, 503}, res.text
 
 
 def test_normalize_israeli_mobile_variants():

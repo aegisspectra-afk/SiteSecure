@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from .quote_terms_defaults import apply_workspace_terms_to_create
 
 # Unconfigured workspaces: a quote is valid for 30 days, the same as the public link TTL.
 DEFAULT_VALIDITY_DAYS = 30
@@ -42,10 +43,7 @@ def apply_quote_create_defaults(
         if days > 0:
             payload["valid_until"] = (workspace_local_today(timezone_name) + timedelta(days=days)).isoformat()
 
-    if not str(payload.get("payment_terms") or "").strip():
-        terms = cfg.get("payment_terms")
-        if isinstance(terms, str) and terms.strip():
-            payload["payment_terms"] = terms.strip()
+    apply_workspace_terms_to_create(payload, cfg)
 
     return payload
 

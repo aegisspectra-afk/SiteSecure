@@ -57,6 +57,9 @@ function QuotesSettingsBody() {
     baseline != null &&
     (prefs.quoteValidityDays !== baseline.quoteValidityDays ||
       prefs.paymentTerms !== baseline.paymentTerms ||
+      prefs.defaultWarranty !== baseline.defaultWarranty ||
+      prefs.defaultGeneralTerms !== baseline.defaultGeneralTerms ||
+      prefs.defaultCustomerNotes !== baseline.defaultCustomerNotes ||
       prefs.showVatOnQuotes !== baseline.showVatOnQuotes ||
       prefs.pdfNotes !== baseline.pdfNotes ||
       prefs.marginMinimumPercent !== baseline.marginMinimumPercent ||
@@ -70,6 +73,10 @@ function QuotesSettingsBody() {
           validity_days: prefs.quoteValidityDays,
           show_vat: prefs.showVatOnQuotes,
           payment_terms: prefs.paymentTerms,
+          warranty: prefs.defaultWarranty,
+          general_terms: prefs.defaultGeneralTerms,
+          customer_notes: prefs.defaultCustomerNotes,
+          terms_templates: prefs.termsTemplates,
           pdf_notes: prefs.pdfNotes,
           margin_minimum: prefs.marginMinimumPercent,
           margin_target: prefs.marginTargetPercent,
@@ -148,6 +155,33 @@ function QuotesSettingsBody() {
             value={prefs.paymentTerms}
             onChange={(ev) => setPrefs({ ...prefs, paymentTerms: ev.target.value })}
           />
+          <label className="settings-field-block col-span-full">
+            <span className="settings-field-label">{he.settingsDefaultWarranty}</span>
+            <textarea
+              className="settings-textarea"
+              rows={3}
+              value={prefs.defaultWarranty}
+              onChange={(ev) => setPrefs({ ...prefs, defaultWarranty: ev.target.value })}
+            />
+          </label>
+          <label className="settings-field-block col-span-full">
+            <span className="settings-field-label">{he.settingsDefaultGeneralTerms}</span>
+            <textarea
+              className="settings-textarea"
+              rows={3}
+              value={prefs.defaultGeneralTerms}
+              onChange={(ev) => setPrefs({ ...prefs, defaultGeneralTerms: ev.target.value })}
+            />
+          </label>
+          <label className="settings-field-block col-span-full">
+            <span className="settings-field-label">{he.settingsDefaultCustomerNotes}</span>
+            <textarea
+              className="settings-textarea"
+              rows={2}
+              value={prefs.defaultCustomerNotes}
+              onChange={(ev) => setPrefs({ ...prefs, defaultCustomerNotes: ev.target.value })}
+            />
+          </label>
           <Input
             id="quote-labor-rate"
             label={he.laborRateLabel}
@@ -157,6 +191,42 @@ function QuotesSettingsBody() {
             className="ltr-meta"
           />
         </div>
+        {prefs.termsTemplates.length > 0 ? (
+          <section className="flex flex-col gap-3" aria-label={he.settingsTermsTemplatesTitle}>
+            <h3 className="text-sm font-semibold text-fg">{he.settingsTermsTemplatesTitle}</h3>
+            <p className="settings-field-hint">{he.settingsTermsTemplatesLead}</p>
+            <ul className="flex flex-col gap-2">
+              {prefs.termsTemplates.map((tpl) => (
+                <li key={tpl.id} className="flex flex-wrap items-center gap-2 rounded border border-border px-3 py-2">
+                  <span className="text-sm text-fg">{tpl.name_he}</span>
+                  <span className="text-xs text-fg-muted">
+                    {tpl.kind === "payment_terms"
+                      ? he.settingsTermsKindPayment
+                      : tpl.kind === "warranty"
+                        ? he.settingsTermsKindWarranty
+                        : he.settingsTermsKindNotes}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="ms-auto text-sm"
+                    onClick={() => {
+                      if (tpl.kind === "payment_terms") {
+                        setPrefs({ ...prefs, paymentTerms: tpl.body });
+                      } else if (tpl.kind === "warranty") {
+                        setPrefs({ ...prefs, defaultWarranty: tpl.body });
+                      } else {
+                        setPrefs({ ...prefs, defaultCustomerNotes: tpl.body });
+                      }
+                    }}
+                  >
+                    {he.settingsTermsTemplateUse}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <p className="settings-field-hint">{he.laborRateLead}</p>
         {laborInvalid ? (
           <p className="text-sm text-danger" role="alert">

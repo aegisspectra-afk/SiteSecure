@@ -11,5 +11,6 @@
 | `20261122140000_ss_quote_alternatives_b3.sql` | B3 | חלופות ועד בית | `supabase/rollbacks/20261122140000_ss_quote_alternatives_b3.sql` |
 | `20261122160000_ss_c1_plan_keys_free_pro_business.sql` | C1 | מפתחות free/pro/business/enterprise · `quotes.alternatives` | `supabase/rollbacks/20261122160000_ss_c1_plan_keys_free_pro_business.sql` |
 | `20261122170000_ss_c1_section8_plan_matrix.sql` | C1 | §8 מגבלות (משתמשים/אחסון/הצעות) + מטריצת יכולות מלאה | `supabase/rollbacks/20261122170000_ss_c1_section8_plan_matrix.sql` |
+| `20261122180000_ss_b7_quote_terms_templates.sql` | B7 | תבניות תנאים ב-workspace · ברירת מחדל להצעה חדשה · תבנית חוזה תחזוקה שנתי | `supabase/rollbacks/20261122180000_ss_b7_quote_terms_templates.sql` |
 
 **קוד בלי מיגרציה (ייפרס עם Web/API):** B1 · B2 · B4 · B5 · B6 · C1 שער capabilities מלא ב-API.

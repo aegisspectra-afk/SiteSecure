@@ -26,6 +26,7 @@ from ..quote_pdf import render_quote_pdf
 from ..quote_snapshot import catalog_line_snapshot, public_payload, version_snapshot
 from ..quote_tokens import hash_public_token, new_public_token
 from ..quote_validation import advisory_checks, critical_gaps_only, validate_for_send
+from ..quote_terms_defaults import apply_template_terms_to_quote
 from ..quote_workspace_defaults import apply_quote_create_defaults, merge_quote_pdf_template_defaults
 from ..rest import acked_or_403, as_list, created_or_403, one_or_404, patched_or_403
 from ..csv_export import (
@@ -194,6 +195,7 @@ class QuoteItemPatch(BaseModel):
 class ApplyTemplateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     template_id: str | None = None
+    apply_terms: bool = True
 
 
 def _ctx(client: UserClient, user: dict, workspace_id: UUID):
@@ -1748,7 +1750,14 @@ def apply_template(
     template = one_or_404(
         client.get(
             "quote_templates",
-            params={"id": f"eq.{template_id}", "workspace_id": f"eq.{workspace_id}", "select": "id,key,name_he"},
+            params={
+                "id": f"eq.{template_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": (
+                    "id,key,name_he,default_payment_terms,default_warranty,"
+                    "default_general_terms,default_notes"
+                ),
+            },
         )
     )
     template_items = as_list(
@@ -1800,10 +1809,13 @@ def apply_template(
             inserted += 1
     if inserted == 0:
         raise ApiError(400, "TEMPLATE_EMPTY", MESSAGES["TEMPLATE_EMPTY"])
+    quote_patch: dict[str, object] = {"template_id": template["id"]}
+    if body.apply_terms:
+        quote_patch.update(apply_template_terms_to_quote(existing, template))
     patched = patched_or_403(
         client.patch(
             "quotes",
-            {"template_id": template["id"]},
+            quote_patch,
             params={
                 "id": f"eq.{quote_id}",
                 "workspace_id": f"eq.{workspace_id}",

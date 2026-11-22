@@ -2,6 +2,13 @@
 
 import type { WorkspaceSettingsOut } from "@site-secure/api-client";
 
+export type QuoteTermsTemplate = {
+  id: string;
+  kind: "payment_terms" | "warranty" | "notes";
+  name_he: string;
+  body: string;
+};
+
 export type WorkspacePrefs = {
   currency: "ILS";
   quotePrefix: string;
@@ -10,6 +17,10 @@ export type WorkspacePrefs = {
   quoteValidityDays: number;
   showVatOnQuotes: boolean;
   paymentTerms: string;
+  defaultWarranty: string;
+  defaultGeneralTerms: string;
+  defaultCustomerNotes: string;
+  termsTemplates: QuoteTermsTemplate[];
   pdfNotes: string;
   /** Office-only: yellow warning when quote/line margin % is below this. Does not block send. */
   marginMinimumPercent: number;
@@ -31,6 +42,10 @@ export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
   quoteValidityDays: 14,
   showVatOnQuotes: true,
   paymentTerms: "שוטף + 30",
+  defaultWarranty: "",
+  defaultGeneralTerms: "",
+  defaultCustomerNotes: "",
+  termsTemplates: [],
   pdfNotes: "",
   marginMinimumPercent: 15,
   marginTargetPercent: 30,
@@ -57,6 +72,12 @@ export function prefsFromSettings(settings: WorkspaceSettingsOut): WorkspacePref
     quoteValidityDays: Number(quotes.validity_days ?? DEFAULT_WORKSPACE_PREFS.quoteValidityDays) || 14,
     showVatOnQuotes: quotes.show_vat !== false,
     paymentTerms: String(quotes.payment_terms ?? DEFAULT_WORKSPACE_PREFS.paymentTerms),
+    defaultWarranty: String(quotes.warranty ?? ""),
+    defaultGeneralTerms: String(quotes.general_terms ?? ""),
+    defaultCustomerNotes: String(quotes.customer_notes ?? ""),
+    termsTemplates: Array.isArray(quotes.terms_templates)
+      ? (quotes.terms_templates as QuoteTermsTemplate[])
+      : [],
     pdfNotes: String(quotes.pdf_notes ?? ""),
     marginMinimumPercent:
       Number(quotes.margin_minimum ?? DEFAULT_WORKSPACE_PREFS.marginMinimumPercent) || 15,
@@ -85,6 +106,10 @@ export function prefsToSettingsPatch(prefs: WorkspacePrefs): Partial<WorkspaceSe
       validity_days: prefs.quoteValidityDays,
       show_vat: prefs.showVatOnQuotes,
       payment_terms: prefs.paymentTerms,
+      warranty: prefs.defaultWarranty,
+      general_terms: prefs.defaultGeneralTerms,
+      customer_notes: prefs.defaultCustomerNotes,
+      terms_templates: prefs.termsTemplates,
       pdf_notes: prefs.pdfNotes,
       margin_minimum: prefs.marginMinimumPercent,
       margin_target: prefs.marginTargetPercent,

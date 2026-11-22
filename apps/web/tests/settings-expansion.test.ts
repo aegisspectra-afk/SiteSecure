@@ -130,6 +130,7 @@ describe("workspace prefs ↔ settings JSON", () => {
       quotePrefix: "QT-",
       quoteValidityDays: 21,
       paymentTerms: "מקדמה 50%",
+      defaultWarranty: "אחריות 12 חודשים",
       siteRequireAddress: true,
     };
     const patch = prefsToSettingsPatch(prefs);
@@ -146,6 +147,7 @@ describe("workspace prefs ↔ settings JSON", () => {
     expect(restored.quotePrefix).toBe("QT-");
     expect(restored.quoteValidityDays).toBe(21);
     expect(restored.paymentTerms).toBe("מקדמה 50%");
+    expect(restored.defaultWarranty).toBe("אחריות 12 חודשים");
     expect(restored.siteRequireAddress).toBe(true);
     expect(restored.currency).toBe("ILS");
   });

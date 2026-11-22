@@ -45,6 +45,22 @@ def test_validity_preserves_explicit_value():
     assert payload["valid_until"] == "2030-01-15"
 
 
+def test_warranty_and_general_terms_default_when_empty():
+    payload = {}
+    apply_quote_create_defaults(
+        payload,
+        quotes_cfg={
+            "warranty": "אחריות יצרן",
+            "general_terms": "תנאים כלליים",
+            "customer_notes": "הערה",
+        },
+        timezone_name="Asia/Jerusalem",
+    )
+    assert payload["warranty"] == "אחריות יצרן"
+    assert payload["general_terms"] == "תנאים כלליים"
+    assert payload["customer_notes"] == "הערה"
+
+
 def test_payment_terms_default_when_empty():
     payload = {"payment_terms": ""}
     apply_quote_create_defaults(

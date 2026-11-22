@@ -224,6 +224,26 @@ function CustomerQuoteExperience() {
               </section>
             ) : null}
 
+            {quote.site_tour_photos && quote.site_tour_photos.length > 0 ? (
+              <section className="cqx-tour-photos" aria-label={he.quoteSiteTourPublic}>
+                <h2 className="mb-2 text-base font-semibold text-fg">{he.quoteSiteTourPublic}</h2>
+                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {quote.site_tour_photos.map((photo) =>
+                    photo.url ? (
+                      <li key={photo.id} className="overflow-hidden rounded border border-border">
+                        <img
+                          src={photo.url}
+                          alt=""
+                          className="aspect-square w-full object-cover"
+                          loading="lazy"
+                        />
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
+              </section>
+            ) : null}
+
             <QuoteDocument quote={quote} showStatus={false} hideSignatureBlock presentation="public" />
 
             {waAskHref && !isExpired && !isSuperseded ? (

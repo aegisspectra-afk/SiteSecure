@@ -244,6 +244,24 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
     summary_he = load_cctv_system_summary(svc, quote.get("workspace_id"), quote.get("id"))
     if summary_he:
         public["system_summary"] = summary_he
+    # B6: resolve frozen tour photo refs to short-lived signed URLs for the customer.
+    tour = public.get("site_tour_photos")
+    if isinstance(tour, list) and tour:
+        resolved = []
+        for row in tour[:10]:
+            if not isinstance(row, dict):
+                continue
+            bucket = row.get("storage_bucket")
+            path = row.get("storage_path")
+            out = {"id": str(row.get("id") or ""), "url": row.get("url")}
+            if bucket and path and not out.get("url"):
+                try:
+                    signed = svc.storage_sign_download(str(bucket), str(path), expires_in=3600)
+                    out["url"] = signed if isinstance(signed, str) else None
+                except Exception:
+                    out["url"] = None
+            resolved.append(out)
+        public["site_tour_photos"] = resolved
     return public
 
 

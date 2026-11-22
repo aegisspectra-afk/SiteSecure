@@ -1013,6 +1013,36 @@ def _upsert_version_snapshot(
     else:
         pdf_template = {}
         merge_quote_pdf_template_defaults(pdf_template, quotes_cfg=quotes_cfg, config={})
+    # B6: freeze up to 10 site-tour photos into the customer document.
+    try:
+        tour_docs = as_list(
+            client.get(
+                "documents",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "entity_type": "eq.quote",
+                    "entity_id": f"eq.{quote_id}",
+                    "kind": "eq.photo",
+                    "select": "id,storage_bucket,storage_path,created_at",
+                    "order": "created_at.asc",
+                    "limit": "10",
+                },
+            )
+        )
+    except Exception:
+        tour_docs = []
+    if tour_docs:
+        quote = {
+            **quote,
+            "site_tour_photos": [
+                {
+                    "id": d.get("id"),
+                    "storage_bucket": d.get("storage_bucket"),
+                    "storage_path": d.get("storage_path"),
+                }
+                for d in tour_docs
+            ],
+        }
     snapshot = version_snapshot(
         quote,
         items,

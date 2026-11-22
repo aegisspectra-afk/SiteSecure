@@ -1693,6 +1693,13 @@ export type PublicQuote = {
   /** B3: customer-facing tiers (no cost/margin). */
   alternatives?: QuoteAlternativePublic[];
   approved_alternative_id?: string | null;
+  /** B6: site tour photos (signed urls when assembled). */
+  site_tour_photos?: Array<{
+    id: string;
+    url?: string | null;
+    storage_bucket?: string | null;
+    storage_path?: string | null;
+  }>;
   /** Non-optional lines before section discounts (pricing.recalculate). */
   items_subtotal?: number | null;
   sections_breakdown?: QuoteSectionBreakdown[];
@@ -2888,11 +2895,12 @@ export function createApiClient(opts: {
       request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/sites/${siteId}`, { method: "DELETE" }),
     listDocuments: (
       workspaceId: string,
-      opts: { entity_type?: string; entity_id?: string; limit?: number } = {},
+      opts: { entity_type?: string; entity_id?: string; kind?: string; limit?: number } = {},
     ) => {
       const params = new URLSearchParams({ limit: String(opts.limit ?? 50) });
       if (opts.entity_type) params.set("entity_type", opts.entity_type);
       if (opts.entity_id) params.set("entity_id", opts.entity_id);
+      if (opts.kind) params.set("kind", opts.kind);
       return request<{ items: DocumentOut[]; next_cursor?: string | null }>(
         `/api/v1/workspaces/${workspaceId}/documents?${params}`,
       );

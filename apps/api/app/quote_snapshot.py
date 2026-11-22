@@ -260,6 +260,19 @@ def public_payload(
         payload["company_snapshot"] = snap
     if pdf_template and isinstance(pdf_template, dict):
         payload["pdf_template"] = pdf_template
+    # B6: frozen site-tour photo refs (URLs resolved at assemble/PDF time).
+    tour = quote.get("site_tour_photos")
+    if isinstance(tour, list):
+        payload["site_tour_photos"] = [
+            {
+                "id": str(row.get("id")),
+                "storage_bucket": row.get("storage_bucket"),
+                "storage_path": row.get("storage_path"),
+                "url": row.get("url"),
+            }
+            for row in tour
+            if isinstance(row, dict) and row.get("id")
+        ][:10]
     return payload
 
 

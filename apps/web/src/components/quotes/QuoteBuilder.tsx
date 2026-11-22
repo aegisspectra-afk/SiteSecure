@@ -57,6 +57,7 @@ import { QuoteShareDialog } from "./QuoteShareDialog";
 import { QuoteSentHonesty } from "./QuoteSentHonesty";
 import { SendQuoteConfirm, type SendChannel } from "./SendQuoteConfirm";
 import { QuoteAlternativesBar } from "./cpq/QuoteAlternativesBar";
+import { QuoteSiteTourPhotos } from "./cpq/QuoteSiteTourPhotos";
 import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
 import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
@@ -2837,6 +2838,9 @@ export function QuoteBuilder({
           onSelect={setActiveAlternativeId}
           onMarkRecommended={(id) => markRecommendedAlternative.mutate(id)}
         />
+        {live.id ? (
+          <QuoteSiteTourPhotos workspaceId={workspaceId} quoteId={live.id} canEdit={canEdit} />
+        ) : null}
         <QuoteLinesPanel
           items={itemsForActiveAlternative}
           sections={live.sections ?? []}

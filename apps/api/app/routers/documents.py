@@ -109,6 +109,7 @@ def list_documents(
     user: Annotated[dict, Depends(current_user)],
     entity_type: str | None = Query(default=None),
     entity_id: str | None = Query(default=None),
+    kind: str | None = Query(default=None),
     limit: int | None = Query(default=50),
     cursor: str | None = Query(default=None),
 ):
@@ -128,6 +129,8 @@ def list_documents(
         params["entity_type"] = f"eq.{entity_type}"
     if entity_id:
         params["entity_id"] = f"eq.{entity_id}"
+    if kind:
+        params["kind"] = f"eq.{kind}"
     before = decode_cursor(cursor)
     if before:
         params["created_at"] = f"lt.{before}"
@@ -150,6 +153,26 @@ def create_upload(
     bucket = KIND_BUCKET.get(body.kind)
     if not bucket:
         raise ApiError(400, "VALIDATION_ERROR", "סוג מסמך לא תקין")
+    # B6: quote site-tour photos — images only, max 10 per quote.
+    if body.entity_type == "quote" and body.kind == "photo":
+        mime = (body.mime_type or "").lower()
+        if mime and not mime.startswith("image/"):
+            raise ApiError(400, "VALIDATION_ERROR", "ניתן לצרף להצעה רק תמונות")
+        existing = as_list(
+            client.get(
+                "documents",
+                params={
+                    "workspace_id": f"eq.{workspace_id}",
+                    "entity_type": "eq.quote",
+                    "entity_id": f"eq.{body.entity_id}",
+                    "kind": "eq.photo",
+                    "select": "id",
+                    "limit": "11",
+                },
+            )
+        )
+        if len(existing) >= 10:
+            raise ApiError(409, "VALIDATION_ERROR", "ניתן לצרף עד 10 תמונות מהסיור להצעה")
     used = fetch_storage_used_bytes(client, str(workspace_id))
     raise_plan_limit(
         evaluate_storage_limit(

@@ -4051,6 +4051,7 @@ export const he = {
   fieldOfflineTitle: "אין חיבור לרשת",
   fieldOfflineBody: "פעולות שטח דורשות חיבור. בדקו את הרשת ונסו שוב.",
   jobStatuses: {
+    awaiting_dispatch: "ממתין לשיבוץ",
     scheduled: "מתוכננת",
     en_route: "בדרך",
     arrived: "באתר",

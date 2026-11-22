@@ -16,5 +16,6 @@
 | `20261122190500_ss_c3_billing_upgrade_requests.sql` | C3 | תור בקשות שדרוג מטופס הגדרות | `supabase/rollbacks/20261122190500_ss_c3_billing_upgrade_requests.sql` |
 | `20261122191000_ss_d1_marketing_beta_signups.sql` | D1 | טופס בטא בשיווק → טבלת לידים לפאנל ניהול | `supabase/rollbacks/20261122191000_ss_d1_marketing_beta_signups.sql` |
 | `20261122200000_ss_warranty_reminder_events.sql` | תזכורות שירות | יומן dedup לתזכורות אחריות 60/14 | `supabase/rollbacks/20261122200000_ss_warranty_reminder_events.sql` |
+| `20261122210000_ss_d2_job_awaiting_dispatch.sql` | D2 | סטטוס עבודה `awaiting_dispatch` לאחר אישור הצעה | `supabase/rollbacks/20261122210000_ss_d2_job_awaiting_dispatch.sql` |
 
 **קוד בלי מיגרציה (ייפרס עם Web/API):** B1 · B2 · B4 · B5 · B6 · C1 שער capabilities מלא ב-API · C2/C3 API+UI · תזכורות אחריות (API).

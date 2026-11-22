@@ -39,7 +39,7 @@ def test_invalid_en_route_from_in_progress():
 
 
 def test_cancel_from_open_states():
-    for status in ("scheduled", "en_route", "arrived", "in_progress", "blocked"):
+    for status in ("awaiting_dispatch", "scheduled", "en_route", "arrived", "in_progress", "blocked"):
         assert assert_transition("cancel", status) == "cancelled"
 
 

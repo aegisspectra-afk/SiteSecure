@@ -16,6 +16,7 @@ import { JobWorkCard } from "./JobWorkCard";
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: he.jobsFilterStatusAll },
   { value: "active", label: he.jobsFilterStatusActive },
+  { value: "awaiting_dispatch", label: he.jobStatuses.awaiting_dispatch },
   { value: "scheduled", label: he.jobStatuses.scheduled },
   { value: "en_route", label: he.jobStatuses.en_route },
   { value: "arrived", label: he.jobStatuses.arrived },

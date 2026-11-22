@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..deps import service_client
 from ..notify import notify_quote_event, try_notify
 from ..errors import ApiError, MESSAGES
+from ..quote_approve_provision import provision_project_and_job_after_quote_approve
 from ..quote_signature import freeze_approval_on_version, store_quote_signature_document
 from ..quote_tokens import hash_public_token
 from ..rest import as_list
@@ -385,6 +386,7 @@ def approve_public_quote(
     _event(svc, quote, "signed", {**event_meta, "signature_bytes": captured.get("byte_size")})
     _event(svc, quote, "approved", event_meta)
     try_notify(notify_quote_event, svc, quote, "quote.approved")
+    provision_project_and_job_after_quote_approve(svc, quote)
     _audit(
         svc,
         quote,

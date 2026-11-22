@@ -9,6 +9,7 @@ from .errors import ApiError
 # Logical "assigned" = scheduled/open + assignments row (not a separate enum value).
 JOB_STATUSES: Final[frozenset[str]] = frozenset(
     {
+        "awaiting_dispatch",
         "scheduled",
         "en_route",
         "arrived",
@@ -20,18 +21,21 @@ JOB_STATUSES: Final[frozenset[str]] = frozenset(
 )
 
 OPEN_JOB_STATUSES: Final[frozenset[str]] = frozenset(
-    {"scheduled", "en_route", "arrived", "in_progress", "blocked"}
+    {"awaiting_dispatch", "scheduled", "en_route", "arrived", "in_progress", "blocked"}
 )
 
 # action -> (from_statuses, to_status)
 TRANSITION_MATRIX: Final[dict[str, tuple[frozenset[str], str]]] = {
-    "en_route": (frozenset({"scheduled"}), "en_route"),
+    "en_route": (frozenset({"awaiting_dispatch", "scheduled"}), "en_route"),
     "arrived": (frozenset({"en_route"}), "arrived"),
     "start": (frozenset({"arrived", "en_route"}), "in_progress"),  # en_route allowed for legacy
     "complete": (frozenset({"in_progress"}), "completed"),
     "block": (frozenset({"in_progress", "arrived", "en_route"}), "blocked"),
     "unblock": (frozenset({"blocked"}), "in_progress"),
-    "cancel": (frozenset({"scheduled", "en_route", "arrived", "in_progress", "blocked"}), "cancelled"),
+    "cancel": (
+        frozenset({"awaiting_dispatch", "scheduled", "en_route", "arrived", "in_progress", "blocked"}),
+        "cancelled",
+    ),
 }
 
 

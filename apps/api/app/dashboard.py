@@ -47,7 +47,7 @@ EVENT_LABEL_HE = {
     "expired": "הצעה פגה",
 }
 
-OPEN_JOB = frozenset({"scheduled", "en_route", "arrived", "in_progress", "blocked"})
+OPEN_JOB = frozenset({"awaiting_dispatch", "scheduled", "en_route", "arrived", "in_progress", "blocked"})
 VANITY_KEYS = frozenset(
     {
         "kpis",

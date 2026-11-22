@@ -15,6 +15,7 @@ export type ProjectStatusValue = (typeof PROJECT_STATUS_VALUES)[number];
 
 /** Open field work — mirrors apps/api/app/job_lifecycle.py OPEN_JOB_STATUSES. */
 export const PROJECT_ACTIVE_JOB_STATUSES = new Set([
+  "awaiting_dispatch",
   "scheduled",
   "en_route",
   "arrived",

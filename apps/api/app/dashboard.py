@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -170,6 +170,7 @@ def build_dashboard(
     attention_cap: int = ATTENTION_CAP,
     member_names: dict[str, str] | None = None,
     plan_key: str | None = None,
+    warranties: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """attention_cap limits items per attention group: ATTENTION_CAP for the dashboard,
     ATTENTION_FULL_CAP for the unified "show all" list."""
@@ -223,6 +224,41 @@ def build_dashboard(
         group = _group("job_overdue", "עבודות באיחור", overdue)
         if group:
             attention.append(group)
+    if variant == "ops" and warranties:
+        from .authz.capabilities import plan_capability_enabled
+        from .warranty_reminders import reminder_title_he
+
+        if plan_capability_enabled(plan_key, "service.reminders"):
+            warranty_rows: list[dict[str, Any]] = []
+            today_d = local_now.date()
+            for w in warranties:
+                ends_raw = w.get("ends_on")
+                if not ends_raw:
+                    continue
+                try:
+                    ends_d = date.fromisoformat(str(ends_raw)[:10])
+                except ValueError:
+                    continue
+                days_left = (ends_d - today_d).days
+                if days_left < 0 or days_left > 60:
+                    continue
+                warranty_rows.append(
+                    _item(
+                        entity_type="warranty",
+                        entity_id=str(w["id"]),
+                        number=str(w.get("number") or ""),
+                        title_he=reminder_title_he(60 if days_left > 14 else 14),
+                        customer_name=names.get(str(w["customer_id"])) if w.get("customer_id") else None,
+                        site_name=names.get(str(w["site_id"])) if w.get("site_id") else None,
+                        scheduled_for=None,
+                        severity="now" if days_left <= 14 else "next",
+                        actions=["propose_maintenance", "open_warranty"],
+                        status=str(w.get("status") or ""),
+                    )
+                )
+            group = _group("warranty_expiring_60", "אחריות שמסתיימת ב-60 יום", warranty_rows)
+            if group:
+                attention.append(group)
 
     attention = [_cap_group(group, attention_cap) for group in attention]
 

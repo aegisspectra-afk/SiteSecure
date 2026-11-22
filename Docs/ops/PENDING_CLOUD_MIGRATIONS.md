@@ -15,5 +15,6 @@
 | `20261122190000_ss_c2_manual_subscription_allocation.sql` | C2 | יומן הקצאת מנוי ידנית (בטא) | `supabase/rollbacks/20261122190000_ss_c2_manual_subscription_allocation.sql` |
 | `20261122190500_ss_c3_billing_upgrade_requests.sql` | C3 | תור בקשות שדרוג מטופס הגדרות | `supabase/rollbacks/20261122190500_ss_c3_billing_upgrade_requests.sql` |
 | `20261122191000_ss_d1_marketing_beta_signups.sql` | D1 | טופס בטא בשיווק → טבלת לידים לפאנל ניהול | `supabase/rollbacks/20261122191000_ss_d1_marketing_beta_signups.sql` |
+| `20261122200000_ss_warranty_reminder_events.sql` | תזכורות שירות | יומן dedup לתזכורות אחריות 60/14 | `supabase/rollbacks/20261122200000_ss_warranty_reminder_events.sql` |
 
-**קוד בלי מיגרציה (ייפרס עם Web/API):** B1 · B2 · B4 · B5 · B6 · C1 שער capabilities מלא ב-API · C2/C3 API+UI.
+**קוד בלי מיגרציה (ייפרס עם Web/API):** B1 · B2 · B4 · B5 · B6 · C1 שער capabilities מלא ב-API · C2/C3 API+UI · תזכורות אחריות (API).

@@ -1906,6 +1906,8 @@ export const he = {
   warrantiesEmptyHint:
     "אחריות מתעדת כיסוי לציוד מותקן באתר. ניתן לקשר מוצר מהאתר (סידורי / יצרן / דגם) או ליצור רשומה כללית.",
   warrantiesError: "לא ניתן לטעון אחריות",
+  warrantiesProposeMaintenance: "הצע חוזה תחזוקה",
+  warrantiesProposeMaintenanceError: "לא ניתן ליצור הצעת תחזוקה",
   warrantiesCreate: "אחריות חדשה",
   warrantiesDetailError: "לא ניתן לטעון את רשומת האחריות",
   warrantiesDetailBack: "חזרה לאחריות",

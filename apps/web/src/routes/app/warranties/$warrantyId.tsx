@@ -81,6 +81,18 @@ function WarrantyDetailBody() {
     onError: (err) => setFormError(err instanceof ApiClientError ? err.message : he.warrantiesError),
   });
 
+  const proposeMaintenance = useMutation({
+    mutationFn: () => api.proposeMaintenanceQuote(workspaceId!, warrantyId),
+    onSuccess: (quote) => {
+      setFormError(null);
+      if (quote?.id) {
+        window.location.assign(`/app/quotes/${quote.id}`);
+      }
+    },
+    onError: (err) =>
+      setFormError(err instanceof ApiClientError ? err.message : he.warrantiesProposeMaintenanceError),
+  });
+
   if (!workspaceId) return <ErrorState title={he.warrantiesDetailError} />;
   if (detailQuery.isError) {
     return (
@@ -170,7 +182,19 @@ function WarrantyDetailBody() {
       <div className="flex flex-wrap items-center gap-2" data-testid="warranty-detail">
         <Status label={warrantyStatusLabel(row.status)} tone={warrantyStatusTone(row.status)} />
         <span className="text-xs text-fg-muted">{warrantyTypeLabel(row.type)}</span>
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={proposeMaintenance.isPending}
+            data-testid="warranty-propose-maintenance"
+            onClick={() => proposeMaintenance.mutate()}
+          >
+            {proposeMaintenance.isPending ? he.saving : he.warrantiesProposeMaintenance}
+          </Button>
+        ) : null}
       </div>
+      {formError && !canEdit ? <p className="text-sm text-danger">{formError}</p> : null}
 
       <dl className="divide-y divide-border rounded-md border border-border">
         {[

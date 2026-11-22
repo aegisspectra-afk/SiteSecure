@@ -15,7 +15,8 @@ QUOTE_EVENT_TYPES = (
     "quote.expired",
 )
 TASK_EVENT_TYPES = ("task.assigned",)
-EVENT_TYPES = QUOTE_EVENT_TYPES + TASK_EVENT_TYPES
+WARRANTY_EVENT_TYPES = ("warranty.expiring",)
+EVENT_TYPES = QUOTE_EVENT_TYPES + TASK_EVENT_TYPES + WARRANTY_EVENT_TYPES
 
 EVENT_COPY: dict[str, tuple[str, str]] = {
     "quote.sent": ("הצעת מחיר נשלחה", "הצעה {number} נשלחה ללקוח"),
@@ -24,6 +25,7 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
     "quote.rejected": ("הצעת מחיר נדחתה", "הצעה {number} נדחתה"),
     "quote.expired": ("הצעת מחיר פגה", "פג תוקף של הצעה {number}"),
     "task.assigned": ("משימה הוקצתה", "הוקצתה לך משימה: {title}"),
+    "warranty.expiring": ("אחריות מסתיימת", "אחריות {number} מתקרבת לסיום"),
 }
 
 

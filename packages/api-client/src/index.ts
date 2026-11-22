@@ -3166,6 +3166,16 @@ export function createApiClient(opts: {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    runWarrantyReminders: (workspaceId: string) =>
+      request<{ sent: number; skipped: number; recipients: number }>(
+        `/api/v1/workspaces/${workspaceId}/warranties/run-reminders`,
+        { method: "POST", body: "{}" },
+      ),
+    proposeMaintenanceQuote: (workspaceId: string, warrantyId: string) =>
+      request<{ id: string }>(
+        `/api/v1/workspaces/${workspaceId}/warranties/${warrantyId}/propose-maintenance`,
+        { method: "POST", body: "{}" },
+      ),
     globalSearch: (workspaceId: string, q: string, limit = 12) => {
       const params = new URLSearchParams({ q: q.trim(), limit: String(limit) });
       return request<GlobalSearchResponse>(`/api/v1/workspaces/${workspaceId}/search?${params}`);

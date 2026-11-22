@@ -188,6 +188,7 @@ def get_dashboard(
     can_jobs_view = authorize(ctx=ctx, action="jobs.view").allowed
     can_jobs_start = authorize(ctx=ctx, action="jobs.start").allowed
     can_jobs_complete = authorize(ctx=ctx, action="jobs.complete").allowed
+    can_warranties_view = authorize(ctx=ctx, action="warranties.view").allowed
     assignments_reliable = ctx.role_key in {"owner", "administrator", "manager"}
     ws = str(workspace_id)
 
@@ -243,6 +244,19 @@ def get_dashboard(
                 },
             )
         )
+    if can_warranties_view:
+        phase1["warranties"] = lambda: _optional_list(
+            client.get(
+                "warranties",
+                params={
+                    "workspace_id": f"eq.{ws}",
+                    "status": "in.(active,expiring_soon)",
+                    "select": "id,number,status,customer_id,site_id,ends_on",
+                    "order": "ends_on.asc",
+                    "limit": "100",
+                },
+            )
+        )
 
     batch1 = _run_parallel(phase1)
     workspace_tz = DEFAULT_WORKSPACE_TZ
@@ -255,6 +269,7 @@ def get_dashboard(
         for key in COST_SELECT_FORBIDDEN:
             row.pop(key, None)
     jobs: list[dict[str, Any]] = list(batch1.get("jobs") or [])
+    warranties: list[dict[str, Any]] = list(batch1.get("warranties") or [])
     assignment_rows: list[dict[str, Any]] = list(batch1.get("assignments") or [])
     raw_events: list[dict[str, Any]] = list(batch1.get("events") or [])
 
@@ -265,8 +280,10 @@ def get_dashboard(
     names: dict[str, str] = {}
     site_addresses: dict[str, str] = {}
     customer_phones: dict[str, str] = {}
-    customer_filter = _in_filter({str(r["customer_id"]) for r in quotes + jobs if r.get("customer_id")})
-    site_filter = _in_filter({str(r["site_id"]) for r in quotes + jobs if r.get("site_id")})
+    customer_filter = _in_filter(
+        {str(r["customer_id"]) for r in quotes + jobs + warranties if r.get("customer_id")}
+    )
+    site_filter = _in_filter({str(r["site_id"]) for r in quotes + jobs + warranties if r.get("site_id")})
     approved_ids = {str(q["id"]) for q in quotes if q.get("status") == "approved"} if can_quotes_view else set()
 
     phase2: dict[str, Callable[[], Any]] = {}
@@ -360,6 +377,7 @@ def get_dashboard(
         attention_cap=ATTENTION_FULL_CAP if attention == "full" else ATTENTION_CAP,
         member_names=member_names,
         plan_key=ctx.plan_key,
+        warranties=warranties,
     )
     jobs_by_id = {str(j["id"]): j for j in jobs}
     for item in payload.get("today", {}).get("items", []):

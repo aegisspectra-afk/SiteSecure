@@ -31,6 +31,9 @@ def quote_is_visible_row(row: dict, *, mode: VisibilityMode = "active") -> bool:
     """In-memory mirror of quote_visibility_filters (dashboard pure builder)."""
     if row.get("deleted_at"):
         return False
+    # Q4: cancelled quotes stay openable but never inflate KPIs / attention.
+    if str(row.get("status") or "") == "cancelled":
+        return False
     archived = bool(row.get("archived_at"))
     if mode == "active":
         return not archived

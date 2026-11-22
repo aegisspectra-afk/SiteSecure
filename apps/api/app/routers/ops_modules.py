@@ -1329,6 +1329,92 @@ def patch_warranty(
     return _enrich_warranties(client, workspace_id, [updated])[0]
 
 
+@router.post("/warranties/run-reminders")
+def run_warranty_reminders(
+    workspace_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient | None, Depends(service_client)] = None,
+):
+    """Daily/manual sweep: notify job managers 60 and 14 days before warranty end."""
+    from ..authz.capabilities import require_capability
+    from ..warranty_reminders import run_workspace_warranty_reminders
+
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "warranties.view")
+    require_capability(ctx, "service.reminders")
+    if svc is None:
+        raise ApiError(503, "SERVICE_UNAVAILABLE", "שירות התראות אינו זמין")
+    return run_workspace_warranty_reminders(svc, workspace_id)
+
+
+@router.post("/warranties/{warranty_id}/propose-maintenance")
+def propose_maintenance_quote(
+    workspace_id: UUID,
+    warranty_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Create a draft quote from the annual maintenance template for this warranty's customer/site."""
+    from ..authz.capabilities import require_capability
+    from ..quote_terms_defaults import MAINTENANCE_ANNUAL_TEMPLATE_KEY
+    from ..routers.quotes import ApplyTemplateIn, QuoteCreate, apply_template, create_quote
+
+    ctx = _ctx(client, user, workspace_id)
+    require(ctx, "quotes.create")
+    require_capability(ctx, "service.reminders")
+    warranty = one_or_404(
+        client.get(
+            "warranties",
+            params={
+                "id": f"eq.{warranty_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": WARRANTY_SELECT,
+            },
+        )
+    )
+    tmpl = as_list(
+        client.get(
+            "quote_templates",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "key": f"eq.{MAINTENANCE_ANNUAL_TEMPLATE_KEY}",
+                "select": "id,key,name_he",
+                "limit": "1",
+            },
+        )
+    )
+    if not tmpl:
+        raise ApiError(404, "NOT_FOUND", "תבנית חוזה תחזוקה שנתי לא נמצאה ב-workspace")
+
+    quote = create_quote(
+        workspace_id,
+        QuoteCreate(
+            customer_id=str(warranty["customer_id"]),
+            site_id=str(warranty["site_id"]) if warranty.get("site_id") else None,
+            title=f"חוזה תחזוקה שנתי — {warranty.get('number') or ''}".strip(),
+        ),
+        client,
+        user,
+    )
+    applied = apply_template(
+        workspace_id,
+        UUID(str(quote["id"])),
+        ApplyTemplateIn(template_id=str(tmpl[0]["id"])),
+        client,
+        user,
+    )
+    write_audit(
+        client,
+        str(workspace_id),
+        "warranties.propose_maintenance",
+        entity_type="quote",
+        entity_id=str(applied.get("id") or quote.get("id") or ""),
+        metadata={"warranty_id": str(warranty_id), "template_key": MAINTENANCE_ANNUAL_TEMPLATE_KEY},
+    )
+    return applied
+
+
 # ── Tasks (calendar) ──────────────────────────────────────────────────────────
 
 

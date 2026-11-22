@@ -5,6 +5,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AdminSummaryStrip, AdminTabPanel, AdminTabs } from "../../components/admin/AdminTabs";
 import { AdminWorkspaceProductsPanel } from "../../components/admin/AdminWorkspaceProductsPanel";
+import { AdminWorkspaceSubscriptionPanel } from "../../components/admin/AdminWorkspaceSubscriptionPanel";
 import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 
@@ -49,6 +50,7 @@ function AdminOrganizations() {
   const [planKey, setPlanKey] = useState("business");
   const [note, setNote] = useState("");
   const [modulesWorkspace, setModulesWorkspace] = useState<{ id: string; name: string } | null>(null);
+  const [subscriptionWorkspace, setSubscriptionWorkspace] = useState<{ id: string; name: string } | null>(null);
   const tab = search.tab;
   const q = search.q ?? "";
 
@@ -240,6 +242,12 @@ function AdminOrganizations() {
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button
                         variant="secondary"
+                        onClick={() => setSubscriptionWorkspace({ id: org.id, name: org.name })}
+                      >
+                        {he.adminOrgSubscriptionCta}
+                      </Button>
+                      <Button
+                        variant="secondary"
                         onClick={() => setModulesWorkspace({ id: org.id, name: org.name })}
                       >
                         {he.adminWorkspaceProductsCta}
@@ -258,6 +266,14 @@ function AdminOrganizations() {
           </table>
         </div>
 
+        {subscriptionWorkspace ? (
+          <AdminWorkspaceSubscriptionPanel
+            workspaceId={subscriptionWorkspace.id}
+            workspaceName={subscriptionWorkspace.name}
+            onClose={() => setSubscriptionWorkspace(null)}
+          />
+        ) : null}
+
         {modulesWorkspace ? (
           <AdminWorkspaceProductsPanel
             workspaceId={modulesWorkspace.id}
@@ -274,6 +290,12 @@ function AdminOrganizations() {
                 {org.plan_key ?? "—"} · {org.is_beta ? he.adminBetaOn : he.adminNotInBeta}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setSubscriptionWorkspace({ id: org.id, name: org.name })}
+                >
+                  {he.adminOrgSubscriptionCta}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => setModulesWorkspace({ id: org.id, name: org.name })}

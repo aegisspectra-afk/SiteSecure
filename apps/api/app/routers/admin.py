@@ -448,7 +448,7 @@ def list_organizations(
         service.get(
             "workspaces",
             params={
-                "select": "id,name,status,is_beta,beta_program,beta_enrolled_at,created_at,subscriptions(plan_key,status)",
+                "select": "id,name,status,is_beta,beta_program,beta_enrolled_at,created_at,subscriptions(plan_key,status,source,override_expires_at,override_reason,current_period_end)",
                 "order": "created_at.desc",
             },
         )
@@ -467,9 +467,214 @@ def list_organizations(
                 "created_at": row.get("created_at"),
                 "plan_key": sub.get("plan_key") if sub else None,
                 "subscription_status": sub.get("status") if sub else None,
+                "subscription_source": sub.get("source") if sub else None,
+                "subscription_period_end": (sub.get("override_expires_at") or sub.get("current_period_end"))
+                if sub
+                else None,
+                "subscription_note": sub.get("override_reason") if sub else None,
             }
         )
     return out
+
+
+ALLOCATION_PLAN_KEYS = frozenset({"free", "solo", "pro", "business", "enterprise"})
+SubscriptionStatus = Literal["trialing", "active", "past_due", "canceled", "manual"]
+UpgradeRequestStatus = Literal["pending", "contacted", "closed"]
+
+
+class AdminSubscriptionPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    plan_key: str | None = Field(default=None, max_length=40)
+    period_end: str | None = None
+    note: str | None = Field(default=None, max_length=2000)
+    status: SubscriptionStatus | None = None
+
+
+def _subscription_snapshot(sub: dict[str, Any] | None) -> dict[str, Any]:
+    if not sub:
+        return {}
+    return {
+        "plan_key": sub.get("plan_key"),
+        "status": sub.get("status"),
+        "source": sub.get("source"),
+        "override_expires_at": sub.get("override_expires_at"),
+        "override_reason": sub.get("override_reason"),
+        "current_period_end": sub.get("current_period_end"),
+    }
+
+
+def _get_workspace_subscription(service: ServiceClient, workspace_id: str) -> dict[str, Any]:
+    return one_or_404(
+        service.get(
+            "subscriptions",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "id,workspace_id,plan_key,status,source,override_expires_at,override_reason,current_period_end,created_at,updated_at",
+            },
+        )
+    )
+
+
+@router.get("/organizations/{workspace_id}/subscription")
+def get_organization_subscription(
+    workspace_id: UUID,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    ws = str(workspace_id)
+    one_or_404(service.get("workspaces", params={"id": f"eq.{ws}", "select": "id,name"}))
+    sub = _get_workspace_subscription(service, ws)
+    logs = as_list(
+        service.get(
+            "subscription_allocation_log",
+            params={
+                "workspace_id": f"eq.{ws}",
+                "select": "id,actor_user_id,note,before,after,created_at",
+                "order": "created_at.desc",
+                "limit": "50",
+            },
+        )
+    )
+    return {"subscription": sub, "audit_log": logs}
+
+
+@router.patch("/organizations/{workspace_id}/subscription")
+def patch_organization_subscription(
+    workspace_id: UUID,
+    body: AdminSubscriptionPatch,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    """Manual plan allocation for beta workspaces."""
+    require_platform_admin(service, user["id"])
+    ws = str(workspace_id)
+    ws_row = one_or_404(
+        service.get("workspaces", params={"id": f"eq.{ws}", "select": "id,name,status"}),
+    )
+    sub = _get_workspace_subscription(service, ws)
+    before = _subscription_snapshot(sub)
+    patch: dict[str, Any] = {}
+    if body.plan_key is not None:
+        plan = body.plan_key.strip()
+        if plan not in ALLOCATION_PLAN_KEYS:
+            raise ApiError(400, "VALIDATION_ERROR", "תוכנית לא חוקית")
+        patch["plan_key"] = plan
+    if body.status is not None:
+        patch["status"] = body.status
+    if body.period_end is not None:
+        period = body.period_end.strip()
+        patch["override_expires_at"] = period or None
+        patch["current_period_end"] = period or None
+    if body.note is not None:
+        patch["override_reason"] = body.note.strip() or None
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    patch["source"] = "admin_override"
+    updated = patched_or_403(
+        service.patch("subscriptions", patch, params={"id": f"eq.{sub['id']}"}),
+    )
+    after = _subscription_snapshot(updated)
+    note_text = (body.note or "").strip() or None
+    created_or_403(
+        service.post(
+            "subscription_allocation_log",
+            {
+                "workspace_id": ws,
+                "actor_user_id": user["id"],
+                "note": note_text,
+                "before": before,
+                "after": after,
+            },
+        )
+    )
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="subscription_allocation_updated",
+        target_workspace_id=ws,
+        metadata={
+            "workspace_name": ws_row.get("name"),
+            "before": before,
+            "after": after,
+            "note": note_text,
+        },
+    )
+    return {"subscription": updated}
+
+
+class AdminBillingUpgradePatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: UpgradeRequestStatus | None = None
+    internal_note: str | None = Field(default=None, max_length=8000)
+
+
+@router.get("/billing-upgrade-requests")
+def list_billing_upgrade_requests(
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+    status: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=500),
+):
+    require_platform_admin(service, user["id"])
+    params: dict[str, str] = {
+        "select": "id,workspace_id,user_id,current_plan_key,target_plan_key,message,status,internal_note,created_at,updated_at,workspaces(name),profiles(email,full_name)",
+        "order": "created_at.desc",
+        "limit": str(limit),
+    }
+    if status:
+        params["status"] = f"eq.{status}"
+    rows = as_list(service.get("billing_upgrade_requests", params=params))
+    out = []
+    for row in rows:
+        ws = _nested(row.get("workspaces")) or {}
+        prof = _nested(row.get("profiles")) or {}
+        out.append(
+            {
+                "id": row["id"],
+                "workspace_id": row["workspace_id"],
+                "workspace_name": ws.get("name"),
+                "user_id": row.get("user_id"),
+                "email": prof.get("email"),
+                "full_name": prof.get("full_name"),
+                "current_plan_key": row.get("current_plan_key"),
+                "target_plan_key": row.get("target_plan_key"),
+                "message": row.get("message"),
+                "status": row.get("status"),
+                "internal_note": row.get("internal_note"),
+                "created_at": row.get("created_at"),
+                "updated_at": row.get("updated_at"),
+            }
+        )
+    return out
+
+
+@router.patch("/billing-upgrade-requests/{request_id}")
+def patch_billing_upgrade_request(
+    request_id: UUID,
+    body: AdminBillingUpgradePatch,
+    service: Annotated[ServiceClient, Depends(service_client)],
+    user: Annotated[dict, Depends(current_user)],
+):
+    require_platform_admin(service, user["id"])
+    patch = body.model_dump(exclude_none=True)
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    row = patched_or_403(
+        service.patch(
+            "billing_upgrade_requests",
+            patch,
+            params={"id": f"eq.{request_id}", "select": "id,workspace_id,status,internal_note"},
+        )
+    )
+    write_platform_admin_event(
+        service,
+        actor_user_id=user["id"],
+        action="billing_upgrade_request_updated",
+        target_workspace_id=str(row.get("workspace_id")) if row.get("workspace_id") else None,
+        metadata={"request_id": str(request_id), "patch": patch},
+    )
+    return row
 
 
 @router.patch("/organizations/{workspace_id}")

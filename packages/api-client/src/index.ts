@@ -212,6 +212,52 @@ export type AdminOrganization = {
   created_at?: string;
   plan_key?: string | null;
   subscription_status?: string | null;
+  subscription_source?: string | null;
+  subscription_period_end?: string | null;
+  subscription_note?: string | null;
+};
+
+export type SubscriptionAllocationLogEntry = {
+  id: string;
+  actor_user_id?: string | null;
+  note?: string | null;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  created_at?: string;
+};
+
+export type WorkspaceSubscriptionAdmin = {
+  id: string;
+  workspace_id: string;
+  plan_key: string;
+  status: string;
+  source?: string | null;
+  override_expires_at?: string | null;
+  override_reason?: string | null;
+  current_period_end?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminWorkspaceSubscriptionResponse = {
+  subscription: WorkspaceSubscriptionAdmin;
+  audit_log: SubscriptionAllocationLogEntry[];
+};
+
+export type BillingUpgradeRequest = {
+  id: string;
+  workspace_id: string;
+  workspace_name?: string | null;
+  user_id?: string;
+  email?: string | null;
+  full_name?: string | null;
+  current_plan_key?: string;
+  target_plan_key?: string | null;
+  message?: string | null;
+  status: "pending" | "contacted" | "closed";
+  internal_note?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type BetaParticipantStatus =
@@ -3791,6 +3837,22 @@ export function createApiClient(opts: {
       request<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`),
     getUsage: (workspaceId: string) =>
       request<WorkspaceUsage>(`/api/v1/workspaces/${workspaceId}/usage`),
+    createBillingUpgradeRequest: (
+      workspaceId: string,
+      body: { target_plan_key?: string; message?: string } = {},
+    ) =>
+      request<{
+        id: string;
+        workspace_id: string;
+        current_plan_key?: string;
+        target_plan_key?: string | null;
+        message?: string | null;
+        status: string;
+        created_at?: string;
+      }>(`/api/v1/workspaces/${workspaceId}/billing/upgrade-requests`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     patchMember: (
       workspaceId: string,
       memberId: string,
@@ -4061,6 +4123,34 @@ export function createApiClient(opts: {
       }),
     adminPatchOrganization: (workspaceId: string, body: { is_beta?: boolean; beta_program?: string }) =>
       request<AdminOrganization>(`/api/v1/admin/organizations/${workspaceId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    adminWorkspaceSubscription: (workspaceId: string) =>
+      request<AdminWorkspaceSubscriptionResponse>(`/api/v1/admin/organizations/${workspaceId}/subscription`),
+    adminPatchWorkspaceSubscription: (
+      workspaceId: string,
+      body: {
+        plan_key?: string;
+        period_end?: string | null;
+        note?: string | null;
+        status?: "trialing" | "active" | "past_due" | "canceled" | "manual";
+      },
+    ) =>
+      request<{ subscription: WorkspaceSubscriptionAdmin }>(
+        `/api/v1/admin/organizations/${workspaceId}/subscription`,
+        { method: "PATCH", body: JSON.stringify(body) },
+      ),
+    adminBillingUpgradeRequests: (params: { status?: string } = {}) => {
+      const q = new URLSearchParams();
+      if (params.status) q.set("status", params.status);
+      return request<BillingUpgradeRequest[]>(`/api/v1/admin/billing-upgrade-requests${q.size ? `?${q}` : ""}`);
+    },
+    adminPatchBillingUpgradeRequest: (
+      id: string,
+      body: { status?: BillingUpgradeRequest["status"]; internal_note?: string },
+    ) =>
+      request<BillingUpgradeRequest>(`/api/v1/admin/billing-upgrade-requests/${id}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),

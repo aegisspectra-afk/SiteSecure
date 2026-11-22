@@ -37,7 +37,7 @@ function beforeSend(event: BeforeSendEvent): BeforeSendEvent | null {
 
 /**
  * Vercel Web Analytics for the Vite SPA.
- * Loads only in production when explicitly enabled and after cookie consent (if analytics cookies apply).
+ * Loads only when VITE_ENABLE_VERCEL_ANALYTICS=true on a non-local production host, after cookie consent.
  */
 export function VercelAnalytics() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

@@ -40,8 +40,13 @@ from .quotes import (
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["quote-cpq"])
 
 SECTION_SELECT = (
-    "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
+    "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,"
+    "alternative_id,created_at,updated_at"
 )
+ALTERNATIVE_SELECT = (
+    "id,workspace_id,quote_id,label,sort_order,is_recommended,customer_summary,created_at,updated_at"
+)
+DEFAULT_ALTERNATIVE_LABELS = ("בסיסי", "מומלץ", "מתקדם")
 PACKAGE_SELECT = (
     "id,workspace_id,name,description,category,is_active,created_by,updated_by,created_at,updated_at"
 )
@@ -965,3 +970,246 @@ def quote_pdf(
         {"version": row.get("version") or 1, "filename": filename, "template_version": document.get("template_version")},
     )
     return pdf_response(pdf_bytes, filename, inline=inline)
+
+
+# --- B3: ועד בית alternatives -------------------------------------------------
+
+
+class AlternativeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    label: str = Field(min_length=1, max_length=80)
+    sort_order: int = Field(ge=1, le=3)
+    is_recommended: bool = False
+    customer_summary: str | None = Field(default=None, max_length=280)
+
+
+class AlternativePatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+    sort_order: int | None = Field(default=None, ge=1, le=3)
+    is_recommended: bool | None = None
+    customer_summary: str | None = Field(default=None, max_length=280)
+
+
+def _load_alternatives(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[dict]:
+    return as_list(
+        client.get(
+            "quote_alternatives",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "quote_id": f"eq.{quote_id}",
+                "select": ALTERNATIVE_SELECT,
+                "order": "sort_order.asc",
+            },
+        )
+    )
+
+
+def _load_sections(client: UserClient, workspace_id: UUID, quote_id: UUID) -> list[dict]:
+    return as_list(
+        client.get(
+            "quote_sections",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "quote_id": f"eq.{quote_id}",
+                "select": SECTION_SELECT,
+                "order": "sort_order.asc",
+            },
+        )
+    )
+
+
+def _alternatives_with_totals(
+    client: UserClient,
+    workspace_id: UUID,
+    quote: dict,
+    *,
+    show_cost: bool,
+) -> list[dict]:
+    alts = _load_alternatives(client, workspace_id, UUID(str(quote["id"])))
+    if not alts:
+        return []
+    items = _load_items(client, workspace_id, UUID(str(quote["id"])))
+    sections = _load_sections(client, workspace_id, UUID(str(quote["id"])))
+    breakdown = pricing.recalculate_alternatives(
+        items,
+        alts,
+        vat_percent=quote.get("vat_percent") or 17,
+        discount_type=quote.get("discount_type"),
+        discount_value=quote.get("discount_value") or 0,
+        sections=sections,
+    )
+    by_id = {str(row["alternative_id"]): row for row in breakdown}
+    out: list[dict] = []
+    for alt in alts:
+        row = dict(alt)
+        totals = by_id.get(str(alt["id"]), {})
+        row["subtotal_net"] = totals.get("subtotal_net", 0)
+        row["vat_amount"] = totals.get("vat_amount", 0)
+        row["total_gross"] = totals.get("total_gross", 0)
+        if show_cost:
+            row["cost_total"] = totals.get("cost_total", 0)
+            row["margin_amount"] = totals.get("margin_amount", 0)
+            row["margin_percent"] = totals.get("margin_percent", 0)
+        out.append(row)
+    return out
+
+
+@router.get("/quotes/{quote_id}/alternatives")
+def list_alternatives(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    quote = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.view", resource=_ref(quote))
+    show_cost = _can_view_cost(ctx)
+    return {
+        "presentation_mode": quote.get("presentation_mode") or "single",
+        "approved_alternative_id": quote.get("approved_alternative_id"),
+        "items": _alternatives_with_totals(client, workspace_id, quote, show_cost=show_cost),
+    }
+
+
+@router.post("/quotes/{quote_id}/alternatives/enable")
+def enable_alternatives(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    """Seed three default tiers (בסיסי / מומלץ / מתקדם) and switch presentation_mode."""
+    ctx = _ctx(client, user, workspace_id)
+    quote = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.edit", resource=_ref(quote))
+    if quote.get("status") != "draft":
+        raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
+    existing = _load_alternatives(client, workspace_id, quote_id)
+    if len(existing) >= 3:
+        _quote_writer(client).patch(
+            "quotes",
+            {"presentation_mode": "alternatives"},
+            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+        )
+        return list_alternatives(workspace_id, quote_id, client, user)
+
+    writer = _quote_writer(client)
+    for idx, label in enumerate(DEFAULT_ALTERNATIVE_LABELS, start=1):
+        if any(int(a.get("sort_order") or 0) == idx for a in existing):
+            continue
+        created_or_403(
+            writer.post(
+                "quote_alternatives",
+                {
+                    "id": str(uuid4()),
+                    "workspace_id": str(workspace_id),
+                    "quote_id": str(quote_id),
+                    "label": label,
+                    "sort_order": idx,
+                    "is_recommended": idx == 2,
+                    "customer_summary": None,
+                },
+                params={"select": ALTERNATIVE_SELECT},
+            )
+        )
+    writer.patch(
+        "quotes",
+        {"presentation_mode": "alternatives"},
+        params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": "id"},
+    )
+    _record_event(client, workspace_id, quote_id, "alternatives_enabled", actor_id(user), {})
+    return list_alternatives(workspace_id, quote_id, client, user)
+
+
+@router.post("/quotes/{quote_id}/alternatives")
+def create_alternative(
+    workspace_id: UUID,
+    quote_id: UUID,
+    body: AlternativeIn,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    quote = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.edit", resource=_ref(quote))
+    if quote.get("status") != "draft":
+        raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
+    existing = _load_alternatives(client, workspace_id, quote_id)
+    if len(existing) >= 3:
+        raise ApiError(400, "VALIDATION_ERROR", "ניתן להוסיף עד 3 חלופות להצעה")
+    if any(int(a.get("sort_order") or 0) == body.sort_order for a in existing):
+        raise ApiError(400, "VALIDATION_ERROR", "סדר החלופה כבר תפוס")
+    if body.is_recommended:
+        writer = _quote_writer(client)
+        for alt in existing:
+            if alt.get("is_recommended"):
+                writer.patch(
+                    "quote_alternatives",
+                    {"is_recommended": False},
+                    params={"id": f"eq.{alt['id']}", "workspace_id": f"eq.{workspace_id}"},
+                )
+    row = created_or_403(
+        _quote_writer(client).post(
+            "quote_alternatives",
+            {
+                "id": str(uuid4()),
+                "workspace_id": str(workspace_id),
+                "quote_id": str(quote_id),
+                "label": body.label.strip(),
+                "sort_order": body.sort_order,
+                "is_recommended": body.is_recommended,
+                "customer_summary": (body.customer_summary or "").strip() or None,
+            },
+            params={"select": ALTERNATIVE_SELECT},
+        )
+    )
+    _quote_writer(client).patch(
+        "quotes",
+        {"presentation_mode": "alternatives"},
+        params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}"},
+    )
+    return row
+
+
+@router.patch("/quotes/{quote_id}/alternatives/{alternative_id}")
+def patch_alternative(
+    workspace_id: UUID,
+    quote_id: UUID,
+    alternative_id: UUID,
+    body: AlternativePatch,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    ctx = _ctx(client, user, workspace_id)
+    quote = _load_quote(client, workspace_id, quote_id)
+    require(ctx, "quotes.edit", resource=_ref(quote))
+    if quote.get("status") != "draft":
+        raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
+    patch = body.model_dump(exclude_unset=True)
+    if "label" in patch and patch["label"] is not None:
+        patch["label"] = str(patch["label"]).strip()
+    if patch.get("is_recommended") is True:
+        for alt in _load_alternatives(client, workspace_id, quote_id):
+            if str(alt["id"]) != str(alternative_id) and alt.get("is_recommended"):
+                _quote_writer(client).patch(
+                    "quote_alternatives",
+                    {"is_recommended": False},
+                    params={"id": f"eq.{alt['id']}", "workspace_id": f"eq.{workspace_id}"},
+                )
+    if not patch:
+        raise ApiError(400, "VALIDATION_ERROR", "אין שינויים")
+    patch["updated_at"] = datetime.now(UTC).isoformat()
+    return patched_or_403(
+        _quote_writer(client).patch(
+            "quote_alternatives",
+            patch,
+            params={
+                "id": f"eq.{alternative_id}",
+                "quote_id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": ALTERNATIVE_SELECT,
+            },
+        )
+    )

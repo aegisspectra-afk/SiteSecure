@@ -251,3 +251,63 @@ def recalculate(
         "optional_cost_total": float(optional_cost_total),
         "total_with_options_gross": float(total_with_options_gross),
     }
+
+
+def recalculate_alternatives(
+    items: list[dict],
+    alternatives: list[dict],
+    *,
+    vat_percent: object,
+    discount_type: str | None,
+    discount_value: object,
+    sections: list[dict] | None = None,
+) -> list[dict]:
+    """B3: run canonical recalculate once per alternative (shared NULL lines excluded from tier totals)."""
+    section_map = {str(s.get("id")): s for s in (sections or []) if s.get("id")}
+    out: list[dict] = []
+    for alt in alternatives:
+        alt_id = str(alt.get("id") or "")
+        if not alt_id:
+            continue
+        # Prefer sections explicitly tagged; if none tagged, pass all sections for legacy single quotes.
+        if any(s.get("alternative_id") for s in (sections or [])):
+            use_sections = [s for s in (sections or []) if str(s.get("alternative_id") or "") == alt_id]
+        else:
+            use_sections = list(sections or [])
+
+        tier_items: list[dict] = []
+        for item in items:
+            item_alt = item.get("alternative_id")
+            if item_alt is None:
+                # Inherit from section when line has no alternative_id.
+                sec = section_map.get(str(item.get("section_id") or ""))
+                if sec and str(sec.get("alternative_id") or "") == alt_id:
+                    tier_items.append(item)
+                # Shared narrative lines (no section / no alt) stay out of tier money.
+                continue
+            if str(item_alt) == alt_id:
+                tier_items.append(item)
+
+        computed = recalculate(
+            tier_items,
+            vat_percent=vat_percent,
+            discount_type=discount_type,
+            discount_value=discount_value,
+            sections=use_sections,
+        )
+        out.append(
+            {
+                "alternative_id": alt_id,
+                "label": alt.get("label"),
+                "sort_order": alt.get("sort_order"),
+                "is_recommended": bool(alt.get("is_recommended")),
+                "subtotal_net": computed["subtotal_net"],
+                "vat_amount": computed["vat_amount"],
+                "total_gross": computed["total_gross"],
+                "cost_total": computed["cost_total"],
+                "margin_amount": computed["margin_amount"],
+                "margin_percent": computed["margin_percent"],
+                "items_subtotal": computed["items_subtotal"],
+            }
+        )
+    return out

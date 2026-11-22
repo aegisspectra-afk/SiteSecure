@@ -52,6 +52,7 @@ QUOTE_SELECT = (
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
     "approved_at,rejected_at,approved_name,rejection_reason,"
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "presentation_mode,approved_alternative_id,"
     "archived_at,archived_by,deleted_at,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
@@ -64,6 +65,7 @@ QUOTE_SELECT_SAFE = (
     "key_points,warranty,general_terms,template_id,version,sent_at,viewed_at,"
     "approved_at,rejected_at,approved_name,rejection_reason,"
     "margin_override_reason,margin_override_by,margin_override_at,revise_reason,"
+    "presentation_mode,approved_alternative_id,"
     "archived_at,archived_by,deleted_at,"
     "created_at,updated_at,customers(display_name),sites(name)"
 )
@@ -78,15 +80,16 @@ OPEN_LIST_STATUSES = frozenset({"draft", "sent", "viewed"})
 ITEM_SELECT = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,cost,discount,"
     "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
-    "section_id,package_instance_id,package_id,package_name,is_optional"
+    "section_id,package_instance_id,package_id,package_name,is_optional,alternative_id"
 )
 ITEM_SELECT_SAFE = (
     "id,quote_id,product_id,item_type,description,qty,unit_price,discount,"
     "discount_type,line_net,sort_order,sku,name,unit,catalog_snapshot,"
-    "section_id,package_instance_id,package_id,package_name,is_optional"
+    "section_id,package_instance_id,package_id,package_name,is_optional,alternative_id"
 )
 SECTION_SELECT = (
-    "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,created_at,updated_at"
+    "id,quote_id,name,sort_order,discount_type,discount_value,collapsed,"
+    "alternative_id,created_at,updated_at"
 )
 PRODUCT_SELECT = (
     "id,sku,name,description,unit,kind,list_price,cost,vat_eligible,is_labor,is_active,"

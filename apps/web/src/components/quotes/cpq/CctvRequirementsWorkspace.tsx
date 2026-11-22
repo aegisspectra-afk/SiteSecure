@@ -14,6 +14,12 @@ import {
   type CctvBuildRequirements,
 } from "../../../lib/cctv-build-requirements";
 import {
+  addPlacement,
+  normalizeCameraPlacements,
+  removePlacement,
+  updatePlacement,
+} from "../../../lib/cctv-camera-placements";
+import {
   applyTechnology,
   isProfessionalMode,
   patchCameraCounts,
@@ -292,6 +298,111 @@ type PoeChoice = "integrated" | "external" | "none";
 function poeChoiceOf(req: CctvBuildRequirements): PoeChoice {
   if (!req.poeRequired) return "none";
   return req.architectureIntent === "prefer_external_switch" ? "external" : "integrated";
+}
+
+/** B4 — professional camera location table (feeds recommend aggregates). */
+function CameraPlacementsEditor({
+  req,
+  setReq,
+  disabled,
+}: {
+  req: CctvBuildRequirements;
+  setReq: (next: CctvBuildRequirements) => void;
+  disabled?: boolean;
+}) {
+  const placements = normalizeCameraPlacements(req.cameraPlacements);
+  const total = placements.reduce((sum, row) => sum + row.count, 0);
+  return (
+    <div className="cpq-cctv-placements" data-testid="cctv-camera-placements">
+      <div className="cpq-cctv-placements-head">
+        <p className="text-sm font-semibold text-fg">{he.cpqCctvPlacementsTitle}</p>
+        <p className="text-xs text-fg-muted">{he.cpqCctvPlacementsHint}</p>
+      </div>
+      {placements.length ? (
+        <div className="cpq-cctv-placements-table" role="table">
+          {placements.map((row) => (
+            <div key={row.id} className="cpq-cctv-placements-row" role="row">
+              <Input
+                id={`cpq-placement-label-${row.id}`}
+                label={he.cpqCctvPlacementLabel}
+                value={row.label}
+                disabled={disabled}
+                placeholder={he.cpqCctvPlacementLabelPlaceholder}
+                onChange={(ev) => setReq(updatePlacement(req, row.id, { label: ev.target.value }))}
+              />
+              <Stepper
+                id={`cpq-placement-count-${row.id}`}
+                label={he.cpqCctvPlacementCount}
+                value={row.count}
+                disabled={disabled}
+                min={1}
+                onChange={(n) => setReq(updatePlacement(req, row.id, { count: n }))}
+              />
+              <Select
+                id={`cpq-placement-env-${row.id}`}
+                label={he.cpqCctvPlacementEnv}
+                value={row.environment}
+                disabled={disabled}
+                onChange={(ev) =>
+                  setReq(
+                    updatePlacement(req, row.id, {
+                      environment: ev.target.value as "indoor" | "outdoor" | "",
+                    }),
+                  )
+                }
+              >
+                <option value="">{he.cpqCctvEnvironmentUnspecified}</option>
+                <option value="indoor">{he.leadsReqLocationIndoor}</option>
+                <option value="outdoor">{he.leadsReqLocationOutdoor}</option>
+              </Select>
+              <Select
+                id={`cpq-placement-ff-${row.id}`}
+                label={he.cpqCameraType}
+                value={row.formFactor}
+                disabled={disabled}
+                onChange={(ev) =>
+                  setReq(
+                    updatePlacement(req, row.id, {
+                      formFactor: ev.target.value as CctvBuildRequirements["formFactor"],
+                    }),
+                  )
+                }
+              >
+                <option value="">{he.cpqCameraMixed}</option>
+                <option value="dome">{he.cpqCameraDome}</option>
+                <option value="bullet">{he.cpqCameraBullet}</option>
+                <option value="turret">{he.cpqCameraTurret}</option>
+                <option value="ptz">PTZ</option>
+              </Select>
+              <button
+                type="button"
+                className="cpq-cctv-placements-remove"
+                disabled={disabled}
+                onClick={() => setReq(removePlacement(req, row.id))}
+              >
+                {he.cpqCctvPlacementRemove}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="cpq-cctv-placements-actions">
+        <button
+          type="button"
+          className="cpq-cctv-ws-linkish"
+          disabled={disabled}
+          onClick={() => setReq(addPlacement(req))}
+        >
+          {he.cpqCctvPlacementAdd}
+        </button>
+        {placements.length ? (
+          <span className="text-xs text-fg-muted" data-testid="cctv-placements-total">
+            {he.cpqCctvPlacementTotal}: {total}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -686,7 +797,9 @@ export function CctvRequirementsWorkspace({
           </Section>
 
           <Section id="cameras" title={he.cpqCctvSectionCameras} active={activeSection === "cameras"}>
-            {tech === "hybrid" ? (
+            <CameraPlacementsEditor req={req} setReq={setReq} disabled={disabled} />
+            {normalizeCameraPlacements(req.cameraPlacements).length === 0 ? (
+              tech === "hybrid" ? (
               <div className="cpq-cctv-ws-grid-2">
                 <Stepper
                   id="cpq-ip-count"
@@ -723,6 +836,11 @@ export function CctvRequirementsWorkspace({
                 min={1}
                 onChange={(n) => setReq(patchCameraCounts(req, { cameraCount: n }))}
               />
+            )
+            ) : (
+              <p className="cpq-cctv-ws-hint" data-testid="cctv-placements-driven-count">
+                {he.cpqCctvPlacementTotal}: {req.cameraCount}
+              </p>
             )}
 
             {tech === "hybrid" ? (

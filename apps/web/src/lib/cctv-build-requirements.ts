@@ -4,9 +4,22 @@
  */
 
 import type { CctvRecommendIn } from "@site-secure/api-client";
+import {
+  applyPlacementAggregates,
+  derivePlacementAggregates,
+  normalizeCameraPlacements,
+  type CctvCameraPlacement,
+} from "./cctv-camera-placements";
+
+export type { CctvCameraPlacement };
 
 export type CctvBuildRequirements = {
   cameraCount: number;
+  /**
+   * B4 professional mode: per-location rows. When non-empty, totals/environment/formFactor
+   * are derived from these rows before recommend.
+   */
+  cameraPlacements: CctvCameraPlacement[];
   /** SYSTEM-DESIGNER-1 — same engine, different component paths */
   cctvTechnology: "ip" | "analog_hd" | "hybrid";
   ipCameraCount: number;
@@ -156,6 +169,7 @@ export function defaultCctvBuildRequirements(lead?: LeadPrefillSource | null): C
     infraSurgeRequested: false,
     infraJunctionRequested: false,
     infraMountsRequested: false,
+    cameraPlacements: [],
   };
 }
 
@@ -168,13 +182,14 @@ export type RequirementsValidation =
     };
 
 export function validateCctvBuildRequirements(req: CctvBuildRequirements): RequirementsValidation {
-  if (!Number.isFinite(req.cameraCount) || req.cameraCount < 1) {
+  const synced = applyPlacementAggregates(req);
+  if (!Number.isFinite(synced.cameraCount) || synced.cameraCount < 1) {
     return { ok: false, field: "cameraCount", messageKey: "cameras" };
   }
-  if (req.cctvTechnology === "hybrid") {
-    const ip = Math.floor(req.ipCameraCount);
-    const an = Math.floor(req.analogCameraCount);
-    if (!Number.isFinite(ip) || !Number.isFinite(an) || ip < 1 || an < 1 || ip + an !== req.cameraCount) {
+  if (synced.cctvTechnology === "hybrid") {
+    const ip = Math.floor(synced.ipCameraCount);
+    const an = Math.floor(synced.analogCameraCount);
+    if (!Number.isFinite(ip) || !Number.isFinite(an) || ip < 1 || an < 1 || ip + an !== synced.cameraCount) {
       return { ok: false, field: "ipCameraCount", messageKey: "hybridSplit" };
     }
   }
@@ -201,31 +216,32 @@ function optNumber(raw: string): number | undefined {
 }
 
 export function requirementsToRecommendBody(req: CctvBuildRequirements): CctvRecommendIn {
-  const headroomPct = optNumber(req.expansionHeadroomPercent);
-  const tech = req.cctvTechnology || "ip";
-  const cameraCount = Math.max(1, Math.floor(req.cameraCount));
+  const synced = applyPlacementAggregates(req);
+  const headroomPct = optNumber(synced.expansionHeadroomPercent);
+  const tech = synced.cctvTechnology || "ip";
+  const cameraCount = Math.max(1, Math.floor(synced.cameraCount));
   const body: CctvRecommendIn = {
     camera_count: cameraCount,
     cctv_technology: tech,
-    resolution_mp: req.resolutionMp,
-    environment: req.environment || null,
-    retention_days: req.retentionDays,
-    recording_mode: req.recordingMode,
+    resolution_mp: synced.resolutionMp,
+    environment: synced.environment || null,
+    retention_days: synced.retentionDays,
+    recording_mode: synced.recordingMode,
     // Analog HD never requests PoE; Hybrid sizes PoE for IP subset only on the server.
-    poe_required: tech === "analog_hd" ? false : req.poeRequired,
-    installation_requested: req.installationRequested,
-    testing_requested: req.testingRequested,
-    remote_viewing: req.remoteViewing,
-    ups_requested: req.upsRequested,
-    commissioning_requested: req.commissioningRequested,
-    architecture_intent: req.architectureIntent,
+    poe_required: tech === "analog_hd" ? false : synced.poeRequired,
+    installation_requested: synced.installationRequested,
+    testing_requested: synced.testingRequested,
+    remote_viewing: synced.remoteViewing,
+    ups_requested: synced.upsRequested,
+    commissioning_requested: synced.commissioningRequested,
+    architecture_intent: synced.architectureIntent,
     expansion_headroom: headroomPct != null ? headroomPct / 100 : 0,
-    power_supply_requested: req.powerSupplyRequested || tech === "analog_hd" || tech === "hybrid",
+    power_supply_requested: synced.powerSupplyRequested || tech === "analog_hd" || tech === "hybrid",
   };
 
   if (tech === "hybrid") {
-    body.ip_camera_count = Math.max(0, Math.floor(req.ipCameraCount));
-    body.analog_camera_count = Math.max(0, Math.floor(req.analogCameraCount));
+    body.ip_camera_count = Math.max(0, Math.floor(synced.ipCameraCount));
+    body.analog_camera_count = Math.max(0, Math.floor(synced.analogCameraCount));
     body.camera_count = Math.max(1, (body.ip_camera_count ?? 0) + (body.analog_camera_count ?? 0));
   } else if (tech === "analog_hd") {
     body.analog_camera_count = cameraCount;
@@ -234,25 +250,32 @@ export function requirementsToRecommendBody(req: CctvBuildRequirements): CctvRec
     body.ip_camera_count = cameraCount;
     body.analog_camera_count = 0;
   }
-  if (req.analogSignal) body.analog_signal = req.analogSignal;
+  if (synced.analogSignal) body.analog_signal = synced.analogSignal;
 
-  const fps = optNumber(req.fps);
+  const fps = optNumber(synced.fps);
   if (fps != null) body.fps = fps;
-  if (req.codec) body.codec = req.codec;
-  const bitrate = optNumber(req.bitrateMbpsOverride);
+  if (synced.codec) body.codec = synced.codec;
+  const bitrate = optNumber(synced.bitrateMbpsOverride);
   if (bitrate != null) body.bitrate_mbps_override = bitrate;
-  const hours = optNumber(req.recordingHoursPerDay);
+  const hours = optNumber(synced.recordingHoursPerDay);
   if (hours != null) body.recording_hours_per_day = hours;
-  const duty = optNumber(req.motionDutyCycle);
+  const duty = optNumber(synced.motionDutyCycle);
   if (duty != null) body.motion_duty_cycle = duty > 1 ? duty / 100 : duty;
-  const cable = effectiveCableMeters(req);
+  const cable = effectiveCableMeters(synced);
   if (cable != null) body.cable_distance_meters = cable;
-  const power = optNumber(req.cameraMaxPowerW);
+  const power = optNumber(synced.cameraMaxPowerW);
   if (power != null) body.camera_max_power_w = power;
-  if (req.manufacturerPreference.trim()) {
-    body.manufacturer_preference = req.manufacturerPreference.trim();
+  if (synced.manufacturerPreference.trim()) {
+    body.manufacturer_preference = synced.manufacturerPreference.trim();
   }
-  if (req.formFactor) body.form_factor = req.formFactor;
+  if (synced.formFactor) body.form_factor = synced.formFactor;
+
+  const placements = normalizeCameraPlacements(synced.cameraPlacements);
+  const agg = derivePlacementAggregates(placements);
+  if (agg && (agg.indoorCount > 0 || agg.outdoorCount > 0)) {
+    body.indoor_count = agg.indoorCount;
+    body.outdoor_count = agg.outdoorCount;
+  }
 
   return body;
 }

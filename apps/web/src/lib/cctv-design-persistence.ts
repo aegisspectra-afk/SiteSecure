@@ -17,6 +17,7 @@ import type {
 } from "@site-secure/api-client";
 import type { CctvBuildRequirements } from "./cctv-build-requirements";
 import { defaultCctvBuildRequirements } from "./cctv-build-requirements";
+import { normalizeCameraPlacements } from "./cctv-camera-placements";
 import {
   commercialLabelHe,
   componentKeyOf,
@@ -65,6 +66,7 @@ export function requirementsFromDesign(design: SystemDesign): CctvBuildRequireme
   if (merged.testingRequested == null) {
     merged.testingRequested = merged.installationRequested !== false;
   }
+  merged.cameraPlacements = normalizeCameraPlacements(merged.cameraPlacements);
   return merged;
 }
 

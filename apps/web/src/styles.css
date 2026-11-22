@@ -13010,6 +13010,59 @@ html.theme-revealing::view-transition-new(root) {
   color: var(--color-fg-muted);
 }
 
+.cpq-cctv-placements {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.cpq-cctv-placements-head {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.cpq-cctv-placements-table {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cpq-cctv-placements-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.cpq-cctv-placements-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cpq-cctv-placements-remove {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0.25rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.cpq-cctv-placements-remove:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+@media (min-width: 720px) {
+  .cpq-cctv-placements-row {
+    grid-template-columns: 1.4fr 0.7fr 0.9fr 0.9fr auto;
+    align-items: end;
+  }
+}
+
 .cpq-cctv-ws-error {
   margin: 0;
   font-size: 0.8rem;

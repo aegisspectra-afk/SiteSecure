@@ -44,7 +44,7 @@ export function PortalShell({
             <Link
               key={item.to}
               to={item.to}
-              className="rounded-full border border-border px-3 py-1.5 text-sm text-fg hover:bg-bg-muted"
+              className="inline-flex min-h-12 items-center rounded-full border border-border px-3 py-2 text-base text-fg hover:bg-bg-muted"
               activeProps={{ className: "bg-action text-action-fg border-action" }}
             >
               {item.label}

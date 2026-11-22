@@ -1989,7 +1989,15 @@ export type PortalHome = {
   installations: Array<{ id: string; number: string; title: string; status: string; completed_at?: string | null; site_id?: string | null }>;
   equipment: Array<{ id: string; site_id?: string | null; name: string; category: string; manufacturer?: string | null; model?: string | null; serial?: string | null; installed_at?: string | null; status: string }>;
   warranties: Array<{ id: string; number: string; type: string; status: string; starts_on?: string | null; ends_on?: string | null; site_id?: string | null }>;
-  quotes: Array<{ id: string; number: string; status: string; total_gross?: number | null; sent_at?: string | null; valid_until?: string | null }>;
+  quotes: Array<{
+    id: string;
+    number: string;
+    status: string;
+    total_gross?: number | null;
+    sent_at?: string | null;
+    valid_until?: string | null;
+    can_open?: boolean;
+  }>;
   service: Array<{ id: string; number?: string | null; title: string; status: string; created_at?: string | null; site_id?: string | null }>;
   documents: Array<{ id: string; filename: string; mime_type?: string | null; created_at?: string | null }>;
 };
@@ -4129,6 +4137,35 @@ export function createApiClient(opts: {
       request<PortalHome["service"][number]>(`/api/v1/portal/access/${accessId}/service-calls`, {
         method: "POST",
         body: JSON.stringify(body),
+      }),
+    createPortalServiceCallPhotoUpload: (
+      accessId: string,
+      callId: string,
+      body: { mime_type: string; original_filename?: string; byte_size: number },
+    ) =>
+      request<{
+        document_id: string;
+        storage_bucket: string;
+        storage_path: string;
+        upload_url: string;
+        expires_in: number;
+      }>(`/api/v1/portal/access/${accessId}/service-calls/${callId}/photos/upload`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    completePortalServiceCallPhotoUpload: (
+      accessId: string,
+      callId: string,
+      documentId: string,
+      body: { byte_size?: number; mime_type?: string } = {},
+    ) =>
+      request<{ id: string; byte_size?: number | null }>(
+        `/api/v1/portal/access/${accessId}/service-calls/${callId}/photos/${documentId}/complete`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    openPortalQuote: (accessId: string, quoteId: string) =>
+      request<{ public_path: string }>(`/api/v1/portal/access/${accessId}/quotes/${quoteId}/open`, {
+        method: "POST",
       }),
     listAudit: (workspaceId: string) =>
       request<AuditItem[]>(`/api/v1/workspaces/${workspaceId}/audit`),

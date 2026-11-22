@@ -1,6 +1,6 @@
 import { Button, Input, Select } from "@site-secure/ui";
 import { Navigate, createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { PortalShell } from "../../components/portal/PortalShell";
 import { he } from "../../i18n/he";
 import { usePortalContext } from "../../lib/use-portal-context";
@@ -8,6 +8,29 @@ import { usePortalContext } from "../../lib/use-portal-context";
 export const Route = createFileRoute("/portal/service")({
   component: PortalServicePage,
 });
+
+async function uploadServiceCallPhoto(
+  api: ReturnType<typeof usePortalContext>["api"],
+  accessId: string,
+  callId: string,
+  file: File,
+) {
+  const intent = await api.createPortalServiceCallPhotoUpload(accessId, callId, {
+    mime_type: file.type || "image/jpeg",
+    original_filename: file.name,
+    byte_size: file.size,
+  });
+  const put = await fetch(intent.upload_url, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "image/jpeg" },
+  });
+  if (!put.ok) throw new Error("upload failed");
+  await api.completePortalServiceCallPhotoUpload(accessId, callId, intent.document_id, {
+    byte_size: file.size,
+    mime_type: file.type || undefined,
+  });
+}
 
 function PortalServicePage() {
   const ctx = usePortalContext();
@@ -18,6 +41,7 @@ function PortalServicePage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   if (!ctx.authed) return <Navigate to="/portal/login" />;
   const home = ctx.home;
@@ -31,12 +55,16 @@ function PortalServicePage() {
     setPending(true);
     setError(null);
     try {
-      await ctx.api.createPortalServiceCall(ctx.accessId, {
+      const call = await ctx.api.createPortalServiceCall(ctx.accessId, {
         site_id: siteId,
         title: title.trim(),
         description: description.trim() || undefined,
         equipment_id: equipmentId || undefined,
       });
+      const file = photoRef.current?.files?.[0];
+      if (file && call.id) {
+        await uploadServiceCallPhoto(ctx.api, ctx.accessId, call.id, file);
+      }
       setSent(true);
     } catch {
       setError(he.portalOtpVerifyFailed);
@@ -86,12 +114,21 @@ function PortalServicePage() {
           <label className="text-sm text-fg">
             {he.customer360Notes}
             <textarea
-              className="mt-1 block min-h-24 w-full rounded-[var(--radius-control)] border border-border bg-bg px-3 py-2"
+              className="mt-1 block min-h-24 w-full rounded-[var(--radius-control)] border border-border bg-bg px-3 py-2 text-base"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </label>
-          <input type="file" accept="image/*" capture="environment" className="text-sm" aria-label={he.portalSectionDocuments} />
+          <label className="text-sm text-fg">
+            {he.portalServicePhoto}
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="mt-1 block w-full text-base"
+            />
+          </label>
           {error ? <p className="text-sm text-danger">{error}</p> : null}
           <Button type="submit" disabled={pending || !siteId || !title.trim()}>
             {he.portalServiceSubmit}

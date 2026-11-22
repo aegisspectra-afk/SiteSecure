@@ -195,6 +195,7 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
         # A3: Draft Share is VIEW only — never promote draft → sent/viewed on open.
         # Formal publication remains staff POST /send only.
         # Legitimate tracking: formally sent → viewed on customer open.
+        # B5: every subsequent open of a viewed quote also logs a viewed event (timeline count).
         if status == "sent":
             res = svc.patch(
                 "quotes",
@@ -213,6 +214,14 @@ def _assemble(svc: ServiceClient, token: str, *, mark_viewed: bool) -> dict:
                 try_notify(notify_quote_event, svc, quote, "quote.viewed")
             else:
                 quote = _load_quote(svc, access)
+        elif status == "viewed":
+            _event(svc, quote, "viewed", {"version": access_version, "repeat": True})
+            _audit(
+                svc,
+                quote,
+                "quotes.view_public",
+                {"version": access_version, "source": "public", "repeat": True},
+            )
     can_decide = (not superseded) and quote.get("status") in DECISION_STATES
     public["status"] = "superseded" if superseded else quote.get("status")
     public["superseded"] = superseded

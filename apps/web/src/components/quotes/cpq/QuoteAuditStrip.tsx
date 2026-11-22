@@ -19,6 +19,7 @@ export function QuoteAuditStrip({
   });
 
   const items = events.data?.items ?? [];
+  const viewCount = items.filter((row) => row.event_type === "viewed").length;
   if (!quoteId) return null;
 
   return (
@@ -26,6 +27,11 @@ export function QuoteAuditStrip({
       <button type="button" className="cpq-domain-toggle w-full" onClick={() => setOpen((v) => !v)}>
         <span>
           {open ? "▾" : "▸"} {he.cpqActivity}
+          {viewCount > 0 ? (
+            <span className="ms-2 text-xs font-normal text-fg-muted">
+              · {he.cpqViewCount(viewCount)}
+            </span>
+          ) : null}
         </span>
         <span className="text-fg-muted">
           {items.length ? he.cpqActivityCount(items.length) : he.cpqAuditEmpty}

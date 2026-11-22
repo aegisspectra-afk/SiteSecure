@@ -9,6 +9,7 @@ export const ATTENTION_KIND_PRIORITY: Record<string, number> = {
   job_overdue: 10,
   job_unassigned: 20,
   quote_approved_pending_project: 30,
+  quote_viewed_followup: 35,
   quote_awaiting_us: 40,
   quote_expiring: 50,
   quote_awaiting_customer: 60,
@@ -43,6 +44,7 @@ function reasonLabel(kind: string, item: DashboardItem, now = new Date()): strin
     return days == null ? item.title_he : he.commandAwaitingDays(days);
   }
   if (kind === "quote_awaiting_us") return he.commandViewedWhy;
+  if (kind === "quote_viewed_followup") return he.commandFollowupWhy;
   if (kind === "quote_expiring") return he.commandExpiringWhy;
   if (kind === "quote_stale_draft") return he.commandStaleWhy;
   if (kind === "quote_approved_pending_project") return item.title_he || he.commandApprovedWhy;
@@ -59,6 +61,7 @@ export function attentionActionLabel(
   if (actions.includes("create_project")) {
     return opts?.canCreateProject === false ? he.commandOpenQuote : he.nextActionCreateProject;
   }
+  if (actions.includes("whatsapp_followup")) return he.commandWhatsAppFollowup;
   if (actions.includes("select_site")) return he.cpqSelectSiteForProject;
   if (item.entity_type === "job") {
     if (actions.includes("en_route") || actions.includes("arrived") || actions.includes("start") || actions.includes("complete")) return he.todayOpenJob;

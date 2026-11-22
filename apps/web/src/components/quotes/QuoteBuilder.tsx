@@ -836,6 +836,18 @@ export function QuoteBuilder({
       setFormError(err instanceof ApiClientError ? err.message : he.quotesError);
     },
   });
+  const duplicateQuote = useMutation({
+    mutationFn: async () => {
+      const row = await api.duplicateQuote(workspaceId, live.id);
+      return row;
+    },
+    onSuccess: (row) => {
+      void navigate({ to: "/app/quotes/$quoteId", params: { quoteId: row.id } });
+    },
+    onError: (err) => {
+      setFormError(err instanceof ApiClientError ? err.message : he.quotesDuplicateError);
+    },
+  });
   const revise = useMutation({
     mutationFn: () => api.reviseQuote(workspaceId, live.id),
     onSuccess: (row) => applyRow(row),
@@ -1992,6 +2004,19 @@ export function QuoteBuilder({
               }}
             >
               {he.quoteRevise}
+            </button>
+          ) : null}
+          {live.id && canCreate ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={duplicateQuote.isPending}
+              onClick={() => {
+                duplicateQuote.mutate();
+                setMoreOpen(false);
+              }}
+            >
+              {he.quoteDuplicateCta}
             </button>
           ) : null}
           {live.id ? (

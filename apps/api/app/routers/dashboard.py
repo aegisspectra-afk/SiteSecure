@@ -23,7 +23,7 @@ JOB_DASHBOARD_LIMIT = "100"
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}", tags=["dashboard"])
 
 QUOTE_SELECT = (
-    "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,updated_at,total_gross,"
+    "id,number,title,status,customer_id,site_id,owner_user_id,valid_until,viewed_at,updated_at,total_gross,"
     "archived_at,deleted_at"
 )
 JOB_SELECT = (

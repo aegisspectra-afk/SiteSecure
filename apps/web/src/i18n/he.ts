@@ -185,6 +185,8 @@ export const he = {
   commandAttention: (count: number) =>
     count === 1 ? "דבר אחד דורש תשומת לב" : `${count} דברים דורשים תשומת לב`,
   commandOpenQuote: "פתח הצעה",
+  commandWhatsAppFollowup: "וואטסאפ ללקוח",
+  commandFollowupWhy: "כדאי לחזור ללקוח — נצפתה ולא אושרה תוך 3 ימים",
   commandOpenProject: "פתח פרויקט",
   commandApprovedWhy: "הלקוח אישר — ממתין ליצירת פרויקט",
   commandAwaitingDays: (days: number) =>
@@ -3249,6 +3251,7 @@ export const he = {
   cpqQuoteReadyToSend: "מוכנה לשליחה",
   cpqActivity: "פעילות",
   cpqActivityCount: (n: number) => `${n} אירועים`,
+  cpqViewCount: (n: number) => (n === 1 ? "צפייה אחת" : `${n} צפיות`),
   cpqMoreActions: "עוד",
   cpqMoreActionsAria: "פעולות נוספות",
   cpqProjectMore: "פרטי פרויקט נוספים",
@@ -3614,9 +3617,10 @@ export const he = {
   quotePublicRequestUpdated: "בקש הצעה מעודכנת",
   quotePublicExpiredLead: "תוקף ההצעה פג. אפשר לבקש מהמשרד הצעה מעודכנת.",
   quotePublicSupersededLead: (live: number) =>
-    `קיימת גרסה חדשה יותר (גרסה ${live}). בקשו מהמשרד את הקישור המעודכן.`,
+    `קיימת גרסה מעודכנת (גרסה ${live}). בקשו מהמשרד את הקישור החדש.`,
   quotePublicSystemSummary: "סיכום המערכת",
-  quotePublicSuperseded: "גרסה זו הוחלפה ואינה ניתנת לאישור.",
+  quotePublicSuperseded: "קיימת גרסה מעודכנת — גרסה זו אינה ניתנת לאישור.",
+  quoteDuplicateCta: "שכפל הצעה",
   quotePublicThanks: "ההצעה אושרה.",
   cqxApproveCta: "אישור וחתימה",
   cqxSignTitle: "אישור ההצעה",

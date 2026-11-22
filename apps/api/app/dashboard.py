@@ -278,11 +278,13 @@ def _quote_attention(
 ) -> list[dict[str, Any]]:
     awaiting_customer: list[dict[str, Any]] = []
     awaiting_us: list[dict[str, Any]] = []
+    viewed_followup: list[dict[str, Any]] = []
     expiring: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
     pending_project: list[dict[str, Any]] = []
     horizon = now + timedelta(days=7)
     stale_before = now - timedelta(days=3)
+    followup_before = now - timedelta(days=3)
 
     for quote in quotes:
         status = quote.get("status")
@@ -302,7 +304,20 @@ def _quote_attention(
         if status == "sent":
             awaiting_customer.append(row)
         elif status == "viewed":
-            awaiting_us.append({**row, "severity": "now"})
+            viewed_at = _parse_dt(quote.get("viewed_at") if isinstance(quote.get("viewed_at"), str) else None)
+            aged = bool(viewed_at and viewed_at <= followup_before)
+            if aged:
+                # B5: viewed, no decision within 3 days → office follow-up with WhatsApp.
+                viewed_followup.append(
+                    {
+                        **row,
+                        "title_he": "כדאי לחזור ללקוח",
+                        "severity": "now",
+                        "actions": ["whatsapp_followup", "open_quote"],
+                    }
+                )
+            else:
+                awaiting_us.append({**row, "severity": "now"})
         elif status == "approved" and quote_id not in project_source_quote_ids:
             pending_project.append(
                 {
@@ -337,6 +352,7 @@ def _quote_attention(
     groups: list[dict[str, Any]] = []
     for kind, label, items in (
         ("quote_approved_pending_project", "הצעות שאושרו וממתינות לפרויקט", pending_project),
+        ("quote_viewed_followup", "כדאי לחזור ללקוח", viewed_followup),
         ("quote_awaiting_customer", "ממתינות לאישור הלקוח", awaiting_customer),
         ("quote_awaiting_us", "הצעות לאישור אצלנו", awaiting_us),
         ("quote_expiring", "הצעות שפג תוקפן בקרוב", expiring),

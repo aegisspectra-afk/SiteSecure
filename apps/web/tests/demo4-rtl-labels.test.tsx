@@ -26,6 +26,23 @@ describe("DEMO-4.4 Today card: job number and time in RTL", () => {
   });
 });
 
+describe("DEMO-4.4 site dossier chrome is Hebrew", () => {
+  it("overview and health kickers", () => {
+    const labels = [
+      he.siteOverviewKicker,
+      he.siteHealthKicker,
+      he.siteHealthOperational,
+      he.siteMetricCameras,
+      he.siteMetricNvrs,
+      he.siteMetricSwitches,
+      he.siteMetricJobs,
+      he.siteCustomerKicker,
+      he.siteRecentKicker,
+    ];
+    for (const label of labels) expect(label).not.toMatch(/[A-Za-z]/);
+  });
+});
+
 describe("DEMO-4.4 job page labels are Hebrew", () => {
   it("section kickers and start/done lines", () => {
     const labels = [

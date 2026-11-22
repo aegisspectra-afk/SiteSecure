@@ -23,7 +23,7 @@ import {
   semanticRoleOf,
 } from "./cctv-component-keys";
 import { formatUnresolvedRequirementHe } from "./cctv-recommend-copy";
-import { isLaborComponent, laborHours, laborLineName } from "./cctv-labor";
+import { isLaborComponent, isPricedLaborHoursQuoteLine, laborHours, laborLineName } from "./cctv-labor";
 
 /** Stable marker for planned CCTV equipment free-lines (send-block + idempotent replace). */
 export const CCTV_PLANNED_PACKAGE_PREFIX = "cctv-planned:";
@@ -383,8 +383,12 @@ export function isCctvPlannedQuoteItem(item: {
     if (isLaborComponent(key) && Number(item.unit_price ?? 0) > 0) return false;
     return true;
   }
-  // Legacy detection only (old polluted descriptions).
-  return String(item.description || "").startsWith(CCTV_PLANNED_DESCRIPTION_PREFIX);
+  const desc = String(item.description || "");
+  if (desc.startsWith(CCTV_PLANNED_DESCRIPTION_PREFIX)) {
+    if (isPricedLaborHoursQuoteLine(item)) return false;
+    return true;
+  }
+  return false;
 }
 
 /** Format engineering requirement from persisted Design technical_requirements. */

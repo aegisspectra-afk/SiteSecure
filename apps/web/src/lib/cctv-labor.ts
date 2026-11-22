@@ -38,3 +38,14 @@ export function normalizeLaborRate(raw: unknown): number | null {
   const n = typeof raw === "string" ? Number(raw.replace(",", ".")) : Number(raw);
   return Number.isFinite(n) && n > 0 && n <= 10_000 ? Math.round(n * 100) / 100 : null;
 }
+
+/** True when a quote line names itself as hours × hourly rate (wizard labor), not catalog equipment. */
+export function isPricedLaborHoursQuoteLine(item: {
+  name?: string | null;
+  description?: string | null;
+  unit_price?: number | string | null;
+}): boolean {
+  if (Number(item.unit_price ?? 0) <= 0) return false;
+  const text = `${String(item.name || "")} ${String(item.description || "")}`;
+  return text.includes("שעות") && text.includes("×") && text.includes("₪");
+}

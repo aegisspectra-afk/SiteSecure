@@ -14,7 +14,7 @@ import {
   type QuoteLinePatch,
 } from "../../../lib/quote-line-edit";
 import { CCTV_LABOR_PACKAGE_PREFIX, componentKeyFromPlannedPackage } from "../../../lib/cctv-component-keys";
-import { isLaborComponent } from "../../../lib/cctv-labor";
+import { isLaborComponent, isPricedLaborHoursQuoteLine } from "../../../lib/cctv-labor";
 import { isCctvPlannedQuoteItem } from "../../../lib/cctv-recommend-projection";
 
 const PERSIST_DEBOUNCE_MS = 450;
@@ -26,7 +26,7 @@ export function isSolutionServiceItem(item: QuoteItemOut): boolean {
   if (pkg.startsWith(CCTV_LABOR_PACKAGE_PREFIX)) return true;
   const laborKey = componentKeyFromPlannedPackage(pkg);
   if (laborKey && isLaborComponent(laborKey) && Number(item.unit_price ?? 0) > 0) return true;
-  return false;
+  return isPricedLaborHoursQuoteLine(item);
 }
 
 export function isSolutionNoteItem(item: QuoteItemOut): boolean {

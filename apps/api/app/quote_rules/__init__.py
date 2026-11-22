@@ -255,6 +255,12 @@ def margin_rule(quote: dict, items: list[dict], workspace: dict, settings: dict)
 CCTV_LABOR_KEYS = frozenset({"installation_camera", "recorder_setup_main", "testing_main"})
 
 
+def _priced_labor_hours_text(item: dict) -> bool:
+    """Wizard service lines name themselves with hours x rate (שעות × ₪)."""
+    text = f"{_text(item.get('name'))} {_text(item.get('description'))}"
+    return "שעות" in text and "×" in text and "₪" in text
+
+
 def _is_labor_line(item: dict, pkg: str) -> bool:
     if pkg.startswith("cctv-labor:") or _text(item.get("item_type")) == "labor":
         return True
@@ -264,7 +270,10 @@ def _is_labor_line(item: dict, pkg: str) -> bool:
         price = float(item.get("unit_price") or 0)
     except (TypeError, ValueError):
         price = 0
-    return key in CCTV_LABOR_KEYS and price > 0
+    if key in CCTV_LABOR_KEYS and price > 0:
+        return True
+    # Polluted «נדרש ציוד» prefix with no package_name — still a priced hours line.
+    return price > 0 and _priced_labor_hours_text(item)
 
 
 def planned_equipment_rule(quote: dict, items: list[dict], workspace: dict, settings: dict) -> list[dict]:

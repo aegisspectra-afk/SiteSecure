@@ -354,8 +354,8 @@ export function FieldJob({ jobId }: { jobId: string }) {
 
       {!online ? (
         <div className="field-offline-banner" role="status">
-          <p className="text-sm font-medium text-fg">{he.fieldOfflineTitle}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.fieldOfflineBody}</p>
+          <p className="field-offline-title">{he.fieldOfflineTitle}</p>
+          <p className="field-offline-detail">{he.fieldOfflineBody}</p>
         </div>
       ) : null}
 
@@ -457,49 +457,6 @@ export function FieldJob({ jobId }: { jobId: string }) {
               if (file) upload.mutate(file);
             }}
           />
-
-          {completing && canCompleteJob ? (
-            <section className="field-section field-complete-panel" aria-labelledby="field-complete">
-              <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.fieldCompleteKicker}</p>
-              <h2 id="field-complete" className="mt-1 text-base font-semibold text-fg">
-                {he.completeJob}
-              </h2>
-              <label className="mt-3 block text-xs font-medium text-fg-muted" htmlFor="completion-notes">
-                {he.fieldCompletionNotes}
-              </label>
-              <textarea
-                id="completion-notes"
-                className="field-notes"
-                rows={4}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder={he.fieldCompletionNotesHint}
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {!completionReady ? (
-                  <p className="mb-2 text-xs text-danger">
-                    {!signatureReady
-                      ? he.fieldCompleteNeedSignature
-                      : !checklistReady
-                        ? he.fieldCompleteNeedChecklist
-                        : he.fieldCompleteNeedPhotos}
-                  </p>
-                ) : null}
-                <Button
-                  type="button"
-                  data-testid="job-complete-submit"
-                  loading={complete.isPending}
-                  disabled={!online || !completionReady || complete.isPending}
-                  onClick={() => complete.mutate()}
-                >
-                  {he.fieldConfirmComplete}
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setCompleting(false)}>
-                  {he.cancel}
-                </Button>
-              </div>
-            </section>
-          ) : null}
 
           <JobChecklist
             api={api}
@@ -608,6 +565,50 @@ export function FieldJob({ jobId }: { jobId: string }) {
           </section>
         </aside>
       </div>
+
+      <FieldActionSheet
+        open={completing && canCompleteJob}
+        onClose={() => setCompleting(false)}
+        title={he.completeJob}
+      >
+        <div className="field-complete-sheet" data-testid="job-complete-sheet">
+          <p className="public-mono text-[10px] tracking-[0.14em] text-fg-muted">{he.fieldCompleteKicker}</p>
+          <label className="field-complete-label" htmlFor="completion-notes">
+            {he.fieldCompletionNotes}
+          </label>
+          <textarea
+            id="completion-notes"
+            className="field-notes"
+            rows={4}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={he.fieldCompletionNotesHint}
+          />
+          {!completionReady ? (
+            <p className="field-complete-blocker" role="alert">
+              {!signatureReady
+                ? he.fieldCompleteNeedSignature
+                : !checklistReady
+                  ? he.fieldCompleteNeedChecklist
+                  : he.fieldCompleteNeedPhotos}
+            </p>
+          ) : null}
+          <div className="field-complete-actions">
+            <Button
+              type="button"
+              data-testid="job-complete-submit"
+              loading={complete.isPending}
+              disabled={!online || !completionReady || complete.isPending}
+              onClick={() => complete.mutate()}
+            >
+              {he.fieldConfirmComplete}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setCompleting(false)}>
+              {he.cancel}
+            </Button>
+          </div>
+        </div>
+      </FieldActionSheet>
 
       <FieldActionSheet open={moreOpen} onClose={() => setMoreOpen(false)} title={he.fieldMoreTitle}>
         <ul className="field-sheet-list">

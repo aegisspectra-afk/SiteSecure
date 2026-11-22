@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FieldJob } from "../src/components/field/FieldJob";
 import { he } from "../src/i18n/he";
 
@@ -126,13 +125,22 @@ describe("FieldJob", () => {
 
   it("renders a field operating job surface with site, checklist, and equipment", async () => {
     renderJob();
-    expect(await screen.findByText(he.fieldJobKicker)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "התקנת מצלמות" })).toBeInTheDocument();
+    await screen.findByText(he.fieldJobKicker);
+    screen.getByRole("heading", { level: 1, name: "התקנת מצלמות" });
     expect((await screen.findAllByText("בית ספר גולדה מאיר")).length).toBeGreaterThan(0);
-    expect(screen.getByText(he.installationChecklist)).toBeInTheDocument();
-    expect(screen.getByText("תשתית")).toBeInTheDocument();
-    expect(await screen.findByText("CAM-018")).toBeInTheDocument();
-    expect(screen.getByText(he.fieldPhotosTitle)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: he.completeJob })).toBeInTheDocument();
+    screen.getByText(he.installationChecklist);
+    screen.getByText("תשתית");
+    await screen.findByText("CAM-018");
+    screen.getByText(he.fieldPhotosTitle);
+    screen.getByRole("button", { name: he.completeJob });
+  });
+
+  it("opens job completion confirm in a bottom sheet", async () => {
+    renderJob();
+    await screen.findByText(he.fieldJobKicker);
+    fireEvent.click(screen.getByTestId("job-complete-open"));
+    screen.getByTestId("job-complete-sheet");
+    screen.getByRole("dialog");
+    screen.getByTestId("job-complete-submit");
   });
 });

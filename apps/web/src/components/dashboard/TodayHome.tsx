@@ -23,7 +23,7 @@ export function TodayHome({
       <header className="field-today-hero">
         <p className="public-mono text-[10px] tracking-[0.16em] text-fg-subtle">{he.fieldOpsKicker}</p>
         <h1 className="mt-2 text-[1.75rem] font-semibold tracking-[-0.04em] text-fg sm:text-3xl">{he.todayTitle}</h1>
-        <p className="mt-2 text-sm leading-6 text-fg-muted">{he.fieldTodayLead}</p>
+        <p className="field-today-lead mt-2 leading-6 text-fg-muted">{he.fieldTodayLead}</p>
         {count > 0 ? (
           <p className="field-today-count tabular-nums" dir="ltr">
             {count}{" "}
@@ -36,8 +36,8 @@ export function TodayHome({
 
       {!online ? (
         <div className="field-offline-banner" role="status">
-          <p className="text-sm font-medium text-fg">{he.fieldOfflineTitle}</p>
-          <p className="mt-1 text-xs text-fg-muted">{he.fieldOfflineBody}</p>
+          <p className="field-offline-title">{he.fieldOfflineTitle}</p>
+          <p className="field-offline-detail">{he.fieldOfflineBody}</p>
         </div>
       ) : null}
 

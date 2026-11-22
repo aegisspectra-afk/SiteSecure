@@ -145,16 +145,18 @@ function ChecklistRow({
   return (
     <li className="field-check-item" data-testid="checklist-row" data-key={item.item_key ?? undefined}>
       <div className="field-check-row">
-        <input
-          id={`${id}-done`}
-          type="checkbox"
-          className="size-5 shrink-0"
-          checked={Boolean(item.completed)}
-          disabled={locked || item.not_applicable || (needsPhoto && !item.completed)}
-          aria-describedby={needsPhoto ? `${id}-photo-hint` : undefined}
-          onChange={(event) => void run({ completed: event.target.checked })}
-        />
-        <label htmlFor={`${id}-done`} className="min-w-0 flex-1">
+        <span className="field-check-hit">
+          <input
+            id={`${id}-done`}
+            type="checkbox"
+            className="field-check-input"
+            checked={Boolean(item.completed)}
+            disabled={locked || item.not_applicable || (needsPhoto && !item.completed)}
+            aria-describedby={needsPhoto ? `${id}-photo-hint` : undefined}
+            onChange={(event) => void run({ completed: event.target.checked })}
+          />
+        </span>
+        <label htmlFor={`${id}-done`} className="field-check-label min-w-0 flex-1">
           <span className={marked ? "text-fg-muted line-through" : "text-fg"}>{item.label_he}</span>
           {item.required ? <span className="checklist-badge">{he.checklistRequired}</span> : null}
           {item.not_applicable ? <span className="checklist-badge is-muted">{he.checklistNotApplicable}</span> : null}

@@ -9100,8 +9100,8 @@ html.theme-revealing::view-transition-new(root) {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  min-height: 2.5rem;
-  font-size: 0.875rem;
+  min-height: 3rem;
+  font-size: 1.0625rem;
   color: var(--color-fg-muted);
   text-decoration: none;
 }
@@ -9154,7 +9154,7 @@ html.theme-revealing::view-transition-new(root) {
 
 .field-job-navlink {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 3rem;
   align-items: center;
   justify-content: center;
   padding: 0 16px;
@@ -9162,7 +9162,7 @@ html.theme-revealing::view-transition-new(root) {
   border-radius: 999px;
   background: var(--color-bg-1);
   color: var(--color-fg);
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   text-decoration: none;
   transition: transform 180ms ease, background-color 180ms ease;
@@ -9209,7 +9209,7 @@ html.theme-revealing::view-transition-new(root) {
 
 .field-job-open {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 3rem;
   align-items: center;
   justify-content: center;
   padding: 0 16px;
@@ -9217,7 +9217,7 @@ html.theme-revealing::view-transition-new(root) {
   border-radius: var(--radius-control);
   background: var(--color-action);
   color: var(--color-action-fg);
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   text-decoration: none;
 }
@@ -9243,7 +9243,7 @@ html.theme-revealing::view-transition-new(root) {
 .field-job-primary > .btn,
 .field-job-primary > button {
   width: 100%;
-  min-height: 2.85rem;
+  min-height: 3rem;
 }
 
 /* Mobile: keep primary CTA pinned above floating nav while scrolling work details */
@@ -9280,7 +9280,7 @@ html.theme-revealing::view-transition-new(root) {
 
 .field-quick-tile {
   display: flex;
-  min-height: 3.35rem;
+  min-height: 3rem;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -9371,12 +9371,12 @@ html.theme-revealing::view-transition-new(root) {
 .field-control {
   display: block;
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 3rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
   background: var(--color-bg);
   padding: 0.5rem 0.65rem;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   color: var(--color-fg);
 }
 
@@ -9394,7 +9394,7 @@ html.theme-revealing::view-transition-new(root) {
   border-radius: var(--radius-control);
   background: var(--color-bg);
   padding: 0.75rem;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   line-height: 1.45;
   color: var(--color-fg);
   resize: vertical;
@@ -9472,8 +9472,8 @@ html.theme-revealing::view-transition-new(root) {
 
 .field-sheet-close {
   display: inline-flex;
-  min-width: 2.5rem;
-  min-height: 2.5rem;
+  min-width: 3rem;
+  min-height: 3rem;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-control);
@@ -29099,6 +29099,161 @@ html.dark .ssp-site-tone.is-officer {
   gap: 0.35rem;
   margin-top: 0.4rem;
   margin-inline-start: 2rem;
+}
+
+.field-offline-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.field-offline-detail {
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-fg-muted);
+}
+
+.field-today-lead {
+  font-size: 0.875rem;
+}
+
+.field-check-hit {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.field-check-input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.field-check-label {
+  font-size: inherit;
+  line-height: 1.4;
+}
+
+.field-signature-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: var(--color-fg-muted);
+}
+
+.field-complete-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.35rem 1.1rem 0.5rem;
+}
+
+.field-complete-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: var(--color-fg-muted);
+}
+
+.field-complete-blocker {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-danger);
+}
+
+.field-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.field-complete-actions > .btn,
+.field-complete-actions > button {
+  flex: 1 1 auto;
+  min-width: min(100%, 10rem);
+}
+
+/* Technician field mobile — docs/design/mobile-guidelines.md (≤767px, QA at 390) */
+@media (max-width: 767px) {
+  .field-today-lead {
+    font-size: 1.0625rem;
+  }
+
+  .field-offline-detail {
+    font-size: 0.8125rem;
+  }
+
+  .field-job-back,
+  .field-job-nav a.text-sm {
+    min-height: 3rem;
+    font-size: 1.0625rem;
+  }
+
+  .field-job-navlink,
+  .field-job-open,
+  .field-quick-tile,
+  .field-chip,
+  .field-sheet-close,
+  .field-sheet-row,
+  .field-info-row,
+  .field-check-row {
+    min-height: 3rem;
+  }
+
+  .field-job-primary > .btn,
+  .field-job-primary > button,
+  .field-job-card-actions > .btn,
+  .field-job-card-actions > button,
+  .field-job-card-actions > a,
+  .field-check-item .btn,
+  .field-check-item button,
+  .field-section .btn,
+  .field-complete-actions > .btn,
+  .field-complete-actions > button {
+    min-height: 3rem;
+    font-size: 1.0625rem;
+  }
+
+  .field-quick-tile {
+    font-size: 0.8125rem;
+  }
+
+  .field-control,
+  .field-notes,
+  .field-check-label,
+  .field-check-row,
+  .field-row-empty,
+  .field-job-object .text-sm {
+    font-size: 1.0625rem;
+  }
+
+  .field-signature-label {
+    font-size: 0.8125rem;
+  }
+
+  .field-complete-label {
+    font-size: 0.8125rem;
+  }
+
+  .field-check-hit {
+    min-width: 3rem;
+    min-height: 3rem;
+  }
+
+  .checklist-help {
+    font-size: 0.8125rem;
+  }
+
+  .field-job-rail {
+    display: none;
+  }
+
+  .field-job {
+    padding-bottom: calc(var(--ops-bottom-nav-offset, 5.5rem) + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
 }
 
 /* Public platform credit + handover certificate */

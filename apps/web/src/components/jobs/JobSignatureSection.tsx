@@ -101,7 +101,7 @@ export function JobSignatureSection({
 
       {showForm ? (
         <div className="mt-3 flex flex-col gap-3" data-testid="job-signature-form">
-          <label className="text-xs font-medium text-fg-muted" htmlFor="job-signer-name">
+          <label className="field-signature-label" htmlFor="job-signer-name">
             {he.jobSignatureSignerName}
             <input
               id="job-signer-name"

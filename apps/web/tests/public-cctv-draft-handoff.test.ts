@@ -3,6 +3,7 @@ import {
   PUBLIC_CCTV_DRAFT_KEY,
   consumePublicCctvDraft,
   mapPublicStorageToCctvRequirements,
+  savePublicCctvDraft,
 } from "../src/lib/public-cctv-draft";
 
 describe("public CCTV draft → wizard handoff", () => {
@@ -24,6 +25,20 @@ describe("public CCTV draft → wizard handoff", () => {
     expect(mapped.cameraCount).toBe(12);
     expect(mapped.retentionDays).toBe(14);
     expect(mapped.recordingMode).toBe("motion");
+  });
+
+  it("savePublicCctvDraft round-trips calculator sizing for post-register wizard", () => {
+    savePublicCctvDraft({
+      camera_count: 12,
+      resolution_mp: 4,
+      retention_days: 14,
+      recording_mode: "motion",
+      codec: "h265",
+    });
+    const req = consumePublicCctvDraft();
+    expect(req?.cameraCount).toBe(12);
+    expect(req?.retentionDays).toBe(14);
+    expect(req?.recordingMode).toBe("motion");
   });
 
   it("consumes draft once from sessionStorage", () => {

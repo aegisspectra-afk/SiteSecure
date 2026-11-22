@@ -1,0 +1,79 @@
+SiteSecure — live E2E scenarios ה + ז
+Generated: 2026-11-22
+Env: APP_ENV=test · SUPABASE_URL=http://127.0.0.1:54321 (apps/api/.env local keys)
+Branch: ss-quote-core-s1-s2 (local only — no cloud)
+
+================================================================================
+SUMMARY
+================================================================================
+
+| ID | Result | Scope |
+|----|--------|-------|
+| ה | PASS | Live API @pytest.mark.live |
+| ז | PASS | Live API slice + vitest (no full browser register→wizard e2e) |
+
+================================================================================
+ה — Free workspace → plan limit → billing upgrade in admin
+================================================================================
+
+Artifact: apps/api/tests/test_c1_c3_free_upgrade_admin_e2e_live.py
+Test: test_c1_free_quote_limit_then_c3_upgrade_visible_in_admin_live
+
+Flow proved (local Supabase):
+1. Auth Admin register-style user (new email) + POST /api/v1/workspaces → plan free/solo
+2. Service-role plant quotes to Free quota (10)
+3. Owner POST quotes → 409 PLAN_LIMIT_REACHED, details.upgrade_required=true
+4. POST /workspaces/{id}/billing/upgrade-requests → 200 pending
+5. grant_platform_admin (RPC) → GET /api/v1/admin/billing-upgrade-requests → row visible
+6. revoke_platform_admin in finally
+
+Command:
+  cd apps/api
+  $env:APP_ENV='test'
+  python -m pytest tests/test_c1_c3_free_upgrade_admin_e2e_live.py::test_c1_free_quote_limit_then_c3_upgrade_visible_in_admin_live -m live -v
+
+Result: PASSED (~6s, 2026-11-22)
+
+Notes:
+- Extends C1 quota (409 + upgrade_required) with C3 intake + admin list (not mocked test_ss_c3_billing_upgrade.py)
+- No Playwright UI on /admin/billing-requests (API proof only)
+
+================================================================================
+ז — Public CCTV calculator draft → SystemBuilder cameraCount
+================================================================================
+
+Live API:
+  test_public_cctv_calculator_and_free_workspace_live (same module)
+  - POST /api/v1/public/tools/cctv-storage/calculate (12 cameras)
+  - New user + Free workspace + GET /usage → quota_quotes.limit=10, plan_key free/solo
+
+Command:
+  python -m pytest tests/test_c1_c3_free_upgrade_admin_e2e_live.py::test_public_cctv_calculator_and_free_workspace_live -m live -v
+
+Result: PASSED
+
+Vitest (draft handoff — sessionStorage → SystemBuilder):
+  apps/web/tests/public-cctv-draft-handoff.test.ts (3 tests, incl. savePublicCctvDraft round-trip)
+  apps/web/tests/system-builder-public-draft.test.tsx (SystemBuilderDrawer → recommendCctv camera_count=9)
+
+Command (path with spaces — use node + vmThreads pool):
+  cd apps/web
+  node "../../node_modules/vitest/vitest.mjs" run --config vite.config.ts --pool=vmThreads \
+    tests/public-cctv-draft-handoff.test.ts tests/system-builder-public-draft.test.tsx
+
+Result: PASSED (4 vitest cases total)
+
+Honest gaps:
+- Draft lives in sessionStorage on marketing site; no server-side draft consume API
+- No Playwright flow: calculator → signup → open wizard in browser
+- Register→onboarding→SystemBuilder covered by unit/integration above, not full e2e browser
+
+================================================================================
+TDD note
+================================================================================
+
+system-builder-public-draft.test.tsx failed first (wrong recommendCctv arg / field naming)
+before fix to assert body.camera_count from call[1].
+
+================================================================================
+EOF

@@ -46,11 +46,12 @@ def load_catalog(path: str | None = None) -> dict[str, Any]:
     data["_plan_capabilities"] = {
         p["key"]: dict(p.get("capabilities") or {}) for p in data["plans"]
     }
-    # Legacy alias: solo workspaces/catalog readers still resolve Free capabilities.
+    # Legacy alias: solo workspaces/catalog readers still resolve Free.
     if "free" in data["_plan_capabilities"] and "solo" not in data["_plan_capabilities"]:
         data["_plan_capabilities"]["solo"] = data["_plan_capabilities"]["free"]
         data["_plan_features"]["solo"] = data["_plan_features"]["free"]
         data["_plan_limits"]["solo"] = data["_plan_limits"]["free"]
+        data["_plan_assignable"]["solo"] = data["_plan_assignable"]["free"]
     data.setdefault("default_plan_key", "free")
     data.setdefault(
         "seat_buckets",

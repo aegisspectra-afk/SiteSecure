@@ -169,6 +169,7 @@ def build_dashboard(
     project_source_quote_ids: frozenset[str] | None = None,
     attention_cap: int = ATTENTION_CAP,
     member_names: dict[str, str] | None = None,
+    plan_key: str | None = None,
 ) -> dict[str, Any]:
     """attention_cap limits items per attention group: ATTENTION_CAP for the dashboard,
     ATTENTION_FULL_CAP for the unified "show all" list."""
@@ -198,7 +199,18 @@ def build_dashboard(
     linked = project_source_quote_ids or frozenset()
     attention: list[dict[str, Any]] = []
     if variant in {"ops", "sales", "observe"}:
-        attention.extend(_quote_attention(visible_quotes, names, now, variant, linked))
+        from .authz.capabilities import plan_capability_enabled
+
+        attention.extend(
+            _quote_attention(
+                visible_quotes,
+                names,
+                now,
+                variant,
+                linked,
+                include_sales_tracking=plan_capability_enabled(plan_key, "quotes.sales_tracking"),
+            )
+        )
     if variant == "ops" and assignments_reliable:
         unassigned = _unassigned_jobs(visible_jobs, job_assignees, names)
         group = _group("job_unassigned", "עבודות ללא טכנאי", unassigned)
@@ -275,6 +287,8 @@ def _quote_attention(
     now: datetime,
     variant: HomeVariant,
     project_source_quote_ids: frozenset[str],
+    *,
+    include_sales_tracking: bool = True,
 ) -> list[dict[str, Any]]:
     awaiting_customer: list[dict[str, Any]] = []
     awaiting_us: list[dict[str, Any]] = []
@@ -306,8 +320,8 @@ def _quote_attention(
         elif status == "viewed":
             viewed_at = _parse_dt(quote.get("viewed_at") if isinstance(quote.get("viewed_at"), str) else None)
             aged = bool(viewed_at and viewed_at <= followup_before)
-            if aged:
-                # B5: viewed, no decision within 3 days → office follow-up with WhatsApp.
+            if aged and include_sales_tracking:
+                # B5 / Pro+: viewed, no decision within 3 days → office follow-up with WhatsApp.
                 viewed_followup.append(
                     {
                         **row,

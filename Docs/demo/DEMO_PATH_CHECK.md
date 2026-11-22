@@ -106,7 +106,7 @@
 | # | נושא | סטטוס | הוכחה |
 |---|------|--------|--------|
 | 1 | תיאור «מחיר לדוגמה – עדכן» ללקוח | **סגור** | `STARTER_SAMPLE_MARKER` מוחלף בשם מוצר ב-`quotes._insert_line`; מיגרציה `20261116130000`; `test_demo2_quote_customer_text_live` |
-| 2 | שליחה חסומה כי שירות = «נדרש ציוד» | **סגור** | `planned_equipment_rule` + `cctv-labor:`; UI: `deriveReviewCardStatus` / `isCctvPlannedQuoteItem` / `SolutionItemCard`; `demo2-labor-lines` |
+| 2 | שליחה חסומה כי שירות = «נדרש ציוד» | **סגור** | `89b0094` send+`cctv-labor:`; UI `4ca87f5`; רגרסיה לתיאור מזוהם בלי `package_name` נסגרה ב-`0c279b4` (`isPricedLaborHoursQuoteLine` + `test_demo2_labor_polluted_description` / `demo2-labor-regression`) |
 | 3 | אין תאריך/שעה לעבודה ב-UI | **סגור** | `NewInstallJobDialog` + `JobScheduleFields` (DEMO-3.1) |
 | 4 | טכנאי רואה עבודות של אחרים | **סגור** | `apply_assigned_job_list_filter` + מיגרציה `20261116120000` |
 | 5 | «היום» ריק בלי תאריך | **סגור** | דשבורד technician מציג assigned ללא תאריך (DEMO-3.2) + יצירת עבודה עם לו״ז |

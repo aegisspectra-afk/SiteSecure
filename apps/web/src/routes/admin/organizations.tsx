@@ -164,9 +164,10 @@ function AdminOrganizations() {
               value={planKey}
               onChange={(ev) => setPlanKey(ev.target.value)}
             >
-              <option value="business">business</option>
-              <option value="solo">solo</option>
-              <option value="enterprise">enterprise</option>
+              <option value="free">Free</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+              <option value="enterprise">Enterprise</option>
             </select>
           </label>
           <Input

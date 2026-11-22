@@ -359,6 +359,7 @@ def get_dashboard(
         project_source_quote_ids=project_source_quote_ids,
         attention_cap=ATTENTION_FULL_CAP if attention == "full" else ATTENTION_CAP,
         member_names=member_names,
+        plan_key=ctx.plan_key,
     )
     jobs_by_id = {str(j["id"]): j for j in jobs}
     for item in payload.get("today", {}).get("items", []):

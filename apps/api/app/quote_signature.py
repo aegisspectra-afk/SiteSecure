@@ -107,7 +107,7 @@ def store_signature_document(
         )
         rows = sub.json() if sub.status_code == 200 else []
         if isinstance(rows, list) and rows:
-            resolved_plan = str(rows[0].get("plan_key") or "solo")
+            resolved_plan = str(rows[0].get("plan_key") or "free")
         else:
             resolved_plan = "solo"
 

@@ -108,8 +108,10 @@ describe("settings role-aware access", () => {
 });
 
 describe("RBAC plan gating", () => {
-  it("maps FREE/solo vs PRO+/business for custom RBAC", () => {
+  it("maps FREE/solo vs Pro+ for custom RBAC (team feature)", () => {
     expect(planAllowsCustomRbac("solo")).toBe(false);
+    expect(planAllowsCustomRbac("free")).toBe(false);
+    expect(planAllowsCustomRbac("pro")).toBe(true);
     expect(planAllowsCustomRbac("business")).toBe(true);
     expect(planAllowsCustomRbac("enterprise")).toBe(true);
   });

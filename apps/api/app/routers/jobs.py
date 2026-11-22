@@ -607,14 +607,17 @@ def create_job(
         quote_id = _source_quote_id(client, workspace_id, body.project_id)
         if quote_id:
             placements = load_placements_for_quote(client, workspace_id, quote_id)
-    checklist_rows = _checklist_rows(
-        workspace_id, str(row["id"]), body.kind, cctv, placements=placements or None
-    )
-    if checklist_rows:
-        try:
-            client.post("job_checklist_items", checklist_rows)
-        except Exception:
-            pass
+    from ..authz.capabilities import plan_capability_enabled
+
+    if plan_capability_enabled(ctx.plan_key, "jobs.checklist"):
+        checklist_rows = _checklist_rows(
+            workspace_id, str(row["id"]), body.kind, cctv, placements=placements or None
+        )
+        if checklist_rows:
+            try:
+                client.post("job_checklist_items", checklist_rows)
+            except Exception:
+                pass
     actor = actor_id(user)
     write_audit(
         client,
@@ -912,6 +915,9 @@ def assign_job(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.assign", resource=_ref(existing))
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "field.dispatch")
     schedule = (
         _schedule_patch(body.scheduled_for, body.scheduled_end, existing)
         if body.scheduled_for or body.scheduled_end
@@ -1127,6 +1133,9 @@ def list_checklist(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.view", resource=_ref(existing))
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "jobs.checklist")
     return _with_marker_names(client, as_list(
         client.get(
             "job_checklist_items",
@@ -1151,6 +1160,9 @@ def add_checklist_item(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.start", resource=_ref(existing))
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "jobs.checklist")
     return created_or_403(
         client.post(
             "job_checklist_items",
@@ -1176,6 +1188,9 @@ def patch_checklist_item(
     ctx = _ctx(client, user, workspace_id)
     existing = _load_job(client, workspace_id, job_id)
     require(ctx, "jobs.start", resource=_ref(existing))
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "jobs.checklist")
     if existing.get("status") in {"completed", "cancelled"}:
         raise ApiError(409, "BUSINESS_RULE", "העבודה סגורה: הצ'קליסט נעול")
     item = one_or_404(

@@ -130,6 +130,12 @@ def patch_workspace_settings(
             errors = validate_branding_values(value)
             if errors:
                 raise ApiError(400, "VALIDATION_ERROR", "פרטי מיתוג לא תקינים", {"fields": errors})
+            # Custom installer brand on handover / docs — Pro+.
+            from ..authz.capabilities import require_capability
+
+            custom_keys = ("display_name", "brand_name", "logo_url", "logo_path", "logo_document_id")
+            if any(value.get(k) not in (None, "", {}) for k in custom_keys if isinstance(value, dict)):
+                require_capability(ctx, "branding.custom_handover")
         if field == "quotes" and LABOR_RATE_KEY in value and value[LABOR_RATE_KEY] is not None:
             if _labor_rate_value({LABOR_RATE_KEY: value[LABOR_RATE_KEY]}) is None:
                 raise ApiError(400, "VALIDATION_ERROR", "תעריף לשעה לא תקין", {"fields": {LABOR_RATE_KEY: "invalid"}})

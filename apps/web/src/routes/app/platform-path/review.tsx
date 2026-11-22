@@ -25,7 +25,7 @@ function productLabel(featureKey: string): string {
 function PlatformPathReviewPage() {
   const { session, api } = useSession();
   const workspaceId = session?.memberships[0]?.workspace_id;
-  const currentPlan = session?.memberships[0]?.plan_key ?? "solo";
+  const currentPlan = session?.memberships[0]?.plan_key ?? "free";
   const preferred = readDemoPlanKey(currentPlan);
   const navigate = useNavigate();
 

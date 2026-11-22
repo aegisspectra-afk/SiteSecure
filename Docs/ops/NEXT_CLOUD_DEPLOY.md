@@ -9,7 +9,8 @@
 ## 1. מיגרציות DB
 
 1. `supabase/migrations/20261122140000_ss_quote_alternatives_b3.sql` — B3 חלופות ועד בית  
-2. `supabase/migrations/20261122160000_ss_c1_plan_keys_free_pro_business.sql` — C1 מפתחות + `quotes.alternatives`
+2. `supabase/migrations/20261122160000_ss_c1_plan_keys_free_pro_business.sql` — C1 מפתחות + `quotes.alternatives`  
+3. `supabase/migrations/20261122170000_ss_c1_section8_plan_matrix.sql` — C1 §8 מגבלות + מטריצת יכולות
 
 ## 2. קוד API / Web (בלי מיגרציה)
 

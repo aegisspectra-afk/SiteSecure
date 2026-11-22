@@ -246,8 +246,15 @@ def test_solo_cannot_invite_founding_technician_role():
     assert d.code == "BUSINESS_RULE"
 
 
-def test_solo_can_invite_technician():
+def test_solo_cannot_invite_technician():
+    """Free (§8): no technicians — assignable roles are viewer only."""
     d = authorize(ctx=_ctx("owner", plan="solo"), action="users.invite", invite_role="technician")
+    assert d.allowed is False
+    assert d.code == "BUSINESS_RULE"
+
+
+def test_solo_can_invite_viewer_role_assignable():
+    d = authorize(ctx=_ctx("owner", plan="solo"), action="users.invite", invite_role="viewer")
     assert d.allowed is True
 
 

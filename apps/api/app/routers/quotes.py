@@ -14,7 +14,7 @@ from ..authz.engine import authorize
 from ..authz.guard import require
 from ..authz.limits import evaluate_count_limit, raise_plan_limit
 from ..authz.types import ResourceRef
-from ..authz.usage import fetch_quotes_count
+from ..authz.usage import fetch_quotes_count, quotes_quota_since_iso
 from ..config import get_settings
 from ..deps import UserClient, current_user, load_authz_context, service_client, user_client
 from ..notify import notify_quote_event, try_notify
@@ -211,6 +211,10 @@ def _ref(row: dict) -> ResourceRef:
 
 
 def _can_view_cost(ctx) -> bool:
+    from ..authz.capabilities import plan_capability_enabled
+
+    if not plan_capability_enabled(ctx.plan_key, "quotes.profitability"):
+        return False
     return authorize(ctx=ctx, action="quotes.view_cost").allowed
 
 
@@ -1595,7 +1599,9 @@ def create_quote(
             plan_key=ctx.plan_key,
             limit_key="quota_quotes",
             resource="quotes",
-            current=fetch_quotes_count(client, str(workspace_id)),
+            current=fetch_quotes_count(
+                client, str(workspace_id), since_iso=quotes_quota_since_iso()
+            ),
         )
     )
     vat = body.vat_percent
@@ -2411,7 +2417,9 @@ def duplicate_quote(
             plan_key=ctx.plan_key,
             limit_key="quota_quotes",
             resource="quotes",
-            current=fetch_quotes_count(client, str(workspace_id)),
+            current=fetch_quotes_count(
+                client, str(workspace_id), since_iso=quotes_quota_since_iso()
+            ),
         )
     )
     payload = {

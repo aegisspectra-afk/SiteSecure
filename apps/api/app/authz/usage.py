@@ -320,14 +320,23 @@ def _count_rows(client: UserClient, table: str, workspace_id: str, *, filters: d
     return len(rows)
 
 
-def fetch_quotes_count(client: UserClient, workspace_id: str) -> int:
-    """Count non-deleted quotes in the workspace."""
-    return _count_rows(
-        client,
-        "quotes",
-        workspace_id,
-        filters={"deleted_at": "is.null", "archived_at": "is.null"},
-    )
+def fetch_quotes_count(
+    client: UserClient,
+    workspace_id: str,
+    *,
+    since_iso: str | None = None,
+) -> int:
+    """Count non-deleted quotes. Optional ``since_iso`` for monthly Free quota."""
+    filters: dict[str, str] = {"deleted_at": "is.null", "archived_at": "is.null"}
+    if since_iso:
+        filters["created_at"] = f"gte.{since_iso}"
+    return _count_rows(client, "quotes", workspace_id, filters=filters)
+
+
+def quotes_quota_since_iso() -> str:
+    """Start of current UTC month — Free plan counts quotes per calendar month."""
+    now = datetime.now(UTC)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def fetch_customers_count(client: UserClient, workspace_id: str) -> int:

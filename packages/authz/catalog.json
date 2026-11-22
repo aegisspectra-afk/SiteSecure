@@ -26,34 +26,56 @@
       "key": "free",
       "label_he": "Free",
       "label_en": "Free",
-      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "fleet", "ssp", "workforce"],
+      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings"],
       "limits": {
+        "max_members": 1,
+        "max_technicians": 0,
         "seats_operator": 1,
-        "seats_field": 3,
-        "storage_gb": 15,
-        "quota_quotes": 50,
+        "seats_field": 0,
+        "storage_gb": 1,
+        "quota_quotes": 10,
         "quota_clients": 30
       },
-      "assignable_roles": ["technician", "viewer"],
+      "assignable_roles": ["viewer"],
       "capabilities": {
-        "quotes.alternatives": false
+        "quotes.alternatives": false,
+        "branding.custom_handover": false,
+        "comms.whatsapp": false,
+        "quotes.sales_tracking": false,
+        "field.technicians": false,
+        "field.dispatch": false,
+        "jobs.checklist": false,
+        "sites.dossier": false,
+        "service.reminders": false,
+        "quotes.profitability": false
       }
     },
     {
       "key": "pro",
       "label_he": "Pro",
       "label_en": "Pro",
-      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "fleet", "ssp", "workforce", "finance", "reports", "automation", "team", "audit", "api"],
+      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "team", "audit"],
       "limits": {
-        "seats_operator": 15,
-        "seats_field": 40,
-        "storage_gb": 100,
-        "quota_quotes": 200,
+        "max_members": 2,
+        "max_technicians": 0,
+        "seats_operator": 2,
+        "seats_field": 0,
+        "storage_gb": 10,
+        "quota_quotes": 0,
         "quota_clients": 150
       },
-      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
+      "assignable_roles": ["administrator", "manager", "sales", "viewer"],
       "capabilities": {
-        "quotes.alternatives": true
+        "quotes.alternatives": true,
+        "branding.custom_handover": true,
+        "comms.whatsapp": true,
+        "quotes.sales_tracking": true,
+        "field.technicians": false,
+        "field.dispatch": false,
+        "jobs.checklist": false,
+        "sites.dossier": false,
+        "service.reminders": false,
+        "quotes.profitability": false
       }
     },
     {
@@ -62,15 +84,26 @@
       "label_en": "Business",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "fleet", "ssp", "workforce", "finance", "reports", "automation", "team", "audit", "api"],
       "limits": {
-        "seats_operator": 15,
-        "seats_field": 40,
-        "storage_gb": 100,
-        "quota_quotes": 200,
-        "quota_clients": 150
+        "max_members": 5,
+        "max_technicians": 0,
+        "seats_operator": 5,
+        "seats_field": 0,
+        "storage_gb": 50,
+        "quota_quotes": 0,
+        "quota_clients": 0
       },
       "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
       "capabilities": {
-        "quotes.alternatives": true
+        "quotes.alternatives": true,
+        "branding.custom_handover": true,
+        "comms.whatsapp": true,
+        "quotes.sales_tracking": true,
+        "field.technicians": true,
+        "field.dispatch": true,
+        "jobs.checklist": true,
+        "sites.dossier": true,
+        "service.reminders": true,
+        "quotes.profitability": true
       }
     },
     {
@@ -79,6 +112,8 @@
       "label_en": "Enterprise",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "fleet", "ssp", "workforce", "finance", "accounting_documents", "reports", "automation", "team", "audit", "api", "ai", "branches"],
       "limits": {
+        "max_members": 0,
+        "max_technicians": 0,
         "seats_operator": 0,
         "seats_field": 0,
         "storage_gb": 0,
@@ -87,7 +122,16 @@
       },
       "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
       "capabilities": {
-        "quotes.alternatives": true
+        "quotes.alternatives": true,
+        "branding.custom_handover": true,
+        "comms.whatsapp": true,
+        "quotes.sales_tracking": true,
+        "field.technicians": true,
+        "field.dispatch": true,
+        "jobs.checklist": true,
+        "sites.dossier": true,
+        "service.reminders": true,
+        "quotes.profitability": true
       }
     }
   ],

@@ -61,7 +61,8 @@ export const DEMO_PLAN_STORAGE_KEY = "aegis-platform-path-preferred-plan";
 export function readDemoPlanKey(fallback: string): string {
   try {
     const v = sessionStorage.getItem(DEMO_PLAN_STORAGE_KEY);
-    if (v === "solo" || v === "business" || v === "enterprise") return v;
+    if (v === "solo") return "free";
+    if (v === "free" || v === "pro" || v === "business" || v === "enterprise") return v;
   } catch {
     /* ignore */
   }

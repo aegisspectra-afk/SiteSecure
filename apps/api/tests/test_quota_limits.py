@@ -32,11 +32,11 @@ def test_quote_quota_blocks_at_limit():
         plan_key="solo",
         limit_key="quota_quotes",
         resource="quotes",
-        current=50,
+        current=10,
     )
     assert d.allowed is False
     assert d.details["resource"] == "quotes"
-    assert d.details["limit"] == 50
+    assert d.details["limit"] == 10
 
 
 def test_enterprise_count_quota_unlimited():
@@ -67,7 +67,7 @@ def test_zero_limit_means_unlimited_not_zero_allowed():
 
 
 def test_storage_quota_blocks_over_remaining():
-    limit = 15 * (1024**3)
+    limit = 1 * (1024**3)  # Free §8: 1GB
     used = limit - 100
     d = evaluate_storage_limit(plan_key="solo", used_bytes=used, requested_bytes=200)
     assert d.allowed is False
@@ -76,7 +76,7 @@ def test_storage_quota_blocks_over_remaining():
 
 
 def test_storage_quota_allows_exact_remaining():
-    limit = 15 * (1024**3)
+    limit = 1 * (1024**3)
     used = limit - 100
     d = evaluate_storage_limit(plan_key="solo", used_bytes=used, requested_bytes=100)
     assert d.allowed is True

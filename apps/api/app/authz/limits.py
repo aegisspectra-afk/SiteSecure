@@ -95,7 +95,24 @@ def evaluate_seat_limit(
         )
 
     if is_technician_role(invite_role):
-        max_technicians = plan_limit_value(plan_key, "max_technicians")
+        from .capabilities import normalize_plan_key, plan_capability_enabled
+
+        pk = normalize_plan_key(plan_key)
+        if not plan_capability_enabled(pk, "field.technicians"):
+            return _deny(
+                "PLAN_LIMIT_REACHED",
+                limit_key="max_technicians",
+                resource="technicians",
+                capability="field.technicians",
+                quota_code="technician_not_in_plan",
+                current=technicians,
+                limit=0,
+                plan_key=pk,
+                invite_role=invite_role,
+                upgrade_required=True,
+            )
+        max_technicians = plan_limit_value(pk, "max_technicians")
+        # max_technicians > 0 = hard cap; 0 with capability = unlimited within max_members.
         if max_technicians > 0 and technicians >= max_technicians:
             return _deny(
                 "PLAN_LIMIT_REACHED",
@@ -104,7 +121,7 @@ def evaluate_seat_limit(
                 quota_code="technician_quota_exceeded",
                 current=technicians,
                 limit=max_technicians,
-                plan_key=plan_key,
+                plan_key=pk,
                 invite_role=invite_role,
                 upgrade_required=True,
             )

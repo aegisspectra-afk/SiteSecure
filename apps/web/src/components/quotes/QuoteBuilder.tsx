@@ -40,6 +40,7 @@ import { CCTV_LABOR_PACKAGE_PREFIX, componentKeyFromPlannedPackage } from "../..
 import { pickActiveCctvDesign } from "../../lib/cctv-design-persistence";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
+import { planHasCapability } from "@site-secure/authz";
 import { useSession } from "../../lib/session";
 import { resolveQuoteContext } from "../../lib/workflow-context";
 import { LeadRequirementsCard } from "./cpq/LeadRequirementsCard";
@@ -159,7 +160,8 @@ export function QuoteBuilder({
   initialSiteId,
   initialLeadId,
 }: Props) {
-  const { api } = useSession();
+  const { api, session } = useSession();
+  const planKey = session?.memberships[0]?.plan_key ?? "free";
   const isDesktopLayout = useMinWidth(1024);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -3112,11 +3114,15 @@ export function QuoteBuilder({
         url={publicUrl}
         customerName={selectedName || undefined}
         onClose={() => setShareOpen(false)}
-        whatsappDisabled={!whatsappPhoneOk}
-        onWhatsApp={() => {
-          setShareOpen(false);
-          void openWhatsApp();
-        }}
+        whatsappDisabled={!whatsappPhoneOk || !planHasCapability(planKey, "comms.whatsapp")}
+        onWhatsApp={
+          planHasCapability(planKey, "comms.whatsapp")
+            ? () => {
+                setShareOpen(false);
+                void openWhatsApp();
+              }
+            : undefined
+        }
       />
 
       <ProjectFromQuoteDialog

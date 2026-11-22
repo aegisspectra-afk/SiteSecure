@@ -1198,6 +1198,9 @@ def list_warranties(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "warranties.view")
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "sites.dossier")
     page_size = parse_limit(limit)
     params: dict[str, str] = {
         "workspace_id": f"eq.{workspace_id}",
@@ -1228,6 +1231,9 @@ def create_warranty(
 ):
     ctx = _ctx(client, user, workspace_id)
     require(ctx, "warranties.issue", resource=ResourceRef(type="warranty", site_id=body.site_id))
+    from ..authz.capabilities import require_capability
+
+    require_capability(ctx, "sites.dossier")
     _validate_warranty_fields(type=body.type, status=body.status)
     _validate_warranty_dates(body.starts_on, body.ends_on)
     one_or_404(

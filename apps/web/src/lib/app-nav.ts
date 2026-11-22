@@ -154,7 +154,8 @@ export function roleLabelEn(roleKey: string | undefined): string {
 }
 
 export function planLabel(planKey: string | undefined): string {
-  if (planKey === "solo") return he.planSolo;
+  // Legacy solo → Free commercial label (C1 keys = display names).
+  if (planKey === "solo") return catalogPlanLabel("free") || he.planSolo;
   return catalogPlanLabel(planKey);
 }
 

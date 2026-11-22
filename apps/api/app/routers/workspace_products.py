@@ -128,15 +128,19 @@ def _upsert_override_merge(svc: ServiceClient, workspace_id: str, feature_key: s
 
 
 def assert_solo_default_off_ready(svc: ServiceClient, plan_key: str) -> frozenset[str]:
-    """Preflight: resolve which Solo products must be disabled, or fail before workspace create.
+    """Preflight: Free/solo self-serve products that must start disabled.
 
     - Not plan-eligible → no disable required (not a failure).
     - Plan-eligible but missing from features registry → configuration error (fail).
     - Plan/features lookup HTTP failure → fail (do not treat as empty).
     """
-    if plan_key != "solo":
+    if plan_key not in {"solo", "free"}:
         return frozenset()
-    plan_eligible = fetch_plan_feature_keys(svc, plan_key)
+    # DB may still list features under legacy solo until §8 mig applied; prefer free.
+    lookup_key = plan_key if plan_key == "solo" else "free"
+    plan_eligible = fetch_plan_feature_keys(svc, lookup_key)
+    if not plan_eligible and lookup_key == "free":
+        plan_eligible = fetch_plan_feature_keys(svc, "solo")
     required = required_solo_disable_keys(plan_eligible)
     if not required:
         return frozenset()

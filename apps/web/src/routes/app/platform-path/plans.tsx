@@ -16,7 +16,7 @@ export const Route = createFileRoute("/app/platform-path/plans")({
   component: PlatformPathPlansPage,
 });
 
-const PLAN_KEYS = ["solo", "business", "enterprise"] as const;
+const PLAN_KEYS = ["free", "pro", "business", "enterprise"] as const;
 
 function formatLimit(value: number): string {
   if (isUnlimited(value)) return he.platformPathLimitUnlimited;
@@ -26,7 +26,7 @@ function formatLimit(value: number): string {
 function PlatformPathPlansPage() {
   const { session, api } = useSession();
   const workspaceId = session?.memberships[0]?.workspace_id;
-  const currentPlan = session?.memberships[0]?.plan_key ?? "solo";
+  const currentPlan = session?.memberships[0]?.plan_key ?? "free";
   const navigate = useNavigate();
   const [preferred, setPreferred] = useState(() => readDemoPlanKey(currentPlan));
 

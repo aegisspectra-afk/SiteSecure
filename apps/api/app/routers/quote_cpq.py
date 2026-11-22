@@ -907,6 +907,10 @@ def create_quote_event(
     event_type = body.event_type.strip()
     if event_type not in ALLOWLISTED_CLIENT_EVENTS:
         raise ApiError(400, "VALIDATION_ERROR", "סוג אירוע לא מורשה")
+    if event_type == "whatsapp_share_initiated":
+        from ..authz.capabilities import require_capability
+
+        require_capability(ctx, "comms.whatsapp")
     meta = body.metadata if isinstance(body.metadata, dict) else {}
     _record_event(
         client,

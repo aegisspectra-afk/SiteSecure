@@ -128,8 +128,11 @@ def _business_rules(
     ctx: AuthzContext, action: str, *, invite_role: str | None
 ) -> Decision | None:
     if action == "users.invite" and invite_role:
+        from .capabilities import normalize_plan_key
+
         catalog = load_catalog()
-        assignable = catalog.get("_plan_assignable", {}).get(ctx.plan_key, frozenset())
+        plan_key = normalize_plan_key(ctx.plan_key)
+        assignable = catalog.get("_plan_assignable", {}).get(plan_key, frozenset())
         if invite_role not in assignable:
             return _deny("BUSINESS_RULE", reason="role_not_assignable", invite_role=invite_role)
     return None

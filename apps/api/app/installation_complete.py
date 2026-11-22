@@ -900,6 +900,32 @@ def assemble_handover_document(svc: ServiceClient, access: dict) -> dict[str, An
     if not isinstance(branding, dict):
         branding = {}
 
+    # Free plan: handover certificate always SITE SECURE branded (no installer brand).
+    from .authz.capabilities import plan_capability_enabled
+
+    plan_key = "free"
+    sub_rows = as_list(
+        svc.get(
+            "subscriptions",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "plan_key",
+                "limit": "1",
+            },
+        )
+    )
+    if sub_rows:
+        plan_key = str(sub_rows[0].get("plan_key") or "free")
+    if not plan_capability_enabled(plan_key, "branding.custom_handover"):
+        branding = {
+            "display_name": "SITE SECURE",
+            "brand_name": "SITE SECURE",
+            "logo_url": None,
+            "brand_primary": None,
+            "primary_color": None,
+            "phone": None,
+        }
+
     customer = {}
     if job.get("customer_id"):
         rows = as_list(

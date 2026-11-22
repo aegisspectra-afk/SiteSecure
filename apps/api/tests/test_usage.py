@@ -6,7 +6,7 @@ def test_quotes_meter_reads_catalog_limit():
     assert meter["key"] == "quota_quotes"
     assert meter["label_he"] == "הצעות מחיר"
     assert meter["current"] == 3
-    assert meter["limit"] == 50
+    assert meter["limit"] == 10
     assert meter["unit"] == "quotes"
     assert meter["at_limit"] is False
     assert meter["detail_he"] == "טיוטה: 2 · נשלח: 1"

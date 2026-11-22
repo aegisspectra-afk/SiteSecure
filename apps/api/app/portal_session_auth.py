@@ -113,7 +113,7 @@ def require_portal_grant(service: ServiceClient, auth: PortalAuth, access_id: UU
             params={
                 "id": f"eq.{access_id}",
                 "status": "eq.active",
-                "select": "id,workspace_id,customer_id,email,capabilities,status,last_login_at",
+                "select": "id,workspace_id,customer_id,email,capabilities,status,last_login_at,scope",
                 "limit": "1",
             },
         )
@@ -124,7 +124,7 @@ def require_portal_grant(service: ServiceClient, auth: PortalAuth, access_id: UU
                 "id": f"eq.{access_id}",
                 "portal_user_id": f"eq.{auth.user_id}",
                 "status": "eq.active",
-                "select": "id,workspace_id,customer_id,email,capabilities,status,last_login_at",
+                "select": "id,workspace_id,customer_id,email,capabilities,status,last_login_at,scope",
                 "limit": "1",
             },
         )

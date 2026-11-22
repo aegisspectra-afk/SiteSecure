@@ -7,8 +7,10 @@ row. They are never inserted into workspace_memberships.
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
-from datetime import UTC, datetime
+import uuid
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -23,11 +25,14 @@ from ..errors import MESSAGES, ApiError
 from ..portal_access import (
     INVITE_TTL,
     PORTAL_DOCUMENT_BUCKETS,
+    PORTAL_PHOTO_MAX_BYTES,
     PORTAL_VIEW_CAPABILITIES,
     QUOTE_PORTAL_STATUSES,
     document_visible,
     has_capability,
     normalize_portal_email,
+    portal_allowed_site_ids,
+    portal_quote_openable,
     portal_ui_status,
     project_document,
     project_equipment,
@@ -39,7 +44,8 @@ from ..portal_access import (
     project_warranty,
     should_touch_login,
 )
-from ..rest import as_list, created_or_403
+from ..quote_tokens import hash_public_token, new_public_token
+from ..rest import as_list, created_or_403, patched_or_403
 from ..supabase_service import ServiceClient
 from ..supabase_user import UserClient
 
@@ -63,6 +69,22 @@ class PortalServiceCallIn(BaseModel):
     description: str | None = Field(default=None, max_length=4000)
     priority: str = "normal"
     equipment_id: str | None = None
+
+
+class PortalPhotoUploadIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mime_type: str = Field(min_length=3, max_length=120)
+    original_filename: str | None = Field(default=None, max_length=200)
+    byte_size: int = Field(ge=1, le=PORTAL_PHOTO_MAX_BYTES)
+
+
+class PortalPhotoCompleteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    byte_size: int | None = Field(default=None, ge=0, le=PORTAL_PHOTO_MAX_BYTES)
+    mime_type: str | None = Field(default=None, max_length=120)
+
+
+SAFE_PORTAL_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 def _now() -> datetime:
@@ -584,6 +606,7 @@ def portal_create_service_call(
     )
     if not site_rows:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    _portal_assert_site_allowed(service, grant, body.site_id)
     if body.equipment_id:
         eq_rows = as_list(
             service.get(
@@ -612,6 +635,166 @@ def portal_create_service_call(
         payload["equipment_id"] = body.equipment_id
     row = created_or_403(service.post("service_calls", payload))
     return project_service_call(row)
+
+
+@router.post("/portal/access/{access_id}/service-calls/{call_id}/photos/upload")
+def portal_service_call_photo_upload(
+    access_id: UUID,
+    call_id: UUID,
+    body: PortalPhotoUploadIn,
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    grant = require_portal_grant(service, auth, access_id)
+    if not has_capability(grant, "portal.service.view"):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    mime = (body.mime_type or "").lower()
+    if not mime.startswith("image/"):
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    _portal_load_service_call(service, grant, access_id, call_id)
+    workspace_id = str(grant["workspace_id"])
+    document_id = str(uuid.uuid4())
+    filename = _portal_safe_filename(body.original_filename)
+    storage_path = _portal_assert_storage_path(
+        workspace_id,
+        f"{workspace_id}/service_call/{call_id}/{document_id}/{filename}",
+    )
+    row = created_or_403(
+        service.post(
+            "documents",
+            {
+                "id": document_id,
+                "workspace_id": workspace_id,
+                "entity_type": "service_call",
+                "entity_id": str(call_id),
+                "kind": "photo",
+                "visibility": "customer",
+                "storage_bucket": "photos",
+                "storage_path": storage_path,
+                "mime_type": body.mime_type,
+                "original_filename": body.original_filename,
+                "reserved_bytes": body.byte_size,
+            },
+        )
+    )
+    signed = service.storage_sign_upload("photos", storage_path)
+    return {
+        "document_id": row["id"],
+        "storage_bucket": "photos",
+        "storage_path": storage_path,
+        "upload_url": signed["upload_url"],
+        "expires_in": signed.get("expires_in", 7200),
+    }
+
+
+@router.post("/portal/access/{access_id}/service-calls/{call_id}/photos/{document_id}/complete")
+def portal_service_call_photo_complete(
+    access_id: UUID,
+    call_id: UUID,
+    document_id: UUID,
+    body: PortalPhotoCompleteIn,
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    grant = require_portal_grant(service, auth, access_id)
+    if not has_capability(grant, "portal.service.view"):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    _portal_load_service_call(service, grant, access_id, call_id)
+    rows = as_list(
+        service.get(
+            "documents",
+            params={
+                "id": f"eq.{document_id}",
+                "workspace_id": f"eq.{grant['workspace_id']}",
+                "entity_type": "eq.service_call",
+                "entity_id": f"eq.{call_id}",
+                "kind": "eq.photo",
+                "select": "id,storage_bucket,storage_path,reserved_bytes,byte_size",
+                "limit": "1",
+            },
+        )
+    )
+    if not rows:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    row = rows[0]
+    bucket = str(row["storage_bucket"])
+    path = _portal_assert_storage_path(str(grant["workspace_id"]), str(row["storage_path"]))
+    try:
+        storage_size = service.storage_object_size(bucket, path)
+    except Exception:
+        storage_size = None
+    if storage_size is None:
+        service.delete("documents", params={"id": f"eq.{document_id}"})
+        raise ApiError(409, "STORAGE_OBJECT_MISSING", "הקובץ לא נמצא באחסון — יש להעלות מחדש")
+    reserved = max(0, int(row.get("reserved_bytes") or 0))
+    final_size = max(storage_size, body.byte_size or 0, reserved)
+    if final_size > PORTAL_PHOTO_MAX_BYTES:
+        raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
+    patched = patched_or_403(
+        service.patch(
+            "documents",
+            {
+                "byte_size": final_size,
+                "reserved_bytes": 0,
+                **({"mime_type": body.mime_type} if body.mime_type else {}),
+            },
+            params={"id": f"eq.{document_id}"},
+        )
+    )
+    return {"id": patched["id"], "byte_size": patched.get("byte_size")}
+
+
+@router.post("/portal/access/{access_id}/quotes/{quote_id}/open")
+def portal_open_quote(
+    access_id: UUID,
+    quote_id: UUID,
+    auth: Annotated[PortalAuth, Depends(portal_auth_flexible)],
+    service: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    grant = require_portal_grant(service, auth, access_id)
+    if not has_capability(grant, "portal.quotes.view"):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    owned = _ownership_ids(service, grant)
+    if str(quote_id) not in owned["quote_ids"]:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    rows = as_list(
+        service.get(
+            "quotes",
+            params={
+                "id": f"eq.{quote_id}",
+                "workspace_id": f"eq.{grant['workspace_id']}",
+                "deleted_at": "is.null",
+                "select": "id,workspace_id,status,version,valid_until",
+                "limit": "1",
+            },
+        )
+    )
+    if not rows or not portal_quote_openable(rows[0]):
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    quote = rows[0]
+    service.patch(
+        "quote_public_access",
+        {"revoked_at": _now().isoformat()},
+        params={
+            "quote_id": f"eq.{quote_id}",
+            "workspace_id": f"eq.{grant['workspace_id']}",
+            "revoked_at": "is.null",
+        },
+    )
+    token = new_public_token()
+    created_or_403(
+        service.post(
+            "quote_public_access",
+            {
+                "workspace_id": quote["workspace_id"],
+                "quote_id": quote["id"],
+                "version": quote.get("version") or 1,
+                "token_hash": hash_public_token(token),
+                "expires_at": _portal_quote_access_expires(quote),
+            },
+        )
+    )
+    return {"public_path": f"/q/{token}"}
 
 
 def _workspace_brand(service: ServiceClient, workspace_id: str) -> str:
@@ -674,33 +857,99 @@ def _ids(service: ServiceClient, table: str, params: dict) -> set[str]:
     return {str(row["id"]) for row in as_list(res) if row.get("id")}
 
 
+def _portal_scope_site_param(grant: dict, site_ids: set[str]) -> dict[str, str]:
+    if str(grant.get("scope") or "customer") != "sites" or not site_ids:
+        return {}
+    return {"site_id": f"in.({','.join(sorted(site_ids))})"}
+
+
+def _portal_assert_site_allowed(service: ServiceClient, grant: dict, site_id: str) -> None:
+    allowed = portal_allowed_site_ids(service, grant)
+    if site_id not in allowed:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+
+
+def _portal_safe_filename(name: str | None) -> str:
+    raw = (name or "photo.jpg").split("/")[-1][:80]
+    cleaned = SAFE_PORTAL_FILENAME.sub("_", raw).strip("._") or "photo.jpg"
+    return cleaned
+
+
+def _portal_assert_storage_path(workspace_id: str, path: str) -> str:
+    raw = (path or "").replace("\\", "/").strip()
+    if not raw or raw.startswith(("/", "./")):
+        raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
+    parts = [part for part in raw.split("/") if part]
+    if not parts or ".." in parts or parts[0] != workspace_id:
+        raise ApiError(403, "SCOPE_DENIED", MESSAGES["SCOPE_DENIED"])
+    return "/".join(parts)
+
+
+def _portal_quote_access_expires(quote: dict, *, now: datetime | None = None) -> str:
+    clock = now or datetime.now(UTC)
+    raw = str(quote.get("valid_until") or "").strip()
+    if raw:
+        try:
+            until = date.fromisoformat(raw[:10])
+            return datetime.combine(until, time(23, 59, 59), tzinfo=UTC).isoformat()
+        except ValueError:
+            pass
+    return (clock + timedelta(days=30)).isoformat()
+
+
+def _portal_load_service_call(
+    service: ServiceClient, grant: dict, access_id: UUID, call_id: UUID
+) -> dict:
+    rows = as_list(
+        service.get(
+            "service_calls",
+            params={
+                "id": f"eq.{call_id}",
+                "workspace_id": f"eq.{grant['workspace_id']}",
+                "customer_id": f"eq.{grant['customer_id']}",
+                "select": "id,site_id,workspace_id,customer_id",
+                "limit": "1",
+            },
+        )
+    )
+    if not rows:
+        raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
+    row = rows[0]
+    _portal_assert_site_allowed(service, grant, str(row.get("site_id") or ""))
+    return row
+
+
 def _ownership_ids(service: ServiceClient, grant: dict) -> dict[str, set[str]]:
     workspace_id = grant["workspace_id"]
     customer_id = grant["customer_id"]
-    site_ids = _ids(
-        service,
-        "sites",
-        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", "deleted_at": "is.null"},
-    )
+    site_ids = portal_allowed_site_ids(service, grant)
+    site_scope = _portal_scope_site_param(grant, site_ids)
     job_ids = _ids(
         service,
         "jobs",
-        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}"},
+        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", **site_scope},
     )
-    quote_ids = _ids(
-        service,
-        "quotes",
-        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", "deleted_at": "is.null"},
-    )
+    quote_params = {
+        "workspace_id": f"eq.{workspace_id}",
+        "customer_id": f"eq.{customer_id}",
+        "deleted_at": "is.null",
+        **site_scope,
+    }
+    quote_ids = _ids(service, "quotes", quote_params)
     warranty_ids = _ids(
         service,
         "warranties",
-        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}"},
+        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", **site_scope},
     )
     project_ids = _ids(
         service,
         "projects",
-        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}"},
+        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", **site_scope},
+    )
+    service_call_ids = _ids(
+        service,
+        "service_calls",
+        {"workspace_id": f"eq.{workspace_id}", "customer_id": f"eq.{customer_id}", **site_scope},
     )
     system_ids: set[str] = set()
     if site_ids:
@@ -717,6 +966,7 @@ def _ownership_ids(service: ServiceClient, grant: dict) -> dict[str, set[str]]:
         "warranty_ids": warranty_ids,
         "project_ids": project_ids,
         "system_ids": system_ids,
+        "service_call_ids": service_call_ids,
     }
 
 
@@ -744,6 +994,7 @@ def _build_home(service: ServiceClient, grant: dict) -> dict:
         raise ApiError(404, "NOT_FOUND", MESSAGES["NOT_FOUND"])
 
     owned = _ownership_ids(service, grant)
+    site_scope = _portal_scope_site_param(grant, owned["site_ids"])
     sites = []
     if has_capability(grant, "portal.sites.view") and owned["site_ids"]:
         site_rows = as_list(
@@ -770,6 +1021,7 @@ def _build_home(service: ServiceClient, grant: dict) -> dict:
                     "status": "eq.completed",
                     "select": "id,number,title,status,completed_at,site_id",
                     "order": "completed_at.desc",
+                    **site_scope,
                 },
             )
         )
@@ -801,6 +1053,7 @@ def _build_home(service: ServiceClient, grant: dict) -> dict:
                     "customer_id": f"eq.{customer_id}",
                     "select": "id,number,type,status,starts_on,ends_on,site_id",
                     "order": "ends_on.desc",
+                    **site_scope,
                 },
             )
         )
@@ -818,6 +1071,7 @@ def _build_home(service: ServiceClient, grant: dict) -> dict:
                     "status": f"in.({','.join(sorted(QUOTE_PORTAL_STATUSES))})",
                     "select": "id,number,status,total_gross,sent_at,valid_until",
                     "order": "sent_at.desc",
+                    **site_scope,
                 },
             )
         )
@@ -833,6 +1087,7 @@ def _build_home(service: ServiceClient, grant: dict) -> dict:
                     "customer_id": f"eq.{customer_id}",
                     "select": "id,number,title,status,created_at,site_id",
                     "order": "created_at.desc",
+                    **site_scope,
                 },
             )
         )

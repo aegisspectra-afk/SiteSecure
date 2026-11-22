@@ -20,6 +20,8 @@ INVITE_TTL = timedelta(days=7)
 LOGIN_TOUCH_AFTER = timedelta(minutes=30)
 PORTAL_DOCUMENT_BUCKETS = frozenset({"documents", "photos"})
 QUOTE_PORTAL_STATUSES = frozenset({"sent", "viewed", "approved", "rejected"})
+QUOTE_PORTAL_OPEN_STATUSES = frozenset({"sent", "viewed"})
+PORTAL_PHOTO_MAX_BYTES = 5 * 1024 * 1024
 
 FORBIDDEN_PORTAL_KEYS = frozenset(
     {
@@ -157,18 +159,53 @@ def project_warranty(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def portal_quote_openable(row: dict[str, Any]) -> bool:
+    return str(row.get("status") or "") in QUOTE_PORTAL_OPEN_STATUSES
+
+
 def project_quote(row: dict[str, Any]) -> dict[str, Any]:
     status = str(row.get("status") or "")
     if status not in QUOTE_PORTAL_STATUSES:
         return {}
-    return {
+    item = {
         "id": row.get("id"),
         "number": row.get("number") or "",
         "status": status,
         "total_gross": row.get("total_gross"),
         "sent_at": row.get("sent_at"),
         "valid_until": row.get("valid_until"),
+        "can_open": portal_quote_openable(row),
     }
+    return item
+
+
+def portal_allowed_site_ids(service: Any, grant: dict[str, Any]) -> set[str]:
+    """Sites visible to this grant (customer-wide or explicit site list)."""
+    from .rest import as_list
+
+    workspace_id = grant["workspace_id"]
+    customer_id = grant["customer_id"]
+    res = service.get(
+        "sites",
+        params={
+            "workspace_id": f"eq.{workspace_id}",
+            "customer_id": f"eq.{customer_id}",
+            "deleted_at": "is.null",
+            "select": "id",
+        },
+    )
+    customer_sites = {str(row["id"]) for row in as_list(res) if row.get("id")}
+    scope = str(grant.get("scope") or "customer")
+    if scope != "sites":
+        return customer_sites
+    granted = as_list(
+        service.get(
+            "customer_portal_site_grants",
+            params={"access_id": f"eq.{grant['id']}", "select": "site_id"},
+        )
+    )
+    allowed = {str(row["site_id"]) for row in granted if row.get("site_id")}
+    return customer_sites & allowed
 
 
 def project_service_call(row: dict[str, Any]) -> dict[str, Any]:
@@ -201,6 +238,7 @@ def document_visible(
     warranty_ids: set[str],
     project_ids: set[str],
     system_ids: set[str],
+    service_call_ids: set[str] | None = None,
 ) -> bool:
     if doc.get("visibility") != "customer":
         return False
@@ -224,6 +262,8 @@ def document_visible(
         return entity_id in project_ids
     if entity_type == "system":
         return entity_id in system_ids
+    if entity_type == "service_call":
+        return entity_id in (service_call_ids or set())
     return False
 
 

@@ -139,6 +139,7 @@ def test_document_visibility_is_explicit():
         "warranty_ids": set(),
         "project_ids": set(),
         "system_ids": set(),
+        "service_call_ids": set(),
     }
     visible = {
         "visibility": "customer",

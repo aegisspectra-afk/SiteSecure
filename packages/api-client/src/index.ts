@@ -1638,6 +1638,27 @@ export type QuoteSectionBreakdown = {
   net: number;
 };
 
+export type QuoteAlternativePublic = {
+  id: string;
+  label?: string | null;
+  sort_order?: number;
+  is_recommended?: boolean;
+  customer_summary?: string | null;
+  subtotal_net?: number;
+  vat_amount?: number;
+  total_gross?: number;
+};
+
+export type QuoteAlternativeOut = QuoteAlternativePublic & {
+  workspace_id?: string;
+  quote_id?: string;
+  cost_total?: number;
+  margin_amount?: number;
+  margin_percent?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type PublicQuote = {
   id: string;
   number: string;
@@ -1665,6 +1686,11 @@ export type PublicQuote = {
   vat_percent: number;
   discount_type?: string | null;
   discount_value?: number | null;
+  /** B3: single | alternatives — frozen on send. */
+  presentation_mode?: "single" | "alternatives" | string | null;
+  /** B3: customer-facing tiers (no cost/margin). */
+  alternatives?: QuoteAlternativePublic[];
+  approved_alternative_id?: string | null;
   /** Non-optional lines before section discounts (pricing.recalculate). */
   items_subtotal?: number | null;
   sections_breakdown?: QuoteSectionBreakdown[];
@@ -2586,6 +2612,35 @@ export function createApiClient(opts: {
       request<QuoteOut>(
         `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/sections/${sectionId}/duplicate`,
         { method: "POST" },
+      ),
+    listQuoteAlternatives: (workspaceId: string, quoteId: string) =>
+      request<{
+        presentation_mode: string;
+        approved_alternative_id?: string | null;
+        items: QuoteAlternativeOut[];
+      }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/alternatives`),
+    enableQuoteAlternatives: (workspaceId: string, quoteId: string) =>
+      request<{
+        presentation_mode: string;
+        approved_alternative_id?: string | null;
+        items: QuoteAlternativeOut[];
+      }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/alternatives/enable`, {
+        method: "POST",
+      }),
+    patchQuoteAlternative: (
+      workspaceId: string,
+      quoteId: string,
+      alternativeId: string,
+      body: Partial<{
+        label: string;
+        sort_order: number;
+        is_recommended: boolean;
+        customer_summary: string | null;
+      }>,
+    ) =>
+      request<QuoteAlternativeOut>(
+        `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/alternatives/${alternativeId}`,
+        { method: "PATCH", body: JSON.stringify(body) },
       ),
     listQuotePackages: (workspaceId: string) =>
       request<{ items: QuotePackage[] }>(`/api/v1/workspaces/${workspaceId}/catalog/packages`),
@@ -3696,6 +3751,7 @@ export function createApiClient(opts: {
         user_agent?: string;
         terms_accepted?: boolean;
         signature_data_url?: string;
+        chosen_alternative_id?: string;
       } = {},
     ) =>
       request<PublicQuote>(`/api/v1/public/quotes/${encodeURIComponent(token)}/approve`, {

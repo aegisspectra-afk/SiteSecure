@@ -56,6 +56,7 @@ import { CustomerSelector } from "./quote-creation/CustomerSelector";
 import { QuoteShareDialog } from "./QuoteShareDialog";
 import { QuoteSentHonesty } from "./QuoteSentHonesty";
 import { SendQuoteConfirm, type SendChannel } from "./SendQuoteConfirm";
+import { QuoteAlternativesBar } from "./cpq/QuoteAlternativesBar";
 import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
 import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
@@ -263,6 +264,7 @@ export function QuoteBuilder({
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [quickCatalogQ, setQuickCatalogQ] = useState("");
   const [quickCatalogKind, setQuickCatalogKind] = useState<string | null>(null);
+  const [activeAlternativeId, setActiveAlternativeId] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(() => {
     if (!quote.id) return null;
     const at = quote.updated_at ? Date.parse(quote.updated_at) : Number.NaN;
@@ -421,6 +423,46 @@ export function QuoteBuilder({
     queryFn: () => api.listCatalogProducts(workspaceId, { sort: "recent", limit: 5 }),
     staleTime: 60_000,
   });
+  const alternativesQuery = useQuery({
+    queryKey: ["quote-alternatives", workspaceId, live.id],
+    enabled: Boolean(workspaceId && live.id),
+    queryFn: () => api.listQuoteAlternatives(workspaceId, live.id),
+    staleTime: 15_000,
+  });
+  const alternatives = alternativesQuery.data?.items ?? [];
+  useEffect(() => {
+    if (!alternatives.length) {
+      setActiveAlternativeId(null);
+      return;
+    }
+    setActiveAlternativeId((prev) => {
+      if (prev && alternatives.some((a) => a.id === prev)) return prev;
+      const recommended = alternatives.find((a) => a.is_recommended);
+      return recommended?.id ?? alternatives[0]?.id ?? null;
+    });
+  }, [alternatives]);
+  const enableAlternatives = useMutation({
+    mutationFn: () => api.enableQuoteAlternatives(workspaceId, live.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quote-alternatives", workspaceId, live.id] });
+      await queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
+    },
+  });
+  const markRecommendedAlternative = useMutation({
+    mutationFn: (alternativeId: string) =>
+      api.patchQuoteAlternative(workspaceId, live.id, alternativeId, { is_recommended: true }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quote-alternatives", workspaceId, live.id] });
+    },
+  });
+  const itemsForActiveAlternative = useMemo(() => {
+    if (!activeAlternativeId || !alternatives.length) return items;
+    return items.filter((item) => {
+      const alt = (item as { alternative_id?: string | null }).alternative_id;
+      if (alt == null || alt === "") return true; // shared narrative lines
+      return String(alt) === String(activeAlternativeId);
+    });
+  }, [items, activeAlternativeId, alternatives.length]);
   const customerQuery = useQuery({
     queryKey: ["customer", workspaceId, draft.customer_id],
     enabled: canOpenCustomerRecord && Boolean(draft.customer_id),
@@ -2741,8 +2783,19 @@ export function QuoteBuilder({
           activeStep={activeStep}
           className={`cpq-stage-composition${activeStep === "pricing" ? " is-pricing-emphasis" : " is-planning-emphasis"}`}
         >
+        <QuoteAlternativesBar
+          currency={currency}
+          alternatives={alternatives}
+          activeAlternativeId={activeAlternativeId}
+          canEdit={canEdit}
+          canViewCost={canViewCost}
+          enabling={enableAlternatives.isPending}
+          onEnable={() => enableAlternatives.mutate()}
+          onSelect={setActiveAlternativeId}
+          onMarkRecommended={(id) => markRecommendedAlternative.mutate(id)}
+        />
         <QuoteLinesPanel
-          items={items}
+          items={itemsForActiveAlternative}
           sections={live.sections ?? []}
           sectionsBreakdown={live.sections_breakdown ?? []}
           currency={currency}

@@ -2,7 +2,7 @@ import { Button, ErrorState, Input, LoadingBlock, Textarea } from "@site-secure/
 import type { PublicQuote } from "@site-secure/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LottieAnimation } from "../../../components/lottie";
 import { QuoteDocument } from "../../../components/quotes/document/QuoteDocument";
 import { SignaturePad } from "../../../components/quotes/SignaturePad";
@@ -35,6 +35,7 @@ function CustomerQuoteExperience() {
   const [reason, setReason] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [chosenAlternativeId, setChosenAlternativeId] = useState<string | null>(null);
   const [showReject, setShowReject] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -48,6 +49,16 @@ function CustomerQuoteExperience() {
   const quote = query.data;
   const isApproved = quote?.status === "approved";
   const pageTitle = quote?.title?.trim() || he.quotePublicTitle;
+  const publicAlternatives = quote?.alternatives ?? [];
+  const requiresAlternativeChoice =
+    (quote?.presentation_mode === "alternatives" || publicAlternatives.length > 1) &&
+    publicAlternatives.length > 0;
+
+  useEffect(() => {
+    if (!requiresAlternativeChoice || chosenAlternativeId) return;
+    const recommended = publicAlternatives.find((a) => a.is_recommended);
+    if (recommended?.id) setChosenAlternativeId(String(recommended.id));
+  }, [requiresAlternativeChoice, publicAlternatives, chosenAlternativeId]);
 
   useDocumentMeta({
     title: pageTitle,
@@ -58,19 +69,30 @@ function CustomerQuoteExperience() {
   });
 
   const approve = useMutation({
-    mutationFn: () =>
-      api.approvePublicQuote(token, {
+    mutationFn: () => {
+      if (requiresAlternativeChoice && !chosenAlternativeId) {
+        throw new Error("ALT_REQUIRED");
+      }
+      return api.approvePublicQuote(token, {
         name: name.trim() || undefined,
         terms_accepted: true,
         signature_data_url: signatureDataUrl || undefined,
+        chosen_alternative_id: chosenAlternativeId || undefined,
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-      }),
+      });
+    },
     onSuccess: (row) => {
       setActionError(null);
       setStep("done");
       queryClient.setQueryData(["public-quote", token], row);
     },
-    onError: () => setActionError(he.quotePublicError),
+    onError: (err) => {
+      setActionError(
+        err instanceof Error && err.message === "ALT_REQUIRED"
+          ? he.quotePublicAlternativeRequired
+          : he.quotePublicError,
+      );
+    },
   });
 
   const reject = useMutation({
@@ -88,8 +110,12 @@ function CustomerQuoteExperience() {
   });
 
   const canSubmitSign = useMemo(
-    () => termsAccepted && Boolean(name.trim()) && Boolean(signatureDataUrl),
-    [termsAccepted, name, signatureDataUrl],
+    () =>
+      termsAccepted &&
+      Boolean(name.trim()) &&
+      Boolean(signatureDataUrl) &&
+      (!requiresAlternativeChoice || Boolean(chosenAlternativeId)),
+    [termsAccepted, name, signatureDataUrl, requiresAlternativeChoice, chosenAlternativeId],
   );
 
   async function downloadPdf() {
@@ -160,6 +186,43 @@ function CustomerQuoteExperience() {
               </div>
             ) : null}
             {actionError ? <p className="cqx-banner is-danger">{actionError}</p> : null}
+
+            {requiresAlternativeChoice && quote.can_approve ? (
+              <section className="cqx-alt-compare" aria-label={he.quotePublicChooseAlternative}>
+                <h2 className="text-base font-semibold text-fg">{he.quotePublicChooseAlternative}</h2>
+                <p className="text-sm text-fg-muted">{he.quotePublicChooseAlternativeHint}</p>
+                {publicAlternatives.map((alt) => {
+                  const id = String(alt.id);
+                  const selected = id === chosenAlternativeId;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`cqx-alt-option${selected ? " is-selected" : ""}${alt.is_recommended ? " is-recommended" : ""}`}
+                      onClick={() => setChosenAlternativeId(id)}
+                    >
+                      <span className="mt-1 size-4 shrink-0 rounded-full border border-border" aria-hidden>
+                        {selected ? (
+                          <span className="block size-full rounded-full bg-action scale-50" />
+                        ) : null}
+                      </span>
+                      <span className="min-w-0 flex-1 text-start">
+                        <span className="block text-sm font-semibold text-fg">
+                          {alt.label}
+                          {alt.is_recommended ? ` · ${he.quoteAlternativeRecommended}` : ""}
+                        </span>
+                        {alt.customer_summary ? (
+                          <span className="block text-xs text-fg-muted">{alt.customer_summary}</span>
+                        ) : null}
+                        <span className="mt-1 block text-sm font-semibold ltr-meta" dir="ltr">
+                          {formatMoney(Number(alt.total_gross ?? 0), quote.currency || "ILS")}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </section>
+            ) : null}
 
             <QuoteDocument quote={quote} showStatus={false} hideSignatureBlock presentation="public" />
 

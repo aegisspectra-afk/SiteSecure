@@ -13462,6 +13462,83 @@ html.theme-revealing::view-transition-new(root) {
   margin: 0;
 }
 
+.cpq-alternatives-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: var(--radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+.cpq-alternatives-bar-label {
+  margin: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--color-fg-muted);
+}
+
+.cpq-alternatives-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cpq-alternatives-tab {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-1);
+  text-align: start;
+  cursor: pointer;
+}
+
+.cpq-alternatives-tab.is-selected,
+.cpq-alternatives-tab:hover {
+  border-color: color-mix(in srgb, var(--color-action) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-action) 6%, var(--color-bg-1));
+}
+
+.cpq-alternatives-tab.is-recommended {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-action) 25%, transparent);
+}
+
+.cqx-alt-compare {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.cqx-alt-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-1);
+  text-align: start;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cqx-alt-option.is-selected {
+  border-color: color-mix(in srgb, var(--color-action) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--color-action) 7%, var(--color-bg-1));
+}
+
+.cqx-alt-option.is-recommended {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-action) 22%, transparent);
+}
+
 .cpq-quick-add-row.is-emphasis {
   border: 1px solid color-mix(in srgb, var(--color-action) 28%, var(--color-border));
   background: color-mix(in srgb, var(--color-action) 7%, var(--color-bg-1));

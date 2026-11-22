@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { LegalDocument } from "../src/components/public/LegalDocument";
 import { legal, legalNav } from "../src/i18n/legal-he";
@@ -38,31 +39,39 @@ vi.mock("../src/lib/session", () => ({
   }),
 }));
 
+vi.mock("../src/components/public/PublicChrome", () => ({
+  PublicHeader: () => <header data-testid="legal-header" />,
+  PublicFooter: () => <footer data-testid="legal-footer" />,
+}));
+
 describe("legal pages", () => {
-  it("renders each legal document with working sibling links", () => {
+  it("renders each legal document with draft notice and sibling links", () => {
     for (const item of legalNav) {
       const page = legal.pages[item.slug];
       const { unmount } = render(<LegalDocument slug={item.slug} />);
+      expect(screen.getByRole("note")).toHaveTextContent(legal.draftNotice);
       expect(screen.getByRole("heading", { level: 1, name: page.title })).toBeInTheDocument();
       expect(screen.getByText(page.lead)).toBeInTheDocument();
-      expect(screen.getAllByRole("link", { name: legal.pages.privacy.title }).every((el) => el.getAttribute("href") === "/legal/privacy")).toBe(true);
-      expect(screen.getAllByRole("link", { name: legal.pages.cookies.title }).every((el) => el.getAttribute("href") === "/legal/cookies")).toBe(true);
-      expect(screen.getAllByRole("link", { name: legal.pages.disclaimer.title }).every((el) => el.getAttribute("href") === "/legal/disclaimer")).toBe(true);
+      expect(
+        screen.getAllByRole("link", { name: legal.pages.privacy.title }).every((el) => el.getAttribute("href") === "/legal/privacy"),
+      ).toBe(true);
+      expect(
+        screen.getAllByRole("link", { name: legal.pages.cancellation.title }).every(
+          (el) => el.getAttribute("href") === "/legal/cancellation",
+        ),
+      ).toBe(true);
+      expect(
+        screen.getAllByRole("link", { name: legal.pages.accessibility.title }).every(
+          (el) => el.getAttribute("href") === "/legal/accessibility",
+        ),
+      ).toBe(true);
       unmount();
     }
   });
 
-  it("exposes real contact emails, not dead legal links", () => {
-    const first = render(<LegalDocument slug="privacy" />);
-    expect(screen.getByRole("link", { name: "privacy@aegis-spectra.com" })).toHaveAttribute(
-      "href",
-      "mailto:privacy@aegis-spectra.com",
-    );
-    first.unmount();
-    render(<LegalDocument slug="security" />);
-    expect(screen.getAllByRole("link", { name: "info@aegisspectra.co.il" })[0]).toHaveAttribute(
-      "href",
-      "mailto:info@aegisspectra.co.il",
-    );
+  it("marks operator placeholders without inventing company ids", () => {
+    render(<LegalDocument slug="privacy" />);
+    expect(screen.getAllByText(/\[להשלמה\]/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/privacy@aegis-spectra.com/)).toBeNull();
   });
 });

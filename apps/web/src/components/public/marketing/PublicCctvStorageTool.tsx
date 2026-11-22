@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { calculatePublicCctvStorage, type PublicStorageInput, type PublicStorageResult } from "../../../lib/public-marketing-api";
 import { usePublicSeo } from "../../../lib/public-seo";
 import { formatTb } from "../../../lib/cctv-storage-display";
+import { PUBLIC_CCTV_DRAFT_KEY, savePublicCctvDraft } from "../../../lib/public-cctv-draft";
 import { PublicHeader } from "../PublicChrome";
 
-export const PUBLIC_CCTV_DRAFT_KEY = "ss.public-cctv-sizing-draft";
+export { PUBLIC_CCTV_DRAFT_KEY };
 
 export function PublicCctvStorageTool() {
   const [input, setInput] = useState<PublicStorageInput>({
@@ -52,7 +53,7 @@ export function PublicCctvStorageTool() {
             void calculatePublicCctvStorage(input)
               .then((data) => {
                 setResult(data);
-                sessionStorage.setItem(PUBLIC_CCTV_DRAFT_KEY, JSON.stringify(input));
+                savePublicCctvDraft(input);
               })
               .catch((e: Error) => setErr(e.message))
               .finally(() => setBusy(false));
@@ -151,7 +152,7 @@ export function PublicCctvStorageTool() {
             <Link
               to="/register"
               className="mt-4 inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
-              onClick={() => sessionStorage.setItem(PUBLIC_CCTV_DRAFT_KEY, JSON.stringify(input))}
+              onClick={() => savePublicCctvDraft(input)}
             >
               הפוך להצעת מחיר — הרשמה
             </Link>

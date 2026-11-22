@@ -27,6 +27,7 @@ import {
   validateCctvBuildRequirements,
   type CctvBuildRequirements,
 } from "../../../lib/cctv-build-requirements";
+import { consumePublicCctvDraft, peekPublicCctvDraft } from "../../../lib/public-cctv-draft";
 import { requirementsCalcFingerprint } from "../../../lib/cctv-designer-workspace";
 import {
   designerStatus,
@@ -103,6 +104,15 @@ function leadDefaults(lead?: LeadOut | null): CctvBuildRequirements {
     infrastructure: lead?.requirements?.infrastructure,
     location: lead?.requirements?.location,
   });
+}
+
+/** D3: public calculator draft wins when opening a fresh wizard after registration. */
+function seedRequirements(lead?: LeadOut | null): CctvBuildRequirements {
+  if (peekPublicCctvDraft()) {
+    const fromPublic = consumePublicCctvDraft();
+    if (fromPublic) return fromPublic;
+  }
+  return leadDefaults(lead);
 }
 
 /** Q2: automatic calculation runs this long after the last requirements change. */
@@ -486,7 +496,7 @@ export function SystemBuilderDrawer({
     let cancelled = false;
     async function hydrate() {
       if (!quoteId) {
-        setReq(leadDefaults(lead));
+        setReq(seedRequirements(lead));
         setRecommendation(null);
         setSelection(emptyReviewSelection());
         setLastCalcFingerprint(null);

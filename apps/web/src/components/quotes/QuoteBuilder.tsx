@@ -38,6 +38,7 @@ import {
 } from "../../lib/cctv-recommend-projection";
 import { CCTV_LABOR_PACKAGE_PREFIX, componentKeyFromPlannedPackage } from "../../lib/cctv-component-keys";
 import { pickActiveCctvDesign } from "../../lib/cctv-design-persistence";
+import { peekPublicCctvDraft } from "../../lib/public-cctv-draft";
 import { formatMoney } from "../../lib/quotes";
 import { downloadAndOpenPdf, downloadBlob, openPdfBlob } from "../../lib/download-blob";
 import { planHasCapability } from "@site-secure/authz";
@@ -223,6 +224,12 @@ export function QuoteBuilder({
   const [fastPathTemplateId, setFastPathTemplateId] = useState("");
   const [systemBuilderOpen, setSystemBuilderOpen] = useState(false);
   const [systemBuilderFocusKey, setSystemBuilderFocusKey] = useState<string | null>(null);
+  // D3: after marketing calculator → register, open CCTV wizard with saved input.
+  useEffect(() => {
+    if (live.status !== "draft") return;
+    if (!peekPublicCctvDraft()) return;
+    setSystemBuilderOpen(true);
+  }, [live.status]);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const [templateApplyOpen, setTemplateApplyOpen] = useState(false);
   const [applyingSystemId, setApplyingSystemId] = useState<string | null>(null);

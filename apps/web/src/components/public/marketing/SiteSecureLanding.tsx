@@ -269,7 +269,15 @@ function MarketingFooter() {
           <Link to="/legal/$slug" params={{ slug: "privacy" }}>
             מדיניות פרטיות
           </Link>
-          <Link to="/legal">{ssMarketing.accessibility}</Link>
+          <Link to="/legal/$slug" params={{ slug: "cancellation" }}>
+            מדיניות ביטול
+          </Link>
+          <Link to="/legal/$slug" params={{ slug: "accessibility" }}>
+            {ssMarketing.accessibility}
+          </Link>
+          <Link to="/legal/$slug" params={{ slug: "security" }}>
+            אבטחת מידע
+          </Link>
           <Link to="/pricing">מחירון</Link>
           <Link to="/tools/cctv-storage">מחשבון אחסון CCTV</Link>
         </nav>

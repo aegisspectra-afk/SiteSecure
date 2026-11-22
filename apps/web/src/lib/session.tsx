@@ -1,4 +1,9 @@
-import { createApiClient, type ApiClient, type SessionResponse } from "@site-secure/api-client";
+import {
+  ApiClientError,
+  createApiClient,
+  type ApiClient,
+  type SessionResponse,
+} from "@site-secure/api-client";
 import { type User } from "@supabase/supabase-js";
 import {
   createContext,
@@ -11,6 +16,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { he } from "../i18n/he";
+import { guestEntryPath, withNextParam } from "./auth-routes";
 import { isHostedBrowser, isSpaApiUrl, requireProductionApiUrl } from "./public-api-url";
 import { syncAccountAvatarWithUser } from "./account-avatar";
 import { clearWorkspaceScopedCaches } from "./query-client";
@@ -66,6 +73,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (tokenRef.current) return tokenRef.current;
           const { data } = await supabase.auth.getSession();
           return data.session?.access_token ?? null;
+        },
+        refreshAccessToken: async () => {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error || !data.session?.access_token) {
+            tokenRef.current = null;
+            return null;
+          }
+          tokenRef.current = data.session.access_token;
+          return data.session.access_token;
+        },
+        onAuthFailure: (_err: ApiClientError) => {
+          const next = `${window.location.pathname}${window.location.search}`;
+          const login = withNextParam(guestEntryPath(), next);
+          const url = `${login}${login.includes("?") ? "&" : "?"}msg=${encodeURIComponent(he.sessionExpiredLogin)}`;
+          if (!window.location.pathname.startsWith("/login")) {
+            window.location.assign(url);
+          }
         },
       }),
     // Recreate when the workspace client gains methods (Vite HMR / new package).

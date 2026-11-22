@@ -62,6 +62,7 @@ import { QuoteSiteTourPhotos } from "./cpq/QuoteSiteTourPhotos";
 import { QuoteQuickAdd, type QuickAddActionId } from "./cpq/QuoteQuickAdd";
 import { QuoteDocument } from "./document/QuoteDocument";
 import { ProjectFromQuoteDialog } from "../workflow/ProjectFromQuoteDialog";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { addressLine } from "../modules/ModuleKit";
 import { canWhatsAppRecipientPhone, resolveQuoteRecipientPhone } from "../../lib/quote-recipient-phone";
 import {
@@ -234,6 +235,7 @@ export function QuoteBuilder({
   const [termsOpen, setTermsOpen] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [morePlacement, setMorePlacement] = useState<"down" | "up">("down");
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
@@ -960,8 +962,8 @@ export function QuoteBuilder({
   });
   const cancelQuote = useMutation({
     mutationFn: async () => {
-      if (live.status === "draft") {
-        await api.deleteQuote(workspaceId, live.id);
+      if (live.status === "draft" || live.status === "sent" || live.status === "viewed") {
+        await api.cancelQuote(workspaceId, live.id);
         return;
       }
       await api.archiveQuote(workspaceId, live.id);
@@ -2099,21 +2101,24 @@ export function QuoteBuilder({
           >
             {he.quoteRedo}
           </button>
-          {live.id && canDelete && !live.archived_at && live.status !== "superseded" ? (
+          {live.id && canDelete && !live.archived_at && live.status !== "superseded" && live.status !== "cancelled" ? (
             <button
               type="button"
               role="menuitem"
-              className={live.status === "draft" ? "is-danger" : undefined}
+              className={
+                live.status === "draft" || live.status === "sent" || live.status === "viewed"
+                  ? "is-danger"
+                  : undefined
+              }
               disabled={cancelQuote.isPending}
               onClick={() => {
                 setMoreOpen(false);
-                const confirmMsg =
-                  live.status === "draft" ? he.cpqCancelQuoteConfirm : he.quotesArchiveBody;
-                if (!window.confirm(confirmMsg)) return;
-                cancelQuote.mutate();
+                setCancelConfirmOpen(true);
               }}
             >
-              {live.status === "draft" ? he.cpqCancelQuote : he.quotesArchive}
+              {live.status === "draft" || live.status === "sent" || live.status === "viewed"
+                ? he.cpqCancelQuote
+                : he.quotesArchive}
             </button>
           ) : null}
           {live.id && canDelete && live.archived_at ? (
@@ -2329,6 +2334,32 @@ export function QuoteBuilder({
         currency={currency}
         gaps={liveGaps}
         canSend={canSendNow}
+      />
+
+      <ConfirmDialog
+        open={cancelConfirmOpen}
+        title={
+          live.status === "draft" || live.status === "sent" || live.status === "viewed"
+            ? he.cpqCancelQuote
+            : he.quotesArchive
+        }
+        body={
+          live.status === "draft" || live.status === "sent" || live.status === "viewed"
+            ? he.cpqCancelQuoteConfirm
+            : he.quotesArchiveBody
+        }
+        confirmLabel={
+          live.status === "draft" || live.status === "sent" || live.status === "viewed"
+            ? he.cpqCancelQuote
+            : he.quotesArchive
+        }
+        danger
+        busy={cancelQuote.isPending}
+        onCancel={() => setCancelConfirmOpen(false)}
+        onConfirm={() => {
+          setCancelConfirmOpen(false);
+          cancelQuote.mutate();
+        }}
       />
 
       <div className="cpq-workspace-main flex min-w-0 flex-col gap-5">

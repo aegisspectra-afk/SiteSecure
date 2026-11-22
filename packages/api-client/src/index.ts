@@ -2317,13 +2317,17 @@ export type GlobalSearchResponse = {
 export function createApiClient(opts: {
   baseUrl: string;
   getAccessToken: () => Promise<string | null>;
+  /** Refresh access token once on 401; return null to give up. */
+  refreshAccessToken?: () => Promise<string | null>;
+  /** After refresh failure (or missing refresh), e.g. navigate to login. */
+  onAuthFailure?: (error: ApiClientError) => void;
   /** Local Vite only: fetch `/api/...` so the dev proxy can reach FastAPI. Never on Vercel. */
   sameOriginProxy?: boolean;
 }) {
   const baseUrl = opts.baseUrl.replace(/\/$/, "");
   const sameOriginProxy = Boolean(opts.sameOriginProxy);
 
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function request<T>(path: string, init: RequestInit = {}, _retried = false): Promise<T> {
     if (!baseUrl && !sameOriginProxy) {
       throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
     }
@@ -2340,7 +2344,34 @@ export function createApiClient(opts: {
     } catch {
       throw new ApiClientError(503, "API_UNAVAILABLE", API_UNAVAILABLE_HE);
     }
-    return parseApiResponse<T>(res);
+    if (res.status === 401 && !_retried && opts.refreshAccessToken) {
+      const refreshed = await opts.refreshAccessToken();
+      if (refreshed) {
+        return request<T>(path, init, true);
+      }
+      const err = new ApiClientError(401, "UNAUTHENTICATED", "נדרשת התחברות מחדש");
+      opts.onAuthFailure?.(err);
+      throw err;
+    }
+    try {
+      return await parseApiResponse<T>(res);
+    } catch (err) {
+      if (
+        err instanceof ApiClientError &&
+        err.status === 401 &&
+        !_retried &&
+        opts.refreshAccessToken
+      ) {
+        const refreshed = await opts.refreshAccessToken();
+        if (refreshed) {
+          return request<T>(path, init, true);
+        }
+        opts.onAuthFailure?.(err);
+      } else if (err instanceof ApiClientError && err.status === 401) {
+        opts.onAuthFailure?.(err);
+      }
+      throw err;
+    }
   }
 
   async function requestBlob(path: string, init: RequestInit = {}): Promise<{ blob: Blob; filename: string }> {
@@ -2582,6 +2613,8 @@ export function createApiClient(opts: {
       request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/send`, { method: "POST" }),
     deleteQuote: (workspaceId: string, quoteId: string) =>
       request<{ ok: true }>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}`, { method: "DELETE" }),
+    cancelQuote: (workspaceId: string, quoteId: string) =>
+      request<QuoteOut>(`/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/cancel`, { method: "POST" }),
     archiveQuote: (workspaceId: string, quoteId: string) =>
       request<{ ok: true; archived_at: string }>(
         `/api/v1/workspaces/${workspaceId}/quotes/${quoteId}/archive`,

@@ -10,12 +10,13 @@ import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
 import { clearUnitSession, hasUnitSession, saveUnitSession } from "../lib/unit-session";
 
-type AuthNextSearch = { next?: string };
+type AuthNextSearch = { next?: string; msg?: string };
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): AuthNextSearch => {
     const next = typeof search.next === "string" ? search.next : undefined;
-    return next ? { next } : {};
+    const msg = typeof search.msg === "string" ? search.msg : undefined;
+    return { ...(next ? { next } : {}), ...(msg ? { msg } : {}) };
   },
   component: LoginPage,
 });
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { loading, user, session, error, refresh, signOut, api } = useSession();
   const navigate = useNavigate();
-  const { next: nextRaw } = Route.useSearch();
+  const { next: nextRaw, msg: authMsg } = Route.useSearch();
   const next = sanitizeNextPath(nextRaw);
   const shell = {
     title: he.loginTitle,
@@ -105,6 +106,15 @@ function LoginPage() {
         />
       }
     >
+      {authMsg ? (
+        <p
+          role="status"
+          data-testid="login-auth-msg"
+          className="mb-4 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+        >
+          {authMsg}
+        </p>
+      ) : null}
       <LoginForm
         loading={submitting}
         error={formError}

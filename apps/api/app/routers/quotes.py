@@ -2254,6 +2254,69 @@ def revoke_quote_link(
 
 
 _NON_DRAFT_DELETE_MSG = "לא ניתן למחוק הצעה שאינה טיוטה — יש לארכב אותה"
+_CANCELABLE_STATUSES = frozenset({"draft", "sent", "viewed", "rejected", "expired"})
+
+
+@router.post("/quotes/{quote_id}/cancel")
+def cancel_quote(
+    workspace_id: UUID,
+    quote_id: UUID,
+    client: Annotated[UserClient, Depends(user_client)],
+    user: Annotated[dict, Depends(current_user)],
+    svc: Annotated[ServiceClient, Depends(service_client)],
+) -> dict:
+    """Mark quote cancelled (בוטלה). Remains GET-able with 200; excluded from dashboard KPIs."""
+    ctx = _ctx(client, user, workspace_id)
+    existing = _load_quote(client, workspace_id, quote_id)
+    status = str(existing.get("status") or "")
+    if status == "cancelled":
+        return _with_validation(
+            client,
+            workspace_id,
+            existing,
+            _load_items(client, workspace_id, quote_id),
+            show_cost=_can_view_cost(ctx),
+        )
+    if status not in _CANCELABLE_STATUSES:
+        raise ApiError(
+            409,
+            "RESOURCE_STATE",
+            "לא ניתן לבטל הצעה במצב זה",
+            {"state": status},
+        )
+    require(
+        ctx,
+        "quotes.delete",
+        resource=ResourceRef(
+            type="quote",
+            id=str(existing["id"]),
+            owner_user_id=existing.get("owner_user_id"),
+            site_id=existing.get("site_id"),
+        ),
+    )
+    uid = actor_id(user)
+    row = patched_or_403(
+        svc.patch(
+            "quotes",
+            {"status": "cancelled"},
+            params={"id": f"eq.{quote_id}", "workspace_id": f"eq.{workspace_id}", "select": QUOTE_SELECT},
+        )
+    )
+    _record_event(client, workspace_id, quote_id, "cancelled", uid, {"from_status": status})
+    write_audit(
+        client,
+        str(workspace_id),
+        "quotes.cancel",
+        entity_type="quote",
+        entity_id=str(quote_id),
+        metadata={"from_status": status},
+    )
+    try:
+        _revoke_public_access(svc, workspace_id, quote_id)
+    except Exception:
+        pass
+    items = _load_items(client, workspace_id, quote_id)
+    return _with_validation(client, workspace_id, row, items, show_cost=_can_view_cost(ctx))
 
 
 @router.delete("/quotes/{quote_id}")

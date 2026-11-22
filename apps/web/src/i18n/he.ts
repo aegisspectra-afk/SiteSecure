@@ -466,6 +466,8 @@ export const he = {
   save: "שמירה",
   saving: "שומרים…",
   cancel: "ביטול",
+  confirm: "אישור",
+  sessionExpiredLogin: "פג תוקף ההתחברות. התחברו מחדש כדי להמשיך.",
   phone: "טלפון",
   notes: "הערות",
   customersTitle: "לקוחות",

@@ -1,7 +1,7 @@
 # מצב המוצר — SITE SECURE
 
-**ענף:** `ss-quote-core-s1-s2` · **HEAD מקומי:** `62da1f3` · **תאריך סריקה:** 2026-11-22  
-**מקור:** סריקת קוד מול `Docs/SITE_SECURE_MASTER_BRIEF.md` (שלב A). אין שינויי מוצר בסריקה זו.
+**ענף:** `ss-quote-core-s1-s2` · **HEAD מקומי:** `7019131` (+תיקונים בהמשך) · **עודכן:** 2026-11-22  
+**מקור:** סריקת קוד מול `Docs/SITE_SECURE_MASTER_BRIEF.md` + תיקון מצב ענן לפי פריסת 18.11.2026.
 
 סטטוסים: **עובד** · **חלקי** · **חסר**
 
@@ -11,24 +11,15 @@
 
 | נושא | סטטוס | פרטים |
 |------|--------|--------|
-| Web (Vercel) | עובד בענן | פרויקט `site-secure` → `https://site-secure-umber.vercel.app` (`vercel.json`, `Docs/operations/VERCEL.md`) |
-| API (Render) | עובד בענן | `site-secure-api-staging` · Frankfurt · `render.yaml` · health `/health` |
+| Web (Vercel) | עובד בענן | פרויקט `site-secure` → `https://site-secure-umber.vercel.app` |
+| API (Render) | עובד בענן | `site-secure-api-staging` · Frankfurt · `render.yaml` |
 | DB (Supabase) | עובד בענן | פרויקט `rhxqqudlngimhplvndmz` |
-| טיפ מיגרציות בענן (ידוע מסבב קודם) | חלקי מול מקומי | בענן אומתה לפחות עד `20261002222349_catalog_general_accessories_category`. מאז נוספו מקומית מיגרציות רבות מנובמבר 2026 (ראה למטה) — **לא לפרוס בסבב זה בלי אישור** |
-| עבודה מקומית בלבד מאז הפריסה | חלקי | כל ענף `ss-quote-core-s1-s2` כולל ליבת הצעות, DEMO-5, פורטל docs, ארכיון הצעות וכו' |
+| GitHub `main` | תואם פריסת 18.11 | `62da1f3` |
+| טיפ מיגרציות בענן | מעודכן | **`20261117200000_ss_quote_archive_and_delete_guard`** — ב-18.11.2026 עלו לענן **כל 33** המיגרציות עד טיפ זה |
+| עבודה מקומית מאז הטיפ | פעילה | ענף `ss-quote-core-s1-s2`: B1–B5 (+המשך). **לא לפרוס בלי אישור** |
 
-**מיגרציות חדשות יחסית על הדיסק (חדשות ביותר, מקומי):**
-
-1. `20261117200000_ss_quote_archive_and_delete_guard.sql`
-2. `20261117194500_ss_sites_lat_lng.sql`
-3. `20261117193000_ss_demo5_completion_uniques.sql`
-4. `20261117190000_ss_demo_workspace_flag.sql`
-5. `20261117180000_ss_installation_complete.sql`
-6. `20261117130000_ss_job_checklist_cctv_template.sql`
-7. `20261117120000_ss_job_customer_signature.sql`
-8. `20261116140000_ss_jobs_idempotency_key.sql`
-9. `20261116130000_ss_starter_mark_office_only.sql`
-10. `20261116120000_ss_technician_assigned_job_scope.sql`
+**פריסה הבאה — רק מה שאחרי הטיפ:** ראו `Docs/ops/NEXT_CLOUD_DEPLOY.md` ו-`Docs/ops/PENDING_CLOUD_MIGRATIONS.md`.  
+כרגע מיגרציית DB חדשה אחת: `20261122140000_ss_quote_alternatives_b3` (B3). B1/B2/B4/B5 הם בעיקר קוד.
 
 `Docs/operations/STAGING.md` קיים אך חלקים בו מיושנים (טוען ש-CRM/Quotes UI «לא נבנו»).
 
@@ -63,7 +54,7 @@
 | אישור / דחייה + חתימה | עובד | B3: רק מחלופה | `public_quotes.py`, `SignaturePad` |
 | רווחיות / עלות | עובד | **B2** ✅ | משרד רואה עלות/רווח; שליחה עם שוליים נמוכים = אזהרה בלי חסימה; ללקוח לא דולף |
 | חלופות ועד בית (עד 3) | עובד | **B3** ✅ | `quote_alternatives` · freeze בשליחה · בחירה באישור · PDF השוואה · `generate-alternatives` CCTV · שורות ל-`alternative_id` |
-| רשימת מצלמות לפי מיקום | עובד | **B4** ✅ | מצב מקצועי: טבלת מיקומים → אגרגציה ל-recommend; מצב מהיר ללא שינוי |
+| רשימת מצלמות לפי מיקום | עובד | **B4** ✅ | מקצועי: מיקומים → recommend; צ'קליסט התקנה לפי מיקום; `location_note` בציוד מותקן בסיום |
 | מעקב מכירה / תזכורת 3 ימים | עובד | **B5** ✅ | צפיות חוזרות ב־timeline · follow-up 3 ימים + WA · שכפול מהבונה · superseded «גרסה מעודכנת» |
 | שכפול הצעה | עובד | **B5** ✅ | `שכפל הצעה` ב־QuoteBuilder + duplicate ברשימה |
 | תמונות סיור בהצעה | חסר | **B6** | אין gallery עד 10 על ההצעה |
@@ -75,14 +66,14 @@
 
 | נושא | סטטוס | קבצים | הערות |
 |------|--------|--------|--------|
-| מפתחות תוכנית | עובד | `packages/authz/catalog.json`, `0048_v3_plan_labels_*` | מפתחות DB: `solo` / `business` / `enterprise` · תצוגה: Free / Pro / Enterprise |
+| מפתחות תוכנית | עובד (C1) | `catalog.json` + `20261122160000_ss_c1_plan_keys_*` | מפתחות = שמות: `free` / `pro` / `business` / `enterprise` · solo→free · business נשאר business |
 | `plan_limits` / מכסות | עובד | `0038_plan_quota_limits.sql`, `limits.py`, `usage.py` | הצעות, לקוחות, אחסון, מושבים |
-| `plan_capabilities` (V3) | חלקי | `0050_v3_capabilities_registry.sql` | 16 מפתחות seeded; **לא** מחוברים ל-`authorize()` בזמן ריצה |
+| `plan_capabilities` (V3) | חלקי→מחובר | `0050` + C1 `quotes.alternatives` | שער runtime ב-`authz/capabilities.py` (409 + «שדרג»); שאר 16 המפתחות עדיין בעיקר registry |
 | commit `54aa15f` | עובד | `OnboardingSoloSetup.tsx`, `settings/plan.tsx` | onboarding solo + מסך מכסות בלי תשלום |
 | אכיפה API | עובד | `authz/limits.py`, routers | HTTP 409 `raise_plan_limit` |
 | אכיפה RLS | חלקי | `auth_feature()`, invite RPCs | ספירות מכסה בעיקר ב-API |
 | אכיפה UI | עובד | `plan-quota.ts`, `UsageThresholdBanner.tsx`, `settings/plan.tsx` | בלי checkout (`billing-honesty`) |
-| מחירון סעיף 8 (Free/Pro/Business/Enterprise + ₪) | חסר | — | המודל הנוכחי 3 מפתחות; Business כשכבה רביעית + מחירים — לשלב C |
+| מחירון סעיף 8 (Free/Pro/Business/Enterprise + ₪) | חלקי | C1 keys ✅ | מחירים/Billing UI — C2–C3; PayPlus — C4 |
 | `/app/settings/billing` | חסר | קיים `/app/settings/plan` | יעד C3 |
 | PayPlus | חסר | — | תכנון בלבד ב-C4 |
 
@@ -131,7 +122,7 @@
 |------|------|--------|
 | ~~בריף B1 + `QuoteQuickAdd`~~ | ~~לחיצה על «מוצר» לא פתחה חיפוש~~ | **סגור ב-B1** |
 | `Docs/QUOTE-11-CCTV-PLANNER-QUOTE-REPORT.md` | בורר קטלוג בשורות CCTV מתוכננות — לא נשלח במלואו | בינוני |
-| `Docs/demo/DEMO_PATH_CHECK.md` | נתיב DEMO: דליפות תיאור starter, שורות שירות חוסמות שליחה, כפילויות סעיפים, overflow בדיאלוג שליחה, היקף טכנאי רחב | מעורב (חלק עשוי להיות מיושן אחרי `c27c967` / `8344a0c`) |
+| `Docs/demo/DEMO_PATH_CHECK.md` | טריאז׳ 22.11: רוב חוסמי DEMO-0 **סגורים**; פתוחים: שליחת שירות=ציוד, UX `/platform`, overflow שליחה, i18n אנגלית, מסמך מסירה לאימות | ראו טבלת חסמים במסמך |
 | Audit G-012 | מנויים בלי ספק תשלום | מכוון (בטא) |
 | ~~רווחיות~~ | ~~חסימת שליחה על שוליים~~ | **סגור ב-B2** (אזהרה בלבד) |
 
@@ -146,4 +137,4 @@
 | C | כן | לאחד מחירים/4 חבילות עם catalog קיים; לא PayPlus |
 | D–F | כן | landing קיים לשיפור; pricing/tool חדשים |
 
-**אין חסם שעוצר מעבר ל-B.** ענן לא נוגעים. `docs/design/mobile-guidelines.md` **לא קיים** — מובייל לפי דפוסי UI קיימים עד שייווצר.
+**אין חסם שעוצר מעבר ל-B6/C.** ענן לא נוגעים בלי אישור. מובייל: `docs/design/mobile-guidelines.md` + הפניה ב-`CLAUDE.md`. פריסה הבאה: `Docs/ops/NEXT_CLOUD_DEPLOY.md`.

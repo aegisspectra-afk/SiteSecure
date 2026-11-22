@@ -23,18 +23,22 @@ export type StorageUsage = {
 type PlanRow = {
   key: string;
   label_he: string;
-  /** Public commercial name (Free / Pro / Enterprise). Keys remain solo/business/enterprise. */
+  /** Public commercial name — C1 keys match labels: free / pro / business / enterprise. */
   label_en?: string;
   features: string[];
   limits: Record<string, number>;
   assignable_roles?: string[];
+  capabilities?: Record<string, boolean>;
 };
 
-/** Persisted plan_key → public commercial label. Keys are never renamed here. */
+/** Persisted plan_key → public commercial label (keys == display names after C1). */
 export const PLAN_PUBLIC_LABELS: Record<string, string> = {
-  solo: "Free",
-  business: "Pro",
+  free: "Free",
+  pro: "Pro",
+  business: "Business",
   enterprise: "Enterprise",
+  /** Legacy aliases until all workspaces migrate. */
+  solo: "Free",
 };
 
 const plans = catalog.plans as PlanRow[];
@@ -44,23 +48,25 @@ const seatBuckets = (catalog as { seat_buckets?: Record<string, string[]> }).sea
 };
 
 export function defaultPlanKey(): string {
-  return (catalog as { default_plan_key?: string }).default_plan_key || "solo";
+  return (catalog as { default_plan_key?: string }).default_plan_key || "free";
 }
 
 export function getPlan(planKey: string | undefined): PlanRow | undefined {
   if (!planKey) return undefined;
-  return plans.find((plan) => plan.key === planKey);
+  const normalized = planKey === "solo" ? "free" : planKey;
+  return plans.find((plan) => plan.key === normalized) ?? plans.find((plan) => plan.key === planKey);
 }
 
 /**
- * Public plan label for UI (Free / Pro / Enterprise).
- * Persisted keys remain solo / business / enterprise — never gate features on these strings.
+ * Public plan label for UI (Free / Pro / Business / Enterprise).
+ * After C1, keys match display names; `solo` still maps to Free for legacy rows.
  */
 export function planLabel(planKey: string | undefined): string {
   if (!planKey) return "";
-  const row = getPlan(planKey);
+  const normalized = planKey === "solo" ? "free" : planKey;
+  const row = getPlan(normalized) ?? getPlan(planKey);
   if (row?.label_he) return row.label_he;
-  return PLAN_PUBLIC_LABELS[planKey] ?? planKey;
+  return PLAN_PUBLIC_LABELS[planKey] ?? PLAN_PUBLIC_LABELS[normalized] ?? planKey;
 }
 
 /** English commercial label; falls back to planLabel. */
@@ -98,10 +104,17 @@ export function assignableInviteRoles(planKey: string | undefined): string[] {
 
 /**
  * Custom roles + editable permission matrix.
- * Maps SaaS FREE→solo (fixed roles), PRO+→business/enterprise (`team` feature).
+ * Free: fixed roles. Pro+ (`team` feature): custom RBAC.
  */
 export function planAllowsCustomRbac(planKey: string | undefined): boolean {
-  return planHasFeature(planKey, "team");
+  const key = planKey === "solo" ? "free" : planKey;
+  return planHasFeature(key, "team");
+}
+
+export function planHasCapability(planKey: string | undefined, capabilityKey: string): boolean {
+  const key = planKey === "solo" ? "free" : planKey;
+  const row = getPlan(key);
+  return Boolean(row?.capabilities?.[capabilityKey]);
 }
 
 export function seatUsage(planKey: string | undefined, occupiedRoleKeys: string[]): SeatUsage[] {

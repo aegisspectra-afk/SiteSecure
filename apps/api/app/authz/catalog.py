@@ -43,7 +43,15 @@ def load_catalog(path: str | None = None) -> dict[str, Any]:
     data["_plan_assignable"] = {
         p["key"]: frozenset(p.get("assignable_roles") or ()) for p in data["plans"]
     }
-    data.setdefault("default_plan_key", "solo")
+    data["_plan_capabilities"] = {
+        p["key"]: dict(p.get("capabilities") or {}) for p in data["plans"]
+    }
+    # Legacy alias: solo workspaces/catalog readers still resolve Free capabilities.
+    if "free" in data["_plan_capabilities"] and "solo" not in data["_plan_capabilities"]:
+        data["_plan_capabilities"]["solo"] = data["_plan_capabilities"]["free"]
+        data["_plan_features"]["solo"] = data["_plan_features"]["free"]
+        data["_plan_limits"]["solo"] = data["_plan_limits"]["free"]
+    data.setdefault("default_plan_key", "free")
     data.setdefault(
         "seat_buckets",
         {
@@ -55,4 +63,4 @@ def load_catalog(path: str | None = None) -> dict[str, Any]:
 
 
 def default_plan_key() -> str:
-    return str(load_catalog().get("default_plan_key") or "solo")
+    return str(load_catalog().get("default_plan_key") or "free")

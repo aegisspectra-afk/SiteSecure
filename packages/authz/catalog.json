@@ -1,7 +1,7 @@
 {
   "$schema": "./catalog.schema.json",
   "version": 1,
-  "default_plan_key": "solo",
+  "default_plan_key": "free",
   "seat_buckets": {
     "seats_operator": ["owner", "administrator", "manager", "sales"],
     "seats_field": ["technician", "viewer", "founding_technician", "workforce_member"]
@@ -23,8 +23,8 @@
   ],
   "plans": [
     {
-      "key": "solo",
-      "label_he": "חינם",
+      "key": "free",
+      "label_he": "Free",
       "label_en": "Free",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "fleet", "ssp", "workforce"],
       "limits": {
@@ -34,10 +34,13 @@
         "quota_quotes": 50,
         "quota_clients": 30
       },
-      "assignable_roles": ["technician", "viewer"]
+      "assignable_roles": ["technician", "viewer"],
+      "capabilities": {
+        "quotes.alternatives": false
+      }
     },
     {
-      "key": "business",
+      "key": "pro",
       "label_he": "Pro",
       "label_en": "Pro",
       "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "fleet", "ssp", "workforce", "finance", "reports", "automation", "team", "audit", "api"],
@@ -48,7 +51,27 @@
         "quota_quotes": 200,
         "quota_clients": 150
       },
-      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"]
+      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
+      "capabilities": {
+        "quotes.alternatives": true
+      }
+    },
+    {
+      "key": "business",
+      "label_he": "Business",
+      "label_en": "Business",
+      "features": ["core", "crm", "sales", "catalog", "quotes", "projects", "service", "settings", "inventory", "fleet", "ssp", "workforce", "finance", "reports", "automation", "team", "audit", "api"],
+      "limits": {
+        "seats_operator": 15,
+        "seats_field": 40,
+        "storage_gb": 100,
+        "quota_quotes": 200,
+        "quota_clients": 150
+      },
+      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
+      "capabilities": {
+        "quotes.alternatives": true
+      }
     },
     {
       "key": "enterprise",
@@ -62,7 +85,10 @@
         "quota_quotes": 0,
         "quota_clients": 0
       },
-      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"]
+      "assignable_roles": ["administrator", "manager", "sales", "technician", "viewer"],
+      "capabilities": {
+        "quotes.alternatives": true
+      }
     }
   ],
   "permission_feature": {

@@ -1081,9 +1081,12 @@ def enable_alternatives(
     user: Annotated[dict, Depends(current_user)],
 ) -> dict:
     """Seed three default tiers (בסיסי / מומלץ / מתקדם) and switch presentation_mode."""
+    from ..authz.capabilities import require_capability
+
     ctx = _ctx(client, user, workspace_id)
     quote = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(quote))
+    require_capability(ctx, "quotes.alternatives")
     if quote.get("status") != "draft":
         raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
     existing = _load_alternatives(client, workspace_id, quote_id)
@@ -1131,9 +1134,12 @@ def create_alternative(
     client: Annotated[UserClient, Depends(user_client)],
     user: Annotated[dict, Depends(current_user)],
 ) -> dict:
+    from ..authz.capabilities import require_capability
+
     ctx = _ctx(client, user, workspace_id)
     quote = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(quote))
+    require_capability(ctx, "quotes.alternatives")
     if quote.get("status") != "draft":
         raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
     existing = _load_alternatives(client, workspace_id, quote_id)
@@ -1239,9 +1245,12 @@ def generate_cctv_alternatives(
     Starts from unscoped / recommended lines so the office can edit prices per tier.
     Full re-recommend (catalog swap by MP) remains available via the CCTV wizard apply.
     """
+    from ..authz.capabilities import require_capability
+
     ctx = _ctx(client, user, workspace_id)
     quote = _load_quote(client, workspace_id, quote_id)
     require(ctx, "quotes.edit", resource=_ref(quote))
+    require_capability(ctx, "quotes.alternatives")
     if quote.get("status") != "draft":
         raise ApiError(409, "QUOTE_NOT_DRAFT", MESSAGES.get("QUOTE_NOT_DRAFT", "ניתן לערוך רק טיוטה"))
     axis = (body.variant_axis or "resolution").strip().lower()

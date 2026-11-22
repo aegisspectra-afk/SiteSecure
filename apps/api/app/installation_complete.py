@@ -165,7 +165,10 @@ def _install_equipment(
     project_id: str,
     site_id: str,
     customer_id: str | None,
+    source_quote_id: str | None = None,
 ) -> list[str]:
+    from .cctv_camera_placements import expand_location_notes, load_placements_for_quote
+
     planned = as_list(
         svc.get(
             "project_planned_items",
@@ -180,6 +183,19 @@ def _install_equipment(
     planned = [p for p in planned if not p.get("is_optional")]
     counts = count_assets_by_planned_item(svc, workspace_id, project_id)
     plan = build_create_plan(planned, counts)
+    placements: list[dict] = []
+    if source_quote_id:
+        try:
+            placements = load_placements_for_quote(svc, workspace_id, source_quote_id)
+        except Exception:
+            placements = []
+    camera_slots = sum(
+        int(entry.get("remaining") or 0)
+        for entry in plan
+        if str(entry.get("category") or "") == "camera" and int(entry.get("remaining") or 0) > 0
+    )
+    location_queue = expand_location_notes(placements, camera_slots) if placements and camera_slots else []
+    loc_idx = 0
     created_ids: list[str] = []
     reserved: set[str] = set()
     today = _today().isoformat()
@@ -213,6 +229,9 @@ def _install_equipment(
                 "model": item.get("model"),
                 "installed_at": today,
             }
+            if category == "camera" and loc_idx < len(location_queue):
+                payload["location_note"] = location_queue[loc_idx]
+                loc_idx += 1
             row = created_or_403(svc.post("equipment", payload))
             created_ids.append(str(row["id"]))
     return created_ids
@@ -648,12 +667,27 @@ def complete_installation(
     try:
         project_id = job.get("project_id")
         if project_id and job.get("site_id"):
+            source_quote_id = None
+            proj_rows = as_list(
+                svc.get(
+                    "projects",
+                    params={
+                        "id": f"eq.{project_id}",
+                        "workspace_id": f"eq.{workspace_id}",
+                        "select": "source_quote_id",
+                        "limit": "1",
+                    },
+                )
+            )
+            if proj_rows and proj_rows[0].get("source_quote_id"):
+                source_quote_id = str(proj_rows[0]["source_quote_id"])
             equipment_ids = _install_equipment(
                 svc,
                 workspace_id=workspace_id,
                 project_id=str(project_id),
                 site_id=str(job["site_id"]),
                 customer_id=str(job["customer_id"]) if job.get("customer_id") else None,
+                source_quote_id=source_quote_id,
             )
             project_status = _update_project_status(svc, workspace_id, str(project_id))
 

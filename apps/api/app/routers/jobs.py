@@ -469,9 +469,34 @@ def _is_cctv_project(client: UserClient, workspace_id: UUID, project_id: str | N
     return bool(designs)
 
 
-def _checklist_rows(workspace_id: UUID, job_id: str, kind: str, cctv: bool) -> list[dict[str, Any]]:
+def _source_quote_id(client: UserClient, workspace_id: UUID, project_id: str | None) -> str | None:
+    if not project_id:
+        return None
+    rows = as_list(
+        client.get(
+            "projects",
+            params={
+                "id": f"eq.{project_id}",
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "source_quote_id",
+                "limit": "1",
+            },
+        )
+    )
+    qid = rows[0].get("source_quote_id") if rows else None
+    return str(qid) if qid else None
+
+
+def _checklist_rows(
+    workspace_id: UUID,
+    job_id: str,
+    kind: str,
+    cctv: bool,
+    *,
+    placements: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     if kind == "installation" and cctv:
-        return [
+        rows = [
             {
                 "workspace_id": str(workspace_id),
                 "job_id": job_id,
@@ -485,7 +510,33 @@ def _checklist_rows(workspace_id: UUID, job_id: str, kind: str, cctv: bool) -> l
                 "sort_order": index,
             }
             for index, item in enumerate(CCTV_INSTALLATION_TEMPLATE)
+            # B4: when per-location rows exist, drop the aggregate cameras_mounted item.
+            if not (placements and item["key"] == "cameras_mounted")
         ]
+        if placements:
+            from ..cctv_camera_placements import checklist_rows_for_placements
+
+            # Insert placement rows after site_walkthrough (sort 0), before cabling.
+            place_rows = checklist_rows_for_placements(
+                workspace_id=str(workspace_id),
+                job_id=job_id,
+                placements=placements,
+                template_key=CCTV_TEMPLATE_KEY,
+                sort_start=1,
+            )
+            # Re-number remaining template rows after placements.
+            offset = len(place_rows)
+            renumbered: list[dict[str, Any]] = []
+            for row in rows:
+                so = int(row.get("sort_order") or 0)
+                if so >= 1:
+                    row = {**row, "sort_order": so + offset}
+                renumbered.append(row)
+            # site_walkthrough (0) + placements + rest
+            head = [r for r in renumbered if int(r.get("sort_order") or 0) == 0]
+            tail = [r for r in renumbered if int(r.get("sort_order") or 0) != 0]
+            return head + place_rows + tail
+        return rows
     labels = INSTALLATION_CHECKLIST if kind == "installation" else SERVICE_CHECKLIST if kind == "service" else ()
     return [
         {"workspace_id": str(workspace_id), "job_id": job_id, "label_he": label, "required": True, "sort_order": index}
@@ -549,7 +600,16 @@ def create_job(
             return _out(client, workspace_id, earlier)
     row = created_or_403(res)
     cctv = body.kind == "installation" and _is_cctv_project(client, workspace_id, body.project_id)
-    checklist_rows = _checklist_rows(workspace_id, str(row["id"]), body.kind, cctv)
+    placements: list[dict[str, Any]] = []
+    if cctv:
+        from ..cctv_camera_placements import load_placements_for_quote
+
+        quote_id = _source_quote_id(client, workspace_id, body.project_id)
+        if quote_id:
+            placements = load_placements_for_quote(client, workspace_id, quote_id)
+    checklist_rows = _checklist_rows(
+        workspace_id, str(row["id"]), body.kind, cctv, placements=placements or None
+    )
     if checklist_rows:
         try:
             client.post("job_checklist_items", checklist_rows)

@@ -467,6 +467,8 @@ export function QuoteBuilder({
       await queryClient.invalidateQueries({ queryKey: ["quote", workspaceId, live.id] });
     },
   });
+  // Must be before itemsForActiveAlternative — TDZ if declared later (B3 e104c511).
+  const items = live.items ?? [];
   const itemsForActiveAlternative = useMemo(() => {
     if (!activeAlternativeId || !alternatives.length) return items;
     return items.filter((item) => {
@@ -1020,7 +1022,6 @@ export function QuoteBuilder({
   );
 
   const linkedProject = linkedProjectQuery.data ?? null;
-  const items = live.items ?? [];
   const hasCctvPlannedItems = useMemo(
     () => items.some((item) => isCctvPlannedQuoteItem(item)),
     [items],

@@ -49,7 +49,7 @@ const api = {
   applyQuoteTemplate: vi.fn(),
   sendQuote: vi.fn(),
   reviseQuote: vi.fn(),
-  shareQuote: vi.fn(),
+  shareQuote: vi.fn(async () => ({ public_url: null as string | null })),
   revokeQuoteLink: vi.fn(),
   deleteQuote: vi.fn(),
   downloadQuotePdf: vi.fn(async () => ({ blob: new Blob(["%PDF"], { type: "application/pdf" }), filename: "q.pdf" })),
@@ -67,10 +67,22 @@ const api = {
   overrideQuoteMargin: vi.fn(),
   compareQuoteVersions: vi.fn(),
   listQuoteVersions: vi.fn(async () => ({ items: [], current_version: 1 })),
+  listQuoteAlternatives: vi.fn(async () => ({ items: [] })),
+  enableQuoteAlternatives: vi.fn(async () => ({ ok: true })),
+  patchQuoteAlternative: vi.fn(async () => ({})),
+  generateCctvAlternatives: vi.fn(async () => ({ items: [] })),
+  listQuoteDocuments: vi.fn(async () => ({ items: [] })),
+  listSystemDesigns: vi.fn(async () => ({ items: [] })),
+  listQuotePackages: vi.fn(async () => ({ items: [] })),
 };
 
 vi.mock("../src/lib/session", () => ({
-  useSession: () => ({ api }),
+  useSession: () => ({
+    api,
+    session: {
+      memberships: [{ workspace_id: "ws", plan_key: "business", role_key: "owner" }],
+    },
+  }),
 }));
 
 function quote(partial: Partial<QuoteOut> = {}): QuoteOut {
@@ -289,6 +301,7 @@ describe("CPQ builder", () => {
       <QueryClientProvider client={client}>
         <QuoteBuilder
           quote={quote({
+            customer_id: "c1",
             cost_total: 80,
             margin_amount: 20,
             margin_percent: 20,
@@ -311,6 +324,7 @@ describe("CPQ builder", () => {
         />
       </QueryClientProvider>,
     );
+    clickStage(he.cpqWorkflowPricing);
     expect(screen.getAllByText(he.quoteCost).length).toBeGreaterThan(0);
   });
 

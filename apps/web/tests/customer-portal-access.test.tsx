@@ -4,6 +4,14 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { CustomerPortalAccess } from "../src/components/customers/CustomerPortalAccess";
+
+vi.mock("../src/lib/session", () => ({
+  useSession: () => ({
+    session: {
+      memberships: [{ workspace_id: "ws", role_key: "owner", is_demo: false }],
+    },
+  }),
+}));
 import {
   portalBuildPlan,
   portalBuildSegmentAt,

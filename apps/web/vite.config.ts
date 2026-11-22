@@ -99,6 +99,14 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./tests/setup.ts"],
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/.{idea,git,cache,output,temp}/**",
+        "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+        "**/._*",
+        "**/.AppleDouble/**",
+      ],
       env: {
         VITE_API_URL: env.VITE_API_URL || "http://127.0.0.1:8001",
         VITE_SUPABASE_URL: env.VITE_SUPABASE_URL || "http://127.0.0.1:54321",

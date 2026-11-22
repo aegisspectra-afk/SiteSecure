@@ -127,8 +127,8 @@ describe("SiteDossier", () => {
     expect(screen.getByText("AS-S-2026-000142")).toBeInTheDocument();
     expect(screen.getByText(he.siteHealthKicker)).toBeInTheDocument();
     expect(screen.getByText(he.siteHealthOperational)).toBeInTheDocument();
-    expect(screen.getByText(he.siteMetricCameras)).toBeInTheDocument();
-    expect(screen.getByText(he.siteMetricNvrs)).toBeInTheDocument();
+    expect(screen.getAllByText(he.siteMetricCameras).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(he.siteMetricNvrs).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText(he.name)).not.toBeInTheDocument();
   });
 

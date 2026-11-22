@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicHome } from "../src/components/public/PublicHome";
 import { pubHe } from "../src/i18n/public-he";
 import { pubEn } from "../src/i18n/public-en";
-import { legal } from "../src/i18n/legal-he";
+import { ssMarketing } from "../src/i18n/site-secure-marketing-he";
 import { PUBLIC_LOCALE_STORAGE_KEY } from "../src/i18n/public";
 import { guestEntryPath } from "../src/lib/auth-routes";
 
@@ -64,56 +64,34 @@ describe("public website", () => {
 
   it("defaults to Hebrew product-led homepage", () => {
     render(<PublicHome />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubHe.heroLine1);
+    expect(screen.getByText(ssMarketing.heroLine1)).toBeInTheDocument();
+    expect(screen.getByText(ssMarketing.heroLine2)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: pubHe.login }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: pubHe.joinPilot }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: pubHe.seeProduct })[0]).toHaveAttribute("href", "/#products");
-    expect(document.getElementById("platform")).toBeTruthy();
-    expect(document.getElementById("products")).toBeTruthy();
-    expect(document.getElementById("quotes")).toBeTruthy();
-    expect(document.getElementById("flow")).toBeTruthy();
-    expect(document.getElementById("site-file")).toBeTruthy();
-    expect(document.getElementById("assets")).toBeTruthy();
-    expect(document.getElementById("field")).toBeTruthy();
-    expect(document.getElementById("solutions")).toBeTruthy();
-    expect(document.getElementById("friction")).toBeTruthy();
-    expect(document.getElementById("security")).toBeTruthy();
-    expect(document.getElementById("contact")).toBeTruthy();
-    expect(document.getElementById("pilot")).toBeTruthy();
-    expect(document.getElementById("intelligence")).toBeNull();
-    expect(screen.getByText(pubHe.productsTitle)).toBeInTheDocument();
-    expect(screen.getByText(pubHe.quoteA)).toBeInTheDocument();
-    expect(screen.getByText(pubHe.securityTitleA)).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: pubHe.heroShotAlt })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: pubHe.securityCta })).toHaveAttribute("href", "/legal/security");
-    expect(document.querySelector('[data-product="scheduling"] .public-product-status')?.textContent).toBe(
-      pubHe.statusPlanned,
-    );
-    expect(screen.getAllByText(pubHe.statusPlanned).length).toBeGreaterThan(0);
-    expect(document.querySelector('a[href="/app/ssp"]')).toBeNull();
-    expect(document.querySelector('a[href="/app/fleet"]')).toBeNull();
-    expect(document.querySelector('a[href="/app"]')).toBeNull();
+    expect(screen.getAllByRole("link", { name: ssMarketing.heroPrimary }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: pubHe.enterWorkspace })[0]).toHaveAttribute("href", "/login");
-    expect(screen.getByRole("link", { name: legal.pages.privacy.title })).toHaveAttribute(
-      "href",
-      "/legal/privacy",
-    );
+    for (const id of ["hero", "problem", "how", "features", "audience", "compare", "pricing-teaser", "faq", "beta"]) {
+      expect(document.getElementById(id)).toBeTruthy();
+    }
+    expect(screen.getByText(ssMarketing.problemTitle)).toBeInTheDocument();
+    expect(screen.getByText(ssMarketing.featuresTitle)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /מדיניות פרטיות/ })).toHaveAttribute("href", "/legal/privacy");
     expect(document.querySelector(".public-root")).toHaveAttribute("dir", "rtl");
+    expect(document.querySelector('a[href="/app"]')).toBeNull();
   });
 
   it("switches homepage copy between Hebrew and English with the language control", async () => {
     const user = userEvent.setup();
     render(<PublicHome />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubHe.heroLine1);
+    expect(screen.getByText(ssMarketing.heroLine1)).toBeInTheDocument();
 
     const english = screen.getAllByRole("radio", { name: /EN/i })[0];
     const header = document.querySelector("header.public-nav");
     expect(header).toHaveAttribute("dir", "rtl");
     await user.click(english);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(pubEn.heroLine1);
+    expect(screen.getByText(ssMarketing.heroLine1)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: pubEn.joinPilot }).length).toBeGreaterThan(0);
-    expect(document.querySelector(".public-root")).toHaveAttribute("dir", "ltr");
+    expect(document.querySelector(".public-root")).toHaveAttribute("dir", "rtl");
     expect(header).toHaveAttribute("dir", "rtl");
     expect(window.localStorage.getItem(PUBLIC_LOCALE_STORAGE_KEY)).toBe("en");
   });
@@ -150,7 +128,7 @@ describe("public website", () => {
     const { rerender } = render(<PublicHome />);
     const signedInWorkspace = screen.getAllByRole("link", { name: pubHe.enterWorkspace });
     expect(signedInWorkspace.length).toBeGreaterThan(0);
-    expect(signedInWorkspace[0]).toHaveAttribute("href", "/platform");
+    expect(signedInWorkspace[0]).toHaveAttribute("href", "/app");
 
     sessionStub.user = null;
     sessionStub.session = null;

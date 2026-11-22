@@ -19,6 +19,7 @@ from tests.test_ssp_c5_e2e_connection import (
     _create_local_user,
     _enable_ssp,
     _password_grant,
+    _set_workspace_plan_c5,
     _snippet,
 )
 
@@ -69,6 +70,7 @@ def test_ssp_unit_login_live_local():
     ws = api.post("/api/v1/workspaces", headers=_auth(owner_tok), json={"name": f"SSP UNIT {marker}"})
     assert ws.status_code in {200, 201}, _snippet(ws)
     ws_id = str(ws.json()["id"])
+    _set_workspace_plan_c5(settings, ws_id)
     _enable_ssp(settings, ws_id)
 
     boot = api.post(

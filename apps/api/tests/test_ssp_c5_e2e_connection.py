@@ -102,6 +102,23 @@ def _password_grant(settings, email: str, password: str) -> str:
     return str(token)
 
 
+def _set_workspace_plan_c5(settings, workspace_id: str, plan_key: str = "business") -> None:
+    """C5 throwaway workspaces: lift off Free member cap for SSP provisioning flows."""
+    assert_local_supabase_url(settings.supabase_url)
+    with httpx.Client(timeout=30) as client:
+        res = client.patch(
+            f"{settings.supabase_url.rstrip('/')}/rest/v1/subscriptions",
+            headers={
+                **_svc_headers(settings),
+                "Prefer": "return=minimal",
+            },
+            params={"workspace_id": f"eq.{workspace_id}"},
+            json={"plan_key": plan_key},
+        )
+    if res.status_code not in {200, 204}:
+        raise AssertionError(f"local subscription plan patch failed status={res.status_code}")
+
+
 def _enable_ssp(settings, workspace_id: str) -> None:
     """Throwaway-workspace override only. Does not change Solo plan defaults."""
     assert_local_supabase_url(settings.supabase_url)
@@ -202,6 +219,7 @@ def test_ssp_eight_live_flows_against_local_supabase():
             f"setup workspace A failed source=API status={ws_a.status_code} {_snippet(ws_a)}"
         )
     ws_a_id = str(ws_a.json()["id"])
+    _set_workspace_plan_c5(settings, ws_a_id)
 
     ws_b = api.post(
         "/api/v1/workspaces",
@@ -213,6 +231,7 @@ def test_ssp_eight_live_flows_against_local_supabase():
             f"setup workspace B failed source=API status={ws_b.status_code} {_snippet(ws_b)}"
         )
     ws_b_id = str(ws_b.json()["id"])
+    _set_workspace_plan_c5(settings, ws_b_id)
 
     _enable_ssp(settings, ws_a_id)
     _enable_ssp(settings, ws_b_id)

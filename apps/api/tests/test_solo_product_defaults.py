@@ -271,7 +271,7 @@ def test_create_workspace_success_dual_writes_fleet_and_ssp(monkeypatch):
     )
 
     def _seed(svc, workspace_id, plan_key):
-        assert plan_key == "solo"
+        assert plan_key == "free"
         assert workspace_id == ws_id
         for key in ("fleet", "ssp"):
             upserts.append((key, False))

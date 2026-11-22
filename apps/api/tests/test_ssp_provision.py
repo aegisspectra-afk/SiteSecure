@@ -168,9 +168,9 @@ def test_provision_solo_field_seat_limit_names_quota():
         )
     assert exc.value.status_code == 409
     assert exc.value.code == "PLAN_LIMIT_REACHED"
-    assert exc.value.details["limit_key"] == "seats_field"
-    assert exc.value.details["limit"] == 3
-    assert "שטח" in exc.value.message
+    assert exc.value.details["limit_key"] == "max_members"
+    assert exc.value.details["limit"] == 1
+    assert "צוות" in exc.value.message
     assert f"{exc.value.details['current']}/{exc.value.details['limit']}" in exc.value.message
 
 

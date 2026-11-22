@@ -30,7 +30,12 @@ def _ok(data, status=200) -> httpx.Response:
     return httpx.Response(status, json=data)
 
 
-def _ctx(role: str, workspace_id: str = str(WS), assigned: tuple[str, ...] = ()) -> AuthzContext:
+def _ctx(
+    role: str,
+    workspace_id: str = str(WS),
+    assigned: tuple[str, ...] = (),
+    plan: str = "business",
+) -> AuthzContext:
     from app.authz.catalog import load_catalog
 
     catalog = load_catalog()
@@ -40,8 +45,8 @@ def _ctx(role: str, workspace_id: str = str(WS), assigned: tuple[str, ...] = ())
         role_key=role,
         workspace_status="active",
         subscription_status="active",
-        plan_key="solo",
-        features=catalog["_plan_features"]["solo"],
+        plan_key=plan,
+        features=catalog["_plan_features"][plan],
         assigned_resource_ids=frozenset(assigned),
     )
 
@@ -255,7 +260,7 @@ def test_quotes_export_forbidden_for_viewer(monkeypatch):
 
 
 def test_quotes_export_hides_cost_without_view_cost(monkeypatch):
-    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales"))
+    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales", plan="free"))
     res = _export_quotes(WS, FakeQuotes(), {"sub": ACTOR})
     text = _csv_text(res)
     assert "מספר" in text
@@ -359,7 +364,7 @@ def test_customers_export_forbidden_for_technician(monkeypatch):
 
 def test_quotes_export_writes_audit(monkeypatch):
     client = FakeQuotes()
-    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales"))
+    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales", plan="free"))
     res = _export_quotes(WS, client, {"sub": ACTOR})
     assert res.headers["x-export-truncated"] == "false"
     assert res.headers["x-export-row-count"] == "1"
@@ -392,7 +397,7 @@ def test_quotes_export_truncates_at_max(monkeypatch):
         for i in (1, 2)
     ]
     client = FakeQuotes(extra)
-    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales"))
+    monkeypatch.setattr(quotes_mod, "_ctx", lambda *a, **k: _ctx("sales", plan="free"))
     monkeypatch.setattr(quotes_mod, "EXPORT_MAX", 1)
     monkeypatch.setattr(quotes_mod, "EXPORT_PAGE", 1)
     res = _export_quotes(WS, client, {"sub": ACTOR})

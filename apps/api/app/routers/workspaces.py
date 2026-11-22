@@ -39,6 +39,17 @@ class WorkspaceCreate(BaseModel):
     business_type: BusinessType | None = None
 
 
+def _self_serve_rpc_plan_key(svc: ServiceClient, plan_key: str) -> str:
+    """§8 self-serve default is free; unmigrated databases may still list solo only."""
+    if plan_key not in {"free", "solo"}:
+        return plan_key
+    for candidate in ("free", "solo"):
+        res = svc.get("plans", params={"key": f"eq.{candidate}", "select": "key"})
+        if res.status_code == 200 and res.json():
+            return candidate
+    return plan_key
+
+
 class WorkspaceOut(BaseModel):
     id: str
     name: str
@@ -180,9 +191,10 @@ def create_workspace(
 
     assert_solo_default_off_ready(svc, plan_key)
 
+    rpc_plan_key = _self_serve_rpc_plan_key(svc, plan_key)
     res = client.rpc(
         "create_workspace",
-        {"p_name": body.name.strip(), "p_plan_key": plan_key},
+        {"p_name": body.name.strip(), "p_plan_key": rpc_plan_key},
     )
     if res.status_code != 200:
         detail = res.text or ""

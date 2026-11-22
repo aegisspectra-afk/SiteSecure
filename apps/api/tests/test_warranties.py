@@ -135,8 +135,8 @@ def _ctx(role: str = "manager") -> AuthzContext:
         role_key=role,
         workspace_status="active",
         subscription_status="active",
-        plan_key="solo",
-        features=catalog["_plan_features"]["solo"],
+        plan_key="business",
+        features=catalog["_plan_features"]["business"],
     )
 
 

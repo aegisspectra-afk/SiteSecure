@@ -102,7 +102,9 @@ def test_public_payload_includes_sections_branding_signature():
         sections=[{"id": "s1", "name": "מערכת מצלמות", "sort_order": 0}],
         branding={"logo_url": "https://cdn.example/logo.png", "name": "אגיס", "phone": "03-111"},
     )
-    assert payload["sections"] == [{"id": "s1", "name": "מערכת מצלמות", "sort_order": 0}]
+    assert payload["sections"] == [
+        {"id": "s1", "name": "מערכת מצלמות", "sort_order": 0, "alternative_id": None}
+    ]
     assert payload["company"]["logo_url"] == "https://cdn.example/logo.png"
     assert payload["company"]["brand_name"] == "אגיס"
     assert payload["company"]["phone"] == "03-111"

@@ -16,11 +16,13 @@ from app.product_entitlements import (
 )
 
 
-def test_solo_catalog_lists_fleet_and_ssp():
+def test_free_catalog_excludes_fleet_ssp_solo_alias_matches():
+    free = plan_eligible_features_catalog("free")
     solo = plan_eligible_features_catalog("solo")
-    assert "fleet" in solo
-    assert "ssp" in solo
-    assert "workforce" in solo
+    assert free == solo
+    assert "fleet" not in free
+    assert "ssp" not in free
+    assert "workforce" not in free
     assert SOLO_DEFAULT_DISABLED <= {"fleet", "ssp", "workforce"}
 
 
@@ -119,9 +121,9 @@ def test_disable_removes_feature_from_authorize():
 
 
 def test_catalog_plan_list_does_not_grant_without_plan_eligible():
-    """Catalog solo includes fleet; omitting DB plan_eligible must not enable."""
-    assert "fleet" in plan_eligible_features_catalog("solo")
-    err = validate_override_request(feature_key="fleet", enabled=True, plan_key="solo")
+    """Catalog free omits fleet; omitting DB plan_eligible must not enable."""
+    assert "fleet" not in plan_eligible_features_catalog("free")
+    err = validate_override_request(feature_key="fleet", enabled=True, plan_key="free")
     assert err == "FEATURE_NOT_IN_PLAN"
 
 

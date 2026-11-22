@@ -22,6 +22,7 @@ from tests.test_ssp_c5_e2e_connection import (
     _fail,
     _ok,
     _password_grant,
+    _set_workspace_plan_c5,
     _snippet,
 )
 
@@ -84,11 +85,13 @@ def test_ssp_acceptance_lifecycle_against_local_supabase():
     if ws_a.status_code not in {200, 201}:
         pytest.fail(f"setup workspace A failed status={ws_a.status_code} {_snippet(ws_a)}")
     ws_a_id = str(ws_a.json()["id"])
+    _set_workspace_plan_c5(settings, ws_a_id)
 
     ws_b = api.post("/api/v1/workspaces", headers=_auth(other_tok), json={"name": f"SSP ACC B {marker}"})
     if ws_b.status_code not in {200, 201}:
         pytest.fail(f"setup workspace B failed status={ws_b.status_code} {_snippet(ws_b)}")
     ws_b_id = str(ws_b.json()["id"])
+    _set_workspace_plan_c5(settings, ws_b_id)
 
     _enable_ssp(settings, ws_a_id)
     _enable_ssp(settings, ws_b_id)

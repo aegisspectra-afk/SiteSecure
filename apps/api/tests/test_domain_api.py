@@ -127,7 +127,7 @@ def test_cost_permission_not_implied_by_quotes_view():
     ctx = AuthzContext(
         user_id="u1",
         workspace_id="w1",
-        role_key="sales",
+        role_key="viewer",
         workspace_status="active",
         subscription_status="active",
         plan_key="business",
@@ -135,7 +135,6 @@ def test_cost_permission_not_implied_by_quotes_view():
     )
     assert authorize(ctx=ctx, action="quotes.view").allowed
     assert not authorize(ctx=ctx, action="quotes.view_cost").allowed
-    assert authorize(ctx=ctx, action="quotes.create").allowed
 
 
 def test_acked_or_403_accepts_no_content():

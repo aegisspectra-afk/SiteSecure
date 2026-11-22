@@ -7,3 +7,5 @@ Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /p/
+
+Sitemap: https://site-secure.com/sitemap.xml

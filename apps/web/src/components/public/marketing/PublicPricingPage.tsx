@@ -9,8 +9,13 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ssPricingFaq } from "../../../i18n/site-secure-marketing-he";
-import { usePublicSeo } from "../../../lib/public-seo";
+import { siteSecurePricingJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
+
+const pricingSeoTitle = "מחירון SITE SECURE";
+const pricingSeoDescription = "חבילות Free, Pro, Business ו-Enterprise — מחירים לפני מע״מ, מקור אמת אחד.";
+const pricingOrigin =
+  typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
 export function PublicPricingPage() {
   const billing = billingPublic();
@@ -18,9 +23,10 @@ export function PublicPricingPage() {
   const [annual, setAnnual] = useState(false);
 
   usePublicSeo({
-    title: "מחירון SITE SECURE",
-    description: "חבילות Free, Pro, Business ו-Enterprise — מחירים לפני מע״מ, מקור אמת אחד.",
-    canonical: `${typeof window !== "undefined" ? window.location.origin : ""}/pricing`,
+    title: pricingSeoTitle,
+    description: pricingSeoDescription,
+    canonical: `${pricingOrigin}/pricing`,
+    jsonLd: siteSecurePricingJsonLd(pricingOrigin, pricingSeoTitle, pricingSeoDescription),
   });
 
   const rows = useMemo(() => PRICING_CAPABILITY_ROWS, []);

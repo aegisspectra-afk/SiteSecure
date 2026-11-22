@@ -30,6 +30,25 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
+function resolvePublicOrigin(canonical?: string): string {
+  if (canonical) {
+    try {
+      return new URL(canonical).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  if (typeof window !== "undefined") return window.location.origin;
+  return "https://site-secure.com";
+}
+
+function absolutePublicUrl(pathOrUrl: string, origin: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  const base = origin.replace(/\/$/, "");
+  const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
+  return `${base}${path}`;
+}
+
 export function usePublicSeo({
   title,
   description,
@@ -39,6 +58,10 @@ export function usePublicSeo({
   jsonLd,
 }: SeoInput) {
   useEffect(() => {
+    const origin = resolvePublicOrigin(canonical);
+    const ogImageAbs = ogImage ? absolutePublicUrl(ogImage, origin) : undefined;
+    const ogUrl = canonical ?? (typeof window !== "undefined" ? window.location.href.split("#")[0] : origin);
+
     const prevTitle = document.title;
     document.title = title;
     upsertMeta("name", "description", description);
@@ -47,7 +70,12 @@ export function usePublicSeo({
     upsertMeta("property", "og:description", description);
     upsertMeta("property", "og:type", "website");
     upsertMeta("property", "og:locale", "he_IL");
-    if (ogImage) upsertMeta("property", "og:image", ogImage);
+    upsertMeta("property", "og:url", ogUrl);
+    if (ogImageAbs) upsertMeta("property", "og:image", ogImageAbs);
+    upsertMeta("name", "twitter:card", "summary_large_image");
+    upsertMeta("name", "twitter:title", title);
+    upsertMeta("name", "twitter:description", description);
+    if (ogImageAbs) upsertMeta("name", "twitter:image", ogImageAbs);
     if (canonical) upsertLink("canonical", canonical);
 
     const id = "ss-public-jsonld";
@@ -72,6 +100,13 @@ export function siteSecureOrgJsonLd(origin: string) {
   return [
     {
       "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "SITE SECURE",
+      url: origin,
+      inLanguage: "he-IL",
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "Organization",
       name: "Aegis Spectra",
       url: origin,
@@ -86,4 +121,16 @@ export function siteSecureOrgJsonLd(origin: string) {
       offers: { "@type": "Offer", price: "0", priceCurrency: "ILS" },
     },
   ];
+}
+
+export function siteSecurePricingJsonLd(origin: string, title: string, description: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: title,
+    description,
+    url: `${origin.replace(/\/$/, "")}/pricing`,
+    inLanguage: "he-IL",
+    isPartOf: { "@type": "WebSite", name: "SITE SECURE", url: origin },
+  };
 }

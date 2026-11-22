@@ -14,6 +14,13 @@
       content="מערכת בעברית לחברות התקנה של מצלמות ומערכות אבטחה. הצעות מחיר, שטח, תיק אתר ותעודת מסירה — במקום אקסל ווואטסאפ."
     />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      href="/landing-v2/02-quote-review-desktop.webp"
+      fetchpriority="high"
+    />
     <style>
       html {
         background-color: #f1f5f9;
@@ -27,6 +34,26 @@
       html.ss-brand-dark body {
         background-color: #070b12;
         color-scheme: dark;
+      }
+      .ss-marketing-paint {
+        margin: 0;
+        padding: 1rem;
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+      .ss-marketing-paint-title {
+        margin: 0 0 0.75rem;
+        font-family: Heebo, system-ui, sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: #64748b;
+      }
+      .ss-marketing-paint-shot {
+        display: block;
+        width: min(100%, 378px);
+        height: auto;
+        border-radius: 12px;
+        box-shadow: 0 18px 44px rgb(15 23 42 / 12%);
       }
     </style>
     <script>
@@ -69,7 +96,24 @@
     </script>
   </head>
   <body>
+    <div id="ss-marketing-paint" hidden></div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var path = String(location.pathname || "/").split("?")[0].split("#")[0];
+        if (path.length > 1 && path.charAt(path.length - 1) === "/") path = path.slice(0, -1);
+        if (path !== "/") return;
+        var paint = document.getElementById("ss-marketing-paint");
+        if (!paint) return;
+        paint.hidden = false;
+        paint.setAttribute("dir", "rtl");
+        paint.setAttribute("lang", "he");
+        paint.className = "ss-marketing-paint";
+        paint.innerHTML =
+          '<p class="ss-marketing-paint-title">SITE SECURE</p>' +
+          '<img src="/landing-v2/02-quote-review-desktop.webp" alt="" width="378" height="236" decoding="async" fetchpriority="high" class="ss-marketing-paint-shot" />';
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 import { Button, Input, Textarea } from "@site-secure/ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { billingPublic, catalogPlansOrdered, formatIls } from "@site-secure/authz";
@@ -20,6 +20,10 @@ function Section({ id, children, className }: { id?: string; children: ReactNode
 }
 
 export function SiteSecureLanding() {
+  useEffect(() => {
+    document.getElementById("ss-marketing-paint")?.remove();
+  }, []);
+
   const [beta, setBeta] = useState({ full_name: "", phone: "", business_name: "", technician_count: "", trade_focus: "" });
   const [betaDone, setBetaDone] = useState(false);
   const [betaErr, setBetaErr] = useState<string | null>(null);
@@ -70,6 +74,7 @@ export function SiteSecureLanding() {
               alt="צילום מסך של SITE SECURE — בונה הצעות מחיר"
               label="SITE SECURE · הצעות מחיר"
               variant="desktop"
+              priority
             />
           </div>
         </section>

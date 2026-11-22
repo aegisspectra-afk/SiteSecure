@@ -16,6 +16,25 @@ const reactDomPkg = path.resolve(__dirname, "../../node_modules/react-dom");
  * OneDrive / non-ASCII workspace paths can make Vite serve the same file as both
  * `/src/...` and `/@fs/C:/...`, which duplicates React context modules (SessionProvider).
  */
+/** Preload Hebrew marketing font from built asset hashes (homepage LCP). */
+function marketingFontPreload(): Plugin {
+  return {
+    name: "marketing-font-preload",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html, ctx) {
+        const bundle = ctx.bundle ?? {};
+        const heebo = Object.keys(bundle).find((name) => name.includes("heebo-hebrew") && name.endsWith(".woff2"));
+        if (!heebo) return html;
+        const href = heebo.startsWith("assets/") ? `/${heebo}` : `/assets/${heebo}`;
+        const tag = `<link rel="preload" href="${href}" as="font" type="font/woff2" crossorigin />`;
+        return html.replace("</head>", `    ${tag}\n  </head>`);
+      },
+    },
+  };
+}
+
 function singleInstanceLocalModules(): Plugin {
   return {
     name: "single-instance-local-modules",
@@ -60,7 +79,30 @@ export default defineConfig(({ mode }) => {
     define: hosted
       ? { "import.meta.env.VITE_API_URL": JSON.stringify(env.VITE_API_URL || "") }
       : undefined,
-    plugins: [singleInstanceLocalModules(), tanstackRouter({ quoteStyle: "double" }), react(), tailwindcss()],
+    plugins: [
+      singleInstanceLocalModules(),
+      marketingFontPreload(),
+      tanstackRouter({ quoteStyle: "double", autoCodeSplitting: true }),
+      react(),
+      tailwindcss(),
+    ],
+    build: {
+      modulePreload: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (/node_modules[\\/]react-dom[\\/]/.test(id)) return "vendor-react";
+            if (/node_modules[\\/]react[\\/]/.test(id)) return "vendor-react";
+            if (id.includes("scheduler")) return "vendor-react";
+            if (id.includes("pdfjs-dist")) return "vendor-pdf";
+            if (id.includes("lottie-web")) return "vendor-lottie";
+            if (id.includes("@supabase")) return "vendor-supabase";
+            return undefined;
+          },
+        },
+      },
+    },
     resolve: {
       // Keep junction/subst paths (C:\ssv1) so Windows `&` in the real OneDrive path
       // cannot split Vite file URLs and serve raw TSX to the browser.
@@ -73,8 +115,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      // Workspace TS package grows new methods; prebundling it freezes a stale client.
-      exclude: ["@site-secure/api-client"],
+      // Workspace TS packages grow new exports; prebundling freezes a stale client
+      // (e.g. missing billingPublic → SiteSecureLanding crash).
+      exclude: ["@site-secure/api-client", "@site-secure/authz"],
     },
     server: {
       port: 5173,

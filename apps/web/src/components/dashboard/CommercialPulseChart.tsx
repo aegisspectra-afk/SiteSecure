@@ -1,7 +1,8 @@
 import type { BusinessChart } from "@site-secure/api-client";
 import type { ApexOptions } from "apexcharts";
-import { useMemo, useState } from "react";
-import Chart from "react-apexcharts";
+import { lazy, Suspense, useMemo, useState } from "react";
+
+const ApexChart = lazy(() => import("react-apexcharts"));
 import { he } from "../../i18n/he";
 import { meaningfulChangePercent } from "../../lib/attention-queue";
 import { useTheme } from "../../lib/use-theme";
@@ -153,7 +154,9 @@ export function CommercialPulseChart({ chart }: { chart: BusinessChart }) {
         </div>
       </div>
       <div className="ops-commercial-apex" role="img" aria-label={he.businessChartAria(sliced.labels, sliced.revenue)}>
-        <Chart options={options} series={series} type="area" height={168} width="100%" />
+        <Suspense fallback={null}>
+          <ApexChart options={options} series={series} type="area" height={168} width="100%" />
+        </Suspense>
       </div>
       <div className="ops-commercial-chart-footer">
         <a href="/app/analytics" className="ops-section-link">

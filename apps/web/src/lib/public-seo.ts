@@ -54,7 +54,7 @@ export function usePublicSeo({
   description,
   robots = "index, follow",
   canonical,
-  ogImage = "/landing-v2/02-quote-review-desktop.jpg",
+  ogImage = "/landing-v2/02-quote-review-desktop.webp",
   jsonLd,
 }: SeoInput) {
   useEffect(() => {

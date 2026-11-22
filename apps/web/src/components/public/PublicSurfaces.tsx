@@ -15,6 +15,10 @@ const PRODUCT_SHOTS: Partial<Record<PublicProductId, string>> = {
   site_secure: "/landing-v2/01-quote-builder-desktop.jpg",
 };
 
+function landingWebp(src: string): string | null {
+  return src.endsWith(".jpg") ? `${src.slice(0, -4)}.webp` : null;
+}
+
 /** Marketing product frame — real UI snapshot, not a mocked scene. */
 export function ProductShot({
   src,
@@ -31,6 +35,16 @@ export function ProductShot({
   priority?: boolean;
   className?: string;
 }) {
+  const webp = landingWebp(src);
+  const imgProps = {
+    alt,
+    className: "public-shot-img",
+    width: variant === "mobile" ? 390 : 1440,
+    height: variant === "mobile" ? 844 : 900,
+    loading: priority ? ("eager" as const) : ("lazy" as const),
+    decoding: "async" as const,
+    fetchPriority: priority ? ("high" as const) : ("auto" as const),
+  };
   return (
     <figure className={cn("public-shot", `is-${variant}`, className)}>
       {label ? (
@@ -39,16 +53,14 @@ export function ProductShot({
         </figcaption>
       ) : null}
       <div className="public-shot-frame">
-        <img
-          src={src}
-          alt={alt}
-          className="public-shot-img"
-          width={variant === "mobile" ? 390 : 1440}
-          height={variant === "mobile" ? 844 : 900}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          fetchPriority={priority ? "high" : "auto"}
-        />
+        {webp ? (
+          <picture>
+            <source srcSet={webp} type="image/webp" />
+            <img src={src} {...imgProps} />
+          </picture>
+        ) : (
+          <img src={src} {...imgProps} />
+        )}
       </div>
     </figure>
   );

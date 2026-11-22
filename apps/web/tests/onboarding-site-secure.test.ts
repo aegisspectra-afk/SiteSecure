@@ -6,8 +6,8 @@ import { needsPlatformSetup } from "../src/lib/platform-setup";
 import { he } from "../src/i18n/he";
 
 describe("Site Secure public onboarding routing", () => {
-  it("sends users with a workspace to Aegis Platform Home, not platform-path", () => {
-    expect(afterAuthPath(true)).toBe("/platform");
+  it("sends users with a workspace into Site Secure, not platform-path", () => {
+    expect(afterAuthPath(true)).toBe("/app");
     expect(afterAuthPath(false)).toBe("/onboarding");
   });
 
@@ -16,7 +16,7 @@ describe("Site Secure public onboarding routing", () => {
   });
 
   it("sends a single-user owner into Site Secure only after the 5-step setup", () => {
-    expect(onboardingEnterPath()).toBe("/app/dashboard");
+    expect(onboardingEnterPath()).toBe("/app");
     expect(onboardingEnterPath()).not.toBe("/platform");
     // S5 decision: payment terms are a required step, right after business details.
     expect(SOLO_ONBOARDING_STEPS.map((step) => step.id)).toEqual([

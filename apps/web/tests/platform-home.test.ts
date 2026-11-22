@@ -4,8 +4,8 @@ import { homeVariant } from "../src/lib/home";
 import { he } from "../src/i18n/he";
 
 describe("Aegis Platform Home routing", () => {
-  it("lands on /platform after auth when a workspace exists", () => {
-    expect(afterAuthPath(true)).toBe("/platform");
+  it("lands on /app after auth when a workspace exists", () => {
+    expect(afterAuthPath(true)).toBe("/app");
   });
 
   it("keeps onboarding when no workspace", () => {

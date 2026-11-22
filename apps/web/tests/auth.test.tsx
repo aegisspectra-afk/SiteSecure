@@ -55,8 +55,8 @@ describe("auth routing", () => {
     expect(guestEntryPath()).not.toBe("/register");
   });
 
-  it("sends authenticated users to platform home or onboarding", () => {
-    expect(afterAuthPath(true)).toBe("/platform");
+  it("sends authenticated users into Site Secure or onboarding", () => {
+    expect(afterAuthPath(true)).toBe("/app");
     expect(afterAuthPath(false)).toBe("/onboarding");
   });
 });

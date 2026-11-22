@@ -3,7 +3,7 @@ import { homeVariant } from "../src/lib/home";
 import { he } from "../src/i18n/he";
 
 const checks: Array<[unknown, unknown]> = [
-  [afterAuthPath(true), "/platform"],
+  [afterAuthPath(true), "/app"],
   [afterAuthPath(false), "/onboarding"],
   [afterAuthPath(true, "/invite/abcdefghijklmnop"), "/invite/abcdefghijklmnop"],
   [homeVariant("technician"), "today"],

@@ -20,7 +20,7 @@ describe("separate product login screens", () => {
 
   it("leaves public SITE SECURE registration and post-login routing unchanged", () => {
     expect(guestEntryPath()).toBe("/login");
-    expect(afterAuthPath(true)).toBe("/platform");
+    expect(afterAuthPath(true)).toBe("/app");
     expect(afterAuthPath(false)).toBe("/onboarding");
     expect(he.registerTitle).toBe("צרו את החשבון שלכם");
     expect(he.registerLead).toMatch(/SITE SECURE/);

@@ -86,16 +86,20 @@ def provision_project_and_job_after_quote_approve(svc: Any, quote: dict[str, Any
     if not workspace_id or not quote_id:
         return None
 
-    needs_reload = "customer_id" not in quote or "site_id" not in quote or quote.get("status") != "approved"
-    full = quote
-    if needs_reload:
-        full = _reload_quote(svc, workspace_id, quote_id) or quote
-    if not full.get("site_id") or not full.get("customer_id"):
-        return None
-    if str(full.get("status") or "") != "approved":
-        return None
-
     try:
+        needs_reload = (
+            "customer_id" not in quote
+            or "site_id" not in quote
+            or quote.get("status") != "approved"
+        )
+        full = quote
+        if needs_reload:
+            full = _reload_quote(svc, workspace_id, quote_id) or quote
+        if not full.get("site_id") or not full.get("customer_id"):
+            return None
+        if str(full.get("status") or "") != "approved":
+            return None
+
         existing_project = _existing_project(svc, workspace_id, quote_id)
         created_project = False
         project: dict[str, Any]

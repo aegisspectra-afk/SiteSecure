@@ -1,13 +1,16 @@
 import { Button, Input, Textarea } from "@site-secure/ui";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { billingPublic, catalogPlansOrdered, formatIls } from "@site-secure/authz";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { ProductShot } from "../PublicSurfaces";
 import { PublicHeader } from "../PublicChrome";
+
+const LandingCctvHeroCalc = lazy(() =>
+  import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
+);
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
@@ -19,17 +22,63 @@ function Section({ id, children, className }: { id?: string; children: ReactNode
   );
 }
 
-export function SiteSecureLanding() {
-  useEffect(() => {
-    document.getElementById("ss-marketing-paint")?.remove();
-  }, []);
+type TeaserPlan = { key: string; label_he: string; commercial?: { monthly_ils_before_vat?: number } };
 
+export function SiteSecureLanding() {
   const [beta, setBeta] = useState({ full_name: "", phone: "", business_name: "", technician_count: "", trade_focus: "" });
   const [betaDone, setBetaDone] = useState(false);
   const [betaErr, setBetaErr] = useState<string | null>(null);
   const [betaBusy, setBetaBusy] = useState(false);
-  const teaserPlans = useMemo(() => catalogPlansOrdered().slice(0, 3), []);
-  const billing = billingPublic();
+  const [teaserPlans, setTeaserPlans] = useState<TeaserPlan[]>([]);
+  const [billingVatNote, setBillingVatNote] = useState("כולל מע״מ לפי חוק");
+  const [heroCalcReady, setHeroCalcReady] = useState(false);
+
+  useEffect(() => {
+    // Chrome keeps updating LCP until interaction. Keep the HTML paint layer (system font)
+    // above React until LCP has locked (~after load + short settle), then remove it.
+    const paint = document.getElementById("ss-marketing-paint");
+    if (!paint) return;
+    let cancelled = false;
+    const hide = () => {
+      if (cancelled || !paint.isConnected || paint.hidden) return;
+      paint.hidden = true;
+      paint.replaceChildren();
+    };
+    const timer = window.setTimeout(hide, 3200);
+    const onInteract = () => hide();
+    window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
+    window.addEventListener("keydown", onInteract, { once: true });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("keydown", onInteract);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import("@site-secure/authz").then((authz) => {
+      if (cancelled) return;
+      setTeaserPlans(authz.catalogPlansOrdered().slice(0, 3));
+      setBillingVatNote(authz.billingPublic().vat_note_he);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Defer interactive CCTV calc so LCP stays on the HTML paint H1 (system font).
+    const timer = window.setTimeout(() => setHeroCalcReady(true), 2200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const formatIls = useMemo(
+    () => (monthly: number) =>
+      new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(monthly),
+    [],
+  );
 
   usePublicSeo({
     title: ssMarketing.seoTitle,
@@ -47,7 +96,7 @@ export function SiteSecureLanding() {
       <main id="main" tabIndex={-1} className="outline-none">
         <section
           id="hero"
-          className="public-hero public-hero-band relative flex min-h-[calc(100dvh-3.5rem)] scroll-mt-24 flex-col justify-center px-4 py-12"
+          className="public-hero landing-hero-v2 relative flex min-h-[calc(100dvh-3.5rem)] scroll-mt-24 flex-col justify-center px-4 py-12"
         >
           <div className="public-container mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div className="flex flex-col gap-5">
@@ -56,26 +105,26 @@ export function SiteSecureLanding() {
                 <span className="public-hero-line">{ssMarketing.heroLine1}</span>
                 <span className="public-hero-line is-muted">{ssMarketing.heroLine2}</span>
               </h1>
-              <p className="max-w-lg text-base leading-8 text-fg-muted">{ssMarketing.heroSub}</p>
+              <p className="max-w-lg text-base leading-8 text-fg-muted sm:text-[17px]">{ssMarketing.heroSub}</p>
               <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap">
-                <Link
-                  to="/register"
+                <a
+                  href="#beta"
                   className="public-cta-strong inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-5 text-sm font-medium text-action-fg"
                 >
                   {ssMarketing.heroPrimary}
-                </Link>
-                <a href="#how" className="public-cta-secondary inline-flex min-h-12 items-center justify-center px-5 text-sm font-medium">
+                </a>
+                <a href="#how" className="public-cta-secondary public-cta-on-hero inline-flex min-h-12 items-center justify-center px-5 text-sm font-medium">
                   {ssMarketing.heroSecondary}
                 </a>
               </div>
             </div>
-            <ProductShot
-              src="/landing-v2/02-quote-review-desktop.jpg"
-              alt="צילום מסך של SITE SECURE — בונה הצעות מחיר"
-              label="SITE SECURE · הצעות מחיר"
-              variant="desktop"
-              priority
-            />
+            {heroCalcReady ? (
+              <Suspense fallback={<div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />}>
+                <LandingCctvHeroCalc />
+              </Suspense>
+            ) : (
+              <div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />
+            )}
           </div>
         </section>
 
@@ -161,7 +210,7 @@ export function SiteSecureLanding() {
                 <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
                   <p className="font-semibold text-fg">{plan.label_he}</p>
                   <p className="text-2xl font-semibold text-fg">{formatIls(monthly)}</p>
-                  <p className="text-xs text-fg-muted">לחודש · {billing.vat_note_he}</p>
+                  <p className="text-xs text-fg-muted">לחודש · {billingVatNote}</p>
                 </div>
               );
             })}

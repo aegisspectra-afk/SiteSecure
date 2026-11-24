@@ -11,6 +11,9 @@ import { PublicHeader } from "../PublicChrome";
 const LandingCctvHeroCalc = lazy(() =>
   import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
 );
+const LandingBeforeAfter = lazy(() =>
+  import("./LandingBeforeAfter").then((m) => ({ default: m.LandingBeforeAfter })),
+);
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
@@ -128,14 +131,9 @@ export function SiteSecureLanding() {
           </div>
         </section>
 
-        <Section id="problem">
-          <h2 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{ssMarketing.problemTitle}</h2>
-          <ul className="mt-6 flex flex-col gap-3 text-base leading-8 text-fg-muted">
-            {ssMarketing.problemLines.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </Section>
+        <Suspense fallback={<section id="problem" className="public-scene min-h-[24rem]" aria-hidden />}>
+          <LandingBeforeAfter />
+        </Suspense>
 
         <div className="public-rule" aria-hidden />
 

@@ -13,6 +13,7 @@ import { LandingFeaturesBento } from "./LandingFeaturesBento";
 import { LandingFounder } from "./LandingFounder";
 import { LandingHowScrolly } from "./LandingHowScrolly";
 import { LandingMobileCta } from "./LandingMobileCta";
+import { LandingSpecStrip } from "./LandingSpecStrip";
 import { useLandingReveal } from "./useLandingReveal";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
@@ -107,6 +108,8 @@ export function SiteSecureLanding() {
             <LandingCctvHeroCalc />
           </div>
         </section>
+
+        <LandingSpecStrip />
 
         <LandingBeforeAfter />
 

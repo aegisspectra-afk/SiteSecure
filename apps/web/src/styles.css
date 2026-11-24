@@ -29356,6 +29356,34 @@ html.dark .ssp-site-tone.is-officer {
 
 
 /* ===== D1-V2 landing visual upgrade ===== */
+/* Type scale: 72 / 48 / 24 / 17 on desktop, clamped on mobile. */
+.landing-shell-with-mobile-cta,
+.public-root.landing-shell-with-mobile-cta {
+  --landing-fs-display: clamp(2.5rem, 5vw + 1.5rem, 4.5rem); /* → 72px */
+  --landing-fs-title: clamp(1.75rem, 2.5vw + 1rem, 3rem); /* → 48px */
+  --landing-fs-sub: clamp(1.125rem, 0.6vw + 1rem, 1.5rem); /* → 24px */
+  --landing-fs-body: clamp(1rem, 0.2vw + 0.95rem, 1.0625rem); /* → 17px */
+  font-family: var(--font-heebo, Heebo, sans-serif);
+  font-size: var(--landing-fs-body);
+}
+
+.landing-shell-with-mobile-cta h2,
+.landing-shell-with-mobile-cta .landing-type-title {
+  font-family: var(--font-heebo, Heebo, sans-serif);
+  font-size: var(--landing-fs-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.landing-shell-with-mobile-cta h3,
+.landing-shell-with-mobile-cta .landing-type-sub {
+  font-family: var(--font-heebo, Heebo, sans-serif);
+  font-size: var(--landing-fs-sub);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
 .landing-hero-v2 {
   position: relative;
   isolation: isolate;
@@ -29372,9 +29400,9 @@ html.dark .ssp-site-tone.is-officer {
 
 .landing-hero-v2 .public-hero-title {
   font-family: var(--font-heebo, Heebo, sans-serif);
-  font-weight: 800;
-  font-size: clamp(2.25rem, 6.5vw, 3.75rem);
-  letter-spacing: -0.03em;
+  font-weight: 850;
+  font-size: var(--landing-fs-display);
+  letter-spacing: -0.035em;
   line-height: 1.05;
 }
 

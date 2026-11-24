@@ -29384,18 +29384,25 @@ html.dark .ssp-site-tone.is-officer {
   line-height: 1.3;
 }
 
+.landing-shell-with-mobile-cta {
+  --landing-ink: #0a1628;
+  --landing-paper: #ffffff;
+  --landing-muted: #64748b;
+  --landing-accent: #0b6bcb;
+}
+
 .landing-hero-v2 {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background-color: #061428;
+  background-color: var(--landing-ink, #0a1628);
   background-image:
-    linear-gradient(rgb(120 170 220 / 7%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(120 170 220 / 7%) 1px, transparent 1px),
-    radial-gradient(ellipse 70% 60% at 85% 0%, rgb(20 90 180 / 28%), transparent 55%),
-    linear-gradient(180deg, #061428 0%, #0a1f38 55%, #0c2745 100%);
+    linear-gradient(rgb(120 170 220 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(120 170 220 / 6%) 1px, transparent 1px),
+    radial-gradient(ellipse 70% 60% at 85% 0%, rgb(11 107 203 / 22%), transparent 55%),
+    linear-gradient(180deg, #0a1628 0%, #0c1e36 55%, #102844 100%);
   background-size: 28px 28px, 28px 28px, auto, auto;
-  color: #f4f7fa;
+  color: var(--landing-paper, #ffffff);
 }
 
 .landing-hero-v2 .public-hero-title {
@@ -29461,7 +29468,7 @@ html.dark .ssp-site-tone.is-officer {
 .landing-cctv-calc input[type="range"] {
   width: 100%;
   min-height: 48px;
-  accent-color: #3b9eff;
+  accent-color: var(--landing-accent, #0b6bcb);
 }
 
 .landing-cctv-calc-res {
@@ -29491,8 +29498,8 @@ html.dark .ssp-site-tone.is-officer {
 }
 
 .landing-cctv-calc-chip.is-active {
-  background: #1a6fd0;
-  border-color: #3b9eff;
+  background: color-mix(in srgb, var(--landing-accent, #0b6bcb) 22%, transparent);
+  border-color: color-mix(in srgb, var(--landing-accent, #0b6bcb) 55%, transparent);
   color: #fff;
 }
 
@@ -29522,7 +29529,7 @@ html.dark .ssp-site-tone.is-officer {
 .landing-cctv-calc-metrics strong {
   font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--landing-accent, #3b9eff);
   font-variant-numeric: tabular-nums;
 }
 
@@ -29548,15 +29555,24 @@ html.dark .ssp-site-tone.is-officer {
   margin-top: 0.25rem;
   padding: 0 1.15rem;
   border-radius: var(--radius-control, 10px);
-  background: #2f8fff;
-  color: #061428;
+  background: var(--landing-accent, #0b6bcb);
+  color: var(--landing-paper, #ffffff);
   font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
 }
 
 .landing-cctv-calc-cta:hover {
-  background: #57a4ff;
+  filter: brightness(1.08);
+}
+
+.landing-cctv-calc-cta:active {
+  filter: brightness(0.95);
+}
+
+.landing-cctv-calc-cta:focus-visible {
+  outline: 2px solid var(--landing-accent, #0b6bcb);
+  outline-offset: 3px;
 }
 
 @media (max-width: 640px) {
@@ -30050,6 +30066,7 @@ html.dark .ssp-site-tone.is-officer {
 
 .landing-mini-cctv strong {
   font-weight: 700;
+  color: var(--landing-accent, #0b6bcb);
 }
 
 .landing-mini-alts,

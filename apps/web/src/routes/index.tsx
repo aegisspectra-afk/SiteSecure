@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AuthLaunchScreen } from "../components/auth";
-import { PublicHome } from "../components/public/PublicHome";
 import { hasAuthCallback } from "../lib/auth-redirect";
+
+const PublicHome = lazy(() =>
+  import("../components/public/PublicHome").then((m) => ({ default: m.PublicHome })),
+);
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -19,5 +22,9 @@ function HomePage() {
   }, [handoff]);
 
   if (handoff) return <AuthLaunchScreen phase="session" />;
-  return <PublicHome />;
+  return (
+    <Suspense fallback={null}>
+      <PublicHome />
+    </Suspense>
+  );
 }

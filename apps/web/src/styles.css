@@ -29495,8 +29495,15 @@ html.dark .ssp-site-tone.is-officer {
   line-height: 1.05;
 }
 
-/* While HTML paint owns LCP, keep React hero text out of the LCP candidate set. */
-.landing-hero-v2.is-paint-pending .public-hero-title {
+/* While HTML paint owns LCP, keep React chrome/copy out of the LCP candidate set. */
+.landing-hero-v2.is-paint-pending .public-hero-title,
+.landing-hero-v2.is-paint-pending .text-fg-muted,
+.landing-hero-v2.is-paint-pending a.public-cta-strong,
+.landing-hero-v2.is-paint-pending a.public-cta-secondary,
+.landing-shell-with-mobile-cta.is-paint-pending .public-nav,
+.landing-shell-with-mobile-cta.is-paint-pending .landing-spec-strip,
+.landing-shell-with-mobile-cta.is-paint-pending .landing-mobile-cta,
+.landing-shell-with-mobile-cta.is-paint-pending footer {
   opacity: 0;
 }
 

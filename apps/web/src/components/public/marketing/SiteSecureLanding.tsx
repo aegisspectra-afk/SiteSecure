@@ -1,26 +1,33 @@
 import { Button, Input } from "@site-secure/ui";
-import { billingPublic, catalogPlansOrdered } from "@site-secure/authz";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
-import { LandingBeforeAfter } from "./LandingBeforeAfter";
-import { LandingCctvHeroCalc } from "./LandingCctvHeroCalc";
-import { LandingFeaturesBento } from "./LandingFeaturesBento";
-import { LandingFounder } from "./LandingFounder";
-import { LandingHowScrolly } from "./LandingHowScrolly";
 import { LandingMobileCta } from "./LandingMobileCta";
 import { LandingSpecStrip } from "./LandingSpecStrip";
+import { LazyWhenVisible } from "./LazyWhenVisible";
 import { useLandingReveal } from "./useLandingReveal";
 
-const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
+const LandingCctvHeroCalc = lazy(() =>
+  import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
+);
+const LandingBeforeAfter = lazy(() =>
+  import("./LandingBeforeAfter").then((m) => ({ default: m.LandingBeforeAfter })),
+);
+const LandingHowScrolly = lazy(() =>
+  import("./LandingHowScrolly").then((m) => ({ default: m.LandingHowScrolly })),
+);
+const LandingFeaturesBento = lazy(() =>
+  import("./LandingFeaturesBento").then((m) => ({ default: m.LandingFeaturesBento })),
+);
+const LandingFounder = lazy(() =>
+  import("./LandingFounder").then((m) => ({ default: m.LandingFounder })),
+);
 
-/** C1 plans are static catalog data — available on first paint (no idle fetch). */
-const TEASER_PLANS = catalogPlansOrdered();
-const BILLING_VAT_NOTE = billingPublic().vat_note_he;
+const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
 function Section({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
   return (
@@ -30,33 +37,116 @@ function Section({ id, children, className }: { id?: string; children: ReactNode
   );
 }
 
+type TeaserPlan = {
+  key: string;
+  label_he: string;
+  commercial?: {
+    monthly_ils_before_vat?: number | null;
+    custom_pricing?: boolean;
+    highlights_he?: string[];
+  };
+};
+
+/** Text shell so how/features copy is in the React tree while the lazy chunk loads. */
+function HowShell() {
+  return (
+    <section id="how" className="public-scene landing-section scroll-mt-24 px-4">
+      <div className="public-container mx-auto max-w-6xl">
+        <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.howTitle}</h2>
+        <ol className="mt-8 flex flex-col gap-6">
+          {ssMarketing.howSteps.map((s, i) => (
+            <li key={s.title}>
+              <p className="public-mono text-xs text-fg-muted">{`0${i + 1}`}</p>
+              <h3 className="text-lg font-semibold text-fg">{s.title}</h3>
+              <p className="mt-2 text-base leading-7 text-fg-muted sm:text-[17px]">{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function FeaturesShell() {
+  return (
+    <section id="features" className="public-scene public-scene-surface landing-section scroll-mt-24 px-4">
+      <div className="public-container mx-auto max-w-6xl">
+        <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.featuresTitle}</h2>
+        <ul className="mt-8 flex flex-col gap-3 text-base leading-7 text-fg-muted sm:text-[17px]">
+          {ssMarketing.features.map((f) => (
+            <li key={f}>{f}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function SiteSecureLanding() {
   const [beta, setBeta] = useState({ full_name: "", phone: "", technician_count: "" });
   const [betaDone, setBetaDone] = useState(false);
   const [betaErr, setBetaErr] = useState<string | null>(null);
   const [betaBusy, setBetaBusy] = useState(false);
+  const [teaserPlans, setTeaserPlans] = useState<TeaserPlan[]>([]);
+  const [billingVatNote, setBillingVatNote] = useState("כולל מע״מ לפי חוק");
   const [paintPending, setPaintPending] = useState(true);
+  const [heroCalcReady, setHeroCalcReady] = useState(false);
 
   useEffect(() => {
     const paint = document.getElementById("ss-marketing-paint");
     let cancelled = false;
-    const hidePaint = () => {
+    let calcTimer = 0;
+    const enableCalc = () => {
+      if (!cancelled) setHeroCalcReady(true);
+    };
+    const hidePaintNode = () => {
       if (cancelled) return;
       if (paint?.isConnected && !paint.hidden) {
         paint.hidden = true;
         paint.replaceChildren();
       }
-      setPaintPending(false);
     };
-    const timer = window.setTimeout(hidePaint, 3200);
-    window.addEventListener("pointerdown", hidePaint, { once: true, passive: true });
-    window.addEventListener("keydown", hidePaint, { once: true });
-    if (!paint) setPaintPending(false);
+    const revealHero = () => {
+      if (cancelled) return;
+      setPaintPending(false);
+      enableCalc();
+    };
+    const onInteract = () => {
+      hidePaintNode();
+      revealHero();
+    };
+    // Remove the paint node after LCP typically locks, but keep React hero text at opacity 0
+    // a bit longer so the large Heebo title cannot replace the paint image as LCP.
+    const timer = window.setTimeout(() => {
+      hidePaintNode();
+      calcTimer = window.setTimeout(revealHero, 6000);
+    }, 3200);
+    window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
+    window.addEventListener("keydown", onInteract, { once: true });
+    if (!paint) {
+      revealHero();
+    }
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
-      window.removeEventListener("pointerdown", hidePaint);
-      window.removeEventListener("keydown", hidePaint);
+      window.clearTimeout(calcTimer);
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("keydown", onInteract);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const idle = window.setTimeout(() => {
+      void import("@site-secure/authz").then((authz) => {
+        if (cancelled) return;
+        setTeaserPlans(authz.catalogPlansOrdered());
+        setBillingVatNote(authz.billingPublic().vat_note_he);
+      });
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(idle);
     };
   }, []);
 
@@ -76,7 +166,11 @@ export function SiteSecureLanding() {
   useLandingReveal();
 
   return (
-    <div className="public-root public-shell landing-shell-with-mobile-cta min-h-dvh text-fg" dir="rtl" lang="he">
+    <div
+      className={`public-root public-shell landing-shell-with-mobile-cta min-h-dvh text-fg${paintPending ? " is-paint-pending" : ""}`}
+      dir="rtl"
+      lang="he"
+    >
       <a href="#main" className="skip-link">
         דלגו לתוכן
       </a>
@@ -105,21 +199,57 @@ export function SiteSecureLanding() {
                 </a>
               </div>
             </div>
-            <LandingCctvHeroCalc />
+            {heroCalcReady ? (
+              <Suspense fallback={<div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />}>
+                <LandingCctvHeroCalc />
+              </Suspense>
+            ) : (
+              <div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />
+            )}
           </div>
         </section>
 
-        <LandingSpecStrip />
+        {/* Spec numbers are large — mount after paint so they cannot steal LCP. */}
+        {!paintPending ? <LandingSpecStrip /> : <div className="landing-spec-strip" style={{ minHeight: "8rem" }} aria-hidden />}
 
-        <LandingBeforeAfter />
+        <LazyWhenVisible minHeight="24rem">
+          <Suspense
+            fallback={
+              <section id="problem" className="public-scene landing-section min-h-[24rem] px-4">
+                <div className="public-container mx-auto max-w-6xl">
+                  <h2 className="text-2xl font-semibold text-fg">{ssMarketing.problemTitle}</h2>
+                  <ul className="mt-6 flex flex-col gap-3 text-base leading-8 text-fg-muted">
+                    {ssMarketing.problemLines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            }
+          >
+            <LandingBeforeAfter />
+          </Suspense>
+        </LazyWhenVisible>
 
         <div className="public-rule" aria-hidden />
 
-        <LandingHowScrolly />
+        <LazyWhenVisible minHeight="28rem">
+          <Suspense fallback={<HowShell />}>
+            <LandingHowScrolly />
+          </Suspense>
+        </LazyWhenVisible>
 
-        <LandingFeaturesBento />
+        <LazyWhenVisible minHeight="22rem">
+          <Suspense fallback={<FeaturesShell />}>
+            <LandingFeaturesBento />
+          </Suspense>
+        </LazyWhenVisible>
 
-        <LandingFounder />
+        <LazyWhenVisible minHeight="16rem">
+          <Suspense fallback={null}>
+            <LandingFounder />
+          </Suspense>
+        </LazyWhenVisible>
 
         <Section id="audience">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
@@ -137,7 +267,7 @@ export function SiteSecureLanding() {
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {TEASER_PLANS.map((plan) => {
+            {teaserPlans.map((plan) => {
               const commercial = plan.commercial;
               const custom = Boolean(commercial?.custom_pricing) || commercial?.monthly_ils_before_vat == null;
               const monthly = commercial?.monthly_ils_before_vat ?? 0;
@@ -149,7 +279,7 @@ export function SiteSecureLanding() {
                   ) : null}
                   <p className="font-semibold text-fg">{plan.label_he}</p>
                   <p className="text-2xl font-semibold text-fg">{custom ? "בהתאמה" : formatIls(monthly)}</p>
-                  <p className="text-xs text-fg-muted">{custom ? "דברו איתנו" : `לחודש · ${BILLING_VAT_NOTE}`}</p>
+                  <p className="text-xs text-fg-muted">{custom ? "דברו איתנו" : `לחודש · ${billingVatNote}`}</p>
                   <ul className="mt-2 flex flex-col gap-1.5 text-sm text-fg">
                     {highlights.map((h) => (
                       <li key={h}>• {h}</li>

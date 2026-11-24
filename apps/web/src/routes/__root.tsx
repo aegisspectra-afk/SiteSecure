@@ -1,8 +1,11 @@
 import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { AppNotFound } from "../components/AppNotFound";
-import { CookieConsentBanner } from "../components/public/CookieConsentBanner";
 import { VercelAnalytics } from "../components/VercelAnalytics";
+
+const CookieConsentBanner = lazy(() =>
+  import("../components/public/CookieConsentBanner").then((m) => ({ default: m.CookieConsentBanner })),
+);
 import { ThemeRuntime } from "../lib/use-theme";
 
 const EntitlementRevokeBridge = lazy(() =>
@@ -40,7 +43,9 @@ function Root() {
         </Suspense>
       ) : null}
       <Outlet />
-      <CookieConsentBanner />
+      <Suspense fallback={null}>
+        <CookieConsentBanner />
+      </Suspense>
       <VercelAnalytics />
     </>
   );

@@ -1,10 +1,10 @@
 import { PublicLocaleProvider } from "./PublicLocaleProvider";
-import { SiteSecureLanding } from "./marketing/SiteSecureLanding";
+import { EnterpriseHome } from "./marketing/enterprise/EnterpriseHome";
 
 export function PublicHome() {
   return (
     <PublicLocaleProvider>
-      <SiteSecureLanding />
+      <EnterpriseHome />
     </PublicLocaleProvider>
   );
 }

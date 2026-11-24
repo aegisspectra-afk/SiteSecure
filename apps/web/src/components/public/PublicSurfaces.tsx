@@ -16,6 +16,7 @@ const PRODUCT_SHOTS: Partial<Record<PublicProductId, string>> = {
 };
 
 function landingWebp(src: string): string | null {
+  if (src.endsWith(".webp")) return null;
   return src.endsWith(".jpg") ? `${src.slice(0, -4)}.webp` : null;
 }
 
@@ -36,14 +37,16 @@ export function ProductShot({
   className?: string;
 }) {
   const webp = landingWebp(src);
+  const isMobileHero = priority && src.includes("-mobile.");
   const imgProps = {
     alt,
     className: "public-shot-img",
-    width: variant === "mobile" ? 390 : 1440,
-    height: variant === "mobile" ? 844 : 900,
+    width: variant === "mobile" ? 390 : isMobileHero ? 756 : 1440,
+    height: variant === "mobile" ? 844 : isMobileHero ? 536 : 900,
     loading: priority ? ("eager" as const) : ("lazy" as const),
-    decoding: "async" as const,
+    decoding: priority ? ("sync" as const) : ("async" as const),
     fetchPriority: priority ? ("high" as const) : ("auto" as const),
+    sizes: priority ? "(max-width: 768px) 378px, 720px" : undefined,
   };
   return (
     <figure className={cn("public-shot", `is-${variant}`, className)}>

@@ -1,62 +1,30 @@
-import {
-  Briefcase,
-  CalendarDays,
-  ClipboardList,
-  FileSignature,
-  FolderOpen,
-  Map,
-  Package,
-  PenLine,
-  ShieldCheck,
-  Users,
-  Wrench,
-  BarChart3,
-  Boxes,
-} from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState } from "react";
 import {
   annualMonthlyIls,
   billingPublic,
   catalogPlansOrdered,
+  comparisonCell,
   formatIls,
 } from "@site-secure/authz";
 import { submitBetaSignup } from "../../../../lib/public-marketing-api";
 import { trackMarketingEvent } from "../../../../lib/marketing-analytics";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../../lib/public-seo";
 import { LandingCctvHeroCalc } from "../LandingCctvHeroCalc";
+import { DemoDashboard } from "./DemoDashboard";
+import { InteractiveWorkflow } from "./InteractiveWorkflow";
+import { LiveAppPreview } from "./LiveAppPreview";
 import { MarketingShell } from "./MarketingShell";
-import {
-  HOME_FAQ,
-  MARKETING_MODULES,
-  PROBLEMS,
-  SOLUTIONS,
-  WORKFLOW_STEPS,
-  statusLabel,
-} from "./marketing-content";
+import { PlatformExplorer } from "./PlatformExplorer";
+import { HOME_FAQ, PROBLEMS, SOLUTIONS } from "./marketing-content";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
-const ICONS: Record<string, ComponentType<{ className?: string; "aria-hidden"?: boolean }>> = {
-  crm: Users,
-  customers: Briefcase,
-  projects: ClipboardList,
-  service: Wrench,
-  quotes: PenLine,
-  catalog: Package,
-  inventory: Boxes,
-  techs: Users,
-  calendar: CalendarDays,
-  maps: Map,
-  docs: FolderOpen,
-  sign: FileSignature,
-  reports: BarChart3,
-};
-
 export function EnterpriseHome() {
-  const [paintPending, setPaintPending] = useState(true);
   const [calcReady, setCalcReady] = useState(false);
   const [annual, setAnnual] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const plans = catalogPlansOrdered();
   const billing = billingPublic();
 
@@ -70,51 +38,24 @@ export function EnterpriseHome() {
 
   useEffect(() => {
     const paint = document.getElementById("ss-marketing-paint");
-    let cancelled = false;
-    let calcTimer = 0;
-    const hidePaintNode = () => {
-      if (cancelled) return;
-      if (paint?.isConnected && !paint.hidden) {
-        paint.hidden = true;
-        paint.replaceChildren();
-      }
-    };
-    const reveal = () => {
-      if (cancelled) return;
-      setPaintPending(false);
-      setCalcReady(true);
-    };
-    const onInteract = () => {
-      hidePaintNode();
-      reveal();
-    };
-    const timer = window.setTimeout(() => {
-      hidePaintNode();
-      calcTimer = window.setTimeout(reveal, 6000);
-    }, 3200);
-    window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
-    window.addEventListener("keydown", onInteract, { once: true });
-    if (!paint) reveal();
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-      window.clearTimeout(calcTimer);
-      window.removeEventListener("pointerdown", onInteract);
-      window.removeEventListener("keydown", onInteract);
-    };
+    if (paint?.isConnected && !paint.hidden) {
+      paint.hidden = true;
+      paint.replaceChildren();
+    }
+    const t = window.setTimeout(() => setCalcReady(true), 200);
+    return () => window.clearTimeout(t);
   }, []);
 
   return (
     <MarketingShell>
-      {/* A — Hero */}
-      <section className={`mkt-dark mkt-section${paintPending ? " is-paint-pending" : ""}`} id="hero">
+      {/* Hero — interactive dashboard, no photography */}
+      <section className="mkt-dark mkt-section" id="hero">
         <div className="mkt-container grid items-center gap-10 lg:grid-cols-2">
-          <div className={paintPending ? "opacity-0" : undefined}>
+          <div>
             <p className="mkt-kicker">SITE SECURE</p>
             <h1 className="mkt-h1">העסק שלך. כל מערכות הניהול. מקום אחד.</h1>
             <p className="mkt-lede">
-              SITE SECURE היא פלטפורמה חכמה לניהול עסקים בתחום האבטחה, התקשורת ומערכות המתח הנמוך. ניהול
-              לקוחות, הצעות מחיר, פרויקטים, התקנות, טכנאים וקריאות שירות – ממערכת אחת.
+              פלטפורמה חכמה לניהול עסקים בתחום האבטחה, התקשורת ומערכות המתח הנמוך.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -133,20 +74,10 @@ export function EnterpriseHome() {
               </a>
             </div>
           </div>
-          <div className="mkt-device">
-            <img
-              src="/landing-v2/01-quote-builder-desktop.webp"
-              alt="מסך בניית הצעת מחיר ב-SITE SECURE"
-              width={1440}
-              height={900}
-              decoding="async"
-              fetchPriority={paintPending ? "low" : "high"}
-            />
-          </div>
+          <DemoDashboard />
         </div>
       </section>
 
-      {/* B — Problem */}
       <section className="mkt-section mkt-reveal" id="problem">
         <div className="mkt-container">
           <h2 className="mkt-h2">עדיין מנהלים את העסק בין אקסלים, וואטסאפ וניירת?</h2>
@@ -160,93 +91,41 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* C — Modules */}
+      {/* Interactive platform explorer */}
       <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="product-modules">
         <div className="mkt-container">
           <h2 className="mkt-h2">כל הפעילות העסקית שלך. מערכת אחת.</h2>
-          <p className="mkt-lede">מודולים שקיימים במוצר — עם סימון ברור למה שעדיין חלקי או מתוכנן.</p>
-          <div className="mkt-grid-3 mt-8">
-            {MARKETING_MODULES.map((mod) => {
-              const Icon = ICONS[mod.key] ?? ShieldCheck;
-              return (
-                <article key={mod.key} className="mkt-card">
-                  <div className="mkt-module-icon">
-                    <Icon className="size-5" aria-hidden />
-                  </div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <h3 className="m-0 text-base font-semibold">{mod.title}</h3>
-                    <span className="mkt-badge">{statusLabel(mod.status)}</span>
-                  </div>
-                  <p className="m-0 text-sm leading-7 text-[var(--mkt-muted)]">{mod.body}</p>
-                  {mod.href ? (
-                    <a href={mod.href} className="mt-3 inline-flex text-sm font-semibold text-[var(--mkt-blue)]">
-                      למידע נוסף ←
-                    </a>
-                  ) : null}
-                </article>
-              );
-            })}
+          <p className="mkt-lede">בחרו מודול וראו תצוגת ממשק חיה — בלי צילומי מסך סטטיים.</p>
+          <div className="mt-8">
+            <PlatformExplorer />
           </div>
         </div>
       </section>
 
-      {/* D — How it works */}
+      {/* Interactive workflow */}
       <section className="mkt-section mkt-reveal" id="how">
         <div className="mkt-container">
           <h2 className="mkt-h2">איך זה עובד</h2>
-          <p className="mkt-lede">מרצף העבודה האמיתי: מליד ועד שירות.</p>
-          <div className="mkt-flow mt-8">
-            {WORKFLOW_STEPS.map((step) => (
-              <div key={step.title} className="mkt-flow-item">
-                <strong>{step.title}</strong>
-                <span>{step.body}</span>
-              </div>
-            ))}
+          <p className="mkt-lede">לחצו על שלב ברצף — מליד ועד שירות שוטף.</p>
+          <div className="mt-8">
+            <InteractiveWorkflow />
           </div>
         </div>
       </section>
 
-      {/* E — Platform preview */}
+      {/* Live app preview — replaces screenshot gallery */}
       <section className="mkt-dark mkt-section mkt-reveal" id="preview">
         <div className="mkt-container">
-          <h2 className="mkt-h2">תצוגת מוצר</h2>
-          <p className="mkt-lede">צילומי מסך אמיתיים מהמערכת — לא הדמיות מזויפות.</p>
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <figure className="mkt-device m-0">
-              <img
-                src="/landing-v2/02b-quote-preview-desktop.webp"
-                alt="תצוגת הצעה ללקוח"
-                width={1440}
-                height={900}
-                loading="lazy"
-                decoding="async"
-              />
-            </figure>
-            <figure className="mkt-device m-0">
-              <img
-                src="/landing-v2/03-site-file-desktop.webp"
-                alt="תיק אתר"
-                width={1440}
-                height={900}
-                loading="lazy"
-                decoding="async"
-              />
-            </figure>
-            <figure className="mkt-device is-phone m-0 lg:col-span-2">
-              <img
-                src="/landing-v2/06-fieldjob-mobile.webp"
-                alt="עבודת שטח במובייל"
-                width={390}
-                height={844}
-                loading="lazy"
-                decoding="async"
-              />
-            </figure>
+          <h2 className="mkt-h2">תצוגת מוצר חיה</h2>
+          <p className="mkt-lede">
+            סביבת הדגמה מבודדת עם נתונים סינתטיים בלבד — לא מחוברת לרשומות לקוחות אמיתיות.
+          </p>
+          <div className="mt-8">
+            <LiveAppPreview />
           </div>
         </div>
       </section>
 
-      {/* F — Solutions */}
       <section className="mkt-section mkt-reveal" id="solutions">
         <div className="mkt-container">
           <h2 className="mkt-h2">פתרונות לפי סוג עסק</h2>
@@ -264,13 +143,12 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* G — Tools */}
       <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="tools">
         <div className="mkt-container grid gap-8 lg:grid-cols-2 lg:items-start">
           <div>
             <h2 className="mkt-h2">כלי מקצועי חינם: מחשבון אחסון CCTV</h2>
             <p className="mkt-lede">
-              חשבו נפח, דיסק מומלץ וערוצי NVR — ואז הפכו את החישוב להצעת מחיר מקצועית ב-SITE SECURE.
+              סליידרים וחישוב חי במנוע המשותף — ואז מעבר להצעת מחיר אחרי הרשמה.
             </p>
             <Link
               to="/tools/cctv-storage"
@@ -286,15 +164,15 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* H — Pricing teaser */}
       <section className="mkt-section mkt-reveal" id="pricing">
         <div className="mkt-container">
           <h2 className="mkt-h2">תמחור שקוף</h2>
           <p className="mkt-lede">{billing.vat_note_he} בבטא אין סליקה אוטומטית — שדרוג בפנייה אלינו.</p>
-          <div className="mt-4 inline-flex rounded-[12px] border border-[var(--mkt-border)] p-1">
+          <div className="mt-4 inline-flex rounded-[12px] border border-[var(--mkt-border)] p-1" role="group" aria-label="מחזור חיוב">
             <button
               type="button"
               className={`mkt-btn ${!annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
+              aria-pressed={!annual}
               onClick={() => setAnnual(false)}
             >
               חודשי
@@ -302,6 +180,7 @@ export function EnterpriseHome() {
             <button
               type="button"
               className={`mkt-btn ${annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
+              aria-pressed={annual}
               onClick={() => setAnnual(true)}
             >
               שנתי
@@ -315,18 +194,51 @@ export function EnterpriseHome() {
               const price = custom
                 ? "בהתאמה"
                 : formatIls(annual ? annualMonthlyIls(monthly!) : monthly!);
+              const selected = selectedPlan === plan.key;
+              const expanded = expandedPlan === plan.key;
               return (
-                <article key={plan.key} className="mkt-card flex flex-col gap-2">
-                  <h3 className="m-0 text-lg font-semibold">{plan.label_he}</h3>
+                <article
+                  key={plan.key}
+                  className={`mkt-card mkt-plan-card${selected ? " is-selected" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="m-0 cursor-pointer border-0 bg-transparent p-0 text-start text-lg font-semibold text-[var(--mkt-ink)]"
+                    onClick={() => setSelectedPlan(plan.key)}
+                    aria-pressed={selected}
+                  >
+                    {plan.label_he}
+                  </button>
                   <p className="m-0 text-3xl font-bold text-[var(--mkt-ink)]">{price}</p>
                   <p className="m-0 text-xs text-[var(--mkt-muted)]">
                     {custom ? "דברו איתנו" : annual ? "ממוצע חודשי בשנתי" : "לחודש לפני מע״מ"}
                   </p>
-                  <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-sm">
-                    {(commercial?.highlights_he ?? []).slice(0, 4).map((h) => (
+                  <p className="m-0 text-xs text-[var(--mkt-muted)]">
+                    אחסון: {comparisonCell(plan, "storage_gb")} · משתמשים:{" "}
+                    {comparisonCell(plan, "max_members")}
+                  </p>
+                  <ul className="m-0 mt-1 flex list-none flex-col gap-1.5 p-0 text-sm">
+                    {(commercial?.highlights_he ?? []).slice(0, expanded ? 99 : 3).map((h) => (
                       <li key={h}>• {h}</li>
                     ))}
                   </ul>
+                  <button
+                    type="button"
+                    className="mkt-plan-expand"
+                    onClick={() => setExpandedPlan(expanded ? null : plan.key)}
+                    aria-expanded={expanded}
+                  >
+                    {expanded ? "הסתר פרטים" : "הרחב פרטים"}
+                  </button>
+                  {plan.key === "enterprise" ? (
+                    <Link to="/contact" className="mkt-btn mkt-btn-primary">
+                      {commercial?.cta_he ?? "דברו איתנו"}
+                    </Link>
+                  ) : (
+                    <Link to="/register" className="mkt-btn mkt-btn-primary">
+                      {commercial?.cta_he ?? "בחרו מסלול"}
+                    </Link>
+                  )}
                 </article>
               );
             })}
@@ -341,7 +253,6 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* I — Trust */}
       <section className="mkt-dark mkt-section mkt-reveal" id="security">
         <div className="mkt-container">
           <h2 className="mkt-h2">אבטחה ואמון</h2>
@@ -361,13 +272,16 @@ export function EnterpriseHome() {
               </article>
             ))}
           </div>
-          <Link to="/legal/$slug" params={{ slug: "security" }} className="mt-6 inline-flex text-sm font-semibold text-[var(--mkt-blue-bright)]">
+          <Link
+            to="/legal/$slug"
+            params={{ slug: "security" }}
+            className="mt-6 inline-flex text-sm font-semibold text-[var(--mkt-blue-bright)]"
+          >
             לעמוד אבטחת המידע ←
           </Link>
         </div>
       </section>
 
-      {/* J — FAQ */}
       <section className="mkt-section mkt-reveal" id="faq">
         <div className="mkt-container">
           <h2 className="mkt-h2">שאלות נפוצות</h2>
@@ -382,7 +296,6 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* K — Final CTA + beta / demo */}
       <section className="mkt-dark mkt-section mkt-reveal" id="cta">
         <div className="mkt-container grid gap-10 lg:grid-cols-2">
           <div>

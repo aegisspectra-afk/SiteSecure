@@ -22,6 +22,8 @@ export function PublicPricingPage() {
   const billing = billingPublic();
   const plans = catalogPlansOrdered();
   const [annual, setAnnual] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
 
   usePublicSeo({
     title: pricingSeoTitle,
@@ -40,19 +42,21 @@ export function PublicPricingPage() {
     <MarketingShell darkNav={false}>
       <div className="mkt-container px-0 py-12">
         <h1 className="mkt-h1 text-[var(--mkt-ink)]">מחירון</h1>
-        <p className="mt-2 text-sm text-fg-muted">{billing.vat_note_he}</p>
+        <p className="mt-2 text-[17px] text-[var(--mkt-ink-soft)]">{billing.vat_note_he}</p>
 
-        <div className="mt-6 inline-flex rounded-[var(--radius-control)] border border-border p-1">
+        <div className="mt-6 inline-flex rounded-[12px] border border-[var(--mkt-border)] p-1" role="group">
           <button
             type="button"
-            className={`min-h-11 rounded-[var(--radius-control)] px-4 text-sm ${!annual ? "bg-action text-action-fg" : "text-fg-muted"}`}
+            className={`mkt-btn ${!annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
+            aria-pressed={!annual}
             onClick={() => setAnnual(false)}
           >
             חודשי
           </button>
           <button
             type="button"
-            className={`min-h-11 rounded-[var(--radius-control)] px-4 text-sm ${annual ? "bg-action text-action-fg" : "text-fg-muted"}`}
+            className={`mkt-btn ${annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
+            aria-pressed={annual}
             onClick={() => setAnnual(true)}
           >
             שנתי ({billing.annual_bonus_months} חודשים מתנה)
@@ -69,17 +73,42 @@ export function PublicPricingPage() {
                 : annual
                   ? formatIls(annualMonthlyIls(monthly))
                   : formatIls(monthly);
+            const selected = selectedPlan === plan.key;
+            const expanded = expandedPlan === plan.key;
             return (
-              <article key={plan.key} className="ops-card flex flex-col gap-3 p-5">
-                <h2 className="text-lg font-semibold text-fg">{plan.label_he}</h2>
-                <p className="text-3xl font-semibold text-fg">{display}</p>
-                <p className="text-xs text-fg-muted">{annual ? "מחיר חודשי ממוצע בשנתי" : "לחודש לפני מע״מ"}</p>
-                <p className="text-sm text-fg-muted">{commercial?.audience_he}</p>
-                <ul className="flex flex-1 flex-col gap-2 text-sm text-fg">
-                  {(commercial?.highlights_he ?? []).map((h) => (
+              <article
+                key={plan.key}
+                className={`mkt-card mkt-plan-card${selected ? " is-selected" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="m-0 cursor-pointer border-0 bg-transparent p-0 text-start text-lg font-semibold text-[var(--mkt-ink)]"
+                  onClick={() => setSelectedPlan(plan.key)}
+                  aria-pressed={selected}
+                >
+                  {plan.label_he}
+                </button>
+                <p className="m-0 text-3xl font-semibold text-[var(--mkt-ink)]">{display}</p>
+                <p className="m-0 text-xs text-[var(--mkt-muted)]">
+                  {annual ? "מחיר חודשי ממוצע בשנתי" : "לחודש לפני מע״מ"}
+                </p>
+                <p className="m-0 text-sm text-[var(--mkt-ink-soft)]">{commercial?.audience_he}</p>
+                <p className="m-0 text-xs text-[var(--mkt-muted)]">
+                  אחסון: {comparisonCell(plan, "storage_gb")} · משתמשים: {comparisonCell(plan, "max_members")}
+                </p>
+                <ul className="m-0 flex flex-1 flex-col gap-2 p-0 text-sm text-[var(--mkt-ink)]">
+                  {(commercial?.highlights_he ?? []).slice(0, expanded ? 99 : 4).map((h) => (
                     <li key={h}>• {h}</li>
                   ))}
                 </ul>
+                <button
+                  type="button"
+                  className="mkt-plan-expand"
+                  aria-expanded={expanded}
+                  onClick={() => setExpandedPlan(expanded ? null : plan.key)}
+                >
+                  {expanded ? "הסתר פרטים" : "הרחב פרטי מסלול"}
+                </button>
                 {plan.key === "enterprise" ? (
                   <Link
                     to="/contact"
@@ -102,14 +131,14 @@ export function PublicPricingPage() {
           })}
         </div>
 
-        <h2 className="mt-14 text-xl font-semibold text-fg">השוואה מלאה</h2>
-        <div className="mt-4 overflow-x-auto rounded-[var(--radius-control)] border border-border">
+        <h2 className="mt-14 text-xl font-semibold text-[var(--mkt-ink)]">השוואה מלאה</h2>
+        <div className="mt-4 overflow-x-auto rounded-[12px] border border-[var(--mkt-border)]">
           <table className="min-w-[720px] w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-public-elevated">
-                <th className="p-3 text-start font-medium text-fg-muted">יכולת</th>
+              <tr className="border-b border-[var(--mkt-border)] bg-[var(--mkt-light)]">
+                <th className="p-3 text-start font-medium text-[var(--mkt-muted)]">יכולת</th>
                 {plans.map((p) => (
-                  <th key={p.key} className="p-3 text-start font-medium text-fg">
+                  <th key={p.key} className="p-3 text-start font-medium text-[var(--mkt-ink)]">
                     {p.label_he}
                   </th>
                 ))}
@@ -117,10 +146,10 @@ export function PublicPricingPage() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.key} className="border-b border-border/60">
-                  <td className="p-3 text-fg-muted">{row.label_he}</td>
+                <tr key={row.key} className="border-b border-[var(--mkt-border)]">
+                  <td className="p-3 text-[var(--mkt-muted)]">{row.label_he}</td>
                   {plans.map((plan) => (
-                    <td key={`${plan.key}-${row.key}`} className="p-3 text-fg">
+                    <td key={`${plan.key}-${row.key}`} className="p-3 text-[var(--mkt-ink)]">
                       {comparisonCell(plan, row.key)}
                     </td>
                   ))}
@@ -130,12 +159,12 @@ export function PublicPricingPage() {
           </table>
         </div>
 
-        <h2 className="mt-12 text-xl font-semibold text-fg">שאלות על תמחור</h2>
-        <div className="mt-4 flex flex-col gap-3">
+        <h2 className="mt-12 text-xl font-semibold text-[var(--mkt-ink)]">שאלות על תמחור</h2>
+        <div className="mkt-faq mt-4">
           {ssPricingFaq.map((item) => (
-            <details key={item.q} className="ops-card px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium">{item.q}</summary>
-              <p className="mt-2 text-sm text-fg-muted">{item.a}</p>
+            <details key={item.q}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
             </details>
           ))}
         </div>

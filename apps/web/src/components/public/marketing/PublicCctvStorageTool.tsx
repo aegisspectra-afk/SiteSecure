@@ -1,26 +1,28 @@
-import { Button, Input, Select } from "@site-secure/ui";
+import { Button, Select } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { calculatePublicCctvStorage, type PublicStorageInput, type PublicStorageResult } from "../../../lib/public-marketing-api";
+import { useEffect, useMemo, useState } from "react";
+import {
+  calculatePublicQuickStorage,
+  type PublicQuickStorageInput,
+} from "@site-secure/cctv-sizing";
 import { trackMarketingEvent } from "../../../lib/marketing-analytics";
 import { usePublicSeo } from "../../../lib/public-seo";
-import { formatTb } from "../../../lib/cctv-storage-display";
+import { formatChannelsHe, formatDiskWithUnit, formatTbWithUnit } from "../../../lib/cctv-storage-display";
 import { PUBLIC_CCTV_DRAFT_KEY, savePublicCctvDraft } from "../../../lib/public-cctv-draft";
 import { MarketingShell } from "./enterprise/MarketingShell";
 
 export { PUBLIC_CCTV_DRAFT_KEY };
 
+const RES_OPTIONS = [2, 4, 5, 8] as const;
+
 export function PublicCctvStorageTool() {
-  const [input, setInput] = useState<PublicStorageInput>({
-    camera_count: 8,
-    resolution_mp: 4,
-    retention_days: 30,
-    recording_mode: "continuous",
+  const [input, setInput] = useState<PublicQuickStorageInput>({
+    cameraCount: 8,
+    resolutionMp: 4,
+    retentionDays: 30,
+    recordingMode: "continuous",
     codec: "h265",
   });
-  const [result, setResult] = useState<PublicStorageResult | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   usePublicSeo({
     title: "מחשבון אחסון CCTV — חינם | SITE SECURE",
@@ -30,141 +32,199 @@ export function PublicCctvStorageTool() {
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(PUBLIC_CCTV_DRAFT_KEY);
-      if (raw) setInput(JSON.parse(raw) as PublicStorageInput);
+      if (!raw) return;
+      const legacy = JSON.parse(raw) as {
+        camera_count?: number;
+        resolution_mp?: number;
+        retention_days?: number;
+        recording_mode?: PublicQuickStorageInput["recordingMode"];
+        codec?: string;
+        recording_hours_per_day?: number;
+        motion_duty_cycle?: number;
+      };
+      setInput((prev) => ({
+        ...prev,
+        cameraCount: legacy.camera_count ?? prev.cameraCount,
+        resolutionMp: legacy.resolution_mp ?? prev.resolutionMp,
+        retentionDays: legacy.retention_days ?? prev.retentionDays,
+        recordingMode: legacy.recording_mode ?? prev.recordingMode,
+        codec: (legacy.codec as PublicQuickStorageInput["codec"]) ?? prev.codec,
+        recordingHoursPerDay: legacy.recording_hours_per_day,
+        motionDutyCycle: legacy.motion_duty_cycle,
+      }));
     } catch {
       /* ignore */
     }
   }, []);
 
+  const result = useMemo(() => calculatePublicQuickStorage(input), [input]);
+  const ok = result.storage.status === "ok";
+  const requiredTb = result.storage.requiredTb ?? 0;
+  const diskFill = Math.min(100, Math.round((requiredTb / Math.max(requiredTb * 1.15, 1)) * 85));
+
+  const persist = () => {
+    savePublicCctvDraft({
+      camera_count: input.cameraCount,
+      resolution_mp: input.resolutionMp,
+      retention_days: input.retentionDays,
+      recording_mode: input.recordingMode ?? "continuous",
+      codec: input.codec ?? "h265",
+      recording_hours_per_day: input.recordingHoursPerDay,
+      motion_duty_cycle: input.motionDutyCycle,
+    });
+    trackMarketingEvent("calculator_complete", {
+      cameras: input.cameraCount,
+      retention_days: input.retentionDays,
+    });
+  };
+
   return (
     <MarketingShell darkNav={false}>
       <div className="mkt-container mx-auto max-w-2xl px-0 py-12">
         <h1 className="mkt-h1 text-[var(--mkt-ink)]">מחשבון אחסון CCTV</h1>
-        <p className="mt-2 text-[15px] leading-7 text-[var(--mkt-ink-soft)]">
-          כלי הנדסי חינמי — בלי מחירים. אותו מנוע כמו באשף ההצעה במערכת.
+        <p className="mt-2 text-[17px] leading-7 text-[var(--mkt-ink-soft)]">
+          כלי הנדסי חינמי — חישוב חי באותו מנוע כמו באשף ההצעה. בלי מחירים.
         </p>
 
-        <form
-          className="mt-8 grid gap-4"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            setBusy(true);
-            setErr(null);
-            void calculatePublicCctvStorage(input)
-              .then((data) => {
-                setResult(data);
-                savePublicCctvDraft(input);
-                trackMarketingEvent("calculator_complete", {
-                  cameras: input.camera_count,
-                  retention_days: input.retention_days,
-                });
-              })
-              .catch((e: Error) => setErr(e.message))
-              .finally(() => setBusy(false));
-          }}
-        >
-          <Input
-            id="cam-count"
-            type="number"
-            min={1}
-            max={64}
-            label="מספר מצלמות"
-            value={String(input.camera_count)}
-            onChange={(ev) => setInput({ ...input, camera_count: Number(ev.target.value) })}
-          />
-          <Input
-            id="res-mp"
-            type="number"
-            step="0.1"
-            min={1}
-            max={32}
-            label="רזולוציה (מגה-פיקסל)"
-            value={String(input.resolution_mp)}
-            onChange={(ev) => setInput({ ...input, resolution_mp: Number(ev.target.value) })}
-          />
-          <Input
-            id="retention"
-            type="number"
-            min={1}
-            max={365}
-            label="ימי הקלטה"
-            value={String(input.retention_days)}
-            onChange={(ev) => setInput({ ...input, retention_days: Number(ev.target.value) })}
-          />
+        <div className="mt-8 grid gap-5">
+          <label className="mkt-calc-slider">
+            <span>
+              מצלמות <strong>{input.cameraCount}</strong>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={64}
+              value={input.cameraCount}
+              aria-label="מספר מצלמות"
+              onChange={(ev) => setInput({ ...input, cameraCount: Number(ev.target.value) })}
+            />
+          </label>
+
+          <label className="mkt-calc-slider">
+            <span>
+              ימי הקלטה <strong>{input.retentionDays}</strong>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={180}
+              value={input.retentionDays}
+              aria-label="ימי הקלטה"
+              onChange={(ev) => setInput({ ...input, retentionDays: Number(ev.target.value) })}
+            />
+          </label>
+
+          <fieldset className="m-0 border-0 p-0">
+            <legend className="mb-2 text-sm font-semibold">רזולוציה (מגה־פיקסל)</legend>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="רזולוציה">
+              {RES_OPTIONS.map((mp) => (
+                <button
+                  key={mp}
+                  type="button"
+                  className={`mkt-btn ${input.resolutionMp === mp ? "mkt-btn-primary" : "mkt-btn-secondary"}`}
+                  aria-pressed={input.resolutionMp === mp}
+                  onClick={() => setInput({ ...input, resolutionMp: mp })}
+                >
+                  {mp}MP
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
           <Select
             id="rec-mode"
             label="אופן הקלטה"
-            value={input.recording_mode}
+            value={input.recordingMode ?? "continuous"}
             onChange={(ev) =>
-              setInput({ ...input, recording_mode: ev.target.value as PublicStorageInput["recording_mode"] })
+              setInput({
+                ...input,
+                recordingMode: ev.target.value as PublicQuickStorageInput["recordingMode"],
+              })
             }
           >
             <option value="continuous">רציפה (24/7)</option>
             <option value="scheduled">לפי לוח שעות</option>
             <option value="motion">תנועה</option>
           </Select>
-          {input.recording_mode === "scheduled" ? (
-            <Input
-              id="hours-day"
-              type="number"
-              min={0.1}
-              max={24}
-              step="0.5"
-              label="שעות הקלטה ביום"
-              value={String(input.recording_hours_per_day ?? 12)}
-              onChange={(ev) => setInput({ ...input, recording_hours_per_day: Number(ev.target.value) })}
-            />
-          ) : null}
-          {input.recording_mode === "motion" ? (
-            <Input
-              id="motion-duty"
-              type="number"
-              min={0.05}
-              max={1}
-              step="0.05"
-              label="אחוז זמן תנועה (0–1)"
-              value={String(input.motion_duty_cycle ?? 0.3)}
-              onChange={(ev) => setInput({ ...input, motion_duty_cycle: Number(ev.target.value) })}
-            />
-          ) : null}
-          <Button type="submit" disabled={busy} className="min-h-12">
-            חשב
-          </Button>
-        </form>
 
-        {err ? <p className="mt-4 text-sm text-destructive">{err}</p> : null}
+          {input.recordingMode === "scheduled" ? (
+            <label className="mkt-calc-slider">
+              <span>
+                שעות ביום <strong>{input.recordingHoursPerDay ?? 12}</strong>
+              </span>
+              <input
+                type="range"
+                min={1}
+                max={24}
+                step={0.5}
+                value={input.recordingHoursPerDay ?? 12}
+                aria-label="שעות הקלטה ביום"
+                onChange={(ev) => setInput({ ...input, recordingHoursPerDay: Number(ev.target.value) })}
+              />
+            </label>
+          ) : null}
 
-        {result?.storage?.status === "ok" ? (
-          <div className="mt-8 ops-card space-y-2 p-5 text-sm">
-            <p>
-              <span className="text-fg-muted">נפח נדרש: </span>
-              <strong>{formatTb(result.storage.required_tb ?? 0)}</strong>
-            </p>
-            <p>
-              <span className="text-fg-muted">ערוצי NVR מומלצים: </span>
-              <strong>{result.recorder.channels ?? "—"}</strong>
-            </p>
-            <p>
-              <span className="text-fg-muted">דיסק מומלץ: </span>
-              <strong>
-                {result.hdd.drive_count
-                  ? `${result.hdd.drive_count}× ${formatTb(result.hdd.recommended_tb_per_drive ?? 0)}`
-                  : "—"}
-              </strong>
-            </p>
-            <p className="text-xs text-fg-muted">מחירים ודגמים — רק אחרי הרשמה ובאשף ההצעה.</p>
-            <Link
-              to="/register"
-              className="mkt-btn mkt-btn-primary mt-4"
-              onClick={() => {
-                savePublicCctvDraft(input);
-                trackMarketingEvent("signup_start", { from: "cctv_calculator" });
-              }}
-            >
-              הפוך להצעת מחיר — הרשמה
-            </Link>
+          {input.recordingMode === "motion" ? (
+            <label className="mkt-calc-slider">
+              <span>
+                אחוז תנועה <strong>{Math.round((input.motionDutyCycle ?? 0.3) * 100)}%</strong>
+              </span>
+              <input
+                type="range"
+                min={0.05}
+                max={1}
+                step={0.05}
+                value={input.motionDutyCycle ?? 0.3}
+                aria-label="אחוז זמן תנועה"
+                onChange={(ev) => setInput({ ...input, motionDutyCycle: Number(ev.target.value) })}
+              />
+            </label>
+          ) : null}
+
+          <div className="mkt-disk-viz" aria-live="polite">
+            {ok ? (
+              <>
+                <p className="m-0 text-sm">
+                  נפח נדרש: <strong>{formatTbWithUnit(requiredTb)}</strong>
+                </p>
+                <p className="mt-2 m-0 text-sm">
+                  ערוצי NVR מומלצים: <strong>{formatChannelsHe(result.recorder.channels)}</strong>
+                </p>
+                <p className="mt-2 m-0 text-sm">
+                  דיסק מומלץ:{" "}
+                  <strong>{formatDiskWithUnit(result.hdd.driveCount, result.hdd.recommendedTbPerDrive)}</strong>
+                </p>
+                <div className="mkt-disk-bar mt-3" aria-hidden>
+                  <span style={{ width: `${diskFill}%` }} />
+                </div>
+                <p className="mt-2 m-0 text-xs text-[var(--mkt-muted)]">ויזואליזציית קיבולת יחסית · בלי מחירים</p>
+              </>
+            ) : (
+              <p className="m-0 text-sm text-destructive">לא ניתן לחשב עם הפרמטרים הנוכחיים.</p>
+            )}
           </div>
-        ) : null}
+
+          <Button
+            type="button"
+            className="min-h-12"
+            onClick={persist}
+            disabled={!ok}
+          >
+            שמירת טיוטה לחישוב
+          </Button>
+        </div>
+
+        <Link
+          to="/register"
+          className="mkt-btn mkt-btn-primary mt-6"
+          onClick={() => {
+            persist();
+            trackMarketingEvent("signup_start", { from: "cctv_calculator" });
+          }}
+        >
+          הפוך להצעת מחיר — הרשמה
+        </Link>
       </div>
     </MarketingShell>
   );

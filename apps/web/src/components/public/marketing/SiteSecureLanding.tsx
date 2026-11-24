@@ -24,7 +24,7 @@ const BILLING_VAT_NOTE = billingPublic().vat_note_he;
 
 function Section({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
   return (
-    <section id={id} className={`public-scene landing-reveal scroll-mt-24 px-4 py-12 sm:py-14 ${className ?? ""}`}>
+    <section id={id} className={`public-scene landing-section landing-reveal scroll-mt-24 px-4 ${className ?? ""}`}>
       <div className="public-container mx-auto max-w-6xl">{children}</div>
     </section>
   );

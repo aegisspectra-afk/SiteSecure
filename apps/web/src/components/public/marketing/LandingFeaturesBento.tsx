@@ -18,7 +18,7 @@ export const BENTO_WARRANTY_DAYS_LEFT = 14;
 /** Bento of miniaturized UI tiles — numbers come from the CCTV engine / product rules. */
 export function LandingFeaturesBento() {
   return (
-    <section id="features" className="landing-bento public-scene public-scene-surface scroll-mt-24 px-4 py-12 sm:py-14">
+    <section id="features" className="landing-bento public-scene public-scene-surface landing-section landing-reveal scroll-mt-24 px-4">
       <div className="public-container mx-auto max-w-6xl">
         <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.featuresTitle}</h2>
         <div className="landing-bento-grid mt-8">

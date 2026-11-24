@@ -40,7 +40,7 @@ export function LandingHowScrolly() {
   const isPhone = step.frame === "phone";
 
   return (
-    <section id="how" ref={rootRef} className="landing-how public-scene landing-reveal scroll-mt-24 px-4 py-12 sm:py-14">
+    <section id="how" ref={rootRef} className="landing-how public-scene landing-section landing-reveal scroll-mt-24 px-4">
       <div className="public-container mx-auto max-w-6xl">
         <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.howTitle}</h2>
 

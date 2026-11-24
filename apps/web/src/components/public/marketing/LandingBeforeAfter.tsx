@@ -9,7 +9,7 @@ export function LandingBeforeAfter() {
   const [pos, setPos] = useState(52);
 
   return (
-    <section id="problem" className="public-scene scroll-mt-24 px-4 py-12 sm:py-14">
+    <section id="problem" className="public-scene landing-section landing-reveal scroll-mt-24 px-4">
       <div className="public-container mx-auto max-w-6xl">
         <h2 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{ssMarketing.problemTitle}</h2>
         <ul className="mt-6 flex flex-col gap-3 text-base leading-8 text-fg-muted sm:text-[17px]">

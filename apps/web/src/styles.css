@@ -30332,6 +30332,56 @@ html.dark .ssp-site-tone.is-officer {
 }
 
 
+/* Uniform section rhythm (8px grid) + radii 12/16 */
+.landing-section {
+  padding-block: 4rem; /* 64px */
+}
+
+@media (min-width: 640px) {
+  .landing-section {
+    padding-block: 5rem; /* 80px */
+  }
+}
+
+.landing-shell-with-mobile-cta .ops-card,
+.landing-shell-with-mobile-cta .landing-bento-tile,
+.landing-shell-with-mobile-cta .landing-cctv-calc {
+  border-radius: 16px;
+}
+
+.landing-shell-with-mobile-cta .landing-cctv-calc-chip,
+.landing-shell-with-mobile-cta .landing-cctv-calc-metrics li,
+.landing-shell-with-mobile-cta .landing-mini,
+.landing-shell-with-mobile-cta details.ops-card {
+  border-radius: 12px;
+}
+
+.landing-shell-with-mobile-cta a.public-cta-strong,
+.landing-shell-with-mobile-cta a.public-cta-secondary,
+.landing-shell-with-mobile-cta .landing-cctv-calc-cta,
+.landing-shell-with-mobile-cta .landing-mobile-cta-btn {
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, filter 0.15s ease;
+}
+
+.landing-shell-with-mobile-cta a.public-cta-strong:hover,
+.landing-shell-with-mobile-cta .landing-mobile-cta-btn:hover {
+  filter: brightness(1.06);
+}
+
+.landing-shell-with-mobile-cta a.public-cta-strong:active,
+.landing-shell-with-mobile-cta .landing-mobile-cta-btn:active,
+.landing-shell-with-mobile-cta .landing-cctv-calc-chip:active {
+  transform: translateY(1px);
+}
+
+.landing-shell-with-mobile-cta a:focus-visible,
+.landing-shell-with-mobile-cta button:focus-visible,
+.landing-shell-with-mobile-cta summary:focus-visible,
+.landing-shell-with-mobile-cta input:focus-visible {
+  outline: 2px solid var(--landing-accent, var(--color-action));
+  outline-offset: 3px;
+}
+
 /* Spec strip under hero */
 .landing-spec-strip {
   padding: 2rem 0;

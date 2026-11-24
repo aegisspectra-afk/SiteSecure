@@ -271,18 +271,20 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  border-bottom: 1px solid transparent;
-  transition: background-color 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease;
+  border-bottom: 1px solid var(--mkt-border);
+  /* Always solid — never transparent white-on-white brand text at page top. */
+  background: var(--mkt-bg);
+  color: var(--mkt-on-dark);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .mkt-nav.is-top {
-  background: transparent;
+  background: var(--mkt-bg);
 }
 
 .mkt-nav.is-scrolled {
-  background: color-mix(in srgb, var(--mkt-bg) 88%, transparent);
-  border-color: var(--mkt-border);
-  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--mkt-bg) 94%, #000);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 22%);
 }
 
 .mkt-nav-inner {
@@ -356,6 +358,33 @@
   background: transparent;
   color: var(--mkt-on-dark);
   border-radius: 10px;
+}
+
+/* Light marketing pages (pricing, knowledge article, legal, …) */
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav {
+  background: var(--mkt-white);
+  border-bottom-color: rgb(15 23 42 / 10%);
+  color: var(--mkt-ink);
+}
+
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav.is-scrolled {
+  background: color-mix(in srgb, var(--mkt-white) 92%, var(--mkt-light));
+  box-shadow: 0 8px 20px rgb(15 23 42 / 8%);
+}
+
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav-brand,
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav-menu-btn {
+  color: var(--mkt-ink);
+}
+
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav-links a {
+  color: var(--mkt-muted);
+}
+
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav-links a:hover,
+.mkt-root:not(.mkt-shell-dark-nav) .mkt-nav-links a[aria-current="page"] {
+  color: var(--mkt-ink);
+  background: rgb(15 23 42 / 5%);
 }
 
 @media (min-width: 1024px) {

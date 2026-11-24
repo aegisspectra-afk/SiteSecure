@@ -17,6 +17,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@site-secure/api-client": "*",
     "@site-secure/authz": "*",
+    "@site-secure/cctv-sizing": "*",
     "@site-secure/design-system": "*",
     "@site-secure/ui": "*",
     "@supabase/supabase-js": "^2.47.10",

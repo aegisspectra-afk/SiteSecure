@@ -1,53 +1,29 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  calculatePublicCctvStorage,
-  type PublicStorageInput,
-  type PublicStorageResult,
-} from "../../../lib/public-marketing-api";
+  calculatePublicQuickStorage,
+  HERO_CCTV_DEFAULTS,
+  type PublicQuickStorageInput,
+} from "@site-secure/cctv-sizing";
 import { formatTb } from "../../../lib/cctv-storage-display";
 import { savePublicCctvDraft } from "../../../lib/public-cctv-draft";
 
 const RES_OPTIONS = [2, 4, 5, 8] as const;
 
-/** Compact live CCTV sizing — same public API as /tools/cctv-storage. */
+/** Live CCTV sizing in-browser — same shared engine as the server (no API, no prices). */
 export function LandingCctvHeroCalc() {
-  const [input, setInput] = useState<PublicStorageInput>({
-    camera_count: 8,
-    resolution_mp: 4,
-    retention_days: 30,
-    recording_mode: "continuous",
-    codec: "h265",
-  });
-  const [result, setResult] = useState<PublicStorageResult | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [input, setInput] = useState<PublicQuickStorageInput>({ ...HERO_CCTV_DEFAULTS });
 
-  useEffect(() => {
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setBusy(true);
-      setErr(null);
-      void calculatePublicCctvStorage(input)
-        .then((data) => {
-          if (cancelled) return;
-          setResult(data);
-          savePublicCctvDraft(input);
-        })
-        .catch((e: Error) => {
-          if (!cancelled) setErr(e.message);
-        })
-        .finally(() => {
-          if (!cancelled) setBusy(false);
-        });
-    }, 280);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [input]);
+  const result = useMemo(() => calculatePublicQuickStorage(input), [input]);
+  const ok = result.storage.status === "ok";
 
-  const ok = result?.storage?.status === "ok";
+  const draftPayload = {
+    camera_count: input.cameraCount,
+    resolution_mp: input.resolutionMp,
+    retention_days: input.retentionDays,
+    recording_mode: input.recordingMode ?? "continuous",
+    codec: input.codec ?? "h265",
+  };
 
   return (
     <div className="landing-cctv-calc" dir="rtl">
@@ -55,29 +31,29 @@ export function LandingCctvHeroCalc() {
 
       <label className="landing-cctv-calc-field">
         <span className="landing-cctv-calc-label">
-          מצלמות <strong>{input.camera_count}</strong>
+          מצלמות <strong>{input.cameraCount}</strong>
         </span>
         <input
           type="range"
           min={1}
           max={64}
-          value={input.camera_count}
+          value={input.cameraCount}
           aria-label="מספר מצלמות"
-          onChange={(ev) => setInput({ ...input, camera_count: Number(ev.target.value) })}
+          onChange={(ev) => setInput({ ...input, cameraCount: Number(ev.target.value) })}
         />
       </label>
 
       <label className="landing-cctv-calc-field">
         <span className="landing-cctv-calc-label">
-          ימי הקלטה <strong>{input.retention_days}</strong>
+          ימי הקלטה <strong>{input.retentionDays}</strong>
         </span>
         <input
           type="range"
           min={1}
           max={90}
-          value={input.retention_days}
+          value={input.retentionDays}
           aria-label="ימי הקלטה"
-          onChange={(ev) => setInput({ ...input, retention_days: Number(ev.target.value) })}
+          onChange={(ev) => setInput({ ...input, retentionDays: Number(ev.target.value) })}
         />
       </label>
 
@@ -88,9 +64,9 @@ export function LandingCctvHeroCalc() {
             <button
               key={mp}
               type="button"
-              className={`landing-cctv-calc-chip${input.resolution_mp === mp ? " is-active" : ""}`}
-              aria-pressed={input.resolution_mp === mp}
-              onClick={() => setInput({ ...input, resolution_mp: mp })}
+              className={`landing-cctv-calc-chip${input.resolutionMp === mp ? " is-active" : ""}`}
+              aria-pressed={input.resolutionMp === mp}
+              onClick={() => setInput({ ...input, resolutionMp: mp })}
             >
               {mp}MP
             </button>
@@ -99,18 +75,17 @@ export function LandingCctvHeroCalc() {
       </fieldset>
 
       <div className="landing-cctv-calc-out" aria-live="polite">
-        {err ? <p className="landing-cctv-calc-err">{err}</p> : null}
         {ok ? (
           <ul className="landing-cctv-calc-metrics">
             <li>
               <span>נפח</span>
-              <strong>{formatTb(result.storage.required_tb ?? 0)}</strong>
+              <strong>{formatTb(result.storage.requiredTb ?? 0)}</strong>
             </li>
             <li>
               <span>דיסק מומלץ</span>
               <strong>
-                {result.hdd.drive_count
-                  ? `${result.hdd.drive_count}× ${formatTb(result.hdd.recommended_tb_per_drive ?? 0)}`
+                {result.hdd.driveCount
+                  ? `${result.hdd.driveCount}× ${formatTb(result.hdd.recommendedTbPerDrive ?? 0)}`
                   : "—"}
               </strong>
             </li>
@@ -120,14 +95,14 @@ export function LandingCctvHeroCalc() {
             </li>
           </ul>
         ) : (
-          <p className="landing-cctv-calc-pending">{busy ? "מחשב…" : "הזיזו סליידר לחישוב"}</p>
+          <p className="landing-cctv-calc-pending">בדקו את ערכי הקלט</p>
         )}
       </div>
 
       <Link
         to="/register"
         className="landing-cctv-calc-cta"
-        onClick={() => savePublicCctvDraft(input)}
+        onClick={() => savePublicCctvDraft(draftPayload)}
       >
         הפוך להצעת מחיר
       </Link>

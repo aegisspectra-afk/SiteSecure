@@ -199,32 +199,6 @@ export function SiteSecureLanding() {
           </Section>
         </LazyWhenVisible>
 
-        <LazyWhenVisible minHeight="14rem">
-          <Section id="compare">
-            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.compareTitle}</h2>
-            <div className="mt-6 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-fg-muted">
-                    <th className="py-3 pe-4 text-start font-medium">נושא</th>
-                    <th className="py-3 px-4 text-start font-medium">אקסל + וואטסאפ</th>
-                    <th className="py-3 ps-4 text-start font-medium">SITE SECURE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ssMarketing.compareRows.map((row) => (
-                    <tr key={row.topic} className="border-b border-border/70">
-                      <td className="py-3 pe-4 font-medium text-fg">{row.topic}</td>
-                      <td className="py-3 px-4 text-fg-muted">{row.legacy}</td>
-                      <td className="py-3 ps-4 text-fg">{row.ss}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Section>
-        </LazyWhenVisible>
-
         <LazyWhenVisible minHeight="16rem">
           <Section id="pricing-teaser" className="public-scene-surface">
             <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>

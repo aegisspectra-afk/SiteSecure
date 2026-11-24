@@ -55,6 +55,30 @@
         border-radius: 12px;
         box-shadow: 0 18px 44px rgb(15 23 42 / 12%);
       }
+      .ss-marketing-paint-copy {
+        max-width: 42rem;
+        margin-top: 1.25rem;
+        font-family: Heebo, system-ui, sans-serif;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        color: #334155;
+      }
+      .ss-marketing-paint-copy h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.35rem;
+        line-height: 1.25;
+        color: #0f172a;
+      }
+      .ss-marketing-paint-copy h2 {
+        margin: 1.1rem 0 0.4rem;
+        font-size: 1.05rem;
+        color: #0f172a;
+      }
+      .ss-marketing-paint-copy p,
+      .ss-marketing-paint-copy ol,
+      .ss-marketing-paint-copy ul {
+        margin: 0 0 0.55rem;
+      }
     </style>
     <script>
       (function () {
@@ -96,7 +120,9 @@
     </script>
   </head>
   <body>
-    <!-- Visible immediately on `/` (no hidden) so preloaded shot can be LCP without unhide delay. -->
+    <!-- Visible immediately on `/` (no hidden) so preloaded shot can be LCP without unhide delay.
+         Section copy lives in the static HTML so view-source / no-JS crawlers see the page content.
+         Images stay lazy in the React tree; this block is cleared after first paint. -->
     <div id="ss-marketing-paint" class="ss-marketing-paint" dir="rtl" lang="he">
       <p class="ss-marketing-paint-title">SITE SECURE</p>
       <img
@@ -108,6 +134,35 @@
         fetchpriority="high"
         class="ss-marketing-paint-shot"
       />
+      <div class="ss-marketing-paint-copy">
+        <h1>מהסיור באתר ועד תעודת המסירה, הכל במקום אחד ובעברית.</h1>
+        <p>הצעת מחיר מקצועית ללקוח תוך 10 דקות מהסיור, עם חלופות, תמונות ואישור בוואטסאפ.</p>
+        <h2>איך זה עובד</h2>
+        <ol>
+          <li>תכנון בסיור — אשף CCTV לאחסון, NVR ו-PoE מהשטח.</li>
+          <li>הצעה שנשלחת בוואטסאפ — הלקוח משווה חלופות ומאשר.</li>
+          <li>טכנאי עם צ׳קליסט — צילומים וחתימה מהטלפון.</li>
+          <li>תעודת מסירה ותיק אתר — מסמך במותג שלכם.</li>
+        </ol>
+        <h2>יכולות מרכזיות</h2>
+        <ul>
+          <li>אשף CCTV — אחסון, NVR ו-PoE בלי תלות ביצרן</li>
+          <li>חלופות לוועד בית — בסיסי, מומלץ, מתקדם</li>
+          <li>אפליקציה לטכנאי — צ׳קליסט, חתימה ותמונות</li>
+          <li>תעודת מסירה במותג שלכם</li>
+          <li>תזכורות לחוזי תחזוקה</li>
+        </ul>
+        <h2>למי זה מתאים</h2>
+        <ul>
+          <li>טכנאי עצמאי — מהצעה ראשונה ועד מסירה.</li>
+          <li>חברת התקנות קטנה — משרד ושטח מסונכרנים.</li>
+          <li>חברה עם צוות טכנאים — שיבוץ, תיק אתר ותזכורות שירות.</li>
+        </ul>
+        <h2>תמחור שקוף</h2>
+        <p>מתחילים בחינם בבטא. שדרוג מתי שאתם מוכנים — בלי כרטיס אשראי עכשיו.</p>
+        <h2>שאלות נפוצות</h2>
+        <p>כל חברה רואה רק את הנתונים שלה. הרשאות לפי תפקיד. היום עובדים מהדפדפן בטלפון; אפליקציה ייעודית בדרך.</p>
+      </div>
     </div>
     <div id="root"></div>
     <script>

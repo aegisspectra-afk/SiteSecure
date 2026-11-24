@@ -1,70 +1,44 @@
 import { Button, Input } from "@site-secure/ui";
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { billingPublic, catalogPlansOrdered } from "@site-secure/authz";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
+import { LandingBeforeAfter } from "./LandingBeforeAfter";
+import { LandingCctvHeroCalc } from "./LandingCctvHeroCalc";
+import { LandingFeaturesBento } from "./LandingFeaturesBento";
+import { LandingFounder } from "./LandingFounder";
+import { LandingHowScrolly } from "./LandingHowScrolly";
 import { LandingMobileCta } from "./LandingMobileCta";
-import { LazyWhenVisible } from "./LazyWhenVisible";
 import { useLandingReveal } from "./useLandingReveal";
-
-const LandingCctvHeroCalc = lazy(() =>
-  import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
-);
-const LandingBeforeAfter = lazy(() =>
-  import("./LandingBeforeAfter").then((m) => ({ default: m.LandingBeforeAfter })),
-);
-const LandingHowScrolly = lazy(() =>
-  import("./LandingHowScrolly").then((m) => ({ default: m.LandingHowScrolly })),
-);
-const LandingFeaturesBento = lazy(() =>
-  import("./LandingFeaturesBento").then((m) => ({ default: m.LandingFeaturesBento })),
-);
-const LandingFounder = lazy(() =>
-  import("./LandingFounder").then((m) => ({ default: m.LandingFounder })),
-);
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
+/** C1 plans are static catalog data — available on first paint (no idle fetch). */
+const TEASER_PLANS = catalogPlansOrdered();
+const BILLING_VAT_NOTE = billingPublic().vat_note_he;
+
 function Section({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
   return (
-    <section id={id} className={`public-scene scroll-mt-24 px-4 py-12 sm:py-14 ${className ?? ""}`}>
+    <section id={id} className={`public-scene landing-reveal scroll-mt-24 px-4 py-12 sm:py-14 ${className ?? ""}`}>
       <div className="public-container mx-auto max-w-6xl">{children}</div>
     </section>
   );
 }
-
-type TeaserPlan = {
-  key: string;
-  label_he: string;
-  commercial?: {
-    monthly_ils_before_vat?: number | null;
-    custom_pricing?: boolean;
-    highlights_he?: string[];
-  };
-};
 
 export function SiteSecureLanding() {
   const [beta, setBeta] = useState({ full_name: "", phone: "", technician_count: "" });
   const [betaDone, setBetaDone] = useState(false);
   const [betaErr, setBetaErr] = useState<string | null>(null);
   const [betaBusy, setBetaBusy] = useState(false);
-  const [teaserPlans, setTeaserPlans] = useState<TeaserPlan[]>([]);
-  const [billingVatNote, setBillingVatNote] = useState("כולל מע״מ לפי חוק");
   const [paintPending, setPaintPending] = useState(true);
-  const [heroCalcReady, setHeroCalcReady] = useState(false);
 
   useEffect(() => {
-    // Keep HTML paint (preloaded shot) as LCP until it locks. Mount the CCTV card only after
-    // input (or a late fallback) so it cannot replace the paint image as LCP.
     const paint = document.getElementById("ss-marketing-paint");
     let cancelled = false;
-    let calcTimer = 0;
-    const enableCalc = () => {
-      if (!cancelled) setHeroCalcReady(true);
-    };
     const hidePaint = () => {
       if (cancelled) return;
       if (paint?.isConnected && !paint.hidden) {
@@ -73,42 +47,15 @@ export function SiteSecureLanding() {
       }
       setPaintPending(false);
     };
-    const onInteract = () => {
-      hidePaint();
-      enableCalc();
-    };
-    const timer = window.setTimeout(() => {
-      hidePaint();
-      calcTimer = window.setTimeout(enableCalc, 6000);
-    }, 3200);
-    window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
-    window.addEventListener("keydown", onInteract, { once: true });
-    if (!paint) {
-      setPaintPending(false);
-      enableCalc();
-    }
+    const timer = window.setTimeout(hidePaint, 3200);
+    window.addEventListener("pointerdown", hidePaint, { once: true, passive: true });
+    window.addEventListener("keydown", hidePaint, { once: true });
+    if (!paint) setPaintPending(false);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
-      window.clearTimeout(calcTimer);
-      window.removeEventListener("pointerdown", onInteract);
-      window.removeEventListener("keydown", onInteract);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const idle = window.setTimeout(() => {
-      void import("@site-secure/authz").then((authz) => {
-        if (cancelled) return;
-        // C1 source of truth: Free / Pro / Business + Enterprise row.
-        setTeaserPlans(authz.catalogPlansOrdered());
-        setBillingVatNote(authz.billingPublic().vat_note_he);
-      });
-    }, 4000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(idle);
+      window.removeEventListener("pointerdown", hidePaint);
+      window.removeEventListener("keydown", hidePaint);
     };
   }, []);
 
@@ -157,90 +104,63 @@ export function SiteSecureLanding() {
                 </a>
               </div>
             </div>
-            {heroCalcReady ? (
-              <Suspense fallback={<div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />}>
-                <LandingCctvHeroCalc />
-              </Suspense>
-            ) : (
-              <div className="landing-cctv-calc min-h-[18rem]" aria-hidden="true" />
-            )}
+            <LandingCctvHeroCalc />
           </div>
         </section>
 
-        <LazyWhenVisible minHeight="24rem">
-          <Suspense fallback={<section id="problem" className="public-scene min-h-[24rem]" aria-hidden />}>
-            <LandingBeforeAfter />
-          </Suspense>
-        </LazyWhenVisible>
+        <LandingBeforeAfter />
 
         <div className="public-rule" aria-hidden />
 
-        <LazyWhenVisible minHeight="28rem">
-          <Suspense fallback={<section id="how" className="public-scene min-h-[28rem]" aria-hidden />}>
-            <LandingHowScrolly />
-          </Suspense>
-        </LazyWhenVisible>
+        <LandingHowScrolly />
 
-        <LazyWhenVisible minHeight="22rem">
-          <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
-            <LandingFeaturesBento />
-          </Suspense>
-        </LazyWhenVisible>
+        <LandingFeaturesBento />
 
-        <LazyWhenVisible minHeight="16rem">
-          <Suspense fallback={<section id="field-note" className="public-scene min-h-[16rem]" aria-hidden />}>
-            <LandingFounder />
-          </Suspense>
-        </LazyWhenVisible>
+        <LandingFounder />
 
-        <LazyWhenVisible minHeight="14rem">
-          <Section id="audience">
-            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {ssMarketing.audience.map((row) => (
-                <article key={row.title} className="ops-card p-5">
-                  <h3 className="font-semibold text-fg">{row.title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-fg-muted">{row.body}</p>
-                </article>
-              ))}
-            </div>
-          </Section>
-        </LazyWhenVisible>
+        <Section id="audience">
+          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {ssMarketing.audience.map((row) => (
+              <article key={row.title} className="ops-card p-5">
+                <h3 className="font-semibold text-fg">{row.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-fg-muted">{row.body}</p>
+              </article>
+            ))}
+          </div>
+        </Section>
 
-        <LazyWhenVisible minHeight="16rem">
-          <Section id="pricing-teaser" className="public-scene-surface">
-            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {teaserPlans.map((plan) => {
-                const commercial = plan.commercial;
-                const custom = Boolean(commercial?.custom_pricing) || commercial?.monthly_ils_before_vat == null;
-                const monthly = commercial?.monthly_ils_before_vat ?? 0;
-                const highlights = (commercial?.highlights_he ?? []).slice(0, 3);
-                return (
-                  <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
-                    {plan.key === "business" ? (
-                      <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
-                    ) : null}
-                    <p className="font-semibold text-fg">{plan.label_he}</p>
-                    <p className="text-2xl font-semibold text-fg">{custom ? "בהתאמה" : formatIls(monthly)}</p>
-                    <p className="text-xs text-fg-muted">{custom ? "דברו איתנו" : `לחודש · ${billingVatNote}`}</p>
-                    <ul className="mt-2 flex flex-col gap-1.5 text-sm text-fg">
-                      {highlights.map((h) => (
-                        <li key={h}>• {h}</li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-            <Link to="/pricing" className="mt-8 inline-flex min-h-12 items-center text-sm font-medium text-action hover:underline">
-              {ssMarketing.pricingTeaserCta} ←
-            </Link>
-          </Section>
-        </LazyWhenVisible>
+        <Section id="pricing-teaser" className="public-scene-surface">
+          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {TEASER_PLANS.map((plan) => {
+              const commercial = plan.commercial;
+              const custom = Boolean(commercial?.custom_pricing) || commercial?.monthly_ils_before_vat == null;
+              const monthly = commercial?.monthly_ils_before_vat ?? 0;
+              const highlights = (commercial?.highlights_he ?? []).slice(0, 3);
+              return (
+                <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
+                  {plan.key === "business" ? (
+                    <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
+                  ) : null}
+                  <p className="font-semibold text-fg">{plan.label_he}</p>
+                  <p className="text-2xl font-semibold text-fg">{custom ? "בהתאמה" : formatIls(monthly)}</p>
+                  <p className="text-xs text-fg-muted">{custom ? "דברו איתנו" : `לחודש · ${BILLING_VAT_NOTE}`}</p>
+                  <ul className="mt-2 flex flex-col gap-1.5 text-sm text-fg">
+                    {highlights.map((h) => (
+                      <li key={h}>• {h}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+          <Link to="/pricing" className="mt-8 inline-flex min-h-12 items-center text-sm font-medium text-action hover:underline">
+            {ssMarketing.pricingTeaserCta} ←
+          </Link>
+        </Section>
 
-        {/* FAQ + beta stay eager so #faq / #beta anchors and admin e2e always find them. */}
         <Section id="faq" className="landing-reveal is-in">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
           <div className="mt-6 flex flex-col gap-4">
@@ -310,18 +230,25 @@ export function SiteSecureLanding() {
 }
 
 function MarketingFooter() {
+  const company = ssMarketing.footerCompanyLine.trim();
+  const address = ssMarketing.footerAddress.trim();
+  const waHref = ssMarketing.footerWhatsappHref.trim();
+  const waLabel = ssMarketing.footerWhatsapp.trim();
+
   return (
     <footer className="border-t border-border px-4 py-14" dir="rtl">
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-2">
         <div>
           <p className="text-sm font-semibold text-fg">SITE SECURE</p>
-          <p className="mt-2 text-sm text-fg-muted">{ssMarketing.footerCompanyLine}</p>
-          <p className="text-sm text-fg-muted">{ssMarketing.footerAddress}</p>
-          <p className="mt-4">
-            <a href={ssMarketing.footerWhatsappHref} className="text-sm text-action hover:underline" rel="noopener noreferrer">
-              {ssMarketing.footerWhatsapp}
-            </a>
-          </p>
+          {company ? <p className="mt-2 text-sm text-fg-muted">{company}</p> : null}
+          {address ? <p className="text-sm text-fg-muted">{address}</p> : null}
+          {waHref ? (
+            <p className="mt-4">
+              <a href={waHref} className="text-sm text-action hover:underline" rel="noopener noreferrer">
+                {waLabel || "וואטסאפ"}
+              </a>
+            </p>
+          ) : null}
         </div>
         <nav className="flex flex-col gap-2 text-sm text-fg-muted" aria-label="משפטי">
           <Link to="/legal/$slug" params={{ slug: "terms" }}>

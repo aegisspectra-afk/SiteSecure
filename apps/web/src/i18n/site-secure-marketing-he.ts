@@ -93,6 +93,14 @@ export const ssMarketing = {
   footerCompanyLine: "Aegis Spectra · ח.פ [להשלמה]",
   footerAddress: "כתובת [להשלמה]",
   accessibility: "הצהרת נגישות",
+  /** Leave photoUrl / lines empty to hide the founder section from visitors. */
+  founder: {
+    title: "נבנה על ידי אנשי שטח",
+    photoUrl: "",
+    photoAlt: "",
+    line1: "",
+    line2: "",
+  },
 } as const;
 
 export const ssPricingFaq = [

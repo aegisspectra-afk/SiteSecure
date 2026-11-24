@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { DEMO_ACTIVITY, DEMO_BADGE, DEMO_NAV, DEMO_TABLE } from "./demo-data";
+import { ActivityFeed } from "./ActivityFeed";
+import { DEMO_BADGE, DEMO_NAV, DEMO_TABLE } from "./demo-data";
 
 type TabId = "overview" | "quotes" | "service";
 
@@ -100,15 +101,7 @@ export function LiveAppPreview() {
               </p>
             </article>
             <article className="mkt-live-card">
-              <h3>פיד</h3>
-              <ul className="mkt-demo-feed is-compact">
-                {DEMO_ACTIVITY.slice(0, 3).map((a) => (
-                  <li key={a.id}>
-                    <time>{a.time}</time>
-                    <p>{a.text}</p>
-                  </li>
-                ))}
-              </ul>
+              <ActivityFeed compact />
             </article>
           </div>
         ) : null}

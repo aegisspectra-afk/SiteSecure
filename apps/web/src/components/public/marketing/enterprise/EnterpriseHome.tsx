@@ -1,32 +1,26 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  annualMonthlyIls,
-  billingPublic,
-  catalogPlansOrdered,
-  comparisonCell,
-  formatIls,
-} from "@site-secure/authz";
 import { submitBetaSignup } from "../../../../lib/public-marketing-api";
 import { trackMarketingEvent } from "../../../../lib/marketing-analytics";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../../lib/public-seo";
 import { LandingCctvHeroCalc } from "../LandingCctvHeroCalc";
+import { ActivityFeed } from "./ActivityFeed";
 import { DemoDashboard } from "./DemoDashboard";
+import { InteractivePricingExperience } from "./InteractivePricingExperience";
 import { InteractiveWorkflow } from "./InteractiveWorkflow";
 import { LiveAppPreview } from "./LiveAppPreview";
 import { MarketingShell } from "./MarketingShell";
+import { OnboardingPreview } from "./OnboardingPreview";
 import { PlatformExplorer } from "./PlatformExplorer";
-import { HOME_FAQ, PROBLEMS, SOLUTIONS } from "./marketing-content";
+import { ProductTour } from "./ProductTour";
+import { SecurityArchitecture } from "./SecurityArchitecture";
+import { SolutionsExplorer } from "./SolutionsExplorer";
+import { HOME_FAQ, PROBLEMS } from "./marketing-content";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
 export function EnterpriseHome() {
   const [calcReady, setCalcReady] = useState(false);
-  const [annual, setAnnual] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
-  const plans = catalogPlansOrdered();
-  const billing = billingPublic();
 
   usePublicSeo({
     title: "SITE SECURE — כל העסק שלך. מערכת אחת. שליטה מלאה.",
@@ -91,13 +85,16 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* Interactive platform explorer */}
+      {/* Interactive platform explorer + guided tour */}
       <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="product-modules">
         <div className="mkt-container">
           <h2 className="mkt-h2">כל הפעילות העסקית שלך. מערכת אחת.</h2>
-          <p className="mkt-lede">בחרו מודול וראו תצוגת ממשק חיה — בלי צילומי מסך סטטיים.</p>
+          <p className="mkt-lede">בחרו מודול או עברו סיור מודרך — בלי צילומי מסך סטטיים.</p>
           <div className="mt-8">
             <PlatformExplorer />
+          </div>
+          <div className="mt-10">
+            <ProductTour />
           </div>
         </div>
       </section>
@@ -123,22 +120,18 @@ export function EnterpriseHome() {
           <div className="mt-8">
             <LiveAppPreview />
           </div>
+          <div className="mt-10">
+            <ActivityFeed />
+          </div>
         </div>
       </section>
 
       <section className="mkt-section mkt-reveal" id="solutions">
         <div className="mkt-container">
           <h2 className="mkt-h2">פתרונות לפי סוג עסק</h2>
-          <div className="mkt-grid-4 mt-8">
-            {SOLUTIONS.map((s) => (
-              <article key={s.slug} className="mkt-card flex flex-col gap-3">
-                <h3 className="m-0 text-lg font-semibold">{s.title}</h3>
-                <p className="m-0 flex-1 text-sm leading-7 text-[var(--mkt-muted)]">{s.body}</p>
-                <Link to={s.href} className="text-sm font-semibold text-[var(--mkt-blue)]">
-                  לעמוד הפתרון ←
-                </Link>
-              </article>
-            ))}
+          <p className="mkt-lede">בחרו סוג עסק — התוכן, המודולים וה־CTA מתעדכנים מיד.</p>
+          <div className="mt-8">
+            <SolutionsExplorer />
           </div>
         </div>
       </section>
@@ -166,119 +159,27 @@ export function EnterpriseHome() {
 
       <section className="mkt-section mkt-reveal" id="pricing">
         <div className="mkt-container">
-          <h2 className="mkt-h2">תמחור שקוף</h2>
-          <p className="mkt-lede">{billing.vat_note_he} בבטא אין סליקה אוטומטית — שדרוג בפנייה אלינו.</p>
-          <div className="mt-4 inline-flex rounded-[12px] border border-[var(--mkt-border)] p-1" role="group" aria-label="מחזור חיוב">
-            <button
-              type="button"
-              className={`mkt-btn ${!annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
-              aria-pressed={!annual}
-              onClick={() => setAnnual(false)}
-            >
-              חודשי
-            </button>
-            <button
-              type="button"
-              className={`mkt-btn ${annual ? "mkt-btn-primary" : "mkt-btn-ghost"}`}
-              aria-pressed={annual}
-              onClick={() => setAnnual(true)}
-            >
-              שנתי
-            </button>
-          </div>
-          <div className="mkt-grid-4 mt-8">
-            {plans.map((plan) => {
-              const commercial = plan.commercial;
-              const monthly = commercial?.monthly_ils_before_vat;
-              const custom = Boolean(commercial?.custom_pricing) || monthly == null;
-              const price = custom
-                ? "בהתאמה"
-                : formatIls(annual ? annualMonthlyIls(monthly!) : monthly!);
-              const selected = selectedPlan === plan.key;
-              const expanded = expandedPlan === plan.key;
-              return (
-                <article
-                  key={plan.key}
-                  className={`mkt-card mkt-plan-card${selected ? " is-selected" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="m-0 cursor-pointer border-0 bg-transparent p-0 text-start text-lg font-semibold text-[var(--mkt-ink)]"
-                    onClick={() => setSelectedPlan(plan.key)}
-                    aria-pressed={selected}
-                  >
-                    {plan.label_he}
-                  </button>
-                  <p className="m-0 text-3xl font-bold text-[var(--mkt-ink)]">{price}</p>
-                  <p className="m-0 text-xs text-[var(--mkt-muted)]">
-                    {custom ? "דברו איתנו" : annual ? "ממוצע חודשי בשנתי" : "לחודש לפני מע״מ"}
-                  </p>
-                  <p className="m-0 text-xs text-[var(--mkt-muted)]">
-                    אחסון: {comparisonCell(plan, "storage_gb")} · משתמשים:{" "}
-                    {comparisonCell(plan, "max_members")}
-                  </p>
-                  <ul className="m-0 mt-1 flex list-none flex-col gap-1.5 p-0 text-sm">
-                    {(commercial?.highlights_he ?? []).slice(0, expanded ? 99 : 3).map((h) => (
-                      <li key={h}>• {h}</li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    className="mkt-plan-expand"
-                    onClick={() => setExpandedPlan(expanded ? null : plan.key)}
-                    aria-expanded={expanded}
-                  >
-                    {expanded ? "הסתר פרטים" : "הרחב פרטים"}
-                  </button>
-                  {plan.key === "enterprise" ? (
-                    <Link to="/contact" className="mkt-btn mkt-btn-primary">
-                      {commercial?.cta_he ?? "דברו איתנו"}
-                    </Link>
-                  ) : (
-                    <Link to="/register" className="mkt-btn mkt-btn-primary">
-                      {commercial?.cta_he ?? "בחרו מסלול"}
-                    </Link>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-          <Link
-            to="/pricing"
-            className="mkt-btn mkt-btn-secondary mt-8"
-            onClick={() => trackMarketingEvent("pricing_view", { from: "home" })}
-          >
-            למחירון המלא והשוואה
-          </Link>
+          <InteractivePricingExperience compact />
         </div>
       </section>
 
       <section className="mkt-dark mkt-section mkt-reveal" id="security">
         <div className="mkt-container">
           <h2 className="mkt-h2">אבטחה ואמון</h2>
-          <p className="mkt-lede">רק מה שקיים במוצר היום.</p>
-          <div className="mkt-grid-3 mt-8">
-            {[
-              { t: "בידוד סביבות עבודה", b: "כל חברה רואה רק את הנתונים שלה." },
-              { t: "הרשאות לפי תפקיד", b: "בעלים, מנהל, מכירות וטכנאי — כל אחד לפי היקף." },
-              { t: "אימות מאובטח", b: "התחברות דרך ספק הזהות של המערכת." },
-              { t: "הגנת נתונים בתעבורה", b: "תקשורת מוצפנת בין הדפדפן לשרת." },
-              { t: "קבצים מבוקרים", b: "אחסון קבצים עם הרשאות סביבת עבודה." },
-              { t: "בקרת גישה", b: "בדיקת הרשאה וסביבת עבודה בכל פעולה רגישה." },
-            ].map((row) => (
-              <article key={row.t} className="mkt-card">
-                <h3 className="m-0 text-base font-semibold">{row.t}</h3>
-                <p className="mt-2 text-sm leading-7 text-[var(--mkt-on-dark-muted)]">{row.b}</p>
-              </article>
-            ))}
+          <p className="mkt-lede">רק בקרות מאומתות — בלי תעודות שלא אומתו.</p>
+          <div className="mt-8">
+            <SecurityArchitecture />
           </div>
-          <Link
-            to="/legal/$slug"
-            params={{ slug: "security" }}
-            className="mt-6 inline-flex text-sm font-semibold text-[var(--mkt-blue-bright)]"
-          >
-            לעמוד אבטחת המידע ←
-          </Link>
+        </div>
+      </section>
+
+      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="onboarding">
+        <div className="mkt-container">
+          <h2 className="mkt-h2">איך נראית ההצטרפות</h2>
+          <p className="mkt-lede">תצוגה אינטראקטיבית של השלבים — כל CTA מוביל לנתיב אמיתי.</p>
+          <div className="mt-8">
+            <OnboardingPreview />
+          </div>
         </div>
       </section>
 

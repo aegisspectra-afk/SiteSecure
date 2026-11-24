@@ -15,9 +15,10 @@ export type PlanCommercial = {
   cta_he: string;
 };
 
-type CatalogPlan = {
+export type CatalogPlan = {
   key: string;
   label_he: string;
+  features?: string[];
   limits: Record<string, number>;
   capabilities?: Record<string, boolean>;
   commercial?: PlanCommercial;

@@ -2,7 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { DemoDashboard } from "../components/public/marketing/enterprise/DemoDashboard";
 import { InteractiveWorkflow } from "../components/public/marketing/enterprise/InteractiveWorkflow";
 import { MarketingShell } from "../components/public/marketing/enterprise/MarketingShell";
+import { OnboardingPreview } from "../components/public/marketing/enterprise/OnboardingPreview";
 import { PlatformExplorer } from "../components/public/marketing/enterprise/PlatformExplorer";
+import { ProductTour } from "../components/public/marketing/enterprise/ProductTour";
+import { SecurityArchitecture } from "../components/public/marketing/enterprise/SecurityArchitecture";
 import { MARKETING_ROUTES } from "../components/public/marketing/enterprise/marketing-routes";
 import { trackMarketingEvent } from "../lib/marketing-analytics";
 import { usePublicSeo } from "../lib/public-seo";
@@ -57,6 +60,9 @@ function ProductPage() {
           <div className="mt-8">
             <PlatformExplorer />
           </div>
+          <div className="mt-10">
+            <ProductTour />
+          </div>
         </div>
       </section>
 
@@ -80,6 +86,21 @@ function ProductPage() {
           <Link to={MARKETING_ROUTES.solutionsTechnicians} className="mkt-btn mkt-btn-secondary mt-6">
             לפתרון טכנאים
           </Link>
+        </div>
+      </section>
+
+      <section className="mkt-section" id="security">
+        <div className="mkt-container">
+          <SecurityArchitecture />
+        </div>
+      </section>
+
+      <section className="mkt-section bg-[var(--mkt-white)]" id="onboarding">
+        <div className="mkt-container">
+          <h2 className="mkt-h2">תצוגת הצטרפות</h2>
+          <div className="mt-8">
+            <OnboardingPreview />
+          </div>
         </div>
       </section>
 

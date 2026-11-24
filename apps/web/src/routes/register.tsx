@@ -10,12 +10,16 @@ import { landingPathForSession, sanitizeNextPath } from "../lib/auth-routes";
 import { useSession } from "../lib/session";
 import { supabase } from "../lib/supabase";
 
-type AuthNextSearch = { next?: string };
+type AuthNextSearch = { next?: string; plan?: string };
+
+const REGISTER_PLAN_KEYS = new Set(["free", "pro", "business"]);
 
 export const Route = createFileRoute("/register")({
   validateSearch: (search: Record<string, unknown>): AuthNextSearch => {
     const next = typeof search.next === "string" ? search.next : undefined;
-    return next ? { next } : {};
+    const planRaw = typeof search.plan === "string" ? search.plan.toLowerCase() : undefined;
+    const plan = planRaw && REGISTER_PLAN_KEYS.has(planRaw) ? planRaw : undefined;
+    return { ...(next ? { next } : {}), ...(plan ? { plan } : {}) };
   },
   component: RegisterPage,
 });
@@ -31,7 +35,7 @@ const registerShell = {
 function RegisterPage() {
   const { loading, user, session, api, error, refresh, signOut } = useSession();
   const navigate = useNavigate();
-  const { next: nextRaw } = Route.useSearch();
+  const { next: nextRaw, plan: preferredPlan } = Route.useSearch();
   const next = sanitizeNextPath(nextRaw);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +103,12 @@ function RegisterPage() {
         />
       }
     >
+      {preferredPlan ? (
+        <p className="mb-4 rounded-[12px] border border-border bg-bg-muted px-4 py-3 text-sm leading-6 text-fg" role="note">
+          ביקשתם מסלול <strong>{preferredPlan}</strong>. ההרשמה מתחילה ב־Free לפי הקטלוג; שדרוג בבטא מתבצע בפנייה
+          לצוות אחרי ההצטרפות — אין סליקה אוטומטית.
+        </p>
+      ) : null}
       <RegisterForm
         loading={submitting}
         error={formError}

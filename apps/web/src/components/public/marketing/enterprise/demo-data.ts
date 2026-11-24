@@ -14,6 +14,9 @@ export const DEMO_ACTIVITY = [
   { id: "a2", time: "09:18", text: "קריאת שירות #882 נפתחה — אתר רמת גן", tone: "warn" as const },
   { id: "a3", time: "08:55", text: "טכנאי יוסי סיים התקנה — תיק מסירה נחתם", tone: "ok" as const },
   { id: "a4", time: "08:20", text: "ליד חדש מאתר — מצלמות לובי", tone: "info" as const },
+  { id: "a5", time: "07:50", text: "שיבוץ טכנאי לעבודת התקנה P-221", tone: "info" as const },
+  { id: "a6", time: "07:15", text: "קריאת שירות #871 נסגרה עם תיעוד", tone: "ok" as const },
+  { id: "a7", time: "06:40", text: "התראת מלאי סינתטית — מק״ט CAM-4K", tone: "warn" as const },
 ];
 
 export const DEMO_CHART = [

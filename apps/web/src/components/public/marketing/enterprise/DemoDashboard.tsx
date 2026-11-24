@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { DEMO_ACTIVITY, DEMO_BADGE, DEMO_CHART, DEMO_KPIS } from "./demo-data";
+import { ActivityFeed } from "./ActivityFeed";
+import { DEMO_BADGE, DEMO_CHART, DEMO_KPIS } from "./demo-data";
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -116,19 +117,7 @@ export function DemoDashboard() {
           </div>
 
           <div className="mkt-demo-panel">
-            <div className="mkt-demo-panel-head">
-              <h3>פיד פעילות</h3>
-              <span className={`mkt-status is-${DEMO_ACTIVITY[0].tone}`}>חי</span>
-            </div>
-            <ul className="mkt-demo-feed">
-              {DEMO_ACTIVITY.map((item) => (
-                <li key={item.id}>
-                  <time dateTime={`2026-01-01T${item.time}:00`}>{item.time}</time>
-                  <span className={`mkt-status-dot is-${item.tone}`} aria-hidden />
-                  <p>{item.text}</p>
-                </li>
-              ))}
-            </ul>
+            <ActivityFeed compact />
           </div>
         </div>
       </div>

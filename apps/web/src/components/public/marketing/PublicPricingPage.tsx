@@ -7,10 +7,11 @@ import {
   PRICING_CAPABILITY_ROWS,
 } from "@site-secure/authz";
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ssPricingFaq } from "../../../i18n/site-secure-marketing-he";
+import { trackMarketingEvent } from "../../../lib/marketing-analytics";
 import { siteSecurePricingJsonLd, usePublicSeo } from "../../../lib/public-seo";
-import { PublicHeader } from "../PublicChrome";
+import { MarketingShell } from "./enterprise/MarketingShell";
 
 const pricingSeoTitle = "מחירון SITE SECURE";
 const pricingSeoDescription = "חבילות Free, Pro, Business ו-Enterprise — מחירים לפני מע״מ, מקור אמת אחד.";
@@ -29,13 +30,16 @@ export function PublicPricingPage() {
     jsonLd: siteSecurePricingJsonLd(pricingOrigin, pricingSeoTitle, pricingSeoDescription),
   });
 
+  useEffect(() => {
+    trackMarketingEvent("pricing_view");
+  }, []);
+
   const rows = useMemo(() => PRICING_CAPABILITY_ROWS, []);
 
   return (
-    <div className="public-root public-shell min-h-dvh text-fg" dir="rtl" lang="he">
-      <PublicHeader marketingNav />
-      <main className="public-container mx-auto max-w-6xl px-4 py-12">
-        <h1 className="text-3xl font-semibold tracking-tight text-fg">מחירון</h1>
+    <MarketingShell darkNav={false}>
+      <div className="mkt-container px-0 py-12">
+        <h1 className="mkt-h1 text-[var(--mkt-ink)]">מחירון</h1>
         <p className="mt-2 text-sm text-fg-muted">{billing.vat_note_he}</p>
 
         <div className="mt-6 inline-flex rounded-[var(--radius-control)] border border-border p-1">
@@ -77,18 +81,20 @@ export function PublicPricingPage() {
                   ))}
                 </ul>
                 {plan.key === "enterprise" ? (
-                  <a
-                    href="/#beta"
-                    className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
+                  <Link
+                    to="/contact"
+                    className="mkt-btn mkt-btn-primary"
+                    onClick={() => trackMarketingEvent("demo_start", { from: "pricing_enterprise" })}
                   >
                     {commercial?.cta_he ?? "דברו איתנו"}
-                  </a>
+                  </Link>
                 ) : (
                   <Link
                     to="/register"
-                    className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
+                    className="mkt-btn mkt-btn-primary"
+                    onClick={() => trackMarketingEvent("signup_start", { from: `pricing_${plan.key}` })}
                   >
-                    {commercial?.cta_he ?? "הצטרפו לבטא"}
+                    {commercial?.cta_he ?? "התחילו בחינם"}
                   </Link>
                 )}
               </article>
@@ -134,10 +140,10 @@ export function PublicPricingPage() {
           ))}
         </div>
 
-        <Link to="/" className="mt-10 inline-flex text-sm text-action hover:underline">
+        <Link to="/" className="mt-10 inline-flex text-sm font-semibold text-[var(--mkt-blue)]">
           חזרה לעמוד הבית
         </Link>
-      </main>
-    </div>
+      </div>
+    </MarketingShell>
   );
 }

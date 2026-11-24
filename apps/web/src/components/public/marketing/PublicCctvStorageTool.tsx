@@ -2,10 +2,11 @@ import { Button, Input, Select } from "@site-secure/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { calculatePublicCctvStorage, type PublicStorageInput, type PublicStorageResult } from "../../../lib/public-marketing-api";
+import { trackMarketingEvent } from "../../../lib/marketing-analytics";
 import { usePublicSeo } from "../../../lib/public-seo";
 import { formatTb } from "../../../lib/cctv-storage-display";
 import { PUBLIC_CCTV_DRAFT_KEY, savePublicCctvDraft } from "../../../lib/public-cctv-draft";
-import { PublicHeader } from "../PublicChrome";
+import { MarketingShell } from "./enterprise/MarketingShell";
 
 export { PUBLIC_CCTV_DRAFT_KEY };
 
@@ -36,11 +37,10 @@ export function PublicCctvStorageTool() {
   }, []);
 
   return (
-    <div className="public-root public-shell min-h-dvh text-fg" dir="rtl" lang="he">
-      <PublicHeader marketingNav />
-      <main className="public-container mx-auto max-w-2xl px-4 py-12">
-        <h1 className="text-3xl font-semibold text-fg">מחשבון אחסון CCTV</h1>
-        <p className="mt-2 text-sm leading-7 text-fg-muted">
+    <MarketingShell darkNav={false}>
+      <div className="mkt-container mx-auto max-w-2xl px-0 py-12">
+        <h1 className="mkt-h1 text-[var(--mkt-ink)]">מחשבון אחסון CCTV</h1>
+        <p className="mt-2 text-[15px] leading-7 text-[var(--mkt-ink-soft)]">
           כלי הנדסי חינמי — בלי מחירים. אותו מנוע כמו באשף ההצעה במערכת.
         </p>
 
@@ -54,6 +54,10 @@ export function PublicCctvStorageTool() {
               .then((data) => {
                 setResult(data);
                 savePublicCctvDraft(input);
+                trackMarketingEvent("calculator_complete", {
+                  cameras: input.camera_count,
+                  retention_days: input.retention_days,
+                });
               })
               .catch((e: Error) => setErr(e.message))
               .finally(() => setBusy(false));
@@ -151,14 +155,17 @@ export function PublicCctvStorageTool() {
             <p className="text-xs text-fg-muted">מחירים ודגמים — רק אחרי הרשמה ובאשף ההצעה.</p>
             <Link
               to="/register"
-              className="mt-4 inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-4 text-sm font-medium text-action-fg"
-              onClick={() => savePublicCctvDraft(input)}
+              className="mkt-btn mkt-btn-primary mt-4"
+              onClick={() => {
+                savePublicCctvDraft(input);
+                trackMarketingEvent("signup_start", { from: "cctv_calculator" });
+              }}
             >
               הפוך להצעת מחיר — הרשמה
             </Link>
           </div>
         ) : null}
-      </main>
-    </div>
+      </div>
+    </MarketingShell>
   );
 }

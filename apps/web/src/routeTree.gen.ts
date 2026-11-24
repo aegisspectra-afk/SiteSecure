@@ -10,14 +10,17 @@
 
 import { Route as rootRouteImport } from "./routes/__root"
 import { Route as IndexRouteImport } from "./routes/index"
+import { Route as AboutRouteImport } from "./routes/about"
 import { Route as AdminRouteRouteImport } from "./routes/admin/route"
 import { Route as AppRouteRouteImport } from "./routes/app/route"
+import { Route as ContactRouteImport } from "./routes/contact"
 import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password"
 import { Route as LoginRouteImport } from "./routes/login"
 import { Route as OnboardingRouteImport } from "./routes/onboarding"
 import { Route as PlatformRouteRouteImport } from "./routes/platform/route"
 import { Route as PortalRouteRouteImport } from "./routes/portal/route"
 import { Route as PricingRouteImport } from "./routes/pricing"
+import { Route as ProductRouteImport } from "./routes/product"
 import { Route as RegisterRouteImport } from "./routes/register"
 import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
 import { Route as UnitRouteRouteImport } from "./routes/unit/route"
@@ -48,6 +51,7 @@ import { Route as DemoSspRouteImport } from "./routes/demo/ssp"
 import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as HTokenRouteImport } from "./routes/h/$token"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
+import { Route as KnowledgeIndexRouteImport } from "./routes/knowledge/index"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
 import { Route as PlatformIndexRouteImport } from "./routes/platform/index"
@@ -59,6 +63,11 @@ import { Route as PortalQuotesRouteImport } from "./routes/portal/quotes"
 import { Route as PortalServiceRouteImport } from "./routes/portal/service"
 import { Route as PortalWarrantiesRouteImport } from "./routes/portal/warranties"
 import { Route as QTokenRouteImport } from "./routes/q/$token"
+import { Route as SolutionsIndexRouteImport } from "./routes/solutions/index"
+import { Route as SolutionsEnterpriseRouteImport } from "./routes/solutions/enterprise"
+import { Route as SolutionsInstallationCompaniesRouteImport } from "./routes/solutions/installation-companies"
+import { Route as SolutionsSecurityCompaniesRouteImport } from "./routes/solutions/security-companies"
+import { Route as SolutionsTechniciansRouteImport } from "./routes/solutions/technicians"
 import { Route as SspTokenRouteImport } from "./routes/ssp/$token"
 import { Route as ToolsCctvStorageRouteImport } from "./routes/tools/cctv-storage"
 import { Route as UnitIndexRouteImport } from "./routes/unit/index"
@@ -165,6 +174,11 @@ const IndexRoute = IndexRouteImport.update({
   path: "/",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: "/about",
+  path: "/about",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: "/admin",
   path: "/admin",
@@ -173,6 +187,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
 const AppRouteRoute = AppRouteRouteImport.update({
   id: "/app",
   path: "/app",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: "/contact",
+  path: "/contact",
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -203,6 +222,11 @@ const PortalRouteRoute = PortalRouteRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: "/pricing",
   path: "/pricing",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductRoute = ProductRouteImport.update({
+  id: "/product",
+  path: "/product",
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -355,6 +379,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: "/invite/$token",
   getParentRoute: () => rootRouteImport,
 } as any)
+const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
+  id: "/knowledge/",
+  path: "/knowledge/",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
   id: "/legal/",
   path: "/legal/",
@@ -408,6 +437,33 @@ const PortalWarrantiesRoute = PortalWarrantiesRouteImport.update({
 const QTokenRoute = QTokenRouteImport.update({
   id: "/q/$token",
   path: "/q/$token",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsIndexRoute = SolutionsIndexRouteImport.update({
+  id: "/solutions/",
+  path: "/solutions/",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsEnterpriseRoute = SolutionsEnterpriseRouteImport.update({
+  id: "/solutions/enterprise",
+  path: "/solutions/enterprise",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsInstallationCompaniesRoute =
+  SolutionsInstallationCompaniesRouteImport.update({
+    id: "/solutions/installation-companies",
+    path: "/solutions/installation-companies",
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsSecurityCompaniesRoute =
+  SolutionsSecurityCompaniesRouteImport.update({
+    id: "/solutions/security-companies",
+    path: "/solutions/security-companies",
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsTechniciansRoute = SolutionsTechniciansRouteImport.update({
+  id: "/solutions/technicians",
+  path: "/solutions/technicians",
   getParentRoute: () => rootRouteImport,
 } as any)
 const SspTokenRoute = SspTokenRouteImport.update({
@@ -922,10 +978,13 @@ export interface FileRoutesByFullPath {
   "/platform": typeof PlatformRouteRouteWithChildren
   "/portal": typeof PortalRouteRouteWithChildren
   "/unit": typeof UnitRouteRouteWithChildren
+  "/about": typeof AboutRoute
+  "/contact": typeof ContactRoute
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
   "/pricing": typeof PricingRoute
+  "/product": typeof ProductRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -961,13 +1020,19 @@ export interface FileRoutesByFullPath {
   "/portal/service": typeof PortalServiceRoute
   "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
+  "/solutions/enterprise": typeof SolutionsEnterpriseRoute
+  "/solutions/installation-companies": typeof SolutionsInstallationCompaniesRoute
+  "/solutions/security-companies": typeof SolutionsSecurityCompaniesRoute
+  "/solutions/technicians": typeof SolutionsTechniciansRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
+  "/knowledge/": typeof KnowledgeIndexRoute
   "/legal/": typeof LegalIndexRoute
   "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
+  "/solutions/": typeof SolutionsIndexRoute
   "/unit/": typeof UnitIndexRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteRouteWithChildren
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
@@ -1069,10 +1134,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
+  "/about": typeof AboutRoute
+  "/contact": typeof ContactRoute
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
   "/pricing": typeof PricingRoute
+  "/product": typeof ProductRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -1103,13 +1171,19 @@ export interface FileRoutesByTo {
   "/portal/service": typeof PortalServiceRoute
   "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
+  "/solutions/enterprise": typeof SolutionsEnterpriseRoute
+  "/solutions/installation-companies": typeof SolutionsInstallationCompaniesRoute
+  "/solutions/security-companies": typeof SolutionsSecurityCompaniesRoute
+  "/solutions/technicians": typeof SolutionsTechniciansRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin": typeof AdminIndexRoute
   "/app": typeof AppIndexRoute
+  "/knowledge": typeof KnowledgeIndexRoute
   "/legal": typeof LegalIndexRoute
   "/platform": typeof PlatformIndexRoute
   "/portal": typeof PortalIndexRoute
+  "/solutions": typeof SolutionsIndexRoute
   "/unit": typeof UnitIndexRoute
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
   "/app/fleet/access": typeof AppFleetAccessRoute
@@ -1216,10 +1290,13 @@ export interface FileRoutesById {
   "/platform": typeof PlatformRouteRouteWithChildren
   "/portal": typeof PortalRouteRouteWithChildren
   "/unit": typeof UnitRouteRouteWithChildren
+  "/about": typeof AboutRoute
+  "/contact": typeof ContactRoute
   "/forgot-password": typeof ForgotPasswordRoute
   "/login": typeof LoginRoute
   "/onboarding": typeof OnboardingRoute
   "/pricing": typeof PricingRoute
+  "/product": typeof ProductRoute
   "/register": typeof RegisterRoute
   "/reset-password": typeof ResetPasswordRoute
   "/verify-email": typeof VerifyEmailRoute
@@ -1255,13 +1332,19 @@ export interface FileRoutesById {
   "/portal/service": typeof PortalServiceRoute
   "/portal/warranties": typeof PortalWarrantiesRoute
   "/q/$token": typeof QTokenRoute
+  "/solutions/enterprise": typeof SolutionsEnterpriseRoute
+  "/solutions/installation-companies": typeof SolutionsInstallationCompaniesRoute
+  "/solutions/security-companies": typeof SolutionsSecurityCompaniesRoute
+  "/solutions/technicians": typeof SolutionsTechniciansRoute
   "/ssp/$token": typeof SspTokenRoute
   "/tools/cctv-storage": typeof ToolsCctvStorageRoute
   "/admin/": typeof AdminIndexRoute
   "/app/": typeof AppIndexRoute
+  "/knowledge/": typeof KnowledgeIndexRoute
   "/legal/": typeof LegalIndexRoute
   "/platform/": typeof PlatformIndexRoute
   "/portal/": typeof PortalIndexRoute
+  "/solutions/": typeof SolutionsIndexRoute
   "/unit/": typeof UnitIndexRoute
   "/app/quotes/$quoteId": typeof AppQuotesQuoteIdRouteRouteWithChildren
   "/app/customers/$customerId": typeof AppCustomersCustomerIdRoute
@@ -1370,10 +1453,13 @@ export interface FileRouteTypes {
     | "/platform"
     | "/portal"
     | "/unit"
+    | "/about"
+    | "/contact"
     | "/forgot-password"
     | "/login"
     | "/onboarding"
     | "/pricing"
+    | "/product"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1409,13 +1495,19 @@ export interface FileRouteTypes {
     | "/portal/service"
     | "/portal/warranties"
     | "/q/$token"
+    | "/solutions/enterprise"
+    | "/solutions/installation-companies"
+    | "/solutions/security-companies"
+    | "/solutions/technicians"
     | "/ssp/$token"
     | "/tools/cctv-storage"
     | "/admin/"
     | "/app/"
+    | "/knowledge/"
     | "/legal/"
     | "/platform/"
     | "/portal/"
+    | "/solutions/"
     | "/unit/"
     | "/app/quotes/$quoteId"
     | "/app/customers/$customerId"
@@ -1517,10 +1609,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
+    | "/about"
+    | "/contact"
     | "/forgot-password"
     | "/login"
     | "/onboarding"
     | "/pricing"
+    | "/product"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1551,13 +1646,19 @@ export interface FileRouteTypes {
     | "/portal/service"
     | "/portal/warranties"
     | "/q/$token"
+    | "/solutions/enterprise"
+    | "/solutions/installation-companies"
+    | "/solutions/security-companies"
+    | "/solutions/technicians"
     | "/ssp/$token"
     | "/tools/cctv-storage"
     | "/admin"
     | "/app"
+    | "/knowledge"
     | "/legal"
     | "/platform"
     | "/portal"
+    | "/solutions"
     | "/unit"
     | "/app/customers/$customerId"
     | "/app/fleet/access"
@@ -1663,10 +1764,13 @@ export interface FileRouteTypes {
     | "/platform"
     | "/portal"
     | "/unit"
+    | "/about"
+    | "/contact"
     | "/forgot-password"
     | "/login"
     | "/onboarding"
     | "/pricing"
+    | "/product"
     | "/register"
     | "/reset-password"
     | "/verify-email"
@@ -1702,13 +1806,19 @@ export interface FileRouteTypes {
     | "/portal/service"
     | "/portal/warranties"
     | "/q/$token"
+    | "/solutions/enterprise"
+    | "/solutions/installation-companies"
+    | "/solutions/security-companies"
+    | "/solutions/technicians"
     | "/ssp/$token"
     | "/tools/cctv-storage"
     | "/admin/"
     | "/app/"
+    | "/knowledge/"
     | "/legal/"
     | "/platform/"
     | "/portal/"
+    | "/solutions/"
     | "/unit/"
     | "/app/quotes/$quoteId"
     | "/app/customers/$customerId"
@@ -1816,10 +1926,13 @@ export interface RootRouteChildren {
   PlatformRouteRoute: typeof PlatformRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   UnitRouteRoute: typeof UnitRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  ContactRoute: typeof ContactRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
+  ProductRoute: typeof ProductRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -1829,9 +1942,15 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
+  SolutionsEnterpriseRoute: typeof SolutionsEnterpriseRoute
+  SolutionsInstallationCompaniesRoute: typeof SolutionsInstallationCompaniesRoute
+  SolutionsSecurityCompaniesRoute: typeof SolutionsSecurityCompaniesRoute
+  SolutionsTechniciansRoute: typeof SolutionsTechniciansRoute
   SspTokenRoute: typeof SspTokenRoute
   ToolsCctvStorageRoute: typeof ToolsCctvStorageRoute
+  KnowledgeIndexRoute: typeof KnowledgeIndexRoute
   LegalIndexRoute: typeof LegalIndexRoute
+  SolutionsIndexRoute: typeof SolutionsIndexRoute
   PublicHandoverTokenRoute: typeof PublicHandoverTokenRoute
   PublicQuotesTokenRoute: typeof PublicQuotesTokenRoute
 }
@@ -1843,6 +1962,13 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/"
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/about": {
+      id: "/about"
+      path: "/about"
+      fullPath: "/about"
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/admin": {
@@ -1857,6 +1983,13 @@ declare module "@tanstack/react-router" {
       path: "/app"
       fullPath: "/app"
       preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/contact": {
+      id: "/contact"
+      path: "/contact"
+      fullPath: "/contact"
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/forgot-password": {
@@ -1899,6 +2032,13 @@ declare module "@tanstack/react-router" {
       path: "/pricing"
       fullPath: "/pricing"
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/product": {
+      id: "/product"
+      path: "/product"
+      fullPath: "/product"
+      preLoaderRoute: typeof ProductRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/register": {
@@ -2111,6 +2251,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/knowledge/": {
+      id: "/knowledge/"
+      path: "/knowledge"
+      fullPath: "/knowledge/"
+      preLoaderRoute: typeof KnowledgeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/legal/": {
       id: "/legal/"
       path: "/legal"
@@ -2186,6 +2333,41 @@ declare module "@tanstack/react-router" {
       path: "/q/$token"
       fullPath: "/q/$token"
       preLoaderRoute: typeof QTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/solutions/": {
+      id: "/solutions/"
+      path: "/solutions"
+      fullPath: "/solutions/"
+      preLoaderRoute: typeof SolutionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/solutions/enterprise": {
+      id: "/solutions/enterprise"
+      path: "/solutions/enterprise"
+      fullPath: "/solutions/enterprise"
+      preLoaderRoute: typeof SolutionsEnterpriseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/solutions/installation-companies": {
+      id: "/solutions/installation-companies"
+      path: "/solutions/installation-companies"
+      fullPath: "/solutions/installation-companies"
+      preLoaderRoute: typeof SolutionsInstallationCompaniesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/solutions/security-companies": {
+      id: "/solutions/security-companies"
+      path: "/solutions/security-companies"
+      fullPath: "/solutions/security-companies"
+      preLoaderRoute: typeof SolutionsSecurityCompaniesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/solutions/technicians": {
+      id: "/solutions/technicians"
+      path: "/solutions/technicians"
+      fullPath: "/solutions/technicians"
+      preLoaderRoute: typeof SolutionsTechniciansRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/ssp/$token": {
@@ -3276,10 +3458,13 @@ const rootRouteChildren: RootRouteChildren = {
   PlatformRouteRoute: PlatformRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   UnitRouteRoute: UnitRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
+  ContactRoute: ContactRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
+  ProductRoute: ProductRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
@@ -3289,9 +3474,15 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
+  SolutionsEnterpriseRoute: SolutionsEnterpriseRoute,
+  SolutionsInstallationCompaniesRoute: SolutionsInstallationCompaniesRoute,
+  SolutionsSecurityCompaniesRoute: SolutionsSecurityCompaniesRoute,
+  SolutionsTechniciansRoute: SolutionsTechniciansRoute,
   SspTokenRoute: SspTokenRoute,
   ToolsCctvStorageRoute: ToolsCctvStorageRoute,
+  KnowledgeIndexRoute: KnowledgeIndexRoute,
   LegalIndexRoute: LegalIndexRoute,
+  SolutionsIndexRoute: SolutionsIndexRoute,
   PublicHandoverTokenRoute: PublicHandoverTokenRoute,
   PublicQuotesTokenRoute: PublicQuotesTokenRoute,
 }

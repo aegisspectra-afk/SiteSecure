@@ -19,6 +19,9 @@ const LandingHowScrolly = lazy(() =>
 const LandingFeaturesBento = lazy(() =>
   import("./LandingFeaturesBento").then((m) => ({ default: m.LandingFeaturesBento })),
 );
+const LandingFounder = lazy(() =>
+  import("./LandingFounder").then((m) => ({ default: m.LandingFounder })),
+);
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
@@ -148,6 +151,10 @@ export function SiteSecureLanding() {
 
         <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
           <LandingFeaturesBento />
+        </Suspense>
+
+        <Suspense fallback={<section id="field-note" className="public-scene min-h-[16rem]" aria-hidden />}>
+          <LandingFounder />
         </Suspense>
 
         <Section id="audience">

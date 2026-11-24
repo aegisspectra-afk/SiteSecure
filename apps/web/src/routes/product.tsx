@@ -30,7 +30,7 @@ function ProductPage() {
       <section className="mkt-section">
         <div className="mkt-container mkt-grid-3">
           {MARKETING_MODULES.map((mod) => (
-            <article key={mod.key} id={mod.key} className="mkt-card mkt-reveal scroll-mt-24">
+            <article key={mod.key} id={mod.key} className="mkt-card scroll-mt-24">
               <div className="mb-2 flex items-center gap-2">
                 <h2 className="m-0 text-lg font-semibold">{mod.title}</h2>
                 <span className="mkt-badge">{statusLabel(mod.status)}</span>

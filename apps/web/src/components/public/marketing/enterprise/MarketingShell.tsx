@@ -17,7 +17,7 @@ export function MarketingShell({
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  useLandingReveal(".mkt-reveal");
+  useLandingReveal(".mkt-reveal", pathname);
 
   useEffect(() => {
     ensureGaBootstrap();

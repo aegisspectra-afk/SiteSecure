@@ -52,7 +52,7 @@ class BetaSignupBody(BaseModel):
     business_name: str = Field(default="", max_length=160)
     technician_count: str = Field(min_length=1, max_length=40)
     trade_focus: str = Field(default="", max_length=160)
-    source: str = Field(default="landing", max_length=40)
+    source: str = Field(default="landing", max_length=48)
 
 
 @router.post("/beta-signups")

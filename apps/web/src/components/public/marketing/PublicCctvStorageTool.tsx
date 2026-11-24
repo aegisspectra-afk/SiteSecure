@@ -223,7 +223,7 @@ export function PublicCctvStorageTool() {
             trackMarketingEvent("signup_start", { from: "cctv_calculator" });
           }}
         >
-          הפוך להצעת מחיר — הרשמה
+          הפכו את התוצאה להצעת מחיר באמצעות SITE SECURE
         </Link>
       </div>
     </MarketingShell>

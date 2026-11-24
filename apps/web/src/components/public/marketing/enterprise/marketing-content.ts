@@ -117,13 +117,15 @@ export const HOME_FAQ = [
   },
 ] as const;
 
+/** @deprecated Prefer HEADER_FLAT_LINKS from marketing-routes.ts */
 export const NAV_LINKS = [
-  { href: "/product", label: "פלטפורמה", isRoute: true },
+  { href: "/product", label: "סקירת מוצר", isRoute: true },
   { href: "/solutions", label: "פתרונות", isRoute: true },
   { href: "/pricing", label: "מחירון", isRoute: true },
-  { href: "/tools/cctv-storage", label: "כלים", isRoute: true },
-  { href: "/knowledge", label: "מרכז ידע", isRoute: true },
+  { href: "/tools/cctv-storage", label: "מחשבון אחסון", isRoute: true },
   { href: "/about", label: "אודות", isRoute: true },
+  { href: "/contact", label: "צור קשר", isRoute: true },
+  { href: "/knowledge", label: "מרכז ידע", isRoute: true },
 ] as const;
 
 export function statusLabel(status: ModuleStatus): string {

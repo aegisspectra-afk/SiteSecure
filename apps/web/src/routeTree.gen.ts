@@ -52,6 +52,7 @@ import { Route as DevUiRouteImport } from "./routes/dev/ui"
 import { Route as HTokenRouteImport } from "./routes/h/$token"
 import { Route as InviteTokenRouteImport } from "./routes/invite/$token"
 import { Route as KnowledgeIndexRouteImport } from "./routes/knowledge/index"
+import { Route as KnowledgeSlugRouteImport } from "./routes/knowledge/$slug"
 import { Route as LegalIndexRouteImport } from "./routes/legal/index"
 import { Route as LegalSlugRouteImport } from "./routes/legal/$slug"
 import { Route as PlatformIndexRouteImport } from "./routes/platform/index"
@@ -382,6 +383,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
 const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
   id: "/knowledge/",
   path: "/knowledge/",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KnowledgeSlugRoute = KnowledgeSlugRouteImport.update({
+  id: "/knowledge/$slug",
+  path: "/knowledge/$slug",
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
@@ -1012,6 +1018,7 @@ export interface FileRoutesByFullPath {
   "/dev/ui": typeof DevUiRoute
   "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
+  "/knowledge/$slug": typeof KnowledgeSlugRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/portal/installations": typeof PortalInstallationsRoute
@@ -1163,6 +1170,7 @@ export interface FileRoutesByTo {
   "/dev/ui": typeof DevUiRoute
   "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
+  "/knowledge/$slug": typeof KnowledgeSlugRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/portal/installations": typeof PortalInstallationsRoute
@@ -1324,6 +1332,7 @@ export interface FileRoutesById {
   "/dev/ui": typeof DevUiRoute
   "/h/$token": typeof HTokenRoute
   "/invite/$token": typeof InviteTokenRoute
+  "/knowledge/$slug": typeof KnowledgeSlugRoute
   "/legal/$slug": typeof LegalSlugRoute
   "/portal/choose": typeof PortalChooseRoute
   "/portal/installations": typeof PortalInstallationsRoute
@@ -1487,6 +1496,7 @@ export interface FileRouteTypes {
     | "/dev/ui"
     | "/h/$token"
     | "/invite/$token"
+    | "/knowledge/$slug"
     | "/legal/$slug"
     | "/portal/choose"
     | "/portal/installations"
@@ -1638,6 +1648,7 @@ export interface FileRouteTypes {
     | "/dev/ui"
     | "/h/$token"
     | "/invite/$token"
+    | "/knowledge/$slug"
     | "/legal/$slug"
     | "/portal/choose"
     | "/portal/installations"
@@ -1798,6 +1809,7 @@ export interface FileRouteTypes {
     | "/dev/ui"
     | "/h/$token"
     | "/invite/$token"
+    | "/knowledge/$slug"
     | "/legal/$slug"
     | "/portal/choose"
     | "/portal/installations"
@@ -1940,6 +1952,7 @@ export interface RootRouteChildren {
   DevUiRoute: typeof DevUiRoute
   HTokenRoute: typeof HTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  KnowledgeSlugRoute: typeof KnowledgeSlugRoute
   LegalSlugRoute: typeof LegalSlugRoute
   QTokenRoute: typeof QTokenRoute
   SolutionsEnterpriseRoute: typeof SolutionsEnterpriseRoute
@@ -2256,6 +2269,13 @@ declare module "@tanstack/react-router" {
       path: "/knowledge"
       fullPath: "/knowledge/"
       preLoaderRoute: typeof KnowledgeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/knowledge/$slug": {
+      id: "/knowledge/$slug"
+      path: "/knowledge/$slug"
+      fullPath: "/knowledge/$slug"
+      preLoaderRoute: typeof KnowledgeSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/legal/": {
@@ -3472,6 +3492,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevUiRoute: DevUiRoute,
   HTokenRoute: HTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
+  KnowledgeSlugRoute: KnowledgeSlugRoute,
   LegalSlugRoute: LegalSlugRoute,
   QTokenRoute: QTokenRoute,
   SolutionsEnterpriseRoute: SolutionsEnterpriseRoute,

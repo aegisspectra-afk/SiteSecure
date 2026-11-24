@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "../../components/public/marketing/enterprise/MarketingShell";
+import { SolutionsExplorer } from "../../components/public/marketing/enterprise/SolutionsExplorer";
 import { usePublicSeo } from "../../lib/public-seo";
 
 export const Route = createFileRoute("/solutions/installation-companies")({
@@ -20,9 +21,11 @@ function Page() {
         <div className="mkt-container">
           <h1 className="mkt-h1">לחברות התקנה קטנות</h1>
           <p className="mkt-lede">משרד ושטח מסונכרנים — בלי לאבד הצעות, תמונות או מעקב אחרי עבודות.</p>
-          <Link to="/pricing" className="mkt-btn mkt-btn-primary mt-6">
-            למחירון
-          </Link>
+        </div>
+      </section>
+      <section className="mkt-section">
+        <div className="mkt-container">
+          <SolutionsExplorer initial="installation" />
         </div>
       </section>
     </MarketingShell>

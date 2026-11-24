@@ -4,7 +4,13 @@ import { createPortal } from "react-dom";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ensureGaBootstrap, trackMarketingEvent } from "../../../../lib/marketing-analytics";
 import { useLandingReveal } from "../useLandingReveal";
-import { NAV_LINKS } from "./marketing-content";
+import {
+  FOOTER_LEGAL_LINKS,
+  HEADER_COMPANY_LINKS,
+  HEADER_FLAT_LINKS,
+  HEADER_PLATFORM_LINKS,
+  MARKETING_ROUTES,
+} from "./marketing-routes";
 
 export function MarketingShell({
   children,
@@ -48,19 +54,21 @@ export function MarketingShell({
     };
   }, [open]);
 
-  const links = (
+  const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const desktopLinks = (
     <>
-      {NAV_LINKS.map((item) => (
+      {HEADER_FLAT_LINKS.map((item) => (
         <Link
           key={item.href}
           to={item.href}
-          aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined}
+          aria-current={isCurrent(item.href) ? "page" : undefined}
           onClick={() => setOpen(false)}
         >
           {item.label}
         </Link>
       ))}
-      <Link to="/login" onClick={() => setOpen(false)}>
+      <Link to={MARKETING_ROUTES.login} onClick={() => setOpen(false)}>
         כניסה
       </Link>
     </>
@@ -73,15 +81,15 @@ export function MarketingShell({
       </a>
       <header className={`mkt-nav${scrolled ? " is-scrolled" : " is-top"}`}>
         <div className="mkt-nav-inner">
-          <Link to="/" className="mkt-nav-brand">
+          <Link to={MARKETING_ROUTES.home} className="mkt-nav-brand">
             SITE SECURE
           </Link>
           <nav className="mkt-nav-links" aria-label="ניווט ראשי">
-            {links}
+            {desktopLinks}
           </nav>
           <div className="mkt-nav-actions">
             <Link
-              to="/register"
+              to={MARKETING_ROUTES.register}
               className="mkt-btn mkt-btn-primary"
               onClick={() => trackMarketingEvent("cta_click", { cta: "nav_get_started" })}
             >
@@ -103,9 +111,41 @@ export function MarketingShell({
                   <X className="size-5" aria-hidden />
                 </button>
               </div>
-              <nav aria-label="תפריט מלא">{links}</nav>
+              <nav aria-label="תפריט מלא" className="grid gap-6">
+                <div className="grid gap-2">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--mkt-on-dark-muted)]">
+                    פלטפורמה
+                  </p>
+                  {HEADER_PLATFORM_LINKS.map((item) => (
+                    <Link key={item.href} to={item.href} onClick={() => setOpen(false)}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+                <div className="grid gap-2">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--mkt-on-dark-muted)]">
+                    חברה
+                  </p>
+                  {HEADER_COMPANY_LINKS.map((item) => (
+                    <Link key={item.href} to={item.href} onClick={() => setOpen(false)}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+                <div className="grid gap-2">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--mkt-on-dark-muted)]">
+                    חשבון
+                  </p>
+                  <Link to={MARKETING_ROUTES.login} onClick={() => setOpen(false)}>
+                    כניסה
+                  </Link>
+                  <Link to={MARKETING_ROUTES.register} onClick={() => setOpen(false)}>
+                    הרשמה
+                  </Link>
+                </div>
+              </nav>
               <Link
-                to="/register"
+                to={MARKETING_ROUTES.register}
                 className="mkt-btn mkt-btn-primary"
                 onClick={() => {
                   setOpen(false);
@@ -129,46 +169,38 @@ export function MarketingShell({
 }
 
 function MarketingFooter() {
-  const company = "Aegis Spectra";
   return (
     <footer className="mkt-footer">
       <div className="mkt-container mkt-footer-grid">
         <div>
           <p className="mkt-nav-brand">SITE SECURE</p>
-          <p className="mt-3 text-sm leading-7">{company}</p>
+          <p className="mt-3 text-sm leading-7">Aegis Spectra</p>
           <p className="mt-2 text-sm leading-7">כל העסק שלך. מערכת אחת. שליטה מלאה.</p>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <p className="font-semibold text-[var(--mkt-on-dark)]">פלטפורמה</p>
-          <Link to="/product">סקירת מוצר</Link>
-          <Link to="/solutions">פתרונות</Link>
-          <Link to="/pricing">מחירון</Link>
-          <Link to="/tools/cctv-storage">מחשבון אחסון</Link>
+          {HEADER_PLATFORM_LINKS.map((l) => (
+            <Link key={l.href} to={l.href}>
+              {l.label}
+            </Link>
+          ))}
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <p className="font-semibold text-[var(--mkt-on-dark)]">חברה</p>
-          <Link to="/about">אודות</Link>
-          <Link to="/contact">צור קשר</Link>
-          <Link to="/knowledge">מרכז ידע</Link>
-          <Link to="/register">הרשמה</Link>
+          {HEADER_COMPANY_LINKS.map((l) => (
+            <Link key={l.href} to={l.href}>
+              {l.label}
+            </Link>
+          ))}
+          <Link to={MARKETING_ROUTES.register}>הרשמה</Link>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <p className="font-semibold text-[var(--mkt-on-dark)]">משפטי</p>
-          <Link to="/legal/$slug" params={{ slug: "terms" }}>
-            תנאי שימוש
-          </Link>
-          <Link to="/legal/$slug" params={{ slug: "privacy" }}>
-            מדיניות פרטיות
-          </Link>
-          <Link to="/legal/$slug" params={{ slug: "cancellation" }}>
-            מדיניות ביטול
-          </Link>
-          <Link to="/legal/$slug" params={{ slug: "accessibility" }}>
-            הצהרת נגישות
-          </Link>
-          <Link to="/legal/$slug" params={{ slug: "security" }}>
-            אבטחת מידע
-          </Link>
+          {FOOTER_LEGAL_LINKS.map((l) => (
+            <Link key={l.slug} to="/legal/$slug" params={{ slug: l.slug }}>
+              {l.label}
+            </Link>
+          ))}
         </div>
       </div>
       <p className="mkt-container mt-10 text-xs">© {new Date().getFullYear()} Aegis Spectra</p>

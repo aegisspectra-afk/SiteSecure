@@ -7,6 +7,7 @@ import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
 import { LandingMobileCta } from "./LandingMobileCta";
+import { LazyWhenVisible } from "./LazyWhenVisible";
 import { useLandingReveal } from "./useLandingReveal";
 
 const LandingCctvHeroCalc = lazy(() =>
@@ -44,26 +45,44 @@ export function SiteSecureLanding() {
   const [betaBusy, setBetaBusy] = useState(false);
   const [teaserPlans, setTeaserPlans] = useState<TeaserPlan[]>([]);
   const [billingVatNote, setBillingVatNote] = useState("כולל מע״מ לפי חוק");
+  const [paintPending, setPaintPending] = useState(true);
   const [heroCalcReady, setHeroCalcReady] = useState(false);
 
   useEffect(() => {
-    // Chrome keeps updating LCP until interaction. Keep the HTML paint layer (system font)
-    // above React until LCP has locked (~after load + short settle), then remove it.
+    // Keep HTML paint (preloaded shot) as LCP until it locks. Mount the CCTV card only after
+    // input (or a late fallback) so it cannot replace the paint image as LCP.
     const paint = document.getElementById("ss-marketing-paint");
-    if (!paint) return;
     let cancelled = false;
-    const hide = () => {
-      if (cancelled || !paint.isConnected || paint.hidden) return;
-      paint.hidden = true;
-      paint.replaceChildren();
+    let calcTimer = 0;
+    const enableCalc = () => {
+      if (!cancelled) setHeroCalcReady(true);
     };
-    const timer = window.setTimeout(hide, 3200);
-    const onInteract = () => hide();
+    const hidePaint = () => {
+      if (cancelled) return;
+      if (paint?.isConnected && !paint.hidden) {
+        paint.hidden = true;
+        paint.replaceChildren();
+      }
+      setPaintPending(false);
+    };
+    const onInteract = () => {
+      hidePaint();
+      enableCalc();
+    };
+    const timer = window.setTimeout(() => {
+      hidePaint();
+      calcTimer = window.setTimeout(enableCalc, 6000);
+    }, 3200);
     window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
     window.addEventListener("keydown", onInteract, { once: true });
+    if (!paint) {
+      setPaintPending(false);
+      enableCalc();
+    }
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      window.clearTimeout(calcTimer);
       window.removeEventListener("pointerdown", onInteract);
       window.removeEventListener("keydown", onInteract);
     };
@@ -71,20 +90,17 @@ export function SiteSecureLanding() {
 
   useEffect(() => {
     let cancelled = false;
-    void import("@site-secure/authz").then((authz) => {
-      if (cancelled) return;
-      setTeaserPlans(authz.catalogPlansOrdered().slice(0, 3));
-      setBillingVatNote(authz.billingPublic().vat_note_he);
-    });
+    const idle = window.setTimeout(() => {
+      void import("@site-secure/authz").then((authz) => {
+        if (cancelled) return;
+        setTeaserPlans(authz.catalogPlansOrdered().slice(0, 3));
+        setBillingVatNote(authz.billingPublic().vat_note_he);
+      });
+    }, 4000);
     return () => {
       cancelled = true;
+      window.clearTimeout(idle);
     };
-  }, []);
-
-  useEffect(() => {
-    // Defer interactive CCTV calc so LCP stays on the HTML paint H1 (system font).
-    const timer = window.setTimeout(() => setHeroCalcReady(true), 2200);
-    return () => window.clearTimeout(timer);
   }, []);
 
   const formatIls = useMemo(
@@ -111,7 +127,7 @@ export function SiteSecureLanding() {
       <main id="main" tabIndex={-1} className="outline-none">
         <section
           id="hero"
-          className="public-hero landing-hero-v2 relative flex min-h-[calc(100dvh-3.5rem)] scroll-mt-24 flex-col justify-center px-4 py-12"
+          className={`public-hero landing-hero-v2 relative flex min-h-[calc(100dvh-3.5rem)] scroll-mt-24 flex-col justify-center px-4 py-12${paintPending ? " is-paint-pending" : ""}`}
         >
           <div className="public-container mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div className="flex flex-col gap-5">
@@ -143,152 +159,162 @@ export function SiteSecureLanding() {
           </div>
         </section>
 
-        <div className="landing-reveal">
+        <LazyWhenVisible minHeight="24rem">
           <Suspense fallback={<section id="problem" className="public-scene min-h-[24rem]" aria-hidden />}>
             <LandingBeforeAfter />
           </Suspense>
-        </div>
+        </LazyWhenVisible>
 
         <div className="public-rule" aria-hidden />
 
-        <div className="landing-reveal">
+        <LazyWhenVisible minHeight="28rem">
           <Suspense fallback={<section id="how" className="public-scene min-h-[28rem]" aria-hidden />}>
             <LandingHowScrolly />
           </Suspense>
-        </div>
+        </LazyWhenVisible>
 
-        <div className="landing-reveal">
+        <LazyWhenVisible minHeight="22rem">
           <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
             <LandingFeaturesBento />
           </Suspense>
-        </div>
+        </LazyWhenVisible>
 
-        <div className="landing-reveal">
+        <LazyWhenVisible minHeight="16rem">
           <Suspense fallback={<section id="field-note" className="public-scene min-h-[16rem]" aria-hidden />}>
             <LandingFounder />
           </Suspense>
-        </div>
+        </LazyWhenVisible>
 
-        <Section id="audience" className="landing-reveal">
-          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {ssMarketing.audience.map((row) => (
-              <article key={row.title} className="ops-card p-5">
-                <h3 className="font-semibold text-fg">{row.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-fg-muted">{row.body}</p>
-              </article>
-            ))}
-          </div>
-        </Section>
+        <LazyWhenVisible minHeight="14rem">
+          <Section id="audience">
+            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {ssMarketing.audience.map((row) => (
+                <article key={row.title} className="ops-card p-5">
+                  <h3 className="font-semibold text-fg">{row.title}</h3>
+                  <p className="mt-2 text-sm leading-7 text-fg-muted">{row.body}</p>
+                </article>
+              ))}
+            </div>
+          </Section>
+        </LazyWhenVisible>
 
-        <Section id="compare" className="landing-reveal">
-          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.compareTitle}</h2>
-          <div className="mt-6 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-fg-muted">
-                  <th className="py-3 pe-4 text-start font-medium">נושא</th>
-                  <th className="py-3 px-4 text-start font-medium">אקסל + וואטסאפ</th>
-                  <th className="py-3 ps-4 text-start font-medium">SITE SECURE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ssMarketing.compareRows.map((row) => (
-                  <tr key={row.topic} className="border-b border-border/70">
-                    <td className="py-3 pe-4 font-medium text-fg">{row.topic}</td>
-                    <td className="py-3 px-4 text-fg-muted">{row.legacy}</td>
-                    <td className="py-3 ps-4 text-fg">{row.ss}</td>
+        <LazyWhenVisible minHeight="14rem">
+          <Section id="compare">
+            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.compareTitle}</h2>
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-fg-muted">
+                    <th className="py-3 pe-4 text-start font-medium">נושא</th>
+                    <th className="py-3 px-4 text-start font-medium">אקסל + וואטסאפ</th>
+                    <th className="py-3 ps-4 text-start font-medium">SITE SECURE</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
+                </thead>
+                <tbody>
+                  {ssMarketing.compareRows.map((row) => (
+                    <tr key={row.topic} className="border-b border-border/70">
+                      <td className="py-3 pe-4 font-medium text-fg">{row.topic}</td>
+                      <td className="py-3 px-4 text-fg-muted">{row.legacy}</td>
+                      <td className="py-3 ps-4 text-fg">{row.ss}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+        </LazyWhenVisible>
 
-        <Section id="pricing-teaser" className="public-scene-surface landing-reveal">
-          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {teaserPlans.map((plan) => {
-              const monthly = plan.commercial?.monthly_ils_before_vat ?? 0;
-              return (
-                <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
-                  {plan.key === "business" ? (
-                    <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
-                  ) : null}
-                  <p className="font-semibold text-fg">{plan.label_he}</p>
-                  <p className="text-2xl font-semibold text-fg">{formatIls(monthly)}</p>
-                  <p className="text-xs text-fg-muted">לחודש · {billingVatNote}</p>
-                </div>
-              );
-            })}
-          </div>
-          <Link to="/pricing" className="mt-8 inline-flex min-h-12 items-center text-sm font-medium text-action hover:underline">
-            {ssMarketing.pricingTeaserCta} ←
-          </Link>
-        </Section>
+        <LazyWhenVisible minHeight="16rem">
+          <Section id="pricing-teaser" className="public-scene-surface">
+            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              {teaserPlans.map((plan) => {
+                const monthly = plan.commercial?.monthly_ils_before_vat ?? 0;
+                return (
+                  <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
+                    {plan.key === "business" ? (
+                      <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
+                    ) : null}
+                    <p className="font-semibold text-fg">{plan.label_he}</p>
+                    <p className="text-2xl font-semibold text-fg">{formatIls(monthly)}</p>
+                    <p className="text-xs text-fg-muted">לחודש · {billingVatNote}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <Link to="/pricing" className="mt-8 inline-flex min-h-12 items-center text-sm font-medium text-action hover:underline">
+              {ssMarketing.pricingTeaserCta} ←
+            </Link>
+          </Section>
+        </LazyWhenVisible>
 
-        <Section id="faq" className="landing-reveal">
-          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
-          <div className="mt-6 flex flex-col gap-4">
-            {ssMarketing.faq.map((item) => (
-              <details key={item.q} className="ops-card group px-4 py-3">
-                <summary className="cursor-pointer text-sm font-medium text-fg">{item.q}</summary>
-                <p className="mt-2 text-sm leading-7 text-fg-muted">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </Section>
+        <LazyWhenVisible minHeight="16rem">
+          <Section id="faq">
+            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
+            <div className="mt-6 flex flex-col gap-4">
+              {ssMarketing.faq.map((item) => (
+                <details key={item.q} className="ops-card group px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-medium text-fg">{item.q}</summary>
+                  <p className="mt-2 text-sm leading-7 text-fg-muted">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </Section>
+        </LazyWhenVisible>
 
-        <Section id="beta" className="public-scene-pilot landing-reveal">
-          <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.betaTitle}</h2>
-          <p className="mt-2 text-sm text-fg-muted">{ssMarketing.betaHint}</p>
-          {betaDone ? (
-            <p className="mt-6 text-base font-medium text-fg" role="status">
-              {ssMarketing.betaSuccess}
-            </p>
-          ) : (
-            <form
-              className="mt-8 grid max-w-xl gap-4"
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                setBetaBusy(true);
-                setBetaErr(null);
-                void submitBetaSignup({ ...beta, source: "landing" })
-                  .then(() => setBetaDone(true))
-                  .catch((e: Error) => setBetaErr(e.message))
-                  .finally(() => setBetaBusy(false));
-              }}
-            >
-              <Input
-                id="beta-name"
-                label={ssMarketing.betaFields.fullName}
-                value={beta.full_name}
-                required
-                onChange={(ev) => setBeta({ ...beta, full_name: ev.target.value })}
-              />
-              <Input
-                id="beta-phone"
-                label={ssMarketing.betaFields.phone}
-                value={beta.phone}
-                required
-                dir="ltr"
-                onChange={(ev) => setBeta({ ...beta, phone: ev.target.value })}
-              />
-              <Input
-                id="beta-tech-count"
-                label={ssMarketing.betaFields.technicianCount}
-                value={beta.technician_count}
-                required
-                onChange={(ev) => setBeta({ ...beta, technician_count: ev.target.value })}
-              />
-              {betaErr ? <p className="text-sm text-destructive">{betaErr}</p> : null}
-              <Button type="submit" disabled={betaBusy} className="min-h-12 w-full sm:w-auto">
-                {ssMarketing.heroPrimary}
-              </Button>
-            </form>
-          )}
-        </Section>
+        <LazyWhenVisible minHeight="18rem">
+          <Section id="beta" className="public-scene-pilot">
+            <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.betaTitle}</h2>
+            <p className="mt-2 text-sm text-fg-muted">{ssMarketing.betaHint}</p>
+            {betaDone ? (
+              <p className="mt-6 text-base font-medium text-fg" role="status">
+                {ssMarketing.betaSuccess}
+              </p>
+            ) : (
+              <form
+                className="mt-8 grid max-w-xl gap-4"
+                onSubmit={(ev) => {
+                  ev.preventDefault();
+                  setBetaBusy(true);
+                  setBetaErr(null);
+                  void submitBetaSignup({ ...beta, source: "landing" })
+                    .then(() => setBetaDone(true))
+                    .catch((e: Error) => setBetaErr(e.message))
+                    .finally(() => setBetaBusy(false));
+                }}
+              >
+                <Input
+                  id="beta-name"
+                  label={ssMarketing.betaFields.fullName}
+                  value={beta.full_name}
+                  required
+                  onChange={(ev) => setBeta({ ...beta, full_name: ev.target.value })}
+                />
+                <Input
+                  id="beta-phone"
+                  label={ssMarketing.betaFields.phone}
+                  value={beta.phone}
+                  required
+                  dir="ltr"
+                  onChange={(ev) => setBeta({ ...beta, phone: ev.target.value })}
+                />
+                <Input
+                  id="beta-tech-count"
+                  label={ssMarketing.betaFields.technicianCount}
+                  value={beta.technician_count}
+                  required
+                  onChange={(ev) => setBeta({ ...beta, technician_count: ev.target.value })}
+                />
+                {betaErr ? <p className="text-sm text-destructive">{betaErr}</p> : null}
+                <Button type="submit" disabled={betaBusy} className="min-h-12 w-full sm:w-auto">
+                  {ssMarketing.heroPrimary}
+                </Button>
+              </form>
+            )}
+          </Section>
+        </LazyWhenVisible>
       </main>
       <MarketingFooter />
       <LandingMobileCta />

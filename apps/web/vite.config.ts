@@ -35,6 +35,29 @@ function marketingFontPreload(): Plugin {
   };
 }
 
+/**
+ * Don't block first paint on the large app CSS — homepage LCP is the inline paint shot.
+ * CSS still preloads and applies as soon as ready (paint overlay covers FOUC ~3s).
+ */
+function asyncMarketingCss(): Plugin {
+  return {
+    name: "async-marketing-css",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        return html.replace(
+          /<link\s+rel="stylesheet"(\s+crossorigin)?\s+href="([^"]+\.css)"(\s+crossorigin)?\s*\/?>/g,
+          (_m, _a, href: string) =>
+            `<link rel="preload" as="style" href="${href}" />` +
+            `<link rel="stylesheet" href="${href}" media="print" onload="this.media='all'" />` +
+            `<noscript><link rel="stylesheet" href="${href}" /></noscript>`,
+        );
+      },
+    },
+  };
+}
+
 function singleInstanceLocalModules(): Plugin {
   return {
     name: "single-instance-local-modules",
@@ -82,6 +105,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       singleInstanceLocalModules(),
       marketingFontPreload(),
+      asyncMarketingCss(),
       tanstackRouter({ quoteStyle: "double", autoCodeSplitting: true }),
       react(),
       tailwindcss(),
@@ -91,13 +115,21 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (!id.includes("node_modules")) return undefined;
-            if (/node_modules[\\/]react-dom[\\/]/.test(id)) return "vendor-react";
-            if (/node_modules[\\/]react[\\/]/.test(id)) return "vendor-react";
-            if (id.includes("scheduler")) return "vendor-react";
-            if (id.includes("pdfjs-dist")) return "vendor-pdf";
-            if (id.includes("lottie-web")) return "vendor-lottie";
-            if (id.includes("@supabase")) return "vendor-supabase";
+            const normalized = id.replace(/\\/g, "/");
+            if (normalized.includes("/components/public/marketing/")) return "marketing";
+            if (normalized.includes("/i18n/site-secure-marketing-he")) return "marketing";
+            if (normalized.includes("/lib/public-marketing-api")) return "marketing";
+            if (normalized.includes("/lib/public-seo")) return "marketing";
+            if (!normalized.includes("node_modules")) return undefined;
+            if (/node_modules[/]react-dom[/]/.test(normalized)) return "vendor-react";
+            if (/node_modules[/]react[/]/.test(normalized)) return "vendor-react";
+            if (normalized.includes("scheduler")) return "vendor-react";
+            if (normalized.includes("pdfjs-dist")) return "vendor-pdf";
+            if (normalized.includes("lottie-web")) return "vendor-lottie";
+            if (normalized.includes("@supabase")) return "vendor-supabase";
+            if (normalized.includes("apexcharts") || normalized.includes("react-apexcharts")) return "vendor-charts";
+            if (normalized.includes("@tanstack/react-query")) return "vendor-query";
+            if (normalized.includes("@tanstack/react-router")) return "vendor-router";
             return undefined;
           },
         },

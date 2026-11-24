@@ -18,7 +18,7 @@
       rel="preload"
       as="image"
       type="image/webp"
-      href="/landing-v2/02-quote-review-desktop.webp"
+      href="/landing-v2/02-quote-review-mobile.webp"
       fetchpriority="high"
     />
     <style>
@@ -96,22 +96,27 @@
     </script>
   </head>
   <body>
-    <div id="ss-marketing-paint" hidden></div>
+    <!-- Visible immediately on `/` (no hidden) so preloaded shot can be LCP without unhide delay. -->
+    <div id="ss-marketing-paint" class="ss-marketing-paint" dir="rtl" lang="he">
+      <p class="ss-marketing-paint-title">SITE SECURE</p>
+      <img
+        src="/landing-v2/02-quote-review-mobile.webp"
+        alt=""
+        width="378"
+        height="236"
+        decoding="async"
+        fetchpriority="high"
+        class="ss-marketing-paint-shot"
+      />
+    </div>
     <div id="root"></div>
     <script>
       (function () {
         var path = String(location.pathname || "/").split("?")[0].split("#")[0];
         if (path.length > 1 && path.charAt(path.length - 1) === "/") path = path.slice(0, -1);
-        if (path !== "/") return;
         var paint = document.getElementById("ss-marketing-paint");
         if (!paint) return;
-        paint.hidden = false;
-        paint.setAttribute("dir", "rtl");
-        paint.setAttribute("lang", "he");
-        paint.className = "ss-marketing-paint";
-        paint.innerHTML =
-          '<p class="ss-marketing-paint-title">SITE SECURE</p>' +
-          '<img src="/landing-v2/02-quote-review-desktop.webp" alt="" width="378" height="236" decoding="async" fetchpriority="high" class="ss-marketing-paint-shot" />';
+        if (path !== "/") paint.remove();
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>

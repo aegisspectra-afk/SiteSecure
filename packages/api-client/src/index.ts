@@ -290,6 +290,22 @@ export type BetaParticipant = {
   recognition_badges?: string[];
 };
 
+export type MarketingBetaSignupStatus = "new" | "contacted" | "closed";
+
+export type MarketingBetaSignup = {
+  id: string;
+  full_name: string;
+  phone: string;
+  business_name: string;
+  technician_count: string;
+  trade_focus: string;
+  source: string;
+  status: MarketingBetaSignupStatus;
+  internal_note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type AdminUser = {
   id: string;
   email: string | null;
@@ -4346,6 +4362,23 @@ export function createApiClient(opts: {
       const q = params.toString();
       return request<BetaParticipant[]>(`/api/v1/admin/beta/participants${q ? `?${q}` : ""}`);
     },
+    adminMarketingBetaSignups: (opts: { status?: string; limit?: number } = {}) => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.limit != null) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<MarketingBetaSignup[]>(
+        `/api/v1/admin/marketing-beta-signups${q ? `?${q}` : ""}`,
+      );
+    },
+    adminPatchMarketingBetaSignup: (
+      signupId: string,
+      body: { status?: MarketingBetaSignupStatus; internal_note?: string | null },
+    ) =>
+      request<Pick<MarketingBetaSignup, "id" | "status" | "internal_note">>(
+        `/api/v1/admin/marketing-beta-signups/${signupId}`,
+        { method: "PATCH", body: JSON.stringify(body) },
+      ),
     adminPatchUserBeta: (
       userId: string,
       body: {

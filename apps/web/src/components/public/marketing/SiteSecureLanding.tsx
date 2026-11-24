@@ -250,71 +250,68 @@ export function SiteSecureLanding() {
           </Section>
         </LazyWhenVisible>
 
-        <LazyWhenVisible minHeight="16rem">
-          <Section id="faq">
-            <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
-            <div className="mt-6 flex flex-col gap-4">
-              {ssMarketing.faq.map((item) => (
-                <details key={item.q} className="ops-card group px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-medium text-fg">{item.q}</summary>
-                  <p className="mt-2 text-sm leading-7 text-fg-muted">{item.a}</p>
-                </details>
-              ))}
-            </div>
-          </Section>
-        </LazyWhenVisible>
+        {/* FAQ + beta stay eager so #faq / #beta anchors and admin e2e always find them. */}
+        <Section id="faq" className="landing-reveal is-in">
+          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
+          <div className="mt-6 flex flex-col gap-4">
+            {ssMarketing.faq.map((item) => (
+              <details key={item.q} className="ops-card group px-4 py-3">
+                <summary className="cursor-pointer text-sm font-medium text-fg">{item.q}</summary>
+                <p className="mt-2 text-sm leading-7 text-fg-muted">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </Section>
 
-        <LazyWhenVisible minHeight="18rem">
-          <Section id="beta" className="public-scene-pilot">
-            <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.betaTitle}</h2>
-            <p className="mt-2 text-sm text-fg-muted">{ssMarketing.betaHint}</p>
-            {betaDone ? (
-              <p className="mt-6 text-base font-medium text-fg" role="status">
-                {ssMarketing.betaSuccess}
-              </p>
-            ) : (
-              <form
-                className="mt-8 grid max-w-xl gap-4"
-                onSubmit={(ev) => {
-                  ev.preventDefault();
-                  setBetaBusy(true);
-                  setBetaErr(null);
-                  void submitBetaSignup({ ...beta, source: "landing" })
-                    .then(() => setBetaDone(true))
-                    .catch((e: Error) => setBetaErr(e.message))
-                    .finally(() => setBetaBusy(false));
-                }}
-              >
-                <Input
-                  id="beta-name"
-                  label={ssMarketing.betaFields.fullName}
-                  value={beta.full_name}
-                  required
-                  onChange={(ev) => setBeta({ ...beta, full_name: ev.target.value })}
-                />
-                <Input
-                  id="beta-phone"
-                  label={ssMarketing.betaFields.phone}
-                  value={beta.phone}
-                  required
-                  dir="ltr"
-                  onChange={(ev) => setBeta({ ...beta, phone: ev.target.value })}
-                />
-                <Input
-                  id="beta-tech-count"
-                  label={ssMarketing.betaFields.technicianCount}
-                  value={beta.technician_count}
-                  required
-                  onChange={(ev) => setBeta({ ...beta, technician_count: ev.target.value })}
-                />
-                {betaErr ? <p className="text-sm text-destructive">{betaErr}</p> : null}
-                <Button type="submit" disabled={betaBusy} className="min-h-12 w-full sm:w-auto">
-                  {ssMarketing.heroPrimary}
-                </Button>
-              </form>
-            )}
-          </Section>
-        </LazyWhenVisible>
+        <Section id="beta" className="public-scene-pilot landing-reveal is-in">
+          <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.betaTitle}</h2>
+          <p className="mt-2 text-sm text-fg-muted">{ssMarketing.betaHint}</p>
+          {betaDone ? (
+            <p className="mt-6 text-base font-medium text-fg" role="status">
+              {ssMarketing.betaSuccess}
+            </p>
+          ) : (
+            <form
+              className="mt-8 grid max-w-xl gap-4"
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                setBetaBusy(true);
+                setBetaErr(null);
+                void submitBetaSignup({ ...beta, source: "landing" })
+                  .then(() => setBetaDone(true))
+                  .catch((e: Error) => setBetaErr(e.message))
+                  .finally(() => setBetaBusy(false));
+              }}
+            >
+              <Input
+                id="beta-name"
+                label={ssMarketing.betaFields.fullName}
+                value={beta.full_name}
+                required
+                onChange={(ev) => setBeta({ ...beta, full_name: ev.target.value })}
+              />
+              <Input
+                id="beta-phone"
+                label={ssMarketing.betaFields.phone}
+                value={beta.phone}
+                required
+                dir="ltr"
+                onChange={(ev) => setBeta({ ...beta, phone: ev.target.value })}
+              />
+              <Input
+                id="beta-tech-count"
+                label={ssMarketing.betaFields.technicianCount}
+                value={beta.technician_count}
+                required
+                onChange={(ev) => setBeta({ ...beta, technician_count: ev.target.value })}
+              />
+              {betaErr ? <p className="text-sm text-destructive">{betaErr}</p> : null}
+              <Button type="submit" disabled={betaBusy} className="min-h-12 w-full sm:w-auto">
+                {ssMarketing.heroPrimary}
+              </Button>
+            </form>
+          )}
+        </Section>
       </main>
       <MarketingFooter />
       <LandingMobileCta />

@@ -6,7 +6,7 @@ import { AdminTabPanel, AdminTabs } from "../../components/admin/AdminTabs";
 import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 
-type BetaTab = "overview" | "badges" | "flags";
+type BetaTab = "overview" | "signups" | "badges" | "flags";
 
 type BetaSearch = { tab: BetaTab };
 
@@ -14,7 +14,9 @@ export const Route = createFileRoute("/admin/beta")({
   validateSearch: (search: Record<string, unknown>): BetaSearch => {
     const tabRaw = typeof search.tab === "string" ? search.tab : "overview";
     const tab: BetaTab =
-      tabRaw === "badges" || tabRaw === "flags" || tabRaw === "overview" ? tabRaw : "overview";
+      tabRaw === "badges" || tabRaw === "flags" || tabRaw === "signups" || tabRaw === "overview"
+        ? tabRaw
+        : "overview";
     return { tab };
   },
   component: AdminBeta,
@@ -43,6 +45,11 @@ function AdminBeta() {
       }),
     enabled: tab === "overview",
   });
+  const signups = useQuery({
+    queryKey: ["admin-marketing-beta-signups"],
+    queryFn: () => api.adminMarketingBetaSignups({ limit: 200 }),
+    enabled: tab === "signups",
+  });
   const flags = useQuery({
     queryKey: ["admin-flags"],
     queryFn: () => api.adminFeatureFlags(),
@@ -68,7 +75,19 @@ function AdminBeta() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-flags"] }),
   });
 
+  const patchSignup = useMutation({
+    mutationFn: (input: { id: string; status: "new" | "contacted" | "closed" }) =>
+      api.adminPatchMarketingBetaSignup(input.id, { status: input.status }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-marketing-beta-signups"] }),
+  });
+
   const enrolled = useMemo(() => (orgs.data ?? []).filter((org) => org.is_beta), [orgs.data]);
+
+  const signupStatusLabel = (s: string) => {
+    if (s === "contacted") return he.adminBetaSignupStatusContacted;
+    if (s === "closed") return he.adminBetaSignupStatusClosed;
+    return he.adminBetaSignupStatusNew;
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,6 +99,7 @@ function AdminBeta() {
         onChange={setTab}
         tabs={[
           { id: "overview", label: he.adminBetaTabOverview },
+          { id: "signups", label: he.adminBetaTabSignups },
           { id: "badges", label: he.adminBadges },
           { id: "flags", label: he.adminFlags },
         ]}
@@ -168,6 +188,40 @@ function AdminBeta() {
             </table>
           </div>
         </section>
+      </AdminTabPanel>
+
+      <AdminTabPanel tabId="signups" active={tab === "signups"}>
+        <p className="text-sm text-fg-muted">{he.adminBetaSignupsLead}</p>
+        {(signups.data ?? []).length === 0 && !signups.isLoading ? (
+          <p className="mt-4 text-sm text-fg-muted">{he.adminBetaSignupsEmpty}</p>
+        ) : null}
+        <ul className="mt-4 flex flex-col gap-2" data-testid="admin-marketing-beta-signups">
+          {(signups.data ?? []).map((row) => (
+            <li
+              key={row.id}
+              className="flex flex-col gap-2 rounded-[var(--radius-panel)] border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              data-signup-id={row.id}
+              data-signup-phone={row.phone}
+            >
+              <div>
+                <p className="font-medium text-fg">{row.full_name}</p>
+                <p className="ltr-meta mt-1 text-xs text-fg-muted">{row.phone}</p>
+                <p className="mt-1 text-xs text-fg-muted">
+                  {he.adminBetaSignupTechs}: {row.technician_count} · {signupStatusLabel(row.status)}
+                </p>
+              </div>
+              {row.status === "new" ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => patchSignup.mutate({ id: row.id, status: "contacted" })}
+                >
+                  {he.adminBetaSignupMarkContacted}
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {signups.isLoading ? <p className="text-sm text-fg-muted">{he.loading}</p> : null}
       </AdminTabPanel>
 
       <AdminTabPanel tabId="badges" active={tab === "badges"}>

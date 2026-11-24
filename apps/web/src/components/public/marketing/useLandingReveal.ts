@@ -6,10 +6,12 @@ export function useLandingReveal(rootSelector = ".landing-reveal") {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const nodes = Array.from(document.querySelectorAll<HTMLElement>(rootSelector));
     if (!nodes.length) return;
+
     if (reduced) {
       nodes.forEach((el) => el.classList.add("is-in"));
       return;
     }
+
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -21,7 +23,17 @@ export function useLandingReveal(rootSelector = ".landing-reveal") {
       },
       { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
     );
-    nodes.forEach((el) => io.observe(el));
+
+    nodes.forEach((el) => {
+      // Already in view on first paint (e.g. short viewports) — reveal without waiting.
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) {
+        el.classList.add("is-in");
+      } else {
+        io.observe(el);
+      }
+    });
+
     return () => io.disconnect();
   }, [rootSelector]);
 }

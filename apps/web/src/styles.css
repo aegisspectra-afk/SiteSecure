@@ -30442,16 +30442,18 @@ html.dark .ssp-site-tone.is-officer {
   color: var(--landing-muted, var(--color-fg-muted));
 }
 
-/* D1-V2 motion — respects prefers-reduced-motion */
+/* Subtle scroll reveal — respects prefers-reduced-motion */
 .landing-reveal {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.55s ease, transform 0.55s ease;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  will-change: opacity, transform;
 }
 
 .landing-reveal.is-in {
   opacity: 1;
   transform: none;
+  will-change: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -30459,5 +30461,6 @@ html.dark .ssp-site-tone.is-officer {
     opacity: 1;
     transform: none;
     transition: none;
+    will-change: auto;
   }
 }

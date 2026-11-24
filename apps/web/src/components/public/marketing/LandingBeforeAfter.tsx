@@ -1,4 +1,6 @@
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { calculatePublicQuickStorage, HERO_CCTV_DEFAULTS } from "@site-secure/cctv-sizing";
+import { formatChannelsHe, formatDiskWithUnit, formatTbWithUnit } from "../../../lib/cctv-storage-display";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 
 /** Before/after: messy WhatsApp-style chat vs SITE SECURE quote screen. Same problem copy. */
@@ -81,6 +83,11 @@ function WhatsAppMessyMock() {
 }
 
 function SiteSecureQuoteMock() {
+  const sized = useMemo(() => calculatePublicQuickStorage(HERO_CCTV_DEFAULTS), []);
+  const volume = formatTbWithUnit(sized.storage.requiredTb ?? 0);
+  const disk = formatDiskWithUnit(sized.hdd.driveCount, sized.hdd.recommendedTbPerDrive);
+  const channels = formatChannelsHe(sized.recorder.channels);
+
   return (
     <div className="landing-ss" dir="rtl">
       <header className="landing-ss-head">
@@ -90,8 +97,12 @@ function SiteSecureQuoteMock() {
       <div className="landing-ss-body">
         <p className="landing-ss-title">מערכת CCTV — חניה + לובי</p>
         <ul>
-          <li>8 מצלמות IP · 4MP</li>
-          <li>NVR 8 ערוצים · דיסק מומלץ</li>
+          <li>
+            {HERO_CCTV_DEFAULTS.cameraCount} מצלמות IP · {HERO_CCTV_DEFAULTS.resolutionMp}MP · {volume}
+          </li>
+          <li>
+            NVR {channels} · דיסק {disk}
+          </li>
           <li>חלופות לוועד: בסיסי / מומלץ / מתקדם</li>
         </ul>
         <div className="landing-ss-shots" aria-hidden>

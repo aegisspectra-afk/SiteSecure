@@ -14,6 +14,25 @@ export function formatTb(tb: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+/** Marketing surfaces: "12.4 TB". */
+export function formatTbWithUnit(tb: number): string {
+  const n = formatTb(tb);
+  return n === "—" ? n : `${n} TB`;
+}
+
+/** Single-drive marketing label: "14 TB"; multi: "2× 12 TB". */
+export function formatDiskWithUnit(driveCount: number | null | undefined, tbPerDrive: number | null | undefined): string {
+  if (!driveCount || tbPerDrive == null || !Number.isFinite(tbPerDrive)) return "—";
+  const size = formatTbWithUnit(tbPerDrive);
+  return driveCount === 1 ? size : `${driveCount}× ${size}`;
+}
+
+/** "8 ערוצים". */
+export function formatChannelsHe(channels: number | null | undefined): string {
+  if (channels == null || !Number.isFinite(channels)) return "—";
+  return `${channels} ערוצים`;
+}
+
 /** Smallest commercial disk that holds the requirement; above 12 TB, several 12 TB disks. */
 export function commercialDisk(requiredTb: number): { driveCount: number; driveTb: number } | null {
   if (!Number.isFinite(requiredTb) || requiredTb <= 0) return null;

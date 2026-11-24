@@ -1,5 +1,5 @@
 import { calculatePublicQuickStorage } from "@site-secure/cctv-sizing";
-import { formatTb } from "../../../lib/cctv-storage-display";
+import { formatChannelsHe, formatDiskWithUnit, formatTbWithUnit } from "../../../lib/cctv-storage-display";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 
 /** Demo scenario for bento tiles — 8 cams · 4MP · 14 days, values from the shared engine. */
@@ -51,10 +51,6 @@ export function LandingFeaturesBento() {
 function MiniCctvResult() {
   const result = calculatePublicQuickStorage(BENTO_CCTV_SCENARIO);
   const tb = result.storage.requiredTb ?? 0;
-  const disk =
-    result.hdd.driveCount && result.hdd.recommendedTbPerDrive != null
-      ? `${result.hdd.driveCount}× ${formatTb(result.hdd.recommendedTbPerDrive)}`
-      : "—";
   return (
     <div className="landing-mini landing-mini-cctv" aria-hidden>
       <p className="landing-mini-cctv-scenario">
@@ -63,15 +59,15 @@ function MiniCctvResult() {
       </p>
       <div>
         <span>נפח</span>
-        <strong>{formatTb(tb)}</strong>
-      </div>
-      <div>
-        <span>NVR</span>
-        <strong>{result.recorder.channels ?? "—"} ערוצים</strong>
+        <strong>{formatTbWithUnit(tb)}</strong>
       </div>
       <div>
         <span>דיסק</span>
-        <strong>{disk}</strong>
+        <strong>{formatDiskWithUnit(result.hdd.driveCount, result.hdd.recommendedTbPerDrive)}</strong>
+      </div>
+      <div>
+        <span>NVR</span>
+        <strong>{formatChannelsHe(result.recorder.channels)}</strong>
       </div>
     </div>
   );

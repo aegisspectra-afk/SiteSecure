@@ -5,7 +5,7 @@ import {
   HERO_CCTV_DEFAULTS,
   type PublicQuickStorageInput,
 } from "@site-secure/cctv-sizing";
-import { formatTb } from "../../../lib/cctv-storage-display";
+import { formatChannelsHe, formatDiskWithUnit, formatTbWithUnit } from "../../../lib/cctv-storage-display";
 import { savePublicCctvDraft } from "../../../lib/public-cctv-draft";
 
 const RES_OPTIONS = [2, 4, 5, 8] as const;
@@ -79,19 +79,15 @@ export function LandingCctvHeroCalc() {
           <ul className="landing-cctv-calc-metrics">
             <li>
               <span>נפח</span>
-              <strong>{formatTb(result.storage.requiredTb ?? 0)}</strong>
+              <strong>{formatTbWithUnit(result.storage.requiredTb ?? 0)}</strong>
             </li>
             <li>
-              <span>דיסק מומלץ</span>
-              <strong>
-                {result.hdd.driveCount
-                  ? `${result.hdd.driveCount}× ${formatTb(result.hdd.recommendedTbPerDrive ?? 0)}`
-                  : "—"}
-              </strong>
+              <span>דיסק</span>
+              <strong>{formatDiskWithUnit(result.hdd.driveCount, result.hdd.recommendedTbPerDrive)}</strong>
             </li>
             <li>
-              <span>ערוצי NVR</span>
-              <strong>{result.recorder.channels ?? "—"}</strong>
+              <span>NVR</span>
+              <strong>{formatChannelsHe(result.recorder.channels)}</strong>
             </li>
           </ul>
         ) : (

@@ -1,4 +1,4 @@
-import { Button, Input, Textarea } from "@site-secure/ui";
+import { Button, Input } from "@site-secure/ui";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -6,6 +6,7 @@ import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
+import { LandingMobileCta } from "./LandingMobileCta";
 
 const LandingCctvHeroCalc = lazy(() =>
   import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
@@ -36,7 +37,7 @@ function Section({ id, children, className }: { id?: string; children: ReactNode
 type TeaserPlan = { key: string; label_he: string; commercial?: { monthly_ils_before_vat?: number } };
 
 export function SiteSecureLanding() {
-  const [beta, setBeta] = useState({ full_name: "", phone: "", business_name: "", technician_count: "", trade_focus: "" });
+  const [beta, setBeta] = useState({ full_name: "", phone: "", technician_count: "" });
   const [betaDone, setBetaDone] = useState(false);
   const [betaErr, setBetaErr] = useState<string | null>(null);
   const [betaBusy, setBetaBusy] = useState(false);
@@ -99,7 +100,7 @@ export function SiteSecureLanding() {
   });
 
   return (
-    <div className="public-root public-shell min-h-dvh text-fg" dir="rtl" lang="he">
+    <div className="public-root public-shell landing-shell-with-mobile-cta min-h-dvh text-fg" dir="rtl" lang="he">
       <a href="#main" className="skip-link">
         דלגו לתוכן
       </a>
@@ -201,6 +202,9 @@ export function SiteSecureLanding() {
               const monthly = plan.commercial?.monthly_ils_before_vat ?? 0;
               return (
                 <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
+                  {plan.key === "business" ? (
+                    <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
+                  ) : null}
                   <p className="font-semibold text-fg">{plan.label_he}</p>
                   <p className="text-2xl font-semibold text-fg">{formatIls(monthly)}</p>
                   <p className="text-xs text-fg-muted">לחודש · {billingVatNote}</p>
@@ -261,26 +265,11 @@ export function SiteSecureLanding() {
                 onChange={(ev) => setBeta({ ...beta, phone: ev.target.value })}
               />
               <Input
-                id="beta-business"
-                label={ssMarketing.betaFields.businessName}
-                value={beta.business_name}
-                required
-                onChange={(ev) => setBeta({ ...beta, business_name: ev.target.value })}
-              />
-              <Input
                 id="beta-tech-count"
                 label={ssMarketing.betaFields.technicianCount}
                 value={beta.technician_count}
                 required
                 onChange={(ev) => setBeta({ ...beta, technician_count: ev.target.value })}
-              />
-              <Textarea
-                id="beta-trade"
-                label={ssMarketing.betaFields.tradeFocus}
-                value={beta.trade_focus}
-                required
-                rows={3}
-                onChange={(ev) => setBeta({ ...beta, trade_focus: ev.target.value })}
               />
               {betaErr ? <p className="text-sm text-destructive">{betaErr}</p> : null}
               <Button type="submit" disabled={betaBusy} className="min-h-12 w-full sm:w-auto">
@@ -291,6 +280,7 @@ export function SiteSecureLanding() {
         </Section>
       </main>
       <MarketingFooter />
+      <LandingMobileCta />
     </div>
   );
 }

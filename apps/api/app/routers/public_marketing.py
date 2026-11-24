@@ -48,9 +48,10 @@ class BetaSignupBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     full_name: str = Field(min_length=2, max_length=120)
     phone: str = Field(min_length=7, max_length=32)
-    business_name: str = Field(min_length=2, max_length=160)
+    # D1-V2 landing form: name + phone + technician count (optional extras kept for older clients).
+    business_name: str = Field(default="", max_length=160)
     technician_count: str = Field(min_length=1, max_length=40)
-    trade_focus: str = Field(min_length=2, max_length=160)
+    trade_focus: str = Field(default="", max_length=160)
     source: str = Field(default="landing", max_length=40)
 
 

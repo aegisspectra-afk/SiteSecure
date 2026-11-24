@@ -124,6 +124,23 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
             {t.signOut}
           </button>
         </>
+      ) : marketingNav ? (
+        <>
+          <Link
+            to="/login"
+            className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] px-2.5 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
+            onClick={() => setOpen(false)}
+          >
+            {t.login}
+          </Link>
+          <a
+            href="/#beta"
+            className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-3.5 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
+            onClick={() => setOpen(false)}
+          >
+            הצטרפו לבטא
+          </a>
+        </>
       ) : (
         <>
           <Link

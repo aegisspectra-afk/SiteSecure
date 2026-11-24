@@ -26,9 +26,9 @@ async function publicPost<T>(path: string, body: unknown): Promise<T> {
 export type BetaSignupInput = {
   full_name: string;
   phone: string;
-  business_name: string;
   technician_count: string;
-  trade_focus: string;
+  business_name?: string;
+  trade_focus?: string;
   source?: string;
 };
 

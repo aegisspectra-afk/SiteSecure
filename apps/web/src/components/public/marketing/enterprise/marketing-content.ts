@@ -11,7 +11,7 @@ export type MarketingModule = {
 };
 
 export const MARKETING_MODULES: MarketingModule[] = [
-  { key: "crm", title: "CRM ולידים", body: "ניהול לידים ולקוחות במקום אחד.", status: "live", href: "/product#crm" },
+  { key: "crm", title: "לידים וניהול פניות", body: "ניהול לידים ולקוחות במקום אחד.", status: "live", href: "/product#crm" },
   { key: "customers", title: "ניהול לקוחות", body: "כרטיס לקוח, אתרים והיסטוריה תפעולית.", status: "live", href: "/product#customers" },
   { key: "projects", title: "פרויקטים והתקנות", body: "מפרויקט מאושר לעבודות שטח.", status: "live", href: "/product#projects" },
   { key: "service", title: "קריאות שירות", body: "מעקב שירות ואחריות לפי אתר.", status: "live", href: "/product#service" },

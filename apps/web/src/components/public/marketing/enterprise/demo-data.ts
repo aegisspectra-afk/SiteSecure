@@ -66,7 +66,7 @@ export type ExplorerModule = {
 export const EXPLORER_MODULES: ExplorerModule[] = [
   {
     key: "crm",
-    title: "CRM ולידים",
+    title: "לידים וניהול פניות",
     value: "קליטת לידים והמרה ללקוח בלי לאבד פרטים בין וואטסאפ לאקסל.",
     capabilities: ["לידים עם מקור", "המרה ללקוח", "תזכורות מעקב", "היסטוריית פניות"],
     previewKind: "list",

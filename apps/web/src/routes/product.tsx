@@ -17,7 +17,7 @@ function ProductPage() {
   usePublicSeo({
     title: "סקירת מוצר — SITE SECURE",
     description:
-      "סקירת מודולי SITE SECURE: CRM, לקוחות, הצעות, פרויקטים, שירות, טכנאים ודוחות — עם סימון זמינות כנה.",
+      "סקירת מודולי SITE SECURE: לידים, לקוחות, הצעות, פרויקטים, שירות, טכנאים ודוחות — עם סימון זמינות כנה.",
     canonical: `${origin}/product`,
   });
 

@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
-import { ProductShot } from "../PublicSurfaces";
 import { PublicHeader } from "../PublicChrome";
 
 const LandingCctvHeroCalc = lazy(() =>
@@ -13,6 +12,9 @@ const LandingCctvHeroCalc = lazy(() =>
 );
 const LandingBeforeAfter = lazy(() =>
   import("./LandingBeforeAfter").then((m) => ({ default: m.LandingBeforeAfter })),
+);
+const LandingHowScrolly = lazy(() =>
+  import("./LandingHowScrolly").then((m) => ({ default: m.LandingHowScrolly })),
 );
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
@@ -137,19 +139,9 @@ export function SiteSecureLanding() {
 
         <div className="public-rule" aria-hidden />
 
-        <Section id="how">
-          <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.howTitle}</h2>
-          <ol className="mt-10 grid gap-8 lg:grid-cols-2">
-            {ssMarketing.howSteps.map((step, i) => (
-              <li key={step.title} className="flex flex-col gap-4">
-                <p className="public-mono text-xs text-fg-muted">{`0${i + 1}`}</p>
-                <h3 className="text-lg font-semibold text-fg">{step.title}</h3>
-                <p className="text-sm leading-7 text-fg-muted">{step.body}</p>
-                <ProductShot src={step.shot} alt={step.shotAlt} label={step.title} variant="desktop" />
-              </li>
-            ))}
-          </ol>
-        </Section>
+        <Suspense fallback={<section id="how" className="public-scene min-h-[28rem]" aria-hidden />}>
+          <LandingHowScrolly />
+        </Suspense>
 
         <Section id="features" className="public-scene-surface">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.featuresTitle}</h2>

@@ -29933,3 +29933,155 @@ html.dark .ssp-site-tone.is-officer {
     transition: none;
   }
 }
+
+
+/* D1-V2 features bento */
+.landing-bento-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .landing-bento-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .landing-bento-tile.is-wide {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-bento-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .landing-bento-tile {
+    grid-column: span 2;
+  }
+  .landing-bento-tile.is-wide {
+    grid-column: span 3;
+  }
+}
+
+.landing-bento-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated, var(--color-bg));
+}
+
+.landing-bento-tile h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--color-fg);
+}
+
+.landing-mini {
+  margin: 0;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+}
+
+.landing-mini-cctv {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.landing-mini-cctv > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.45rem;
+  border-radius: 8px;
+  background: #0b2238;
+  color: #e8f1fa;
+}
+
+.landing-mini-cctv span {
+  opacity: 0.7;
+  font-size: 0.7rem;
+}
+
+.landing-mini-cctv strong {
+  font-weight: 700;
+}
+
+.landing-mini-alts,
+.landing-mini-check {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.landing-mini-alts li,
+.landing-mini-check li {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+
+.landing-mini-alts .is-pick {
+  border-color: #1a6fd0;
+  font-weight: 650;
+}
+
+.landing-mini-check .is-done {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.landing-mini-hand {
+  padding: 0.75rem;
+  border: 1px dashed #9db0c6;
+  background: #fff;
+  color: #0f172a;
+}
+
+.landing-mini-hand-brand {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.landing-mini-hand-title {
+  margin: 0.35rem 0 0;
+  font-weight: 750;
+}
+
+.landing-mini-hand-meta {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.landing-mini-warranty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid #f0c36d;
+  background: #fff8e8;
+  color: #3f2e0a;
+}
+
+.landing-mini-warranty-tag {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9a6b00;
+}
+
+.landing-mini-warranty p:last-child {
+  margin: 0;
+  line-height: 1.45;
+}

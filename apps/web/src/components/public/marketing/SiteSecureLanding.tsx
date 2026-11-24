@@ -16,6 +16,9 @@ const LandingBeforeAfter = lazy(() =>
 const LandingHowScrolly = lazy(() =>
   import("./LandingHowScrolly").then((m) => ({ default: m.LandingHowScrolly })),
 );
+const LandingFeaturesBento = lazy(() =>
+  import("./LandingFeaturesBento").then((m) => ({ default: m.LandingFeaturesBento })),
+);
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
 
@@ -143,16 +146,9 @@ export function SiteSecureLanding() {
           <LandingHowScrolly />
         </Suspense>
 
-        <Section id="features" className="public-scene-surface">
-          <h2 className="text-2xl font-semibold text-fg">{ssMarketing.featuresTitle}</h2>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-            {ssMarketing.features.map((f) => (
-              <li key={f} className="rounded-[var(--radius-control)] border border-border bg-public-elevated px-4 py-3 text-sm leading-7">
-                {f}
-              </li>
-            ))}
-          </ul>
-        </Section>
+        <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
+          <LandingFeaturesBento />
+        </Suspense>
 
         <Section id="audience">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>

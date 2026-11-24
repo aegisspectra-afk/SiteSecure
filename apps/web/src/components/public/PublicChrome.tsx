@@ -1,6 +1,7 @@
 import { Button, Drawer, cn } from "@site-secure/ui";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { afterAuthPath } from "../../lib/auth-routes";
 import { useSession } from "../../lib/session";
@@ -32,11 +33,10 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
 
   const nav = marketingNav
     ? ([
-        { href: "/#how", label: "איך זה עובד" },
+        { href: "/#features", label: "מוצר" },
         { href: "/pricing", label: "מחירון", isRoute: true },
-        { href: "/#faq", label: "שאלות" },
-        { href: "/#beta", label: "בטא" },
-        { href: "/tools/cctv-storage", label: "מחשבון אחסון", isRoute: true },
+        { href: "/#how", label: "איך זה עובד" },
+        { href: "/login", label: "כניסה", isRoute: true },
       ] as const)
     : ([
         { href: "#platform", label: t.navPlatform },
@@ -52,6 +52,20 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!marketingNav || !open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [marketingNav, open]);
 
   const workspaceCta = user
     ? error && !session
@@ -125,22 +139,13 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
           </button>
         </>
       ) : marketingNav ? (
-        <>
-          <Link
-            to="/login"
-            className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] px-2.5 text-sm font-medium text-fg-muted transition-colors duration-200 hover:text-fg"
-            onClick={() => setOpen(false)}
-          >
-            {t.login}
-          </Link>
-          <a
-            href="/#beta"
-            className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-control)] bg-action px-3.5 text-sm font-medium text-action-fg transition-[background-color,transform] duration-200 hover:bg-action-hover"
-            onClick={() => setOpen(false)}
-          >
-            הצטרפו לבטא
-          </a>
-        </>
+        <a
+          href="/#beta"
+          className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-action px-4 text-sm font-semibold text-action-fg transition-[background-color,transform,filter] duration-200 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          onClick={() => setOpen(false)}
+        >
+          הצטרפו לבטא
+        </a>
       ) : (
         <>
           <Link
@@ -169,11 +174,39 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
     </div>
   );
 
+  const marketingMenu =
+    marketingNav && open
+      ? createPortal(
+          <div className="landing-nav-fullscreen" role="dialog" aria-modal="true" aria-label={t.menu} dir={dir}>
+            <div className="landing-nav-fullscreen-bar">
+              <p className="font-semibold text-fg">SITE SECURE</p>
+              <Button variant="ghost" className="min-h-12 min-w-12" aria-label="סגור" onClick={() => setOpen(false)}>
+                <X className="size-5" aria-hidden />
+              </Button>
+            </div>
+            <nav className="landing-nav-fullscreen-links" aria-label={t.navAria}>
+              {links}
+            </nav>
+            <div className="landing-nav-fullscreen-actions">
+              {actions}
+              <div className="mt-6 flex flex-col gap-3" dir="ltr">
+                <ThemePicker id="public-theme-drawer" labels={themeLabels} lockDir="ltr" />
+                <PublicLangPicker id="public-lang-drawer" />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <header
       className={cn(
         "public-nav sticky top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
+        marketingNav && "landing-public-nav",
         scrolled ? "public-nav-scrolled" : "public-nav-top",
+        marketingNav && !scrolled && "landing-public-nav-top",
+        marketingNav && scrolled && "landing-public-nav-scrolled",
       )}
       /* Chrome layout stays RTL so brand + controls do not jump when locale flips. */
       dir="rtl"
@@ -196,27 +229,31 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
           {actions}
         </div>
 
-        {/* Below lg: only the menu trigger — theme + language live in the drawer. */}
+        {/* Below lg: only the menu trigger — theme + language live in the drawer / fullscreen. */}
         <div className="ms-auto lg:hidden">
-          <Button variant="ghost" className="min-w-11" aria-label={t.menu} onClick={() => setOpen(true)}>
+          <Button variant="ghost" className="min-h-12 min-w-12" aria-label={t.menu} onClick={() => setOpen(true)}>
             <Menu className="size-5" aria-hidden />
           </Button>
         </div>
       </div>
-      <Drawer open={open} onClose={() => setOpen(false)} title={t.platformBrand}>
-        <div className="flex flex-col gap-6 p-4" dir={dir}>
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-fg-muted">{t.themeLabel}</p>
-            <ThemePicker id="public-theme-drawer" labels={themeLabels} lockDir="ltr" />
+      {marketingNav ? (
+        marketingMenu
+      ) : (
+        <Drawer open={open} onClose={() => setOpen(false)} title={t.platformBrand}>
+          <div className="flex flex-col gap-6 p-4" dir={dir}>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-fg-muted">{t.themeLabel}</p>
+              <ThemePicker id="public-theme-drawer" labels={themeLabels} lockDir="ltr" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-fg-muted">{t.languageLabel}</p>
+              <PublicLangPicker id="public-lang-drawer" />
+            </div>
+            {links}
+            {actions}
           </div>
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-fg-muted">{t.languageLabel}</p>
-            <PublicLangPicker id="public-lang-drawer" />
-          </div>
-          {links}
-          {actions}
-        </div>
-      </Drawer>
+        </Drawer>
+      )}
     </header>
   );
 }

@@ -1559,6 +1559,88 @@ body {
   -webkit-backdrop-filter: blur(18px);
 }
 
+/* Marketing home: transparent over hero → opaque blur on scroll */
+.landing-public-nav.landing-public-nav-top {
+  border-color: transparent;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing-public-nav.landing-public-nav-top .public-nav-brand,
+.landing-public-nav.landing-public-nav-top a,
+.landing-public-nav.landing-public-nav-top button {
+  color: #f8fbff;
+}
+
+.landing-public-nav.landing-public-nav-top a.text-fg-muted,
+.landing-public-nav.landing-public-nav-top .text-fg-muted {
+  color: rgb(248 251 255 / 78%);
+}
+
+.landing-public-nav.landing-public-nav-scrolled {
+  border-color: color-mix(in srgb, var(--color-public-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-public-bg) 88%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.landing-nav-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1rem 1.5rem;
+  background: var(--color-bg, #0a1628);
+  color: var(--color-fg);
+}
+
+.landing-nav-fullscreen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.5rem;
+  margin-bottom: 1rem;
+}
+
+.landing-nav-fullscreen-links {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.landing-nav-fullscreen-links a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0.75rem 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: var(--color-fg);
+  border-radius: 12px;
+}
+
+.landing-nav-fullscreen-links a:hover,
+.landing-nav-fullscreen-links a:active {
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+}
+
+.landing-nav-fullscreen-links a:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+
+.landing-nav-fullscreen-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .public-mono {
   direction: ltr;
   unicode-bidi: isolate;

@@ -36,7 +36,15 @@ function Section({ id, children, className }: { id?: string; children: ReactNode
   );
 }
 
-type TeaserPlan = { key: string; label_he: string; commercial?: { monthly_ils_before_vat?: number } };
+type TeaserPlan = {
+  key: string;
+  label_he: string;
+  commercial?: {
+    monthly_ils_before_vat?: number | null;
+    custom_pricing?: boolean;
+    highlights_he?: string[];
+  };
+};
 
 export function SiteSecureLanding() {
   const [beta, setBeta] = useState({ full_name: "", phone: "", technician_count: "" });
@@ -93,7 +101,8 @@ export function SiteSecureLanding() {
     const idle = window.setTimeout(() => {
       void import("@site-secure/authz").then((authz) => {
         if (cancelled) return;
-        setTeaserPlans(authz.catalogPlansOrdered().slice(0, 3));
+        // C1 source of truth: Free / Pro / Business + Enterprise row.
+        setTeaserPlans(authz.catalogPlansOrdered());
         setBillingVatNote(authz.billingPublic().vat_note_he);
       });
     }, 4000);
@@ -203,17 +212,25 @@ export function SiteSecureLanding() {
           <Section id="pricing-teaser" className="public-scene-surface">
             <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {teaserPlans.map((plan) => {
-                const monthly = plan.commercial?.monthly_ils_before_vat ?? 0;
+                const commercial = plan.commercial;
+                const custom = Boolean(commercial?.custom_pricing) || commercial?.monthly_ils_before_vat == null;
+                const monthly = commercial?.monthly_ils_before_vat ?? 0;
+                const highlights = (commercial?.highlights_he ?? []).slice(0, 3);
                 return (
                   <div key={plan.key} className="ops-card flex flex-col gap-2 p-5">
                     {plan.key === "business" ? (
                       <span className="landing-plan-badge">מומלץ לחברות עם טכנאים</span>
                     ) : null}
                     <p className="font-semibold text-fg">{plan.label_he}</p>
-                    <p className="text-2xl font-semibold text-fg">{formatIls(monthly)}</p>
-                    <p className="text-xs text-fg-muted">לחודש · {billingVatNote}</p>
+                    <p className="text-2xl font-semibold text-fg">{custom ? "בהתאמה" : formatIls(monthly)}</p>
+                    <p className="text-xs text-fg-muted">{custom ? "דברו איתנו" : `לחודש · ${billingVatNote}`}</p>
+                    <ul className="mt-2 flex flex-col gap-1.5 text-sm text-fg">
+                      {highlights.map((h) => (
+                        <li key={h}>• {h}</li>
+                      ))}
+                    </ul>
                   </div>
                 );
               })}

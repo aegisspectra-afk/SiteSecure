@@ -29873,7 +29873,8 @@ html.dark .ssp-site-tone.is-officer {
   transition: width 0.35s ease;
 }
 
-.landing-how-device {
+.landing-how-device,
+.landing-device-frame {
   border-radius: 16px;
   border: 1px solid var(--color-border);
   overflow: hidden;
@@ -29881,10 +29882,36 @@ html.dark .ssp-site-tone.is-officer {
   box-shadow: 0 16px 40px rgb(15 23 42 / 10%);
 }
 
+.landing-device-frame.is-laptop {
+  border-radius: 12px 12px 16px 16px;
+  padding: 0.65rem 0.65rem 0.85rem;
+  background:
+    linear-gradient(180deg, #1a2332 0%, #0f172a 100%);
+  border-color: #1e293b;
+}
+
+.landing-device-frame.is-laptop .landing-how-shot {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #020617;
+}
+
+.landing-device-frame.is-phone,
 .landing-how-device.is-phone {
   max-width: 17rem;
   margin-inline: auto;
-  border-radius: 24px;
+  border-radius: 28px;
+  padding: 0.55rem;
+  background: #0f172a;
+  border: 2px solid #334155;
+  box-shadow:
+    0 16px 40px rgb(15 23 42 / 18%),
+    inset 0 0 0 1px rgb(255 255 255 / 8%);
+}
+
+.landing-device-frame.is-phone .landing-how-shot {
+  border-radius: 22px;
+  overflow: hidden;
 }
 
 .landing-how-shot {

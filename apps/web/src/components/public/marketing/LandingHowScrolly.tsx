@@ -3,7 +3,7 @@ import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 
 const steps = ssMarketing.howSteps;
 
-/** Scrollytelling how-it-works: sticky device + progress; step 2 shows WhatsApp→quote→alternatives. */
+/** Scrollytelling how-it-works: sticky device frames + WebP srcset from demo workspace shots. */
 export function LandingHowScrolly() {
   const rootRef = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState(0);
@@ -37,9 +37,10 @@ export function LandingHowScrolly() {
 
   const step = steps[active] ?? steps[0];
   const progress = ((active + 1) / steps.length) * 100;
+  const isPhone = step.frame === "phone";
 
   return (
-    <section id="how" ref={rootRef} className="landing-how public-scene scroll-mt-24 px-4 py-12 sm:py-14">
+    <section id="how" ref={rootRef} className="landing-how public-scene landing-reveal scroll-mt-24 px-4 py-12 sm:py-14">
       <div className="public-container mx-auto max-w-6xl">
         <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.howTitle}</h2>
 
@@ -59,19 +60,32 @@ export function LandingHowScrolly() {
             <div className="landing-how-progress" aria-hidden>
               <div className="landing-how-progress-bar" style={{ width: `${progress}%` }} />
             </div>
-            <div className={`landing-how-device${active === 2 ? " is-phone" : ""}`}>
+            <div className={`landing-device-frame${isPhone ? " is-phone" : " is-laptop"}`}>
               {active === 1 ? (
                 <StepTwoDevice />
               ) : (
                 <figure className="landing-how-shot">
-                  <img
-                    src={step.shot.replace(/\.jpg$/i, ".webp")}
-                    alt={step.shotAlt}
-                    width={active === 2 ? 390 : 1440}
-                    height={active === 2 ? 844 : 900}
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={
+                        isPhone
+                          ? `${step.shot} 390w, /landing-v2/02-quote-review-mobile.webp 378w`
+                          : `${step.shot} 1440w`
+                      }
+                      sizes={isPhone ? "(max-width: 768px) 70vw, 272px" : "(max-width: 960px) 90vw, 520px"}
+                    />
+                    <img
+                      src={step.shotJpg}
+                      srcSet={`${step.shotJpg} ${isPhone ? "390w" : "1440w"}`}
+                      sizes={isPhone ? "(max-width: 768px) 70vw, 272px" : "(max-width: 960px) 90vw, 520px"}
+                      alt={step.shotAlt}
+                      width={isPhone ? 390 : 1440}
+                      height={isPhone ? 844 : 900}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </picture>
                   <figcaption>{step.title}</figcaption>
                 </figure>
               )}

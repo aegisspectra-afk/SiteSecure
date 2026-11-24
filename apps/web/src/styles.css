@@ -29998,6 +29998,13 @@ html.dark .ssp-site-tone.is-officer {
   gap: 0.45rem;
 }
 
+.landing-mini-cctv-scenario {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.75rem;
+  color: #9db4cc;
+}
+
 .landing-mini-cctv > div {
   display: flex;
   flex-direction: column;

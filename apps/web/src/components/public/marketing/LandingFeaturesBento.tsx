@@ -1,6 +1,21 @@
+import { calculatePublicQuickStorage } from "@site-secure/cctv-sizing";
+import { formatTb } from "../../../lib/cctv-storage-display";
 import { ssMarketing } from "../../../i18n/site-secure-marketing-he";
 
-/** Bento of miniaturized UI tiles — same feature list, visual only. */
+/** Demo scenario for bento tiles — 8 cams · 4MP · 14 days, values from the shared engine. */
+export const BENTO_CCTV_SCENARIO = {
+  cameraCount: 8,
+  resolutionMp: 4,
+  retentionDays: 14,
+  recordingMode: "continuous" as const,
+  codec: "h265",
+};
+
+const BENTO_SITE_NAME = "לובי מערב";
+/** Matches typical service-reminder window shown in-product. */
+export const BENTO_WARRANTY_DAYS_LEFT = 14;
+
+/** Bento of miniaturized UI tiles — numbers come from the CCTV engine / product rules. */
 export function LandingFeaturesBento() {
   return (
     <section id="features" className="landing-bento public-scene public-scene-surface scroll-mt-24 px-4 py-12 sm:py-14">
@@ -34,19 +49,29 @@ export function LandingFeaturesBento() {
 }
 
 function MiniCctvResult() {
+  const result = calculatePublicQuickStorage(BENTO_CCTV_SCENARIO);
+  const tb = result.storage.requiredTb ?? 0;
+  const disk =
+    result.hdd.driveCount && result.hdd.recommendedTbPerDrive != null
+      ? `${result.hdd.driveCount}× ${formatTb(result.hdd.recommendedTbPerDrive)}`
+      : "—";
   return (
     <div className="landing-mini landing-mini-cctv" aria-hidden>
+      <p className="landing-mini-cctv-scenario">
+        {BENTO_CCTV_SCENARIO.cameraCount} מצלמות · {BENTO_CCTV_SCENARIO.resolutionMp}MP ·{" "}
+        {BENTO_CCTV_SCENARIO.retentionDays} יום
+      </p>
       <div>
         <span>נפח</span>
-        <strong>3.2 TB</strong>
+        <strong>{formatTb(tb)}</strong>
       </div>
       <div>
         <span>NVR</span>
-        <strong>8 ערוצים</strong>
+        <strong>{result.recorder.channels ?? "—"} ערוצים</strong>
       </div>
       <div>
         <span>דיסק</span>
-        <strong>1× 4 TB</strong>
+        <strong>{disk}</strong>
       </div>
     </div>
   );
@@ -86,7 +111,9 @@ function MiniWarrantyAlert() {
   return (
     <div className="landing-mini landing-mini-warranty" aria-hidden>
       <p className="landing-mini-warranty-tag">תזכורת שירות</p>
-      <p>חוזה תחזוקה ל־«לובי מערב» מסתיים בעוד 21 יום</p>
+      <p>
+        האחריות ל&lsquo;{BENTO_SITE_NAME}&rsquo; מסתיימת בעוד {BENTO_WARRANTY_DAYS_LEFT} יום
+      </p>
     </div>
   );
 }

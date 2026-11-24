@@ -140,7 +140,6 @@ export function SiteSecureLanding() {
         >
           <div className="public-container mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div className="flex flex-col gap-5">
-              <p className="public-mono text-[11px] tracking-[0.2em] text-fg-muted">SITE SECURE</p>
               <h1 className="public-hero-title">
                 <span className="public-hero-line">{ssMarketing.heroLine1}</span>
                 <span className="public-hero-line is-muted">{ssMarketing.heroLine2}</span>

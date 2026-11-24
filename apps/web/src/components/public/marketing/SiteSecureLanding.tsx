@@ -7,6 +7,7 @@ import { submitBetaSignup } from "../../../lib/public-marketing-api";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../lib/public-seo";
 import { PublicHeader } from "../PublicChrome";
 import { LandingMobileCta } from "./LandingMobileCta";
+import { useLandingReveal } from "./useLandingReveal";
 
 const LandingCctvHeroCalc = lazy(() =>
   import("./LandingCctvHeroCalc").then((m) => ({ default: m.LandingCctvHeroCalc })),
@@ -99,6 +100,8 @@ export function SiteSecureLanding() {
     jsonLd: siteSecureOrgJsonLd(origin),
   });
 
+  useLandingReveal();
+
   return (
     <div className="public-root public-shell landing-shell-with-mobile-cta min-h-dvh text-fg" dir="rtl" lang="he">
       <a href="#main" className="skip-link">
@@ -140,25 +143,33 @@ export function SiteSecureLanding() {
           </div>
         </section>
 
-        <Suspense fallback={<section id="problem" className="public-scene min-h-[24rem]" aria-hidden />}>
-          <LandingBeforeAfter />
-        </Suspense>
+        <div className="landing-reveal">
+          <Suspense fallback={<section id="problem" className="public-scene min-h-[24rem]" aria-hidden />}>
+            <LandingBeforeAfter />
+          </Suspense>
+        </div>
 
         <div className="public-rule" aria-hidden />
 
-        <Suspense fallback={<section id="how" className="public-scene min-h-[28rem]" aria-hidden />}>
-          <LandingHowScrolly />
-        </Suspense>
+        <div className="landing-reveal">
+          <Suspense fallback={<section id="how" className="public-scene min-h-[28rem]" aria-hidden />}>
+            <LandingHowScrolly />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
-          <LandingFeaturesBento />
-        </Suspense>
+        <div className="landing-reveal">
+          <Suspense fallback={<section id="features" className="public-scene min-h-[22rem]" aria-hidden />}>
+            <LandingFeaturesBento />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<section id="field-note" className="public-scene min-h-[16rem]" aria-hidden />}>
-          <LandingFounder />
-        </Suspense>
+        <div className="landing-reveal">
+          <Suspense fallback={<section id="field-note" className="public-scene min-h-[16rem]" aria-hidden />}>
+            <LandingFounder />
+          </Suspense>
+        </div>
 
-        <Section id="audience">
+        <Section id="audience" className="landing-reveal">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.audienceTitle}</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {ssMarketing.audience.map((row) => (
@@ -170,7 +181,7 @@ export function SiteSecureLanding() {
           </div>
         </Section>
 
-        <Section id="compare">
+        <Section id="compare" className="landing-reveal">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.compareTitle}</h2>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -194,7 +205,7 @@ export function SiteSecureLanding() {
           </div>
         </Section>
 
-        <Section id="pricing-teaser" className="public-scene-surface">
+        <Section id="pricing-teaser" className="public-scene-surface landing-reveal">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.pricingTeaserTitle}</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-fg-muted">{ssMarketing.pricingTeaserBody}</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -217,7 +228,7 @@ export function SiteSecureLanding() {
           </Link>
         </Section>
 
-        <Section id="faq">
+        <Section id="faq" className="landing-reveal">
           <h2 className="text-2xl font-semibold text-fg">{ssMarketing.faqTitle}</h2>
           <div className="mt-6 flex flex-col gap-4">
             {ssMarketing.faq.map((item) => (
@@ -229,7 +240,7 @@ export function SiteSecureLanding() {
           </div>
         </Section>
 
-        <Section id="beta" className="public-scene-pilot">
+        <Section id="beta" className="public-scene-pilot landing-reveal">
           <h2 className="text-2xl font-semibold text-fg sm:text-3xl">{ssMarketing.betaTitle}</h2>
           <p className="mt-2 text-sm text-fg-muted">{ssMarketing.betaHint}</p>
           {betaDone ? (

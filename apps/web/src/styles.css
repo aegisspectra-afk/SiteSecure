@@ -30164,3 +30164,24 @@ html.dark .ssp-site-tone.is-officer {
   font-size: 0.75rem;
   font-weight: 650;
 }
+
+
+/* D1-V2 motion — respects prefers-reduced-motion */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.landing-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

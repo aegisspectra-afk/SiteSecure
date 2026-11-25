@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./public-pricing": "./src/public-pricing.ts",
     "./catalog.json": "./catalog.json"
   }
 }

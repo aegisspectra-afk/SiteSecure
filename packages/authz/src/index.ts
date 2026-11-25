@@ -1,4 +1,27 @@
 import catalog from "../catalog.json";
+import {
+  billingPublic,
+  catalogPlansOrdered,
+  annualMonthlyIls,
+  formatIls,
+  comparisonCell,
+  publicPricingPayload,
+  planAllowsExtraSeats,
+  extraSeatUnitPrice,
+  extraSeatsTotalIls,
+  planDisplayBaseIls,
+  planRegularBaseIls,
+  monthlyTotalIls,
+  effectiveMemberCap,
+  extrasNeededForUsers,
+  PRICING_CAPABILITY_ROWS,
+} from "./public-pricing";
+import type {
+  BillingPublic,
+  PlanCommercial,
+  CatalogPlan,
+  ExtraSeatTier,
+} from "./public-pricing";
 
 export {
   billingPublic,
@@ -16,13 +39,8 @@ export {
   effectiveMemberCap,
   extrasNeededForUsers,
   PRICING_CAPABILITY_ROWS,
-} from "./public-pricing";
-export type {
-  BillingPublic,
-  PlanCommercial,
-  CatalogPlan,
-  ExtraSeatTier,
-} from "./public-pricing";
+};
+export type { BillingPublic, PlanCommercial, CatalogPlan, ExtraSeatTier };
 
 export type SeatLimitKey = "seats_operator" | "seats_field";
 export type ResourceLimitKey = SeatLimitKey | "storage_gb";

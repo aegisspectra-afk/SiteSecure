@@ -4,7 +4,7 @@ import {
   formatIls,
   monthlyTotalIls,
   planAllowsExtraSeats,
-} from "@site-secure/authz";
+} from "@site-secure/authz/public-pricing";
 import { Button, Input, Textarea } from "@site-secure/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";

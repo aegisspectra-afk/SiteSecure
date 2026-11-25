@@ -10,7 +10,7 @@ import {
   planDisplayBaseIls,
   planRegularBaseIls,
   type CatalogPlan,
-} from "@site-secure/authz";
+} from "@site-secure/authz/public-pricing";
 import { Link } from "@tanstack/react-router";
 import { useId, useMemo, useState } from "react";
 import { ssPricingFaq } from "../../../../i18n/site-secure-marketing-he";

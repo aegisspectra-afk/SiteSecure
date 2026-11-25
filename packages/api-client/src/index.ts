@@ -235,6 +235,8 @@ export type WorkspaceSubscriptionAdmin = {
   override_expires_at?: string | null;
   override_reason?: string | null;
   current_period_end?: string | null;
+  extra_seats?: number;
+  locked_price_ils_before_vat?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -254,6 +256,11 @@ export type BillingUpgradeRequest = {
   current_plan_key?: string;
   target_plan_key?: string | null;
   message?: string | null;
+  requested_extra_seats?: number;
+  estimated_monthly_ils_before_vat?: number | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   status: "pending" | "contacted" | "closed";
   internal_note?: string | null;
   created_at?: string;
@@ -3911,7 +3918,15 @@ export function createApiClient(opts: {
       request<WorkspaceUsage>(`/api/v1/workspaces/${workspaceId}/usage`),
     createBillingUpgradeRequest: (
       workspaceId: string,
-      body: { target_plan_key?: string; message?: string } = {},
+      body: {
+        target_plan_key?: string;
+        message?: string;
+        requested_extra_seats?: number;
+        estimated_monthly_ils_before_vat?: number;
+        contact_name?: string;
+        contact_phone?: string;
+        contact_email?: string;
+      } = {},
     ) =>
       request<{
         id: string;
@@ -3919,6 +3934,11 @@ export function createApiClient(opts: {
         current_plan_key?: string;
         target_plan_key?: string | null;
         message?: string | null;
+        requested_extra_seats?: number;
+        estimated_monthly_ils_before_vat?: number | null;
+        contact_name?: string | null;
+        contact_phone?: string | null;
+        contact_email?: string | null;
         status: string;
         created_at?: string;
       }>(`/api/v1/workspaces/${workspaceId}/billing/upgrade-requests`, {
@@ -4275,6 +4295,8 @@ export function createApiClient(opts: {
         period_end?: string | null;
         note?: string | null;
         status?: "trialing" | "active" | "past_due" | "canceled" | "manual";
+        extra_seats?: number;
+        locked_price_ils_before_vat?: number | null;
       },
     ) =>
       request<{ subscription: WorkspaceSubscriptionAdmin }>(

@@ -18,5 +18,6 @@
 | `20261122200000_ss_warranty_reminder_events.sql` | תזכורות שירות | יומן dedup לתזכורות אחריות 60/14 | `supabase/rollbacks/20261122200000_ss_warranty_reminder_events.sql` |
 | `20261122210000_ss_d2_job_awaiting_dispatch.sql` | D2 | סטטוס עבודה `awaiting_dispatch` לאחר אישור הצעה | `supabase/rollbacks/20261122210000_ss_d2_job_awaiting_dispatch.sql` |
 | `20261125140000_ss_c1_subscription_extra_seats.sql` | C1 seats | `subscriptions.extra_seats` + `locked_price_ils_before_vat` | `supabase/rollbacks/20261125140000_ss_c1_subscription_extra_seats.sql` |
+| `20261125141000_ss_c3_billing_upgrade_request_details.sql` | C3 upgrade | פרטי בקשת שדרוג: extras / סכום / יצירת קשר | `supabase/rollbacks/20261125141000_ss_c3_billing_upgrade_request_details.sql` |
 
 **קוד בלי מיגרציה (ייפרס עם Web/API):** B1 · B2 · B4 · B5 · B6 · C1 שער capabilities מלא ב-API · C2/C3 API+UI · תזכורות אחריות (API).

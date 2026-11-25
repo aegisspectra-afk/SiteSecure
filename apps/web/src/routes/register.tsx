@@ -105,7 +105,7 @@ function RegisterPage() {
     >
       {preferredPlan ? (
         <p className="mb-4 rounded-[12px] border border-border bg-bg-muted px-4 py-3 text-sm leading-6 text-fg" role="note">
-          ביקשתם מסלול <strong>{preferredPlan}</strong>. ההרשמה מתחילה ב־Free לפי הקטלוג; שדרוג בבטא מתבצע בפנייה
+          ביקשתם מסלול <strong>{preferredPlan}</strong>. ההרשמה מתחילה ב־Free לפי הקטלוג; שדרוג מתבצע בפנייה
           לצוות אחרי ההצטרפות — אין סליקה אוטומטית.
         </p>
       ) : null}

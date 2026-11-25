@@ -1,7 +1,13 @@
 import { ApiClientError } from "@site-secure/api-client";
-import { Button, Textarea } from "@site-secure/ui";
+import {
+  catalogPlansOrdered,
+  formatIls,
+  monthlyTotalIls,
+  planAllowsExtraSeats,
+} from "@site-secure/authz";
+import { Button, Input, Textarea } from "@site-secure/ui";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { he } from "../../i18n/he";
 import { useSession } from "../../lib/session";
 
@@ -11,13 +17,38 @@ type Props = {
   onClose: () => void;
 };
 
+const UPGRADE_PLANS = catalogPlansOrdered().filter((p) => p.key !== "free");
+
 export function BillingUpgradeDialog({ workspaceId, open, onClose }: Props) {
   const { api } = useSession();
+  const [targetPlan, setTargetPlan] = useState("pro");
+  const [extraSeats, setExtraSeats] = useState(0);
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
 
+  const plan = useMemo(
+    () => UPGRADE_PLANS.find((p) => p.key === targetPlan) ?? UPGRADE_PLANS[0],
+    [targetPlan],
+  );
+  const allowsExtras = plan ? planAllowsExtraSeats(plan) : false;
+  const estimated = plan
+    ? monthlyTotalIls({ plan, extraSeats: allowsExtras ? extraSeats : 0 })
+    : null;
+
   const submit = useMutation({
-    mutationFn: () => api.createBillingUpgradeRequest(workspaceId, { message: message.trim() || undefined }),
+    mutationFn: () =>
+      api.createBillingUpgradeRequest(workspaceId, {
+        target_plan_key: plan?.key,
+        requested_extra_seats: allowsExtras ? extraSeats : 0,
+        estimated_monthly_ils_before_vat: estimated ?? undefined,
+        contact_name: contactName.trim() || undefined,
+        contact_phone: contactPhone.trim() || undefined,
+        contact_email: contactEmail.trim() || undefined,
+        message: message.trim() || undefined,
+      }),
     onSuccess: () => {
       setDone(true);
       setMessage("");
@@ -36,7 +67,7 @@ export function BillingUpgradeDialog({ workspaceId, open, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="billing-upgrade-title"
     >
-      <div className="flex w-full max-w-md flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-bg p-4 shadow-lg">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-[var(--radius-card)] border border-border bg-bg p-4 shadow-lg">
         <div>
           <h2 id="billing-upgrade-title" className="text-base font-semibold text-fg">
             {he.settingsBillingUpgradeTitle}
@@ -48,13 +79,70 @@ export function BillingUpgradeDialog({ workspaceId, open, onClose }: Props) {
             {he.settingsBillingUpgradeDone}
           </p>
         ) : (
-          <Textarea
-            id="billing-upgrade-message"
-            label={he.settingsBillingUpgradeMessage}
-            value={message}
-            onChange={(ev) => setMessage(ev.target.value)}
-            rows={4}
-          />
+          <>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-fg-muted">{he.settingsBillingUpgradePlan}</span>
+              <select
+                className="h-12 min-h-12 rounded-[var(--radius-control)] border border-border bg-bg px-3 text-[17px] text-fg"
+                value={targetPlan}
+                onChange={(ev) => {
+                  setTargetPlan(ev.target.value);
+                  setExtraSeats(0);
+                }}
+              >
+                {UPGRADE_PLANS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label_he}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {allowsExtras ? (
+              <Input
+                id="billing-upgrade-extras"
+                type="number"
+                min={0}
+                max={500}
+                label={he.settingsBillingUpgradeExtras}
+                value={String(extraSeats)}
+                onChange={(ev) => setExtraSeats(Math.max(0, Number(ev.target.value) || 0))}
+              />
+            ) : null}
+
+            <p className="text-sm text-fg">
+              {he.settingsBillingUpgradeEstimate}:{" "}
+              <strong>{estimated == null ? he.settingsBillingUpgradeCustom : formatIls(estimated)}</strong>
+              <span className="text-fg-muted"> {he.settingsBillingUpgradeBeforeVat}</span>
+            </p>
+
+            <Input
+              id="billing-upgrade-name"
+              label={he.settingsBillingUpgradeContactName}
+              value={contactName}
+              onChange={(ev) => setContactName(ev.target.value)}
+            />
+            <Input
+              id="billing-upgrade-phone"
+              label={he.settingsBillingUpgradeContactPhone}
+              value={contactPhone}
+              onChange={(ev) => setContactPhone(ev.target.value)}
+            />
+            <Input
+              id="billing-upgrade-email"
+              type="email"
+              label={he.settingsBillingUpgradeContactEmail}
+              value={contactEmail}
+              onChange={(ev) => setContactEmail(ev.target.value)}
+            />
+            <Textarea
+              id="billing-upgrade-message"
+              label={he.settingsBillingUpgradeMessage}
+              value={message}
+              onChange={(ev) => setMessage(ev.target.value)}
+              rows={3}
+            />
+          </>
         )}
         {error ? (
           <p className="text-sm text-danger" role="alert">

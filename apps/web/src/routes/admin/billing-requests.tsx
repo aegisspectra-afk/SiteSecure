@@ -59,9 +59,15 @@ function AdminBillingRequests() {
             <p className="mt-1 text-sm text-fg-muted">
               {planLabel(row.current_plan_key)}
               {row.target_plan_key ? ` → ${planLabel(row.target_plan_key)}` : ""}
+              {row.requested_extra_seats ? ` · +${row.requested_extra_seats} משתמשים` : ""}
+              {row.estimated_monthly_ils_before_vat != null
+                ? ` · ₪${Number(row.estimated_monthly_ils_before_vat).toLocaleString("he-IL")} / חודש`
+                : ""}
             </p>
             <p className="mt-1 text-sm text-fg-muted">
-              {row.full_name || row.email || row.user_id}
+              {row.contact_name || row.full_name || row.email || row.user_id}
+              {row.contact_phone ? ` · ${row.contact_phone}` : ""}
+              {row.contact_email ? ` · ${row.contact_email}` : ""}
             </p>
             {row.message ? <p className="mt-2 whitespace-pre-wrap text-sm text-fg">{row.message}</p> : null}
             <p className="ltr-meta mt-2 text-xs text-fg-subtle">

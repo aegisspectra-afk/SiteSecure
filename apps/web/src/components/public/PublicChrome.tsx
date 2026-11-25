@@ -144,7 +144,7 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
           className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-action px-4 text-sm font-semibold text-action-fg transition-[background-color,transform,filter] duration-200 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={() => setOpen(false)}
         >
-          הצטרפו לבטא
+          התחילו עכשיו
         </a>
       ) : (
         <>

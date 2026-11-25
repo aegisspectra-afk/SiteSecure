@@ -256,7 +256,7 @@ function BetaLiteForm() {
           .finally(() => setBusy(false));
       }}
     >
-      <h3 className="m-0 text-lg font-semibold text-[var(--mkt-ink)]">הצטרפות לבטא</h3>
+      <h3 className="m-0 text-lg font-semibold text-[var(--mkt-ink)]">השאירו פרטים</h3>
       <label>
         שם מלא
         <input

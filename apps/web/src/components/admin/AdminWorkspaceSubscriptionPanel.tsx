@@ -33,6 +33,8 @@ export function AdminWorkspaceSubscriptionPanel({ workspaceId, workspaceName, on
   const [planKey, setPlanKey] = useState("free");
   const [periodEnd, setPeriodEnd] = useState("");
   const [note, setNote] = useState("");
+  const [extraSeats, setExtraSeats] = useState("0");
+  const [lockedPrice, setLockedPrice] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   const query = useQuery({
@@ -47,6 +49,12 @@ export function AdminWorkspaceSubscriptionPanel({ workspaceId, workspaceName, on
     setPlanKey(sub.plan_key || "free");
     setPeriodEnd(toLocalDatetime(sub.override_expires_at || sub.current_period_end));
     setNote(sub.override_reason || "");
+    setExtraSeats(String(sub.extra_seats ?? 0));
+    setLockedPrice(
+      sub.locked_price_ils_before_vat == null || sub.locked_price_ils_before_vat === undefined
+        ? ""
+        : String(sub.locked_price_ils_before_vat),
+    );
   }, [sub]);
 
   const save = useMutation({
@@ -56,6 +64,8 @@ export function AdminWorkspaceSubscriptionPanel({ workspaceId, workspaceName, on
         period_end: fromLocalDatetime(periodEnd),
         note: note.trim() || null,
         status: "manual",
+        extra_seats: Math.max(0, Number(extraSeats) || 0),
+        locked_price_ils_before_vat: lockedPrice.trim() === "" ? null : Number(lockedPrice),
       }),
     onSuccess: () => {
       setFormError(null);
@@ -116,6 +126,26 @@ export function AdminWorkspaceSubscriptionPanel({ workspaceId, workspaceName, on
         label={he.adminWorkspaceSubscriptionPeriodEnd}
         value={periodEnd}
         onChange={(ev) => setPeriodEnd(ev.target.value)}
+      />
+
+      <Input
+        id="admin-sub-extra-seats"
+        type="number"
+        min={0}
+        max={500}
+        label={he.adminWorkspaceSubscriptionExtraSeats}
+        value={extraSeats}
+        onChange={(ev) => setExtraSeats(ev.target.value)}
+      />
+
+      <Input
+        id="admin-sub-locked-price"
+        type="number"
+        min={0}
+        step="1"
+        label={he.adminWorkspaceSubscriptionLockedPrice}
+        value={lockedPrice}
+        onChange={(ev) => setLockedPrice(ev.target.value)}
       />
 
       <Textarea

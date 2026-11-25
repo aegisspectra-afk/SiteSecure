@@ -488,6 +488,8 @@ class AdminSubscriptionPatch(BaseModel):
     period_end: str | None = None
     note: str | None = Field(default=None, max_length=2000)
     status: SubscriptionStatus | None = None
+    extra_seats: int | None = Field(default=None, ge=0, le=500)
+    locked_price_ils_before_vat: float | None = Field(default=None, ge=0)
 
 
 def _subscription_snapshot(sub: dict[str, Any] | None) -> dict[str, Any]:
@@ -500,6 +502,8 @@ def _subscription_snapshot(sub: dict[str, Any] | None) -> dict[str, Any]:
         "override_expires_at": sub.get("override_expires_at"),
         "override_reason": sub.get("override_reason"),
         "current_period_end": sub.get("current_period_end"),
+        "extra_seats": sub.get("extra_seats"),
+        "locked_price_ils_before_vat": sub.get("locked_price_ils_before_vat"),
     }
 
 
@@ -509,7 +513,7 @@ def _get_workspace_subscription(service: ServiceClient, workspace_id: str) -> di
             "subscriptions",
             params={
                 "workspace_id": f"eq.{workspace_id}",
-                "select": "id,workspace_id,plan_key,status,source,override_expires_at,override_reason,current_period_end,created_at,updated_at",
+                "select": "id,workspace_id,plan_key,status,source,override_expires_at,override_reason,current_period_end,extra_seats,locked_price_ils_before_vat,created_at,updated_at",
             },
         )
     )
@@ -568,6 +572,10 @@ def patch_organization_subscription(
         patch["current_period_end"] = period or None
     if body.note is not None:
         patch["override_reason"] = body.note.strip() or None
+    if body.extra_seats is not None:
+        patch["extra_seats"] = int(body.extra_seats)
+    if "locked_price_ils_before_vat" in body.model_fields_set:
+        patch["locked_price_ils_before_vat"] = body.locked_price_ils_before_vat
     if not patch:
         raise ApiError(400, "VALIDATION_ERROR", MESSAGES["VALIDATION_ERROR"])
     patch["source"] = "admin_override"
@@ -618,7 +626,7 @@ def list_billing_upgrade_requests(
 ):
     require_platform_admin(service, user["id"])
     params: dict[str, str] = {
-        "select": "id,workspace_id,user_id,current_plan_key,target_plan_key,message,status,internal_note,created_at,updated_at,workspaces(name),profiles(email,full_name)",
+        "select": "id,workspace_id,user_id,current_plan_key,target_plan_key,message,requested_extra_seats,estimated_monthly_ils_before_vat,contact_name,contact_phone,contact_email,status,internal_note,created_at,updated_at,workspaces(name),profiles(email,full_name)",
         "order": "created_at.desc",
         "limit": str(limit),
     }
@@ -640,6 +648,11 @@ def list_billing_upgrade_requests(
                 "current_plan_key": row.get("current_plan_key"),
                 "target_plan_key": row.get("target_plan_key"),
                 "message": row.get("message"),
+                "requested_extra_seats": row.get("requested_extra_seats") or 0,
+                "estimated_monthly_ils_before_vat": row.get("estimated_monthly_ils_before_vat"),
+                "contact_name": row.get("contact_name"),
+                "contact_phone": row.get("contact_phone"),
+                "contact_email": row.get("contact_email"),
                 "status": row.get("status"),
                 "internal_note": row.get("internal_note"),
                 "created_at": row.get("created_at"),

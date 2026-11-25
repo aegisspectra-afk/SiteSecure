@@ -1,0 +1,65 @@
+[
+  {
+    "w": 390,
+    "name": "nav-390.png",
+    "menuBtn": true,
+    "desktopLinks": false,
+    "linkTexts": [
+      "מוצר",
+      "פתרונות",
+      "מחירון",
+      "מחשבון אחסון",
+      "כניסה"
+    ],
+    "current": [
+      "מוצר"
+    ],
+    "keyboard": {
+      "tabOk": true,
+      "escOk": true
+    },
+    "bdi": 1
+  },
+  {
+    "w": 768,
+    "name": "nav-768.png",
+    "menuBtn": true,
+    "desktopLinks": false,
+    "linkTexts": [
+      "מוצר",
+      "פתרונות",
+      "מחירון",
+      "מחשבון אחסון",
+      "כניסה"
+    ],
+    "current": [
+      "מוצר"
+    ],
+    "keyboard": {
+      "tabOk": true,
+      "escOk": true
+    },
+    "bdi": 1
+  },
+  {
+    "w": 1440,
+    "name": "nav-1440.png",
+    "menuBtn": false,
+    "desktopLinks": true,
+    "linkTexts": [
+      "מוצר",
+      "פתרונות",
+      "מחירון",
+      "מחשבון אחסון",
+      "כניסה"
+    ],
+    "current": [
+      "מוצר"
+    ],
+    "keyboard": {
+      "tabOk": true,
+      "escOk": true
+    },
+    "bdi": 1
+  }
+]

@@ -372,7 +372,9 @@ function MarketingFooter() {
     <footer className="border-t border-border px-4 py-14" dir="rtl">
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-2">
         <div>
-          <p className="text-sm font-semibold text-fg">SITE SECURE</p>
+          <p className="text-sm font-semibold text-fg">
+            <bdi>SITE SECURE</bdi>
+          </p>
           {company ? <p className="mt-2 text-sm text-fg-muted">{company}</p> : null}
           {address ? <p className="text-sm text-fg-muted">{address}</p> : null}
           {waHref ? (
@@ -403,7 +405,9 @@ function MarketingFooter() {
           <Link to="/tools/cctv-storage">מחשבון אחסון CCTV</Link>
         </nav>
       </div>
-      <p className="mx-auto mt-10 max-w-6xl text-xs text-fg-muted">© {new Date().getFullYear()} Aegis Spectra</p>
+      <p className="mx-auto mt-10 max-w-6xl text-xs text-fg-muted">
+        © {new Date().getFullYear()} <bdi>Aegis Spectra</bdi>
+      </p>
     </footer>
   );
 }

@@ -179,7 +179,9 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
       ? createPortal(
           <div className="landing-nav-fullscreen" role="dialog" aria-modal="true" aria-label={t.menu} dir={dir}>
             <div className="landing-nav-fullscreen-bar">
-              <p className="font-semibold text-fg">SITE SECURE</p>
+              <p className="font-semibold text-fg">
+                <bdi>SITE SECURE</bdi>
+              </p>
               <Button variant="ghost" className="min-h-12 min-w-12" aria-label="סגור" onClick={() => setOpen(false)}>
                 <X className="size-5" aria-hidden />
               </Button>
@@ -216,7 +218,7 @@ export function PublicHeader({ marketingNav = false }: { marketingNav?: boolean 
           to="/"
           className="public-nav-brand shrink-0 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
-          {marketingNav ? "SITE SECURE" : t.platformBrand}
+          {marketingNav ? <bdi>SITE SECURE</bdi> : t.platformBrand}
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center lg:flex" aria-label={t.navAria}>

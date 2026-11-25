@@ -11,6 +11,7 @@ import { HomeSecurity } from "./HomeSecurity";
 import { MarketingShell } from "./MarketingShell";
 import { PlatformExplorer } from "./PlatformExplorer";
 import { SolutionsExplorer } from "./SolutionsExplorer";
+import { BrandBdi } from "./BrandBdi";
 import { HOME_FAQ, PROBLEMS } from "./marketing-content";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "https://site-secure.com";
@@ -41,7 +42,9 @@ export function EnterpriseHome() {
       <section className="mkt-dark mkt-section" id="hero">
         <div className="mkt-container grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <p className="mkt-kicker">SITE SECURE</p>
+            <p className="mkt-kicker">
+              <BrandBdi name="SITE SECURE" />
+            </p>
             <h1 className="mkt-h1">
               מהסיור באתר ועד תעודת המסירה,
               <br />

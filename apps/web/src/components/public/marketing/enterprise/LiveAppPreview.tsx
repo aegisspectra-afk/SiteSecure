@@ -28,7 +28,9 @@ export function LiveAppPreview() {
   return (
     <div className="mkt-live">
       <aside className="mkt-live-side" aria-label="ניווט הדגמה">
-        <p className="mkt-live-brand">SITE SECURE</p>
+        <p className="mkt-live-brand">
+          <bdi>SITE SECURE</bdi>
+        </p>
         <nav className="mkt-live-nav">
           {DEMO_NAV.map((item) => (
             <button

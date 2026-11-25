@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { ActivityFeed } from "./ActivityFeed";
+import { BrandBdi } from "./BrandBdi";
 import { DEMO_BADGE, DEMO_CHART, DEMO_KPIS } from "./demo-data";
 
 function usePrefersReducedMotion() {
@@ -53,7 +54,7 @@ export function DemoDashboard() {
         <span className="mkt-demo-dot" aria-hidden />
         <span className="mkt-demo-dot" aria-hidden />
         <p id={labelId} className="mkt-demo-title">
-          לוח בקרה · SITE SECURE
+          לוח בקרה · <BrandBdi name="SITE SECURE" />
         </p>
         <span className="mkt-demo-badge">{DEMO_BADGE}</span>
       </div>

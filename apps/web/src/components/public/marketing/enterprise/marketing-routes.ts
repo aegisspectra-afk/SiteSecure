@@ -22,14 +22,27 @@ export const MARKETING_ROUTES = {
   legalSecurity: "/legal/security",
 } as const;
 
-export const HEADER_PLATFORM_LINKS = [
-  { href: MARKETING_ROUTES.product, label: "סקירת מוצר" },
+/** Desktop + mobile primary nav — no dropdowns. */
+export const HEADER_PRIMARY_LINKS = [
+  { href: MARKETING_ROUTES.product, label: "מוצר" },
   { href: MARKETING_ROUTES.solutions, label: "פתרונות" },
   { href: MARKETING_ROUTES.pricing, label: "מחירון" },
   { href: MARKETING_ROUTES.cctvTool, label: "מחשבון אחסון" },
 ] as const;
 
-export const HEADER_COMPANY_LINKS = [
+/** Platform links for footer (same destinations, longer labels OK). */
+export const FOOTER_PLATFORM_LINKS = [
+  { href: MARKETING_ROUTES.product, label: "מוצר" },
+  { href: MARKETING_ROUTES.solutions, label: "פתרונות" },
+  { href: MARKETING_ROUTES.pricing, label: "מחירון" },
+  { href: MARKETING_ROUTES.cctvTool, label: "מחשבון אחסון" },
+] as const;
+
+/**
+ * Company links — footer only (not in header).
+ * Knowledge stays only while KNOWLEDGE_ARTICLES has ≥ 3 real articles.
+ */
+export const FOOTER_COMPANY_LINKS = [
   { href: MARKETING_ROUTES.about, label: "אודות" },
   { href: MARKETING_ROUTES.contact, label: "צור קשר" },
   { href: MARKETING_ROUTES.knowledge, label: "מרכז ידע" },
@@ -43,5 +56,11 @@ export const FOOTER_LEGAL_LINKS = [
   { href: MARKETING_ROUTES.legalSecurity, label: "אבטחת מידע", slug: "security" as const },
 ] as const;
 
-/** Flat header links for compact desktop nav. */
-export const HEADER_FLAT_LINKS = [...HEADER_PLATFORM_LINKS, ...HEADER_COMPANY_LINKS] as const;
+/** @deprecated Use HEADER_PRIMARY_LINKS */
+export const HEADER_PLATFORM_LINKS = FOOTER_PLATFORM_LINKS;
+
+/** @deprecated Company links belong in the footer only */
+export const HEADER_COMPANY_LINKS = FOOTER_COMPANY_LINKS;
+
+/** @deprecated Use HEADER_PRIMARY_LINKS */
+export const HEADER_FLAT_LINKS = HEADER_PRIMARY_LINKS;

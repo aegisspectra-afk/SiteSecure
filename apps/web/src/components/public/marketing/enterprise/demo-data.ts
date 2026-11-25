@@ -1,6 +1,4 @@
-/** Synthetic marketing-demo data only — never production customer records. */
-
-export const DEMO_BADGE = "נתוני הדגמה";
+export const DEMO_BADGE = "דוגמה";
 
 export const DEMO_KPIS = [
   { key: "customers", label: "לקוחות", value: 128, hint: "+6 החודש" },
@@ -16,7 +14,7 @@ export const DEMO_ACTIVITY = [
   { id: "a4", time: "08:20", text: "ליד חדש מאתר — מצלמות לובי", tone: "info" as const },
   { id: "a5", time: "07:50", text: "שיבוץ טכנאי לעבודת התקנה P-221", tone: "info" as const },
   { id: "a6", time: "07:15", text: "קריאת שירות #871 נסגרה עם תיעוד", tone: "ok" as const },
-  { id: "a7", time: "06:40", text: "התראת מלאי סינתטית — מק״ט CAM-4K", tone: "warn" as const },
+  { id: "a7", time: "06:40", text: "תזכורת שירות — חוזה תחזוקה באתר הדר", tone: "warn" as const },
 ];
 
 export const DEMO_CHART = [
@@ -50,18 +48,14 @@ export type ExplorerModuleKey =
   | "installations"
   | "service"
   | "quotations"
-  | "inventory"
-  | "technicians"
-  | "calendar"
-  | "maps"
-  | "reports";
+  | "technicians";
 
 export type ExplorerModule = {
   key: ExplorerModuleKey;
   title: string;
   value: string;
   capabilities: string[];
-  previewKind: "list" | "table" | "board" | "map" | "chart";
+  previewKind: "list" | "table" | "board";
   cta: { label: string; href: string };
   status: "live" | "partial" | "planned";
 };
@@ -122,15 +116,6 @@ export const EXPLORER_MODULES: ExplorerModule[] = [
     status: "live",
   },
   {
-    key: "inventory",
-    title: "מלאי",
-    value: "ניהול מלאי מתקדם — מתוכנן להמשך הדרך.",
-    capabilities: ["פריטים ומק״ט", "יתרות", "התראות מלאי", "קישור להצעות"],
-    previewKind: "table",
-    cta: { label: "למחירון", href: "/pricing" },
-    status: "planned",
-  },
-  {
     key: "technicians",
     title: "טכנאים",
     value: "שיבוץ, זמינות וחתימה בשטח במסלול Business ומעלה.",
@@ -138,33 +123,6 @@ export const EXPLORER_MODULES: ExplorerModule[] = [
     previewKind: "list",
     cta: { label: "למסלול Business", href: "/pricing" },
     status: "live",
-  },
-  {
-    key: "calendar",
-    title: "יומן עבודה",
-    value: "תצוגות לוח זמנים לשיבוץ צוות — בחלקן כבר פעילות.",
-    capabilities: ["תצוגת יום/שבוע", "שיבוץ עבודות", "התראות", "סינון לפי טכנאי"],
-    previewKind: "board",
-    cta: { label: "סקירת מוצר", href: "/product" },
-    status: "partial",
-  },
-  {
-    key: "maps",
-    title: "מפות",
-    value: "מיפוי אתרים על המפה — בהרחבה.",
-    capabilities: ["סימון אתרים", "ניווט לטכנאי", "צפיפות אזורית", "סינון סטטוס"],
-    previewKind: "map",
-    cta: { label: "צור קשר", href: "/contact" },
-    status: "planned",
-  },
-  {
-    key: "reports",
-    title: "דוחות",
-    value: "משפך הצעות ותמונת מצב מסחרית — חלקית היום.",
-    capabilities: ["משפך הצעות", "סיכום חודשי", "ייצוא בסיסי", "מדדי שירות"],
-    previewKind: "chart",
-    cta: { label: "התחילו בחינם", href: "/register" },
-    status: "partial",
   },
 ];
 

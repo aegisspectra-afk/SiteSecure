@@ -9,7 +9,7 @@ const TONE_LABEL: Record<Exclude<ToneFilter, "all">, string> = {
   info: "מידע",
 };
 
-/** Operational activity feed — synthetic demo rows only, clearly labeled. */
+/** Operational activity feed preview. */
 export function ActivityFeed({ compact = false }: { compact?: boolean }) {
   const baseId = useId();
   const [tone, setTone] = useState<ToneFilter>("all");
@@ -26,8 +26,8 @@ export function ActivityFeed({ compact = false }: { compact?: boolean }) {
     <div className={`mkt-feed${compact ? " is-compact" : ""}`}>
       <div className="mkt-feed-head">
         <div>
-          <h3 className="m-0 text-base font-semibold">פיד פעילות תפעולית</h3>
-          <p className="mkt-demo-badge mt-2">{DEMO_BADGE}</p>
+          <h3 className="m-0 text-base font-semibold">פיד פעילות</h3>
+          {!compact ? <p className="mkt-demo-badge mt-2">{DEMO_BADGE}</p> : null}
         </div>
         <div className="mkt-xp-tabs" role="tablist" aria-label="סינון לפי סוג אירוע">
           {(
@@ -77,19 +77,16 @@ export function ActivityFeed({ compact = false }: { compact?: boolean }) {
         </ul>
       ) : (
         <p className="mkt-card mt-3 text-sm" role="status">
-          אין אירועי הדגמה בסינון הנוכחי.
+          אין אירועים בסינון הנוכחי.
         </p>
       )}
 
       {active && !compact ? (
         <div className="mkt-feed-detail mkt-card" aria-live="polite">
           <p className="m-0 text-xs font-semibold text-[var(--mkt-muted)]">
-            פירוט הדגמה · {TONE_LABEL[active.tone]}
+            {TONE_LABEL[active.tone]} · {active.time}
           </p>
           <p className="mt-2 m-0 text-[17px] leading-7">{active.text}</p>
-          <p className="mt-2 m-0 text-xs text-[var(--mkt-muted)]">
-            שעה סינתטית {active.time} · לא מחובר לנתוני ייצור
-          </p>
         </div>
       ) : null}
     </div>

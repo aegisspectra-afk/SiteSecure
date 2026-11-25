@@ -7,27 +7,27 @@ import { MARKETING_ROUTES } from "./marketing-routes";
 const STEPS = [
   {
     title: "הרשמה",
-    body: "יצירת חשבון דרך תשתית האימות הקיימת — בלי סיסמאות ידניות באפליקציה.",
+    body: "יוצרים חשבון ומתחילים במסלול החינמי — בלי כרטיס אשראי.",
     cta: { label: "לעמוד ההרשמה", href: MARKETING_ROUTES.register },
   },
   {
     title: "סביבת עבודה",
-    body: "נוצרת סביבת עבודה מבודדת עם מסלול Free כברירת מחדל לפי הקטלוג.",
-    cta: { label: "למחירון Free", href: MARKETING_ROUTES.pricing },
+    body: "נפתחת סביבה נפרדת לעסק שלכם, עם המסלול החינמי כברירת מחדל.",
+    cta: { label: "למחירון", href: MARKETING_ROUTES.pricing },
   },
   {
     title: "הגדרת חברה",
-    body: "פרטי עסק בסיסיים באשף ההצטרפות הקיים — לא הדגמה מזויפת של שמירה.",
+    body: "מזינים פרטי עסק בסיסיים ומוכנים לעבודה.",
     cta: { label: "התחילו בחינם", href: MARKETING_ROUTES.register },
   },
   {
     title: "כניסה לעבודה",
-    body: "מעבר לאפליקציה המאומתת (/platform) אחרי השלמת ההרשמה — לא סימולציה של נתוני לקוח.",
+    body: "נכנסים למערכת ומתחילים מהצעה ראשונה או מלקוח קיים.",
     cta: { label: "כניסה", href: MARKETING_ROUTES.login },
   },
 ] as const;
 
-/** Interactive onboarding walkthrough — CTAs go to real routes only. */
+/** Interactive onboarding walkthrough. */
 export function OnboardingPreview() {
   const baseId = useId();
   const [step, setStep] = useState(0);

@@ -2,42 +2,26 @@ import { Link } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import { MARKETING_ROUTES } from "./marketing-routes";
 
-/** Only controls documented as verified in product/legal security copy. */
 const LAYERS = [
   {
-    key: "auth",
-    title: "אימות",
-    body: "התחברות דרך ספק הזהות של התשתית (Supabase Auth). אין אחסון סיסמאות ידני באפליקציה.",
-  },
-  {
-    key: "workspace",
-    title: "בידוד סביבות עבודה",
-    body: "נתונים משויכים ל־workspace. כל חברה רואה רק את הסביבה שלה.",
-  },
-  {
-    key: "rls",
-    title: "Row Level Security",
-    body: "במסד הנתונים מופעלות מדיניות RLS לפי חברה והרשאות — כפי שמתואר בעמוד אבטחת המידע.",
+    key: "isolation",
+    title: "כל חברה רואה רק את הנתונים שלה",
+    body: "סביבת עבודה נפרדת לכל עסק — בלי ערבוב בין לקוחות.",
   },
   {
     key: "rbac",
     title: "הרשאות לפי תפקיד",
-    body: "בקרת גישה בצד האפליקציה והשרת לפי תפקיד (בעלים, מנהל, מכירות, טכנאי ועוד).",
-  },
-  {
-    key: "api",
-    title: "גישת API מאובטחת",
-    body: "פעולות רגישות נבדקות מול הרשאה וסביבת עבודה פעילה בשרת.",
-  },
-  {
-    key: "files",
-    title: "בקרת קבצים",
-    body: "אחסון קבצים עם הרשאות סביבת עבודה — לא חשיפה ציבורית של נתוני לקוח.",
+    body: "בעלים, מנהל, מכירות וטכנאי רואים ופועלים לפי מה שמותר להם.",
   },
   {
     key: "transit",
-    title: "הצפנה בתעבורה",
-    body: "תקשורת מוצפנת בין הדפדפן לשרת (HTTPS).",
+    title: "חיבור מוצפן",
+    body: "התקשורת בין הדפדפן לשרת מוגנת בהצפנה.",
+  },
+  {
+    key: "backup",
+    title: "גיבויים",
+    body: "הנתונים נשמרים עם גיבויים שוטפים בתשתית הענן.",
   },
 ] as const;
 
@@ -48,10 +32,10 @@ export function SecurityArchitecture() {
 
   return (
     <div className="mkt-sec">
-      <p className="mkt-kicker">ארכיטקטורת אבטחה</p>
-      <h3 className="m-0 text-xl font-semibold">בקרות מאומתות במוצר</h3>
+      <p className="mkt-kicker">אבטחה ואמון</p>
+      <h3 className="m-0 text-xl font-semibold">שמירת הנתונים שלכם</h3>
       <p className="mt-2 text-sm leading-7 text-[var(--mkt-muted)]">
-        מוצגות רק בקרות שמתוארות במסמכי המוצר. אין טענות לתעודות או סטנדרטים שלא אומתו.
+        ארבע נקודות שחשוב לדעת — בשפה פשוטה.
       </p>
 
       <div className="mkt-sec-grid">

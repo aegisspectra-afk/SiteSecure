@@ -39,7 +39,7 @@ function AnimatedValue({ value, active }: { value: number; active: boolean }) {
   return <span>{shown}</span>;
 }
 
-/** Interactive hero dashboard — synthetic demo only. */
+/** Interactive hero dashboard preview. */
 export function DemoDashboard() {
   const labelId = useId();
   const [activeKpi, setActiveKpi] = useState(0);
@@ -59,7 +59,7 @@ export function DemoDashboard() {
       </div>
 
       <div className="mkt-demo-body">
-        <div className="mkt-demo-kpis" role="tablist" aria-label="מדדי הדגמה">
+        <div className="mkt-demo-kpis" role="tablist" aria-label="מדדים">
           {DEMO_KPIS.map((kpi, i) => (
             <button
               key={kpi.key}
@@ -82,9 +82,9 @@ export function DemoDashboard() {
           <div className="mkt-demo-panel">
             <div className="mkt-demo-panel-head">
               <h3>פעילות השבוע</h3>
-              <p className="mkt-demo-caption">הצעות מול התקנות · {DEMO_BADGE}</p>
+              <p className="mkt-demo-caption">הצעות מול התקנות</p>
             </div>
-            <div className="mkt-demo-chart" role="img" aria-label="תרשים עמודות להדגמה">
+            <div className="mkt-demo-chart" role="img" aria-label="תרשים עמודות">
               {DEMO_CHART.map((d, i) => {
                 const h = Math.max(12, Math.round((d.quotes / maxQuotes) * 100));
                 const h2 = Math.max(8, Math.round((d.installs / maxQuotes) * 100));

@@ -2063,27 +2063,39 @@
   color: var(--mkt-on-dark-muted);
 }
 
-/* Support panel */
+/* Talk-to-us FAB + panel (marketing) */
 
 .mkt-support-fab {
   position: fixed;
-  inset-inline-start: 1rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-end: 1rem;
+  /* Sit above mobile sticky CTAs (~56px) + safe area */
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   z-index: 45;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  min-height: 48px;
-  padding: 0 1rem;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
   border: 0;
   border-radius: 999px;
   background: var(--mkt-blue);
   color: var(--mkt-white);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 650;
   cursor: pointer;
   box-shadow: 0 12px 28px rgb(37 99 235 / 35%);
+}
+
+@media (min-width: 769px) {
+  .mkt-support-fab {
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* When a fixed bottom CTA bar is present, lift the FAB further */
+.mkt-root:has(.landing-mobile-cta) .mkt-support-fab {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .mkt-support-fab:focus-visible {
@@ -2107,14 +2119,31 @@
 
 .mkt-support-panel {
   position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: min(24rem, 100%);
+  inset-inline-end: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  width: 360px;
+  max-width: calc(100vw - 2rem);
+  max-height: min(36rem, calc(100dvh - 2rem));
   background: var(--mkt-white);
   color: var(--mkt-ink);
   display: flex;
   flex-direction: column;
-  box-shadow: 12px 0 40px rgb(0 0 0 / 25%);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+  overflow: hidden;
+}
+
+@media (max-width: 390px) {
+  .mkt-support-panel {
+    inset-inline: 0;
+    inset-block-end: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    max-height: min(88dvh, 40rem);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgb(0 0 0 / 25%);
+  }
 }
 
 .mkt-support-head {
@@ -2124,10 +2153,12 @@
   gap: 0.75rem;
   padding: 1rem;
   border-bottom: 1px solid var(--mkt-border);
+  min-height: 3.5rem;
 }
 
 .mkt-support-head .mkt-nav-menu-btn {
   color: var(--mkt-ink);
+  margin-inline-start: 0;
 }
 
 .mkt-support-body {
@@ -2136,13 +2167,62 @@
   flex: 1;
 }
 
-.mkt-support-body a {
-  color: var(--mkt-blue);
+.mkt-support-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mkt-support-action {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: start;
+  padding: 0.9rem 1rem;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--mkt-border);
+  background: var(--mkt-bg, #f8fafc);
+  color: var(--mkt-ink);
   text-decoration: none;
-  font-weight: 600;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mkt-support-action:hover,
+.mkt-support-action:focus-visible {
+  border-color: var(--mkt-blue);
+  outline: none;
+}
+
+.mkt-support-action:focus-visible {
+  outline: 2px solid var(--mkt-blue-bright, #3b82f6);
+  outline-offset: 2px;
+}
+
+.mkt-support-action strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.mkt-support-action span {
+  font-size: 0.8125rem;
+  color: var(--mkt-muted);
+  line-height: 1.4;
+}
+
+.mkt-support-demo {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mkt-support-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mkt-support-done {
+  padding: 0.25rem 0 0.5rem;
 }
 
 /* Operational activity feed (synthetic) */

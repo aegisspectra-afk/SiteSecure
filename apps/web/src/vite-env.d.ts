@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_API_URL: string;
   readonly VITE_WORKFORCE_APP_URL?: string;
   readonly VITE_ENABLE_VERCEL_ANALYTICS?: string;
+  /** International digits for marketing WhatsApp (wa.me). Empty = hide channel. */
+  readonly VITE_MARKETING_WHATSAPP?: string;
 }
 
 interface ImportMeta {

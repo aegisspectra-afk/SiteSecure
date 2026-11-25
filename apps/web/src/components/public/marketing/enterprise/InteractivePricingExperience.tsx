@@ -57,7 +57,7 @@ function monthlyPriceCaption(plan: CatalogPlan): string {
     display < regular &&
     billingPublic().pro_launch_active
   ) {
-    return `מחיר השקה · רגיל ${formatIls(regular)} / חודש לפני מע״מ`;
+    return `חוסכים ₪${regular - display} בחודש · נעלו את מחיר ההשקה`;
   }
   return "לחודש לפני מע״מ";
 }
@@ -139,7 +139,7 @@ function recommendPlan(
   reasons.push(`מכסה משתמשים במסלול: ${comparisonCell(pick, "max_members")}.`);
   reasons.push(`אחסון: ${comparisonCell(pick, "storage_gb")} · הצעות: ${comparisonCell(pick, "quota_display")}.`);
   if (needs.length) {
-    reasons.push("המסלול כולל את היכולות שבחרתם לפי הקטלוג בפועל.");
+    reasons.push("המסלול כולל את היכולות שבחרתם.");
   }
   if (planAllowsExtraSeats(pick) && users > (pick.limits.max_members || 0)) {
     const extra = users - (pick.limits.max_members || 0);
@@ -201,12 +201,7 @@ function featureCategories(plan: CatalogPlan): { label: string; detail: string }
     },
     {
       label: "אינטגרציות",
-      detail:
-        plan.key === "enterprise"
-          ? "אינטגרציות מותאמות לפי דרישה"
-          : hasFeature(plan, "api")
-            ? "גישת API במסגרת המסלול"
-            : "לא כלול במסלול זה",
+      detail: plan.key === "enterprise" ? "אינטגרציות לפי דרישה" : "לא כלול במסלול זה",
     },
   ];
 }
@@ -245,8 +240,7 @@ function buildCompareRows(): CompareRow[] {
     {
       key: "integrations",
       label: "אינטגרציות",
-      value: (p) =>
-        p.key === "enterprise" ? "מותאמות" : hasFeature(p, "api") ? "API" : "—",
+      value: (p) => (p.key === "enterprise" ? "לפי דרישה" : "—"),
     },
     {
       key: "support",
@@ -315,8 +309,8 @@ function SeatCalculator({ plan }: { plan: CatalogPlan }) {
     <div className="mkt-ip-calc">
       <h4 className="m-0 text-base font-semibold">מחשבון משתמשים — {plan.label_he}</h4>
       <p className="mt-2 m-0 text-sm leading-7 text-[var(--mkt-muted)]">
-        כלולים {included} משתמשים. משתמשים נוספים מתומחרים לפי מדרגות — כל הנוספים במדרגה הנוכחית במחיר המדרגה
-        (לא מדורג מצטבר).
+        כלולים {included} משתמשים. משתמשים נוספים מתומחרים לפי מדרגות — המחיר לכל משתמש נוסף לפי המדרגה שמתאימה
+        למספר הנוספים.
       </p>
       <ul className="mkt-ip-tiers" aria-label="מדרגות משתמשים נוספים">
         {tiers.map((t) => (
@@ -364,9 +358,6 @@ function SeatCalculator({ plan }: { plan: CatalogPlan }) {
           <dd>{formatIls(total)}</dd>
         </div>
       </dl>
-      <p className="mt-3 m-0 text-xs text-[var(--mkt-muted)]">
-        אין סליקה אוטומטית באתר — שדרוג ומקומות נוספים מתבצעים בפנייה לצוות אחרי ההרשמה.
-      </p>
     </div>
   );
 }
@@ -392,7 +383,7 @@ function PlanFinder({
       <p className="mkt-kicker">מאתר מסלול</p>
       <h3 className="m-0 text-xl font-semibold">איזה מסלול מתאים לכם?</h3>
       <p className="mt-2 text-sm leading-7 text-[var(--mkt-muted)]">
-        ההמלצה מבוססת על מגבלות ויכולות מהקטלוג בפועל בלבד. אם הדרישות חורגות מ־Business — נפנה ל־Enterprise.
+        בחרו גודל צוות ויכולות — נציג את המסלול שמתאים. לצרכים רחבים יותר נציע Enterprise.
       </p>
 
       <label className="mkt-calc-slider mt-6">
@@ -500,9 +491,6 @@ export function InteractivePricingExperience({
           <h2 className="mkt-h2">תמחור שקוף. שליטה מלאה.</h2>
           <p className="mkt-lede">
             בחרו את המסלול שמתאים לגודל העסק שלכם והרחיבו משתמשים במדרגות ברורות — בלי חיוב שנתי.
-          </p>
-          <p className="mkt-ip-note" role="note">
-            אין סליקה אוטומטית באתר. הצטרפות למסלול בתשלום ושדרוגים מתבצעים בפנייה לצוות אחרי ההרשמה.
           </p>
           <p className="mt-2 m-0 text-sm text-[var(--mkt-muted)]">{billing.vat_note_he} מוצג מחיר חודשי בלבד.</p>
         </header>

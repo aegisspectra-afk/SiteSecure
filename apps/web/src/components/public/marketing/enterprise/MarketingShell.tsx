@@ -273,7 +273,7 @@ function megaBlurb(href: string): string {
     case MARKETING_ROUTES.solutions:
       return "לפי סוג עסק וצוות";
     case MARKETING_ROUTES.pricing:
-      return "מסלולים מהקטלוג בפועל";
+      return "ארבעה מסלולים שקופים";
     case MARKETING_ROUTES.cctvTool:
       return "חישוב אחסון חינמי";
     case MARKETING_ROUTES.about:
@@ -294,7 +294,7 @@ function MarketingFooter() {
         <div>
           <p className="mkt-nav-brand">SITE SECURE</p>
           <p className="mt-3 text-sm leading-7">Aegis Spectra</p>
-          <p className="mt-2 text-sm leading-7">כל העסק שלך. מערכת אחת. שליטה מלאה.</p>
+          <p className="mt-2 text-sm leading-7">מהסיור באתר ועד תעודת המסירה — בעברית.</p>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <p className="font-semibold text-[var(--mkt-on-dark)]">פלטפורמה</p>

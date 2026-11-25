@@ -10,25 +10,6 @@ import {
 } from "./demo-data";
 
 function ModulePreview({ mod }: { mod: ExplorerModule }) {
-  if (mod.previewKind === "chart") {
-    return (
-      <div className="mkt-xp-preview-chart" aria-hidden>
-        {[40, 65, 48, 80, 55, 70].map((h, i) => (
-          <span key={i} style={{ height: `${h}%` }} />
-        ))}
-      </div>
-    );
-  }
-  if (mod.previewKind === "map") {
-    return (
-      <div className="mkt-xp-map" aria-hidden>
-        <span className="mkt-xp-pin" style={{ insetInlineStart: "28%", top: "34%" }} />
-        <span className="mkt-xp-pin is-warn" style={{ insetInlineStart: "58%", top: "52%" }} />
-        <span className="mkt-xp-pin" style={{ insetInlineStart: "42%", top: "68%" }} />
-        <p>מפת אתרים · {DEMO_BADGE}</p>
-      </div>
-    );
-  }
   if (mod.previewKind === "board") {
     return (
       <div className="mkt-xp-board" aria-hidden>
@@ -45,7 +26,7 @@ function ModulePreview({ mod }: { mod: ExplorerModule }) {
   if (mod.previewKind === "table") {
     return (
       <table className="mkt-xp-table">
-        <caption className="sr-only">טבלת הדגמה</caption>
+        <caption className="sr-only">טבלת דוגמה</caption>
         <thead>
           <tr>
             <th>מס׳</th>
@@ -79,15 +60,21 @@ function ModulePreview({ mod }: { mod: ExplorerModule }) {
   );
 }
 
-export function PlatformExplorer() {
+export function PlatformExplorer({ liveOnly = false }: { liveOnly?: boolean }) {
   const baseId = useId();
-  const [active, setActive] = useState<ExplorerModuleKey>("quotations");
-  const mod = EXPLORER_MODULES.find((m) => m.key === active) ?? EXPLORER_MODULES[0];
+  const modules = liveOnly
+    ? EXPLORER_MODULES.filter((m) => m.status === "live")
+    : EXPLORER_MODULES;
+  const [active, setActive] = useState<ExplorerModuleKey>(
+    () => (modules.find((m) => m.key === "quotations") ?? modules[0])?.key ?? "quotations",
+  );
+  const mod = modules.find((m) => m.key === active) ?? modules[0];
+  if (!mod) return null;
 
   return (
     <div className="mkt-xp">
       <div className="mkt-xp-tabs" role="tablist" aria-label="מודולי פלטפורמה">
-        {EXPLORER_MODULES.map((m) => (
+        {modules.map((m) => (
           <button
             key={m.key}
             type="button"

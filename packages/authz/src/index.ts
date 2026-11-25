@@ -7,9 +7,22 @@ export {
   formatIls,
   comparisonCell,
   publicPricingPayload,
+  planAllowsExtraSeats,
+  extraSeatUnitPrice,
+  extraSeatsTotalIls,
+  planDisplayBaseIls,
+  planRegularBaseIls,
+  monthlyTotalIls,
+  effectiveMemberCap,
+  extrasNeededForUsers,
   PRICING_CAPABILITY_ROWS,
 } from "./public-pricing";
-export type { BillingPublic, PlanCommercial, CatalogPlan } from "./public-pricing";
+export type {
+  BillingPublic,
+  PlanCommercial,
+  CatalogPlan,
+  ExtraSeatTier,
+} from "./public-pricing";
 
 export type SeatLimitKey = "seats_operator" | "seats_field";
 export type ResourceLimitKey = SeatLimitKey | "storage_gb";

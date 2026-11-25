@@ -4,8 +4,14 @@
   "default_plan_key": "free",
   "billing_public": {
     "currency": "ILS",
-    "annual_bonus_months": 2,
-    "vat_note_he": "המחירים לא כוללים מע״מ."
+    "vat_note_he": "המחירים לא כוללים מע״מ.",
+    "pro_launch_active": true,
+    "extra_seat_tiers": [
+      { "min_extra": 1, "max_extra": 2, "ils_before_vat": 49 },
+      { "min_extra": 3, "max_extra": 4, "ils_before_vat": 39 },
+      { "min_extra": 5, "max_extra": 9, "ils_before_vat": 29 },
+      { "min_extra": 10, "max_extra": null, "ils_before_vat": 24 }
+    ]
   },
   "seat_buckets": {
     "seats_operator": ["owner", "administrator", "manager", "sales"],
@@ -56,16 +62,17 @@
       },
       "commercial": {
         "monthly_ils_before_vat": 0,
+        "allows_extra_seats": false,
         "custom_pricing": false,
         "audience_he": "טכנאי עצמאי שרוצה להתחיל בצורה מסודרת",
         "highlights_he": [
+          "משתמש אחד כלול",
           "עד 10 הצעות בחודש",
           "אחסון 1GB במערכת",
           "אשף CCTV במצב מהיר",
-          "ללא טכנאי בשטח",
           "תעודת מסירה במיתוג SITE SECURE"
         ],
-        "cta_he": "הצטרפו לבטא"
+        "cta_he": "התחילו עכשיו"
       }
     },
     {
@@ -97,16 +104,18 @@
       },
       "commercial": {
         "monthly_ils_before_vat": 129,
+        "launch_monthly_ils_before_vat": 99,
+        "allows_extra_seats": true,
         "custom_pricing": false,
         "audience_he": "חברת התקנות קטנה עם עד 2 אנשי משרד",
         "highlights_he": [
+          "2 משתמשים כלולים + מדרגות נוספים",
           "הצעות ללא הגבלה",
           "אחסון 10GB",
-          "חלופות לוועד בית",
-          "תעודת מסירה במותג שלך",
+          "חלופות לוועד בית ותעודת מסירה במותג שלך",
           "שיתוף בוואטסאפ ומעקב מכירה"
         ],
-        "cta_he": "הצטרפו לבטא"
+        "cta_he": "שדרגו"
       }
     },
     {
@@ -138,17 +147,17 @@
       },
       "commercial": {
         "monthly_ils_before_vat": 349,
-        "extra_seat_ils_before_vat": 49,
+        "allows_extra_seats": true,
         "custom_pricing": false,
         "audience_he": "חברה עם צוות טכנאים ומשרד מלא",
         "highlights_he": [
-          "עד 5 משתמשים (+₪49 לכל נוסף)",
+          "5 משתמשים כלולים + מדרגות נוספים",
           "אחסון 50GB",
           "טכנאים, שיבוץ וצ׳קליסט",
           "תיק אתר, אחריות ותזכורות שירות",
           "רווחיות להצעות"
         ],
-        "cta_he": "הצטרפו לבטא"
+        "cta_he": "שדרגו"
       }
     },
     {

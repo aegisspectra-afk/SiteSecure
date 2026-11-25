@@ -1322,7 +1322,8 @@
   margin: 0;
 }
 
-.mkt-ip-beta {
+.mkt-ip-beta,
+.mkt-ip-note {
   margin: 1rem 0 0;
   padding: 0.85rem 1rem;
   border-radius: var(--mkt-radius);
@@ -1332,6 +1333,25 @@
   font-size: 0.9375rem;
   line-height: 1.6;
 }
+
+.mkt-ip-badge-launch {
+  background: #0f766e;
+  color: #ecfdf5;
+}
+
+.mkt-ip-tiers {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0.9rem;
+  list-style: none;
+  border-radius: var(--mkt-radius);
+  border: 1px solid var(--mkt-border);
+  background: #f8fafc;
+  font-size: 0.875rem;
+  color: var(--mkt-ink-soft);
+}
+
 
 .mkt-ip-cards {
   display: grid;
@@ -1480,8 +1500,11 @@
 }
 
 .mkt-ip-calc {
-  border-top: 1px solid var(--mkt-border);
-  padding-top: 1rem;
+  margin-top: 0.25rem;
+  border: 1px solid rgb(37 99 235 / 18%);
+  border-radius: var(--mkt-radius-lg);
+  padding: 1rem 1.1rem;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 55%);
 }
 
 .mkt-ip-calc-grid {

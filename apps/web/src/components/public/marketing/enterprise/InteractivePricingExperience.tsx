@@ -2,7 +2,13 @@ import {
   billingPublic,
   catalogPlansOrdered,
   comparisonCell,
+  extraSeatUnitPrice,
+  extraSeatsTotalIls,
   formatIls,
+  monthlyTotalIls,
+  planAllowsExtraSeats,
+  planDisplayBaseIls,
+  planRegularBaseIls,
   type CatalogPlan,
 } from "@site-secure/authz";
 import { Link } from "@tanstack/react-router";
@@ -36,9 +42,24 @@ type CompareRow = {
 };
 
 function monthlyPrice(plan: CatalogPlan): string {
-  const c = plan.commercial;
-  if (c?.custom_pricing || c?.monthly_ils_before_vat == null) return "בהתאמה";
-  return formatIls(c.monthly_ils_before_vat);
+  const display = planDisplayBaseIls(plan);
+  if (display == null) return "בהתאמה";
+  return formatIls(display);
+}
+
+function monthlyPriceCaption(plan: CatalogPlan): string {
+  if (plan.commercial?.custom_pricing) return "תמחור בהתאמה";
+  const display = planDisplayBaseIls(plan);
+  const regular = planRegularBaseIls(plan);
+  if (
+    display != null &&
+    regular != null &&
+    display < regular &&
+    billingPublic().pro_launch_active
+  ) {
+    return `מחיר השקה · רגיל ${formatIls(regular)} / חודש לפני מע״מ`;
+  }
+  return "לחודש לפני מע״מ";
 }
 
 function hasFeature(plan: CatalogPlan, feature: string): boolean {
@@ -64,8 +85,7 @@ function planCoversUsers(plan: CatalogPlan, users: number): boolean {
   const max = plan.limits?.max_members ?? 0;
   if (max <= 0) return true; // unlimited
   if (users <= max) return true;
-  // Business (and only Business) allows extra seats at catalog rate
-  return Boolean(plan.commercial?.extra_seat_ils_before_vat);
+  return planAllowsExtraSeats(plan);
 }
 
 function recommendPlan(
@@ -121,10 +141,11 @@ function recommendPlan(
   if (needs.length) {
     reasons.push("המסלול כולל את היכולות שבחרתם לפי הקטלוג בפועל.");
   }
-  if (pick.commercial?.extra_seat_ils_before_vat && users > (pick.limits.max_members || 0)) {
+  if (planAllowsExtraSeats(pick) && users > (pick.limits.max_members || 0)) {
     const extra = users - (pick.limits.max_members || 0);
+    const unit = extraSeatUnitPrice(extra);
     reasons.push(
-      `מעל ${pick.limits.max_members} משתמשים: ${extra} נוספים ב־${formatIls(pick.commercial.extra_seat_ils_before_vat)} למשתמש (לפני מע״מ).`,
+      `מעל ${pick.limits.max_members} משתמשים: ${extra} נוספים ב־${formatIls(unit)} למשתמש לפי מדרגה (לפני מע״מ).`,
     );
   }
   reasons.push(pick.commercial?.audience_he ?? "");
@@ -230,7 +251,7 @@ function buildCompareRows(): CompareRow[] {
     {
       key: "support",
       label: "תמיכה",
-      value: (p) => (p.key === "enterprise" ? "ייעודית" : "תמיכת בטא"),
+      value: (p) => (p.key === "enterprise" ? "ייעודית" : "סטנדרטית"),
     },
   ];
 }
@@ -244,7 +265,9 @@ function rememberPreferredPlan(planKey: string) {
 }
 
 function PlanCta({ plan, from }: { plan: CatalogPlan; from: string }) {
-  const cta = plan.commercial?.cta_he ?? (plan.key === "enterprise" ? "דברו איתנו" : "הצטרפו לבטא");
+  const cta =
+    plan.commercial?.cta_he ??
+    (plan.key === "enterprise" ? "דברו איתנו" : plan.key === "free" ? "התחילו עכשיו" : "שדרגו");
   if (plan.key === "enterprise") {
     return (
       <Link
@@ -277,23 +300,37 @@ function PlanCta({ plan, from }: { plan: CatalogPlan; from: string }) {
 
 function SeatCalculator({ plan }: { plan: CatalogPlan }) {
   const included = plan.limits?.max_members ?? 0;
-  const extraRate = plan.commercial?.extra_seat_ils_before_vat;
-  const base = plan.commercial?.monthly_ils_before_vat ?? 0;
-  const [users, setUsers] = useState(Math.max(included, 5));
+  const base = planDisplayBaseIls(plan) ?? 0;
+  const tiers = billingPublic().extra_seat_tiers;
+  const [users, setUsers] = useState(Math.max(included, included + 2));
 
-  if (!extraRate || plan.key !== "business") return null;
+  if (!planAllowsExtraSeats(plan) || included <= 0) return null;
 
   const extraSeats = Math.max(0, users - included);
-  const extraCost = extraSeats * extraRate;
-  const total = base + extraCost;
+  const unit = extraSeatUnitPrice(extraSeats);
+  const extraCost = extraSeatsTotalIls(extraSeats);
+  const total = monthlyTotalIls({ plan, extraSeats }) ?? base + extraCost;
 
   return (
     <div className="mkt-ip-calc">
-      <h4 className="m-0 text-base font-semibold">מחשבון משתמשים נוספים — Business</h4>
+      <h4 className="m-0 text-base font-semibold">מחשבון משתמשים — {plan.label_he}</h4>
       <p className="mt-2 m-0 text-sm leading-7 text-[var(--mkt-muted)]">
-        במסלול Business כלולים {included} משתמשים. כל משתמש נוסף לפי הקטלוג: {formatIls(extraRate)} לחודש לפני
-        מע״מ. הכלל לא חל על מסלולים אחרים.
+        כלולים {included} משתמשים. משתמשים נוספים מתומחרים לפי מדרגות — כל הנוספים במדרגה הנוכחית במחיר המדרגה
+        (לא מדורג מצטבר).
       </p>
+      <ul className="mkt-ip-tiers" aria-label="מדרגות משתמשים נוספים">
+        {tiers.map((t) => (
+          <li key={`${t.min_extra}-${t.max_extra ?? "plus"}`}>
+            {t.max_extra == null
+              ? `${t.min_extra}+`
+              : t.min_extra === t.max_extra
+                ? `${t.min_extra}`
+                : `${t.min_extra}–${t.max_extra}`}
+            {" · "}
+            {formatIls(t.ils_before_vat)} למשתמש
+          </li>
+        ))}
+      </ul>
       <label className="mkt-calc-slider mt-4">
         <span>
           מספר משתמשים כולל: <strong>{users}</strong>
@@ -312,11 +349,14 @@ function SeatCalculator({ plan }: { plan: CatalogPlan }) {
       </label>
       <dl className="mkt-ip-calc-grid">
         <div>
-          <dt>בסיס Business</dt>
+          <dt>בסיס {plan.label_he}</dt>
           <dd>{formatIls(base)}</dd>
         </div>
         <div>
-          <dt>משתמשים נוספים ({extraSeats})</dt>
+          <dt>
+            נוספים ({extraSeats}
+            {extraSeats > 0 ? ` × ${formatIls(unit)}` : ""})
+          </dt>
           <dd>{formatIls(extraCost)}</dd>
         </div>
         <div>
@@ -325,7 +365,7 @@ function SeatCalculator({ plan }: { plan: CatalogPlan }) {
         </div>
       </dl>
       <p className="mt-3 m-0 text-xs text-[var(--mkt-muted)]">
-        בבטא אין סליקה אוטומטית — שדרוג ומקומות נוספים מתבצעים בפנייה לצוות אחרי ההרשמה.
+        אין סליקה אוטומטית באתר — שדרוג ומקומות נוספים מתבצעים בפנייה לצוות אחרי ההרשמה.
       </p>
     </div>
   );
@@ -406,9 +446,7 @@ function PlanFinder({
         <p className="m-0 text-sm text-[var(--mkt-muted)]">מסלול מומלץ</p>
         <p className="m-0 mt-1 text-2xl font-bold">{result.plan.label_he}</p>
         <p className="m-0 mt-1 text-xl">{monthlyPrice(result.plan)}</p>
-        <p className="m-0 mt-1 text-xs text-[var(--mkt-muted)]">
-          {result.plan.commercial?.custom_pricing ? "תמחור בהתאמה" : "לחודש לפני מע״מ"}
-        </p>
+        <p className="m-0 mt-1 text-xs text-[var(--mkt-muted)]">{monthlyPriceCaption(result.plan)}</p>
         <ul className="mt-3 m-0 list-none space-y-1 p-0 text-sm">
           {result.reasons.map((r) => (
             <li key={r}>• {r}</li>
@@ -461,10 +499,10 @@ export function InteractivePricingExperience({
         <header className="mkt-ip-header">
           <h2 className="mkt-h2">תמחור שקוף. שליטה מלאה.</h2>
           <p className="mkt-lede">
-            בחרו את המסלול שמתאים לגודל העסק שלכם והרחיבו את הפעילות בקצב שלכם.
+            בחרו את המסלול שמתאים לגודל העסק שלכם והרחיבו משתמשים במדרגות ברורות — בלי חיוב שנתי.
           </p>
-          <p className="mkt-ip-beta" role="note">
-            בתקופת הבטא אין סליקה אוטומטית. הצטרפות למסלול בתשלום ושדרוגים מתבצעים בפנייה לצוות.
+          <p className="mkt-ip-note" role="note">
+            אין סליקה אוטומטית באתר. הצטרפות למסלול בתשלום ושדרוגים מתבצעים בפנייה לצוות אחרי ההרשמה.
           </p>
           <p className="mt-2 m-0 text-sm text-[var(--mkt-muted)]">{billing.vat_note_he} מוצג מחיר חודשי בלבד.</p>
         </header>
@@ -491,11 +529,12 @@ export function InteractivePricingExperience({
                 }}
               >
                 {plan.key === "business" ? <span className="mkt-ip-badge">מומלץ לצוותים</span> : null}
+                {plan.key === "pro" && billing.pro_launch_active ? (
+                  <span className="mkt-ip-badge mkt-ip-badge-launch">מחיר השקה</span>
+                ) : null}
                 <span className="mkt-ip-card-name">{plan.label_he}</span>
                 <span className="mkt-ip-card-price">{monthlyPrice(plan)}</span>
-                <span className="mkt-ip-card-period">
-                  {plan.commercial?.custom_pricing ? "תמחור בהתאמה" : "לחודש לפני מע״מ"}
-                </span>
+                <span className="mkt-ip-card-period">{monthlyPriceCaption(plan)}</span>
                 <span className="mkt-ip-card-audience">{plan.commercial?.audience_he}</span>
                 <span className="mkt-ip-card-limits">
                   אחסון {comparisonCell(plan, "storage_gb")} · משתמשים {comparisonCell(plan, "max_members")}
@@ -543,9 +582,7 @@ export function InteractivePricingExperience({
           <p className="mkt-kicker">מסלול נבחר</p>
           <h3 className="m-0 text-xl font-semibold">{active.label_he}</h3>
           <p className="mt-2 m-0 text-2xl font-bold">{monthlyPrice(active)}</p>
-          <p className="m-0 text-sm text-[var(--mkt-muted)]">
-            {active.commercial?.custom_pricing ? "דברו איתנו לתמחור" : "לחודש לפני מע״מ"}
-          </p>
+          <p className="m-0 text-sm text-[var(--mkt-muted)]">{monthlyPriceCaption(active)}</p>
           <p className="mt-3 text-[17px] leading-7 text-[var(--mkt-ink-soft)]">
             {active.commercial?.audience_he}
           </p>
@@ -557,10 +594,14 @@ export function InteractivePricingExperience({
           <div className="mt-4 flex flex-wrap gap-2">
             <PlanCta plan={active} from="pricing_active_panel" />
             <Link to={MARKETING_ROUTES.contact} search={{ topic: "sales" }} className="mkt-btn mkt-btn-secondary">
-              שאלה על שדרוג בבטא
+              שאלה על שדרוג
             </Link>
           </div>
-          {active.key === "business" ? <div className="mt-6"><SeatCalculator plan={active} /></div> : null}
+          {planAllowsExtraSeats(active) ? (
+            <div className="mt-6">
+              <SeatCalculator plan={active} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

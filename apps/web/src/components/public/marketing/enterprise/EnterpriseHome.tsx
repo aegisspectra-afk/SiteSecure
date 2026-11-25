@@ -4,16 +4,12 @@ import { submitBetaSignup } from "../../../../lib/public-marketing-api";
 import { trackMarketingEvent } from "../../../../lib/marketing-analytics";
 import { siteSecureOrgJsonLd, usePublicSeo } from "../../../../lib/public-seo";
 import { LandingCctvHeroCalc } from "../LandingCctvHeroCalc";
-import { ActivityFeed } from "./ActivityFeed";
 import { DemoDashboard } from "./DemoDashboard";
-import { InteractivePricingExperience } from "./InteractivePricingExperience";
-import { InteractiveWorkflow } from "./InteractiveWorkflow";
-import { LiveAppPreview } from "./LiveAppPreview";
+import { HomeHowItWorks } from "./HomeHowItWorks";
+import { HomePricingTeaser } from "./HomePricingTeaser";
+import { HomeSecurity } from "./HomeSecurity";
 import { MarketingShell } from "./MarketingShell";
-import { OnboardingPreview } from "./OnboardingPreview";
 import { PlatformExplorer } from "./PlatformExplorer";
-import { ProductTour } from "./ProductTour";
-import { SecurityArchitecture } from "./SecurityArchitecture";
 import { SolutionsExplorer } from "./SolutionsExplorer";
 import { HOME_FAQ, PROBLEMS } from "./marketing-content";
 
@@ -23,9 +19,9 @@ export function EnterpriseHome() {
   const [calcReady, setCalcReady] = useState(false);
 
   usePublicSeo({
-    title: "SITE SECURE — כל העסק שלך. מערכת אחת. שליטה מלאה.",
+    title: "SITE SECURE — מהסיור באתר ועד תעודת המסירה",
     description:
-      "פלטפורמה לניהול חברות אבטחה, התקנות ומתח נמוך: לקוחות, הצעות מחיר, פרויקטים, טכנאים ושירות — בעברית.",
+      "הצעת מחיר מקצועית ללקוח תוך 10 דקות מהסיור, עם חלופות, תמונות ואישור בוואטסאפ. מערכת בעברית לחברות התקנה ותחזוקה.",
     canonical: `${origin}/`,
     jsonLd: siteSecureOrgJsonLd(origin),
   });
@@ -42,14 +38,17 @@ export function EnterpriseHome() {
 
   return (
     <MarketingShell>
-      {/* Hero — interactive dashboard, no photography */}
       <section className="mkt-dark mkt-section" id="hero">
         <div className="mkt-container grid items-center gap-10 lg:grid-cols-2">
           <div>
             <p className="mkt-kicker">SITE SECURE</p>
-            <h1 className="mkt-h1">העסק שלך. כל מערכות הניהול. מקום אחד.</h1>
+            <h1 className="mkt-h1">
+              מהסיור באתר ועד תעודת המסירה,
+              <br />
+              הכל במקום אחד ובעברית.
+            </h1>
             <p className="mkt-lede">
-              פלטפורמה חכמה לניהול עסקים בתחום האבטחה, התקשורת ומערכות המתח הנמוך.
+              הצעת מחיר מקצועית ללקוח תוך 10 דקות מהסיור, עם חלופות, תמונות ואישור בוואטסאפ.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -57,14 +56,14 @@ export function EnterpriseHome() {
                 className="mkt-btn mkt-btn-primary"
                 onClick={() => trackMarketingEvent("cta_click", { cta: "hero_start_free" })}
               >
-                התחילו בחינם
+                התחילו עכשיו
               </Link>
               <a
-                href="#product-modules"
+                href="#how"
                 className="mkt-btn mkt-btn-secondary"
-                onClick={() => trackMarketingEvent("cta_click", { cta: "hero_discover" })}
+                onClick={() => trackMarketingEvent("cta_click", { cta: "hero_how" })}
               >
-                גלו את הפלטפורמה
+                איך זה עובד
               </a>
             </div>
           </div>
@@ -85,53 +84,22 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      {/* Interactive platform explorer + guided tour */}
-      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="product-modules">
-        <div className="mkt-container">
-          <h2 className="mkt-h2">כל הפעילות העסקית שלך. מערכת אחת.</h2>
-          <p className="mkt-lede">בחרו מודול או עברו סיור מודרך — בלי צילומי מסך סטטיים.</p>
-          <div className="mt-8">
-            <PlatformExplorer />
-          </div>
-          <div className="mt-10">
-            <ProductTour />
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive workflow */}
-      <section className="mkt-section mkt-reveal" id="how">
+      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="how">
         <div className="mkt-container">
           <h2 className="mkt-h2">איך זה עובד</h2>
-          <p className="mkt-lede">לחצו על שלב ברצף — מליד ועד שירות שוטף.</p>
+          <p className="mkt-lede">רצף אחד: מסיור באתר ועד שירות שוטף.</p>
           <div className="mt-8">
-            <InteractiveWorkflow />
+            <HomeHowItWorks />
           </div>
         </div>
       </section>
 
-      {/* Live app preview — replaces screenshot gallery */}
-      <section className="mkt-dark mkt-section mkt-reveal" id="preview">
+      <section className="mkt-section mkt-reveal" id="product-modules">
         <div className="mkt-container">
-          <h2 className="mkt-h2">תצוגת מוצר חיה</h2>
-          <p className="mkt-lede">
-            סביבת הדגמה מבודדת עם נתונים סינתטיים בלבד — לא מחוברת לרשומות לקוחות אמיתיות.
-          </p>
+          <h2 className="mkt-h2">סיור מוצר</h2>
+          <p className="mkt-lede">המודולים שפעילים היום — בחרו וגלו מה כלול.</p>
           <div className="mt-8">
-            <LiveAppPreview />
-          </div>
-          <div className="mt-10">
-            <ActivityFeed />
-          </div>
-        </div>
-      </section>
-
-      <section className="mkt-section mkt-reveal" id="solutions">
-        <div className="mkt-container">
-          <h2 className="mkt-h2">פתרונות לפי סוג עסק</h2>
-          <p className="mkt-lede">בחרו סוג עסק — התוכן, המודולים וה־CTA מתעדכנים מיד.</p>
-          <div className="mt-8">
-            <SolutionsExplorer />
+            <PlatformExplorer liveOnly />
           </div>
         </div>
       </section>
@@ -139,10 +107,8 @@ export function EnterpriseHome() {
       <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="tools">
         <div className="mkt-container grid gap-8 lg:grid-cols-2 lg:items-start">
           <div>
-            <h2 className="mkt-h2">כלי מקצועי חינם: מחשבון אחסון CCTV</h2>
-            <p className="mkt-lede">
-              סליידרים וחישוב חי במנוע המשותף — ואז מעבר להצעת מחיר אחרי הרשמה.
-            </p>
+            <h2 className="mkt-h2">מחשבון אחסון CCTV</h2>
+            <p className="mkt-lede">חשבו אחסון, NVR ו-PoE — ואז עברו להצעת מחיר אחרי הרשמה.</p>
             <Link
               to="/tools/cctv-storage"
               className="mkt-btn mkt-btn-primary mt-6"
@@ -157,33 +123,33 @@ export function EnterpriseHome() {
         </div>
       </section>
 
-      <section className="mkt-section mkt-reveal" id="pricing">
+      <section className="mkt-section mkt-reveal" id="solutions">
         <div className="mkt-container">
-          <InteractivePricingExperience compact />
+          <h2 className="mkt-h2">פתרונות לפי סוג עסק</h2>
+          <p className="mkt-lede">בחרו סוג עסק — התוכן וההמלצה מתעדכנים מיד.</p>
+          <div className="mt-8">
+            <SolutionsExplorer />
+          </div>
+        </div>
+      </section>
+
+      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="pricing">
+        <div className="mkt-container">
+          <HomePricingTeaser />
         </div>
       </section>
 
       <section className="mkt-dark mkt-section mkt-reveal" id="security">
         <div className="mkt-container">
           <h2 className="mkt-h2">אבטחה ואמון</h2>
-          <p className="mkt-lede">רק בקרות מאומתות — בלי תעודות שלא אומתו.</p>
+          <p className="mkt-lede">מה שחשוב לדעת על שמירת הנתונים שלכם.</p>
           <div className="mt-8">
-            <SecurityArchitecture />
+            <HomeSecurity />
           </div>
         </div>
       </section>
 
-      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="onboarding">
-        <div className="mkt-container">
-          <h2 className="mkt-h2">איך נראית ההצטרפות</h2>
-          <p className="mkt-lede">תצוגה אינטראקטיבית של השלבים — כל CTA מוביל לנתיב אמיתי.</p>
-          <div className="mt-8">
-            <OnboardingPreview />
-          </div>
-        </div>
-      </section>
-
-      <section className="mkt-section mkt-reveal" id="faq">
+      <section className="mkt-section mkt-reveal bg-[var(--mkt-white)]" id="faq">
         <div className="mkt-container">
           <h2 className="mkt-h2">שאלות נפוצות</h2>
           <div className="mkt-faq mt-8 max-w-3xl">
@@ -200,18 +166,19 @@ export function EnterpriseHome() {
       <section className="mkt-dark mkt-section mkt-reveal" id="cta">
         <div className="mkt-container grid gap-10 lg:grid-cols-2">
           <div>
-            <h2 className="mkt-h2">הגיע הזמן לנהל את העסק בצורה חכמה יותר.</h2>
-            <p className="mkt-lede">הצטרפו ל-SITE SECURE והתחילו לנהל את כל הפעילות העסקית במקום אחד.</p>
+            <h2 className="mkt-h2">מוכנים לראות את זה אצלכם?</h2>
+            <p className="mkt-lede">התחילו עכשיו או השאירו פרטים לתיאום הדגמה קצרה.</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/register"
                 className="mkt-btn mkt-btn-primary"
                 onClick={() => trackMarketingEvent("signup_start", { from: "final_cta" })}
               >
-                התחילו בחינם
+                התחילו עכשיו
               </Link>
               <Link
                 to="/contact"
+                search={{ topic: "demo" }}
                 className="mkt-btn mkt-btn-secondary"
                 onClick={() => trackMarketingEvent("demo_start", { from: "final_cta" })}
               >
@@ -219,14 +186,14 @@ export function EnterpriseHome() {
               </Link>
             </div>
           </div>
-          <BetaLiteForm />
+          <DemoRequestForm />
         </div>
       </section>
     </MarketingShell>
   );
 }
 
-function BetaLiteForm() {
+function DemoRequestForm() {
   const [form, setForm] = useState({ full_name: "", phone: "", technician_count: "" });
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -235,7 +202,7 @@ function BetaLiteForm() {
   if (done) {
     return (
       <p className="mkt-card text-base font-medium" role="status">
-        תודה, נחזור אליך תוך יום עסקים.
+        תודה — נחזור אליכם לתיאום הדגמה.
       </p>
     );
   }
@@ -247,16 +214,16 @@ function BetaLiteForm() {
         ev.preventDefault();
         setBusy(true);
         setErr(null);
-        void submitBetaSignup({ ...form, source: "landing" })
+        void submitBetaSignup({ ...form, source: "landing_demo" })
           .then(() => {
             setDone(true);
-            trackMarketingEvent("beta_submit", { source: "landing" });
+            trackMarketingEvent("demo_start", { source: "home_form" });
           })
           .catch((e: Error) => setErr(e.message))
           .finally(() => setBusy(false));
       }}
     >
-      <h3 className="m-0 text-lg font-semibold text-[var(--mkt-ink)]">השאירו פרטים</h3>
+      <h3 className="m-0 text-lg font-semibold text-[var(--mkt-ink)]">תיאום הדגמה</h3>
       <label>
         שם מלא
         <input

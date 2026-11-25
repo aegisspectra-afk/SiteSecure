@@ -343,6 +343,7 @@ def create_invitation(
         plan_key=ctx.plan_key,
         invite_role=role_key,
         occupied_roles=occupancy.roles,
+        extra_seats=getattr(ctx, "extra_seats", 0) or 0,
     )
     if not limit.allowed:
         write_audit(

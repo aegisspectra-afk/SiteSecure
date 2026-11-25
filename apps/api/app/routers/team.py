@@ -132,7 +132,12 @@ def _enforce_seat_on_change(
     roles = list(fetch_occupancy(client, workspace_id).roles)
     if old_active and old_role in roles:
         roles.remove(old_role)  # the member being changed does not compete with itself
-    decision = evaluate_seat_limit(plan_key=ctx.plan_key, invite_role=new_role, occupied_roles=roles)
+    decision = evaluate_seat_limit(
+        plan_key=ctx.plan_key,
+        invite_role=new_role,
+        occupied_roles=roles,
+        extra_seats=getattr(ctx, "extra_seats", 0) or 0,
+    )
     if decision.allowed:
         return
     write_audit(
@@ -205,11 +210,11 @@ def workspace_usage(
     user: Annotated[dict, Depends(current_user)],
 ) -> WorkspaceUsageOut:
     ctx = load_authz_context(client, user["id"], str(workspace_id))
+    # Seat/billing meters are team/admin surfaces — not field settings.view.
     view = authorize(ctx=ctx, action="users.view")
-    settings = authorize(ctx=ctx, action="settings.view")
     billing = authorize(ctx=ctx, action="workspace.billing")
-    if not view.allowed and not settings.allowed and not billing.allowed:
-        _raise_decision(settings, client=client, workspace_id=str(workspace_id), action="settings.view")
+    if not view.allowed and not billing.allowed:
+        _raise_decision(view, client=client, workspace_id=str(workspace_id), action="users.view")
     workspace_key = str(workspace_id)
 
     from concurrent.futures import ThreadPoolExecutor

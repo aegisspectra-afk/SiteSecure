@@ -393,6 +393,7 @@ def provision_employee_user(
     payload: CreateEmployeeInput,
     occupied_roles: list[str],
     plan_key: str,
+    extra_seats: int = 0,
 ) -> dict[str, Any]:
     data = validate_create_input(payload)
     raise_if_email_archived(service, data.email)  # type: ignore[arg-type]
@@ -512,6 +513,7 @@ def provision_employee_user(
             plan_key=plan_key,
             invite_role=WORKFORCE_MEMBER_ROLE,
             occupied_roles=occupied_roles,
+            extra_seats=extra_seats,
         )
         raise_plan_limit(limit)
 

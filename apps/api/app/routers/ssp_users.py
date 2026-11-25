@@ -296,6 +296,7 @@ def create_user(
         ),
         occupied_roles=occupancy.roles,
         plan_key=ctx.plan_key,
+        extra_seats=getattr(ctx, "extra_seats", 0) or 0,
     )
     write_audit(
         client,

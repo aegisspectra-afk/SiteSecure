@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 from ..errors import MESSAGES
 from .catalog import load_catalog
+from .pricing import effective_member_cap, plan_allows_extra_seats
 from .types import Decision
 
 # Legacy founding_technician role_key still counts as a technician seat if present.
@@ -64,11 +65,13 @@ def evaluate_seat_limit(
     plan_key: str,
     invite_role: str,
     occupied_roles: Iterable[str],
+    extra_seats: int = 0,
 ) -> Decision:
-    """USER-LOCKED seat model: max_members + max_technicians.
+    """USER-LOCKED seat model: max_members (+ purchased extras) + max_technicians.
 
     Pending invites are included in occupied_roles by occupancy_from_rows.
     Legacy founding_technician counts toward technician capacity.
+    Free never receives extras even if subscriptions.extra_seats is set.
     """
     roles = [str(role or "").strip() for role in occupied_roles if str(role or "").strip()]
     members = len(roles)
@@ -81,14 +84,19 @@ def evaluate_seat_limit(
             plan_key=plan_key, invite_role=invite_role, occupied_roles=roles
         )
 
-    if members >= max_members:
+    extras = max(0, int(extra_seats or 0)) if plan_allows_extra_seats(plan_key) else 0
+    member_cap = effective_member_cap(max_members, extras)
+
+    if members >= member_cap:
         return _deny(
             "PLAN_LIMIT_REACHED",
             limit_key="max_members",
             resource="members",
             quota_code="member_quota_exceeded",
             current=members,
-            limit=max_members,
+            limit=member_cap,
+            included_limit=max_members,
+            extra_seats=extras,
             plan_key=plan_key,
             invite_role=invite_role,
             upgrade_required=True,

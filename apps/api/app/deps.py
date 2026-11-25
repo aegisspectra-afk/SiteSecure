@@ -185,19 +185,46 @@ def load_authz_context(
             },
         )
 
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    def _subscription_commercial():
+        return client.get(
+            "subscriptions",
+            params={
+                "workspace_id": f"eq.{workspace_id}",
+                "select": "extra_seats,locked_price_ils_before_vat",
+                "limit": "1",
+            },
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
         fut_ws = pool.submit(_workspace)
         fut_ent = pool.submit(_entitlements)
         fut_asg = pool.submit(_assignments)
+        fut_sub = pool.submit(_subscription_commercial)
         workspace = fut_ws.result()
         ent = fut_ent.result()
         assigned = fut_asg.result()
+        sub_commercial = fut_sub.result()
 
     if workspace.status_code != 200 or not workspace.json():
         raise ApiError(404, "NOT_FOUND", "לא נמצא")
     ws = workspace.json()[0]
 
     plan_key, sub_status, features = parse_entitlements_rpc(ent, workspace_id=workspace_id)
+
+    extra_seats = 0
+    locked_price: float | None = None
+    if sub_commercial.status_code == 200 and sub_commercial.json():
+        row = sub_commercial.json()[0]
+        try:
+            extra_seats = max(0, int(row.get("extra_seats") or 0))
+        except (TypeError, ValueError):
+            extra_seats = 0
+        raw_locked = row.get("locked_price_ils_before_vat")
+        if raw_locked is not None:
+            try:
+                locked_price = float(raw_locked)
+            except (TypeError, ValueError):
+                locked_price = None
 
     assigned_ids: frozenset[str] = frozenset()
     if assigned.status_code == 200:
@@ -224,6 +251,8 @@ def load_authz_context(
         assigned_resource_ids=assigned_ids,
         workspace_role_key=workspace_role_key,
         grants=grants,
+        extra_seats=extra_seats,
+        locked_price_ils_before_vat=locked_price,
     )
 
 

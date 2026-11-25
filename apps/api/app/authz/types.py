@@ -39,6 +39,8 @@ class AuthzContext:
     assigned_resource_ids: frozenset[str] = field(default_factory=frozenset)
     workspace_role_key: str | None = None
     grants: frozenset[str] = field(default_factory=frozenset)
+    extra_seats: int = 0
+    locked_price_ils_before_vat: float | None = None
 
 
 @dataclass(frozen=True)

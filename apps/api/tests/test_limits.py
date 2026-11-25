@@ -65,6 +65,50 @@ def test_business_member_cap_five():
     raise AssertionError("expected PLAN_LIMIT_REACHED on invite over cap")
 
 
+def test_business_extra_seats_raise_cap():
+    occupied = ["owner", "sales", "technician", "manager", "administrator"]
+    # 5 included + 2 extras → cap 7; adding 6th member OK
+    ok = evaluate_seat_limit(
+        plan_key="business",
+        invite_role="viewer",
+        occupied_roles=occupied,
+        extra_seats=2,
+    )
+    assert ok.allowed is True
+    full = evaluate_seat_limit(
+        plan_key="business",
+        invite_role="viewer",
+        occupied_roles=occupied + ["viewer", "sales"],
+        extra_seats=2,
+    )
+    assert full.allowed is False
+    assert full.details["limit"] == 7
+    assert full.details["extra_seats"] == 2
+    try:
+        raise_plan_limit(full)
+    except ApiError as exc:
+        assert exc.status_code == 409
+        return
+    raise AssertionError("expected 409 when over included+extras")
+
+
+def test_pro_extra_seats_and_free_ignores_extras():
+    occupied_pro = ["owner", "sales"]
+    denied = evaluate_seat_limit(plan_key="pro", invite_role="viewer", occupied_roles=occupied_pro)
+    assert denied.allowed is False
+    assert denied.details["limit"] == 2
+    ok = evaluate_seat_limit(
+        plan_key="pro", invite_role="viewer", occupied_roles=occupied_pro, extra_seats=1
+    )
+    assert ok.allowed is True
+    # Free hard-cap stays 1 even if extra_seats is set on row
+    free = evaluate_seat_limit(
+        plan_key="free", invite_role="viewer", occupied_roles=["owner"], extra_seats=99
+    )
+    assert free.allowed is False
+    assert free.details["limit"] == 1
+
+
 def test_seat_meters_read_catalog_not_hardcoded():
     load_catalog.cache_clear()
     meters = {row["key"]: row for row in seat_meters(plan_key="free", occupied_roles=["owner"])}
